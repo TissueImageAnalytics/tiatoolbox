@@ -498,7 +498,7 @@ def test_wsi_segmentor_annotationstore(
 
 
 def test_cli_model_single_file(sample_svs: Path, track_tmp_path: Path) -> None:
-    """Test for models CLI single file."""
+    """Test semantic segmentor CLI single file."""
     runner = CliRunner()
     models_wsi_result = runner.invoke(
         cli.main,

@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import click
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Callable
-
     from tiatoolbox.models.engine.io_config import ModelIOConfigABC
+    from tiatoolbox.type_hints import IntPair
+
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def add_default_to_usage_help(
@@ -74,6 +77,135 @@ def cli_output_path(
         "--output-path",
         help=add_default_to_usage_help(usage_help, default=default),
         type=str,
+        default=default,
+    )
+
+
+def cli_output_file(
+    usage_help: str = "Filename for saving output (e.g., '.zarr' or '.db').",
+    default: str | None = None,
+) -> Callable:
+    """Enables --output-file option for cli."""
+    return click.option(
+        "--output-file",
+        help=add_default_to_usage_help(usage_help, default=default),
+        type=str,
+        default=default,
+    )
+
+
+def cli_class_dict(
+    usage_help: str = (
+        "Mapping of classification outputs to class names. "
+        'Example: --class-dict \'{"1": "tumour", "2": "normal"}\''
+    ),
+    default: dict | None = None,
+) -> Callable:
+    """Enables --class-dict option for CLI.
+
+    The functions parse JSON into a dict with int keys if possible.
+
+    """
+
+    def _parse_json(
+        _ctx: click.Context, _param: click.Parameter, value: str | None
+    ) -> dict[int | str, Any] | None:
+        if value is None:
+            return default
+        try:
+            parsed = json.loads(value)
+            return {
+                int(k) if isinstance(k, str) and k.isdigit() else k: v
+                for k, v in parsed.items()
+            }
+        except json.JSONDecodeError as e:
+            msg = f"Invalid JSON: {e}"
+            raise click.BadParameter(msg) from e
+
+    return click.option(
+        "--class-dict",
+        help=usage_help,
+        callback=_parse_json,
+        default=default,
+    )
+
+
+def cli_input_resolutions(
+    usage_help: str = (
+        "Resolution settings for input heads. "
+        'Example: --input-resolutions \'[{"units": "mpp", "resolution": 0.25}]\''
+    ),
+    default: list[dict[str, Any]] | None = None,
+) -> Callable[[F], F]:
+    """Click option for --input-resolutions.
+
+    Parses a JSON list of dictionaries specifying resolution settings for input heads.
+    Supported units are 'level', 'power', and 'mpp'.
+    Example: --input-resolutions '[{"units": "mpp", "resolution": 0.25}]'
+
+    """
+
+    def _parse_json(
+        _ctx: click.Context,
+        _param: click.Parameter,
+        value: str | None,
+    ) -> list[dict[str, Any]] | None:
+        if value is None:
+            return default
+        try:
+            parsed = json.loads(value)
+            if not isinstance(parsed, list):
+                msg = "Must be a JSON list of dictionaries"
+                raise click.BadParameter(msg)
+            return parsed  # noqa: TRY300
+        except json.JSONDecodeError as e:
+            msg = f"Invalid JSON: {e}"
+            raise click.BadParameter(msg) from e
+
+    return click.option(
+        "--input-resolutions",
+        help=usage_help,
+        callback=_parse_json,
+        default=default,
+    )
+
+
+def cli_output_resolutions(
+    usage_help: str = (
+        "Resolution used for writing output predictions. "
+        'Example: --output-resolutions \'[{"units": "mpp", "resolution": 0.25}]\''
+    ),
+    default: list[dict[str, Any]] | None = None,
+) -> Callable[[F], F]:
+    """Click option for --output-resolutions.
+
+    Parses a JSON list of dictionaries specifying resolution settings for input heads.
+    Supported units are 'level', 'power', and 'mpp'.
+    Example: --output-resolutions '[{"units": "mpp", "resolution": 0.25}]'
+
+    """
+
+    def _parse_json(
+        _ctx: click.Context,
+        _param: click.Parameter,
+        value: str | None,
+    ) -> list[dict[str, Any]] | None:
+        if value is None:
+            return default
+        try:
+            parsed = json.loads(value)
+            if not isinstance(parsed, list):
+                msg = "Must be a JSON list of dictionaries"
+                raise click.BadParameter(msg)
+            return parsed  # noqa: TRY300
+        except json.JSONDecodeError as e:
+            msg = f"Invalid JSON: {e}"
+            raise click.BadParameter(msg) from e
+
+    return click.option(
+        "--output-resolutions",
+        help=usage_help,
+        callback=_parse_json,
         default=default,
     )
 
@@ -150,6 +282,69 @@ def cli_region(
         "--region",
         type=int,
         nargs=4,
+        help=usage_help,
+    )
+
+
+def cli_patch_input_shape(
+    usage_help: str = "Shape of input patches (height, width). Patches are at "
+    "requested read resolution, not with respect to level 0,"
+    "and must be positive. default=None",
+    default: IntPair | None = None,
+) -> Callable:
+    """Enables --patch-input-shape option for cli."""
+    return click.option(
+        "--patch-input-shape",
+        type=int,
+        default=default,
+        nargs=2,
+        help=usage_help,
+    )
+
+
+def cli_patch_output_shape(
+    usage_help: str = "Shape of output patches (height, width). default=None",
+    default: IntPair | None = None,
+) -> Callable:
+    """Enables --patch-output-shape option for cli."""
+    return click.option(
+        "--patch-output-shape",
+        type=int,
+        default=default,
+        nargs=2,
+        help=usage_help,
+    )
+
+
+def cli_stride_shape(
+    usage_help: str = "Stride used during patch extraction. Stride is"
+    "at requested read resolution, not with respect to"
+    "level 0, and must be positive. If stride_shape is None"
+    "patch_input_shape is used for stride. If not provided,"
+    "`stride_shape=None`",
+    default: IntPair | None = None,
+) -> Callable:
+    """Enables --stride-shape option for cli."""
+    return click.option(
+        "--stride-shape",
+        type=int,
+        default=default,
+        nargs=2,
+        help=usage_help,
+    )
+
+
+def cli_scale_factor(
+    usage_help: str = "Scale factor for annotations (model_mpp / slide_mpp)."
+    "Used to convert coordinates to baseline resolution.",
+    default: tuple[float, float] | None = None,
+) -> Callable:
+    """Enables --scale-factor option for cli."""
+    return click.option(
+        "--scale-factor",
+        type=float,
+        default=default,
+        nargs=2,
         help=usage_help,
     )
 
@@ -453,6 +648,20 @@ def cli_verbose(
     """Enables --verbose option for cli."""
     return click.option(
         "--verbose",
+        type=bool,
+        help=add_default_to_usage_help(usage_help, default=str(default)),
+        default=default,
+    )
+
+
+def cli_overwrite(
+    usage_help: str = "Whether to overwrite existing output files. Default is False.",
+    *,
+    default: bool = False,
+) -> Callable:
+    """Enables --overwrite option for cli."""
+    return click.option(
+        "--overwrite",
         type=bool,
         help=add_default_to_usage_help(usage_help, default=str(default)),
         default=default,

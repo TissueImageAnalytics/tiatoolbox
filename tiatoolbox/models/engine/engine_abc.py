@@ -90,29 +90,25 @@ class EngineABCRunParams(TypedDict, total=False):
             Device to run the model on (e.g., "cpu", "cuda").
             See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
             for more details.
-        input_resolutions (list[dict[Units, Resolution]]):
-            Resolution settings for input heads. Supported units are `level`,
-            `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
-            [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for details.
-        ioconfig (ModelIOConfigABC):
-            IO configuration (:class:`ModelIOConfigABC`) for model input/output.
+        labels (list):
+            Optional labels for input images. Only a single label per image
+            is supported.
         memory_threshold (int):
             Memory usage threshold (in percentage) to trigger caching behavior.
         num_workers (int):
             Number of workers for DataLoader and post-processing.
         output_file (str):
             Filename for saving output (e.g., "zarr" or "annotationstore").
-        patch_input_shape (IntPair):
-            Shape of input patches (height, width), requested at read resolution.
-            Must be positive.
         return_labels (bool):
             Whether to return labels with predictions.
         scale_factor (tuple[float, float]):
             Scale factor for annotations (model_mpp / slide_mpp).
-            Used to convert coordinates from non-baseline to baseline resolution.
+            Used to convert coordinates from non-baseline to baseline
+            resolution.
         stride_shape (IntPair):
             Stride used during WSI processing, at requested read resolution.
-            Must be positive. Defaults to `patch_input_shape` if not provided.
+            Must be positive. Defaults to `patch_input_shape` if not
+            provided.
         verbose (bool):
             Whether to enable verbose logging.
 
@@ -122,12 +118,10 @@ class EngineABCRunParams(TypedDict, total=False):
     batch_size: int
     class_dict: dict
     device: str
-    input_resolutions: list[dict[Units, Resolution]]
-    ioconfig: ModelIOConfigABC
+    labels: list
     memory_threshold: int
     num_workers: int
     output_file: str
-    patch_input_shape: IntPair
     return_labels: bool
     scale_factor: tuple[float, float]
     stride_shape: IntPair
@@ -592,7 +586,41 @@ class EngineABC(ABC):  # noqa: B024
             prediction_dtype (type):
                 Data type of the prediction output.
             **kwargs (EngineABCRunParams):
-                Additional runtime parameters used for post-processing.
+                Additional runtime parameters to update engine attributes.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                        See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+                        for more details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., "zarr" or "annotationstore").
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates from non-baseline to baseline
+                        resolution.
+                    stride_shape (IntPair):
+                        Stride used during WSI processing, at requested read resolution.
+                        Must be positive. Defaults to `patch_input_shape` if not
+                        provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             dask.array.Array:
@@ -623,10 +651,41 @@ class EngineABC(ABC):  # noqa: B024
                 Path to save the output file.
                 Required for "zarr" and "annotationstore" formats.
             **kwargs (EngineABCRunParams):
-                Additional runtime parameters including:
-                    - output_file: Name of the output file.
-                    - scale_factor: Scaling factor for annotations.
-                    - class_dict: Mapping of class indices to names.
+                Additional runtime parameters to update engine attributes.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                        See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+                        for more details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., "zarr" or "annotationstore").
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates from non-baseline to baseline
+                        resolution.
+                    stride_shape (IntPair):
+                        Stride used during WSI processing, at requested read resolution.
+                        Must be positive. Defaults to `patch_input_shape` if not
+                        provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             dict | AnnotationStore | Path:
@@ -733,7 +792,41 @@ class EngineABC(ABC):  # noqa: B024
                 Path to save the intermediate output. The intermediate output is saved
                 in a zarr file.
             **kwargs (EngineABCRunParams):
-                Additional runtime parameters used during inference.
+                Additional runtime parameters to update engine attributes.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                        See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+                        for more details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., "zarr" or "annotationstore").
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates from non-baseline to baseline
+                        resolution.
+                    stride_shape (IntPair):
+                        Stride used during WSI processing, at requested read resolution.
+                        Must be positive. Defaults to `patch_input_shape` if not
+                        provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             dict:
@@ -769,7 +862,41 @@ class EngineABC(ABC):  # noqa: B024
             prediction_dtype (type):
                 Data type of the prediction output.
             **kwargs (EngineABCRunParams):
-                Additional runtime parameters used for post-processing.
+                Additional runtime parameters to update engine attributes.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                        See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+                        for more details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., "zarr" or "annotationstore").
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates from non-baseline to baseline
+                        resolution.
+                    stride_shape (IntPair):
+                        Stride used during WSI processing, at requested read resolution.
+                        Must be positive. Defaults to `patch_input_shape` if not
+                        provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             dask.array.Array:
@@ -982,7 +1109,8 @@ class EngineABC(ABC):  # noqa: B024
         self: EngineABC,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
-        labels: list | None = None,
+        input_resolutions: list[dict[Units, Resolution]] | None = None,
+        patch_input_shape: IntPair | None = None,
         save_dir: os.PathLike | Path | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         output_type: str = "dict",
@@ -1001,8 +1129,14 @@ class EngineABC(ABC):  # noqa: B024
                 List of input images or a NumPy array of patches.
             masks (list[PathLike | Path] | np.ndarray | None):
                 Optional list of masks for WSI processing.
-            labels (list | None):
-                Optional list of labels for input images.
+            input_resolutions (list[dict[Units, Resolution]] | None):
+                Resolution settings for input heads. Supported units are `level`,
+                `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
+                [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
+                details.
+            patch_input_shape (IntPair | None):
+                Shape of input patches (height, width), requested at read
+                resolution. Must be positive.
             save_dir (PathLike | Path | None):
                 Directory to save output files. Required for WSI mode.
             ioconfig (ModelIOConfigABC | None):
@@ -1015,6 +1149,40 @@ class EngineABC(ABC):  # noqa: B024
                 Whether to treat input as patches (`True`) or WSIs (`False`).
             **kwargs (EngineABCRunParams):
                 Additional runtime parameters to update engine attributes.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                        See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+                        for more details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., "zarr" or "annotationstore").
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates from non-baseline to baseline
+                        resolution.
+                    stride_shape (IntPair):
+                        Stride used during WSI processing, at requested read resolution.
+                        Must be positive. Defaults to `patch_input_shape` if not
+                        provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             Path | None:
@@ -1033,6 +1201,12 @@ class EngineABC(ABC):  # noqa: B024
         for key in kwargs:
             setattr(self, key, kwargs.get(key))
 
+        if input_resolutions:
+            self.input_resolutions = input_resolutions
+
+        if patch_input_shape is not None:
+            self.patch_input_shape = patch_input_shape
+
         if self.num_workers > 0:
             dask.config.set(scheduler="threads", num_workers=self.num_workers)
         else:
@@ -1043,7 +1217,7 @@ class EngineABC(ABC):  # noqa: B024
 
         self.patch_mode = patch_mode
 
-        self._validate_input_numbers(images=images, masks=masks, labels=labels)
+        self._validate_input_numbers(images=images, masks=masks, labels=self.labels)
         if output_type.lower() not in ["dict", "zarr", "annotationstore"]:
             msg = "output_type must be 'dict' or 'zarr' or 'annotationstore'."
             raise TypeError(msg)
@@ -1070,8 +1244,6 @@ class EngineABC(ABC):  # noqa: B024
 
         if masks is not None:
             self.masks = self._validate_images_masks(images=masks)
-
-        self.labels = labels
 
         # if necessary move model parameters to "cpu" or "gpu" and update ioconfig
         self._ioconfig = self._load_ioconfig(ioconfig=ioconfig)
@@ -1107,10 +1279,41 @@ class EngineABC(ABC):  # noqa: B024
             save_dir (Path):
                 Directory to save the output files.
             **kwargs (EngineABCRunParams):
-                Additional runtime parameters including:
-                    - output_file: Name of the output file.
-                    - scale_factor: Scaling factor for annotations.
-                    - class_dict: Mapping of class indices to names.
+                Additional runtime parameters to update engine attributes.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                        See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+                        for more details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., "zarr" or "annotationstore").
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates from non-baseline to baseline
+                        resolution.
+                    stride_shape (IntPair):
+                        Stride used during WSI processing, at requested read resolution.
+                        Must be positive. Defaults to `patch_input_shape` if not
+                        provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             dict | AnnotationStore | Path:
@@ -1228,10 +1431,41 @@ class EngineABC(ABC):  # noqa: B024
             save_dir (Path):
                 Directory to save the output files.
             **kwargs (EngineABCRunParams):
-                Additional runtime parameters including:
-                    - output_file: Name of the output file.
-                    - scale_factor: Scaling factor for annotations.
-                    - class_dict: Mapping of class indices to names.
+                Additional runtime parameters to update engine attributes.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                        See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+                        for more details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., "zarr" or "annotationstore").
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates from non-baseline to baseline
+                        resolution.
+                    stride_shape (IntPair):
+                        Stride used during WSI processing, at requested read resolution.
+                        Must be positive. Defaults to `patch_input_shape` if not
+                        provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             dict | AnnotationStore | Path:
@@ -1315,10 +1549,11 @@ class EngineABC(ABC):  # noqa: B024
     def run(
         self: EngineABC,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
-        masks: list[os.PathLike | Path] | np.ndarray | None = None,
-        labels: list | None = None,
-        ioconfig: ModelIOConfigABC | None = None,
         *,
+        masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        input_resolutions: list[dict[Units, Resolution]] | None = None,
+        patch_input_shape: IntPair | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
         patch_mode: bool = True,
         save_dir: os.PathLike | Path | None = None,
         overwrite: bool = False,
@@ -1340,8 +1575,14 @@ class EngineABC(ABC):  # noqa: B024
                 Patches are only generated within a masked area.
                 If not provided, then a tissue mask will be automatically
                 generated for whole slide images.
-            labels (list | None):
-                Optional list of labels for input images.
+            input_resolutions (list[dict[Units, Resolution]] | None):
+                Resolution settings for input heads. Supported units are `level`,
+                `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
+                [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
+                details.
+            patch_input_shape (IntPair | None):
+                Shape of input patches (height, width), requested at read
+                resolution. Must be positive.
             ioconfig (ModelIOConfigABC | None):
                 IO configuration for patch extraction and resolution settings.
             patch_mode (bool):
@@ -1355,6 +1596,40 @@ class EngineABC(ABC):  # noqa: B024
                 Desired output format: "dict", "zarr", or "annotationstore".
             **kwargs (EngineABCRunParams):
                 Additional runtime parameters to update engine attributes.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                        See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+                        for more details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., "zarr" or "annotationstore").
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates from non-baseline to baseline
+                        resolution.
+                    stride_shape (IntPair):
+                        Stride used during WSI processing, at requested read resolution.
+                        Must be positive. Defaults to `patch_input_shape` if not
+                        provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
             AnnotationStore | Path | str | dict:
@@ -1387,7 +1662,8 @@ class EngineABC(ABC):  # noqa: B024
         save_dir = self._update_run_params(
             images=images,
             masks=masks,
-            labels=labels,
+            input_resolutions=input_resolutions,
+            patch_input_shape=patch_input_shape,
             save_dir=save_dir,
             ioconfig=ioconfig,
             overwrite=overwrite,
