@@ -1,5 +1,6 @@
 """Unit test package for architecture utilities."""
 
+import dask.array as da
 import numpy as np
 import pytest
 import torch
@@ -8,6 +9,7 @@ from tiatoolbox.models.architecture.utils import (
     UpSample2x,
     centre_crop,
     centre_crop_to_shape,
+    peak_detection_da_map_overlap,
 )
 
 
@@ -65,3 +67,96 @@ def test_centre_crop_operators() -> None:
     y = x[:, :, 6:9, 6:9]
     with pytest.raises(ValueError, match=r".*Height.*smaller than `y`*"):
         centre_crop_to_shape(y, x, data_format="NCHW")
+
+
+def test_peak_detection() -> None:
+    """Test for peak detection."""
+    min_distance = 3
+    threshold_abs = 0.5
+
+    heatmap = np.zeros((7, 7, 1), dtype=np.float32)
+
+    peak_map = peak_detection_da_map_overlap(
+        heatmap,
+        min_distance=min_distance,
+        threshold_abs=threshold_abs,
+    )
+    assert np.sum(peak_map) == 0.0  # No peaks
+
+    heatmap[0, 0, 0] = 0.9  # First peak
+    heatmap[0, 1, 0] = 0.6  # Too close to first peak
+    heatmap[1, 0, 0] = 0.6  # Too close to first peak
+    heatmap[2, 2, 0] = 0.9  # Too close to first peak
+    heatmap[3, 3, 0] = 0.9  # Second peak
+
+    peak_map = peak_detection_da_map_overlap(
+        heatmap,
+        min_distance=min_distance,
+        threshold_abs=threshold_abs,
+    )
+    assert peak_map[0, 0, 0] == 1.0
+    assert peak_map[3, 3, 0] == 1.0
+    assert np.sum(peak_map) == 2.0
+
+
+def test_peak_detection_da_map_overlap() -> None:
+    """Test for peak detection with da.map_overlap."""
+    heatmap = np.zeros((7, 7, 1), dtype=np.float32)
+    heatmap[0, 0, 0] = 0.9  # First peak
+    heatmap[0, 1, 0] = 0.6  # Too close to first peak
+    heatmap[1, 0, 0] = 0.6  # Too close to first peak
+    heatmap[2, 2, 0] = 0.9  # Too close to first peak
+    heatmap[3, 3, 0] = 0.9  # Second peak
+
+    min_distance = 3
+    threshold_abs = 0.5
+
+    # Add halo (overlap) around each block for post-processing
+    depth_h = min_distance
+    depth_w = min_distance
+    depth = {0: depth_h, 1: depth_w, 2: 0}
+
+    # Test chunk is entire heatmap
+    da_heatmap = da.from_array(heatmap, chunks=(7, 7, 1))
+
+    da_peak_map = da.map_overlap(
+        da_heatmap,
+        peak_detection_da_map_overlap,
+        depth=depth,
+        boundary=0,
+        dtype=np.float32,
+        block_info=True,
+        depth_h=depth_h,
+        depth_w=depth_w,
+        threshold_abs=threshold_abs,
+        min_distance=min_distance,
+    )
+
+    peak_map = da_peak_map.compute()
+
+    assert peak_map[0, 0, 0] == 1.0
+    assert peak_map[3, 3, 0] == 1.0
+    assert np.sum(peak_map) == 2.0
+
+    # Test small chunk with halo
+    # using very small chunk sizes (1,1,1) to force multiple overlaps
+    da_heatmap = da_heatmap.rechunk({0: 1, 1: 1, 2: 1})
+
+    da_peak_map = da.map_overlap(
+        da_heatmap,
+        peak_detection_da_map_overlap,
+        depth=depth,
+        boundary=0,
+        dtype=np.float32,
+        block_info=True,
+        depth_h=depth_h,
+        depth_w=depth_w,
+        threshold_abs=threshold_abs,
+        min_distance=min_distance,
+    )
+
+    peak_map = da_peak_map.compute()
+
+    assert peak_map[0, 0, 0] == 1.0
+    assert peak_map[3, 3, 0] == 1.0
+    assert np.sum(peak_map) == 2.0
