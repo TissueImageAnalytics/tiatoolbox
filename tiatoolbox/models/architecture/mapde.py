@@ -11,9 +11,9 @@ from __future__ import annotations
 import numpy as np
 import torch
 import torch.nn.functional as F  # noqa: N812
-from skimage.feature import peak_local_max
 
 from tiatoolbox.models.architecture.micronet import MicroNet
+from tiatoolbox.models.architecture.utils import peak_detection_da_map_overlap
 
 
 class MapDe(MicroNet):
@@ -79,7 +79,7 @@ class MapDe(MicroNet):
         threshold_abs: float = 250,
         num_classes: int = 1,
         postproc_tile_shape: tuple[int, int] = (2048, 2048),
-        output_class_dict: dict[int, str] | None = None,
+        class_dict: dict[int, str] | None = None,
     ) -> None:
         """Initialize :class:`MapDe`."""
         super().__init__(
@@ -87,7 +87,7 @@ class MapDe(MicroNet):
             num_input_channels=num_input_channels,
             out_activation="relu",
         )
-        self.output_class_dict = output_class_dict
+        self.output_class_dict = class_dict
         self.postproc_tile_shape = postproc_tile_shape
 
         dist_filter = np.array(
@@ -249,11 +249,6 @@ class MapDe(MicroNet):
         Builds a processed mask per input channel, runs peak_local_max then
         writes 1.0 at peak pixels.
 
-        Can be called inside Dask.da.map_overlap on a padded NumPy block:
-        (h_pad, w_pad, C) to process large prediction maps in chunks.
-        Keeps only centroids whose (row,col) lie in the interior window:
-        rows [depth_h : depth_h + core_h), cols [depth_w : depth_w + core_w)
-
         Returns same spatial shape as the input block
 
         Args:
@@ -268,40 +263,14 @@ class MapDe(MicroNet):
         Returns:
             out: NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere.
         """
-        block_height, block_width, block_channels = block.shape
-
-        # --- derive core (pre-overlap) size for THIS block ---
-        if block_info is None:
-            core_h = block_height - 2 * depth_h
-            core_w = block_width - 2 * depth_w
-        else:
-            info = block_info[0]
-            locs = info[
-                "array-location"
-            ]  # a list of (start, stop) coordinates per axis
-            core_h = int(locs[0][1] - locs[0][0])  # r1 - r0
-            core_w = int(locs[1][1] - locs[1][0])
-
-        rmin, rmax = depth_h, depth_h + core_h
-        cmin, cmax = depth_w, depth_w + core_w
-
-        out = np.zeros((block_height, block_width, block_channels), dtype=np.float32)
-
-        for ch in range(block_channels):
-            img = np.asarray(block[..., ch])  # NumPy 2D view
-
-            coords = peak_local_max(
-                img,
-                min_distance=self.min_distance,
-                threshold_abs=self.threshold_abs,
-                exclude_border=False,
-            )
-
-            for r, c in coords:
-                if (rmin <= r < rmax) and (cmin <= c < cmax):
-                    out[r, c, ch] = 1.0
-
-        return out
+        return peak_detection_da_map_overlap(
+            block,
+            min_distance=self.min_distance,
+            threshold_abs=self.threshold_abs,
+            block_info=block_info,
+            depth_h=depth_h,
+            depth_w=depth_w,
+        )
 
     @staticmethod
     def infer_batch(

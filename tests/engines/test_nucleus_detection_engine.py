@@ -148,6 +148,7 @@ def test_nucleus_detector_patch(
     wsi_reader = WSIReader.open(mini_wsi_svs)
     patch_1 = wsi_reader.read_rect((0, 0), (252, 252), resolution=0.5, units="mpp")
     patch_2 = wsi_reader.read_rect((252, 252), (252, 252), resolution=0.5, units="mpp")
+    patch_3 = np.zeros((252, 252, 3), dtype=np.uint8)
 
     pretrained_model = "mapde-conic"
 
@@ -159,7 +160,7 @@ def test_nucleus_detector_patch(
         device=device,
         output_type="annotationstore",
         memory_threshold=50,
-        images=[patch_1, patch_2],
+        images=[patch_1, patch_2, patch_3],
         save_dir=save_dir,
         overwrite=True,
         class_dict=None,
@@ -172,6 +173,10 @@ def test_nucleus_detector_patch(
     store_2 = SQLiteStore.open(save_dir / "1.db")
     assert len(store_2.values()) == 52
     store_2.close()
+
+    store_3 = SQLiteStore.open(save_dir / "2.db")
+    assert len(store_3.values()) == 0
+    store_3.close()
 
     imwrite(save_dir / "patch_0.png", patch_1)
     imwrite(save_dir / "patch_1.png", patch_2)

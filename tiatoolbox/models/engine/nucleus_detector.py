@@ -27,7 +27,12 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class NucleusDetector(SemanticSegmentor):
-    r"""Nucleus detection engine.
+    r"""Nucleus detection engine for digital pathology images.
+
+    This class extends SemanticSegmentor to support nucleus detection tasks
+    using pretrained or custom models from TIAToolbox. It supports both patch-level
+    and whole slide image (WSI) processing, and provides utilities for merging,
+    post-processing, and saving predictions.
 
     Args:
         model (str or nn.Module):
@@ -72,15 +77,16 @@ class NucleusDetector(SemanticSegmentor):
         ...     auto_get_mask=True,
         ...     memory_threshold=80
         ... )
+
     """
 
     def post_process_patches(
         self: NucleusDetector,
-        raw_predictions: list[da.Array],
+        raw_predictions: da.Array,
         prediction_shape: tuple[int, ...],
         prediction_dtype: type,
         **kwargs: Unpack[SemanticSegmentorRunParams],
-    ) -> list[np.ndarray]:
+    ) -> da.Array:
         """Define how to post-process patch predictions.
 
         Args:
@@ -91,18 +97,34 @@ class NucleusDetector(SemanticSegmentor):
                 Additional runtime parameters
 
         Returns:
-            A list of DataFrames containing the post-processed
-            predictions for each patch.
+            dask.array.Array: Post-processed predictions as a Dask array.
 
         """
         _ = kwargs.get("return_probabilities")
         _ = prediction_shape
         _ = prediction_dtype
 
-        return [
-            self.model.postproc_func(raw_predictions[i])
-            for i in range(len(raw_predictions))
-        ]
+        # Ensure chunks are full in spatial/channel dims; batch dim can vary
+        raw_predictions = raw_predictions.rechunk({0: 1})
+
+        def block_fn(block: np.ndarray) -> np.ndarray:
+            """Apply model's post-processing function to each block.
+
+            Args:
+                block: (b_chunk, H, W, C) NumPy array representing a chunk of
+                raw patch predictions.
+            returns:
+                Processed NumPy array after applying the model's post-processing.
+            """
+            return np.stack(
+                [self.model.postproc_func(sample) for sample in block], axis=0
+            )
+
+        return da.map_blocks(
+            block_fn,
+            raw_predictions,
+            dtype=raw_predictions.dtype,
+        )
 
     def post_process_wsi(
         self: NucleusDetector,
@@ -215,15 +237,13 @@ class NucleusDetector(SemanticSegmentor):
         if self.patch_mode:
             save_paths = []
             for i, predictions in enumerate(processed_predictions["predictions"]):
-                predictions_da = da.from_array(predictions, chunks=predictions.shape)
-
                 if isinstance(self.images[i], Path):
                     output_path = save_path.parent / (self.images[i].stem + ".db")
                 else:
                     output_path = save_path.parent / (str(i) + ".db")
 
                 out_file = self.write_centroid_maps_to_store(
-                    predictions_da,
+                    predictions,
                     scale_factor=scale_factor,
                     class_dict=class_dict,
                     save_path=output_path,

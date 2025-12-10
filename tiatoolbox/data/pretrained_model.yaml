@@ -815,7 +815,7 @@ mapde-crchisto:
             threshold_abs: 250
             num_classes: 1
             postproc_tile_shape: [ 2048, 2048 ]
-            output_class_dict: {
+            class_dict: {
                 0: "nucleus"
             }
     ioconfig:
@@ -840,7 +840,7 @@ mapde-conic:
             threshold_abs: 205
             num_classes: 1
             postproc_tile_shape: [ 2048, 2048 ]
-            output_class_dict: {
+            class_dict: {
                 0: "nucleus"
             }
     ioconfig:
@@ -866,7 +866,7 @@ sccnn-crchisto:
             threshold_abs: 0.20
             patch_output_shape: [ 13, 13 ]
             postproc_tile_shape: [ 2048, 2048 ]
-            output_class_dict: {
+            class_dict: {
                 0: "nucleus"
             }
     ioconfig:
@@ -892,7 +892,7 @@ sccnn-conic:
             threshold_abs: 0.05
             patch_output_shape: [ 13, 13 ]
             postproc_tile_shape: [ 2048, 2048 ]
-            output_class_dict: {
+            class_dict: {
                 0: "nucleus"
             }
     ioconfig:
