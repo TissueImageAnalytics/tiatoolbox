@@ -21,8 +21,6 @@ from tiatoolbox.models.engine.semantic_segmentor import (
 if TYPE_CHECKING:  # pragma: no cover
     from typing import Unpack
 
-    import pandas as pd
-
     from tiatoolbox.annotation import AnnotationStore
 
 
@@ -86,7 +84,7 @@ class NucleusDetector(SemanticSegmentor):
         prediction_shape: tuple[int, ...],
         prediction_dtype: type,
         **kwargs: Unpack[SemanticSegmentorRunParams],
-    ) -> da.Array:
+    ) -> dict[str, da.Array]:
         """Define how to post-process patch predictions.
 
         Args:
@@ -97,7 +95,15 @@ class NucleusDetector(SemanticSegmentor):
                 Additional runtime parameters
 
         Returns:
-            dask.array.Array: Post-processed predictions as a Dask array.
+            dict[str, dask.array.Array]:
+                Detection arrays aggregated per patch. Each key ('x', 'y',
+                'types', 'probs') maps to a 1-D object dask array where each
+                element corresponds to a patch's detections.
+                keys:
+                - "x": dask array of x coordinates (np.uint32).
+                - "y": dask array of y coordinates (np.uint32).
+                - "types": dask array of detection types (np.uint32).
+                - "probs": dask array of detection probabilities (np.float32).
 
         """
         _ = kwargs.get("return_probabilities")
@@ -120,11 +126,34 @@ class NucleusDetector(SemanticSegmentor):
                 [self.model.postproc_func(sample) for sample in block], axis=0
             )
 
-        return da.map_blocks(
+        postproc_maps = da.map_blocks(
             block_fn,
             raw_predictions,
             dtype=raw_predictions.dtype,
         )
+
+        # Convert each patch's centroid map to detection records and aggregate
+        detections = [
+            self._centroid_maps_to_detection_arrays(postproc_maps[i])
+            for i in range(postproc_maps.shape[0])
+        ]
+
+        def to_object_da(values: list[np.ndarray]) -> da.Array:
+            """Wrap list of numpy arrays into a single object-dtype dask array."""
+            obj_array = np.array(values, dtype=object)
+            return da.from_array(obj_array, chunks=(len(values),))
+
+        x_list = [det["x"] for det in detections]
+        y_list = [det["y"] for det in detections]
+        types_list = [det["types"] for det in detections]
+        probs_list = [det["probs"] for det in detections]
+
+        return {
+            "x": to_object_da(x_list),
+            "y": to_object_da(y_list),
+            "types": to_object_da(types_list),
+            "probs": to_object_da(probs_list),
+        }
 
     def post_process_wsi(
         self: NucleusDetector,
@@ -147,10 +176,12 @@ class NucleusDetector(SemanticSegmentor):
                 Additional runtime parameters
 
         Returns:
-            Post-processed dask array of detections at the WSI level.
-            The array has the same shape and dtype as the input.
-            Each pixel indicates the presence of a detected nucleus
-            as a probability score.
+            dict[str, da.Array]:
+                Dictionary of detection records with keys:
+                - "x": dask array of x coordinates.
+                - "y": dask array of y coordinates.
+                - "types": dask array of detection types.
+                - "probs": dask array of detection probabilities.
 
         """
         logger.info("Post processing WSI predictions in NucleusDetector")
@@ -170,7 +201,7 @@ class NucleusDetector(SemanticSegmentor):
         logger.info("Post-processing tile size: %s", rechunked_prediction_map.chunks)
         logger.info("Post-processing tiles overlap: (h=%d, w=%d)", depth_h, depth_w)
 
-        return da.map_overlap(
+        centroid_maps = da.map_overlap(
             rechunked_prediction_map,
             self.model.postproc,
             depth=depth,
@@ -181,13 +212,15 @@ class NucleusDetector(SemanticSegmentor):
             depth_w=depth_w,
         )
 
+        return self._centroid_maps_to_detection_arrays(centroid_maps)
+
     def save_predictions(
         self: NucleusDetector,
         processed_predictions: dict,
         output_type: str,
         save_path: Path | None = None,
         **kwargs: Unpack[SemanticSegmentorRunParams],
-    ) -> AnnotationStore | Path:
+    ) -> dict | AnnotationStore | Path:
         """Save nucleus detections to disk or return them in memory.
 
         This method saves predictions in one of the supported formats:
@@ -199,8 +232,17 @@ class NucleusDetector(SemanticSegmentor):
         Args:
             processed_predictions (dict):
                 Dictionary containing processed model predictions.
+                keys:
+                - "predictions":
+                {
+                    - 'x': dask array of x coordinates (np.uint32).
+                    - 'y': dask array of y coordinates (np.uint32).
+                    - 'types': dask array of detection types (np.uint32).
+                    - 'probs': dask array of detection probabilities (np.float32).
+                }
             output_type (str):
-                "annotationstore".
+                Desired output format.
+                Supported values are "dict", "zarr", and "annotationstore".
             save_path (Path | None):
                 Path to save the output file.
             **kwargs (SemanticSegmentorRunParams):
@@ -213,14 +255,13 @@ class NucleusDetector(SemanticSegmentor):
                 - returns AnnotationStore or path to .db file.
 
         """
-        # Only "annotationstore" output type is supported for NucleusDetector
-        if output_type != "annotationstore":
-            logger.warning(
-                "Output type %s is not supported by NucleusDetector. "
-                "Defaulting to 'annotationstore'.",
+        if output_type.lower() != "annotationstore":
+            return super().save_predictions(
+                processed_predictions["predictions"],
                 output_type,
+                save_path=save_path,
+                **kwargs,
             )
-            output_type = "annotationstore"
 
         # scale_factor set from kwargs
         scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
@@ -233,17 +274,26 @@ class NucleusDetector(SemanticSegmentor):
         save_paths = []
 
         logger.info("Saving predictions as AnnotationStore.")
-
         if self.patch_mode:
             save_paths = []
-            for i, predictions in enumerate(processed_predictions["predictions"]):
+            detections = processed_predictions["predictions"]
+
+            num_patches = len(detections["x"])
+            for i in range(num_patches):
                 if isinstance(self.images[i], Path):
                     output_path = save_path.parent / (self.images[i].stem + ".db")
                 else:
                     output_path = save_path.parent / (str(i) + ".db")
 
-                out_file = self.write_centroid_maps_to_store(
-                    predictions,
+                detection_arrays = {
+                    "x": detections["x"][i],
+                    "y": detections["y"][i],
+                    "types": detections["types"][i],
+                    "probs": detections["probs"][i],
+                }
+
+                out_file = self.write_detection_arrays_to_store(
+                    detection_arrays=detection_arrays,
                     scale_factor=scale_factor,
                     class_dict=class_dict,
                     save_path=output_path,
@@ -251,91 +301,13 @@ class NucleusDetector(SemanticSegmentor):
 
                 save_paths.append(out_file)
             return save_paths
-        return self.write_centroid_maps_to_store(
-            processed_predictions["predictions"],
+        predictions = processed_predictions["predictions"]
+        return self.write_detection_arrays_to_store(
+            detection_arrays=predictions,
             scale_factor=scale_factor,
             save_path=save_path,
             class_dict=class_dict,
         )
-
-    @staticmethod
-    def nucleus_detection_nms(
-        df: pd.DataFrame, radius: int, overlap_threshold: float = 0.5
-    ) -> pd.DataFrame:
-        """Non-Maximum Suppression across ALL detections.
-
-        Keeps the highest-prob detection, removes any other point
-        within 'radius' pixels > overlap_threshold.
-        Expects dataframe columns: ['x','y','type','prob'].
-
-        Args:
-            df: pandas DataFrame of detections.
-            radius: radius in pixels for suppression.
-            overlap_threshold: float in [0,1], fraction of radius for suppression.
-
-        Returns:
-            filtered DataFrame with same columns/dtypes.
-        """
-        overlap_max = 1.0
-        overlap_min = 0.0
-        if df.empty:
-            return df.copy()
-        if radius <= 0:
-            msg = "radius must be > 0"
-            raise ValueError(msg)
-        if not overlap_min < overlap_threshold <= overlap_max:
-            msg = f"overlap_threshold must be in (0.0, 1.0], got {overlap_threshold}"
-            raise ValueError(msg)
-
-        # Sort by descending probability (highest priority first)
-        sub = df.sort_values("prob", ascending=False).reset_index(drop=True)
-
-        # Coordinates as float64 for distance math
-
-        coords = sub[["x", "y"]].to_numpy(dtype=np.float64)
-        r = float(radius)
-        two_r = 2.0 * r
-        two_r2 = two_r * two_r  # distance^2 cutoff for any overlap
-
-        suppressed = np.zeros(len(sub), dtype=bool)
-        keep_idx = []
-
-        for i in range(len(sub)):
-            if suppressed[i]:
-                continue
-
-            keep_idx.append(i)
-
-            # Vectorised distances to all points
-            dx = coords[:, 0] - coords[i, 0]
-            dy = coords[:, 1] - coords[i, 1]
-            d2 = dx * dx + dy * dy
-
-            # Only points with d < 2r can have nonzero overlap
-            cand = d2 <= two_r2
-            cand[i] = False  # don't suppress the kept point itself
-            if not np.any(cand):
-                continue
-
-            d = np.sqrt(d2[cand])
-
-            # Safe cosine argument = (distance ÷ diameter)
-            # Clamp for numerical stability
-            u = np.clip(d / (2.0 * r), -1.0, 1.0)
-            # Exact intersection area of two equal-radius circles.
-            inter = 2.0 * (r * r) * np.arccos(u) - 0.5 * d * np.sqrt(
-                np.clip(4.0 * r * r - d * d, 0.0, None)
-            )
-
-            union = 2.0 * np.pi * (r * r) - inter
-            iou = inter / union
-
-            # Suppress candidates whose IoU exceeds threshold
-            idx_cand = np.where(cand)[0]
-            to_suppress = idx_cand[iou >= overlap_threshold]
-            suppressed[to_suppress] = True
-
-        return sub.iloc[keep_idx].copy()
 
     @staticmethod
     def _centroid_maps_to_detection_records(
@@ -380,6 +352,81 @@ class NucleusDetector(SemanticSegmentor):
         # read detection probabilities
         p = block[ys, xs, cs].astype(np.float32, copy=False)
         return (x, y, t, p)
+
+    @staticmethod
+    def _centroid_maps_to_detection_arrays(
+        detection_maps: da.Array,
+    ) -> dict[str, da.Array]:
+        """Convert centroid maps to detection records stored as dask arrays.
+
+        Returns a dictionary with four 1-D dask arrays: x, y, types, probs.
+
+        Args:
+            detection_maps: Dask array (H, W, C) of centroid maps.
+
+        Returns:
+            dict with keys:
+                - "x": dask array of x coordinates (np.uint32).
+                - "y": dask array of y coordinates (np.uint32).
+                - "types": dask array of detection types (np.uint32).
+                - "probs": dask array of detection probabilities (np.float32).
+
+        """
+        recs_delayed = (
+            detection_maps.map_blocks(
+                NucleusDetector._centroid_maps_to_detection_records,
+                dtype=object,
+                block_info=True,
+            )
+            .to_delayed()
+            .ravel()
+        )
+
+        def make_parts(index: int, dtype: np.dtype) -> list[da.Array]:
+            """Extract one element from each delayed record tuple."""
+            return [
+                da.from_delayed(
+                    dask.delayed(lambda rec, idx=index: rec[idx])(rec_tuple),
+                    shape=(np.nan,),
+                    dtype=dtype,
+                )
+                for rec_tuple in recs_delayed
+            ]
+
+        def concat_parts(parts: list[da.Array], dtype: np.dtype) -> da.Array:
+            """Concatenate parts while handling empty inputs."""
+            if not parts:
+                return da.from_array(np.empty((0,), dtype=dtype), chunks=(0,))
+            return da.concatenate(parts)
+
+        x_parts = make_parts(0, np.uint32)
+        y_parts = make_parts(1, np.uint32)
+        type_parts = make_parts(2, np.uint32)
+        prob_parts = make_parts(3, np.float32)
+
+        x_da = concat_parts(x_parts, np.uint32)
+        y_da = concat_parts(y_parts, np.uint32)
+        types_da = concat_parts(type_parts, np.uint32)
+        probs_da = concat_parts(prob_parts, np.float32)
+
+        # Compute once to avoid nested delayed graphs downstream.
+        with ProgressBar():
+            x_np, y_np, types_np, probs_np = dask.compute(
+                x_da, y_da, types_da, probs_da
+            )
+
+        def wrap(arr: np.ndarray) -> da.Array:
+            """Wrap computed numpy arrays back to single-chunk dask arrays."""
+            if arr.size == 0:
+                return da.from_array(arr, chunks=(0,))
+            return da.from_array(arr, chunks="auto")
+
+        return {
+            "x": wrap(x_np),
+            "y": wrap(y_np),
+            "types": wrap(types_np),
+            "probs": wrap(probs_np),
+        }
 
     @staticmethod
     def _write_detection_records_to_store(
@@ -436,20 +483,24 @@ class NucleusDetector(SemanticSegmentor):
         return written
 
     @staticmethod
-    def write_centroid_maps_to_store(
-        detection_maps: da.Array,
+    def write_detection_arrays_to_store(
+        detection_arrays: dict[str, da.Array],
         scale_factor: tuple[float, float] = (1.0, 1.0),
         class_dict: dict | None = None,
         save_path: Path | None = None,
         batch_size: int = 5000,
     ) -> Path | SQLiteStore:
-        """Write post-processed detection maps to an AnnotationStore.
+        """Write detection arrays to an SQLiteStore.
 
-        This is done in chunks using Dask for efficiency and to handle large
-        detection maps at WSI level.
+        Expects detection_arrays to contain dask arrays for keys
+        ``x``, ``y``, ``types``, and ``probs``.
 
         Args:
-            detection_maps: Dask array (H, W, C) of detection scores.
+            detection_arrays: dict with keys:
+                - "x": dask array of x coordinates (np.uint32).
+                - "y": dask array of y coordinates (np.uint32).
+                - "types": dask array of detection types (np.uint32).
+                - "probs": dask array of detection probabilities (np.float32).
             scale_factor: Tuple (sx, sy) to scale coordinates before saving.
             class_dict: Optional dict mapping class indices to names.
             save_path: Optional Path to save the .db file.
@@ -458,34 +509,32 @@ class NucleusDetector(SemanticSegmentor):
 
         Returns:
             Path to saved .db file if save_path is provided, else in-memory SQLiteStore.
+
         """
-        recs_delayed = (  # Convert each block to detection records
-            detection_maps.map_blocks(
-                NucleusDetector._centroid_maps_to_detection_records,
-                dtype=object,  # we return Python tuples
-                block_info=True,
-            )
-            .to_delayed()
-            .ravel()
-        )
+        xs = detection_arrays["x"]
+        ys = detection_arrays["y"]
+        types = detection_arrays["types"]
+        probs = detection_arrays["probs"]
 
-        # create annotation store
+        xs = np.atleast_1d(np.asarray(xs))
+        ys = np.atleast_1d(np.asarray(ys))
+        types = np.atleast_1d(np.asarray(types))
+        probs = np.atleast_1d(np.asarray(probs))
+
+        if not (len(xs) == len(ys) == len(types) == len(probs)):
+            msg = "Detection record lengths are misaligned."
+            raise ValueError(msg)
+
         store = SQLiteStore()
+        total_written = NucleusDetector._write_detection_records_to_store(
+            (xs, ys, types, probs),
+            store,
+            scale_factor,
+            class_dict,
+            batch_size,
+        )
+        logger.info("Total detections written to store: %s", total_written)
 
-        # one delayed writer per chunk (returns number of detections written)
-        writes = [
-            dask.delayed(NucleusDetector._write_detection_records_to_store)(
-                recs, store, scale_factor, class_dict, batch_size
-            )
-            for recs in recs_delayed
-        ]
-
-        # IMPORTANT: SQLite is single-writer; run sequentially
-        with ProgressBar():
-            total = dask.compute(*writes, scheduler="single-threaded")
-        logger.info("Total detections written to store: %s", sum(total))
-
-        # if a save directory is provided, then dump store into a file
         if save_path:
             save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
             save_path = save_path.parent.absolute() / (save_path.stem + ".db")

@@ -6,8 +6,7 @@ from collections.abc import Callable
 
 import dask.array as da
 import numpy as np
-import pandas as pd
-import pytest
+import zarr
 
 from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
@@ -26,91 +25,6 @@ def _rm_dir(path: pathlib.Path) -> None:
 
 def check_output(path: pathlib.Path) -> None:
     """Check NucleusDetector output."""
-
-
-def test_nucleus_detection_nms_empty_dataframe() -> None:
-    """nucleus_detection_nms should return a copy for empty inputs."""
-    df = pd.DataFrame(columns=["x", "y", "type", "prob"])
-
-    result = NucleusDetector.nucleus_detection_nms(df, radius=3)
-
-    assert result.empty
-    assert result is not df
-    assert list(result.columns) == ["x", "y", "type", "prob"]
-
-
-def test_nucleus_detection_nms_invalid_radius() -> None:
-    """Radius must be strictly positive."""
-    df = pd.DataFrame({"x": [0], "y": [0], "type": [1], "prob": [0.9]})
-
-    with pytest.raises(ValueError, match="radius must be > 0"):
-        NucleusDetector.nucleus_detection_nms(df, radius=0)
-
-
-def test_nucleus_detection_nms_invalid_overlap_threshold() -> None:
-    """overlap_threshold must lie in (0, 1]."""
-    df = pd.DataFrame({"x": [0], "y": [0], "type": [1], "prob": [0.9]})
-
-    message = r"overlap_threshold must be in \(0\.0, 1\.0\], got 0"
-    with pytest.raises(ValueError, match=message):
-        NucleusDetector.nucleus_detection_nms(df, radius=1, overlap_threshold=0)
-
-
-def test_nucleus_detection_nms_suppresses_overlapping_detections() -> None:
-    """Lower-probability overlapping detections are removed."""
-    df = pd.DataFrame(
-        {
-            "x": [2, 0, 20],
-            "y": [1, 0, 20],
-            "type": [1, 1, 2],
-            "prob": [0.6, 0.9, 0.7],
-        }
-    )
-
-    result = NucleusDetector.nucleus_detection_nms(df, radius=5)
-
-    expected = pd.DataFrame(
-        {"x": [0, 20], "y": [0, 20], "type": [1, 2], "prob": [0.9, 0.7]}
-    )
-    pd.testing.assert_frame_equal(result.reset_index(drop=True), expected)
-
-
-def test_nucleus_detection_nms_suppresses_across_types() -> None:
-    """Overlapping detections of different types are also suppressed."""
-    df = pd.DataFrame(
-        {
-            "x": [0, 0, 20],
-            "y": [0, 0, 0],
-            "type": [1, 2, 1],
-            "prob": [0.6, 0.95, 0.4],
-        }
-    )
-
-    result = NucleusDetector.nucleus_detection_nms(df, radius=5)
-
-    expected = pd.DataFrame(
-        {"x": [0, 20], "y": [0, 0], "type": [2, 1], "prob": [0.95, 0.4]}
-    )
-    pd.testing.assert_frame_equal(result.reset_index(drop=True), expected)
-
-
-def test_nucleus_detection_nms_retains_non_overlapping_candidates() -> None:
-    """Detections with IoU below the threshold are preserved."""
-    df = pd.DataFrame(
-        {
-            "x": [0, 10],
-            "y": [0, 0],
-            "type": [1, 1],
-            "prob": [0.8, 0.5],
-        }
-    )
-
-    result = NucleusDetector.nucleus_detection_nms(df, radius=5, overlap_threshold=0.5)
-
-    expected = pd.DataFrame(
-        {"x": [0, 10], "y": [0, 0], "type": [1, 1], "prob": [0.8, 0.5]}
-    )
-    pd.testing.assert_frame_equal(result.reset_index(drop=True), expected)
 
 
 def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -> None:
@@ -136,10 +50,31 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
     assert len(store.values()) == 281
     store.close()
 
+    result_path = nucleus_detector.run(
+        patch_mode=False,
+        device=device,
+        output_type="zarr",
+        memory_threshold=50,
+        images=[mini_wsi_svs],
+        save_dir=save_dir,
+        overwrite=True,
+    )
+
+    zarr_path = result_path[mini_wsi_svs]
+    zarr_group = zarr.open(zarr_path, mode="r")
+    xs = zarr_group["x"][:]
+    ys = zarr_group["y"][:]
+    types = zarr_group["types"][:]
+    probs = zarr_group["probs"][:]
+    assert len(xs) == 281
+    assert len(ys) == 281
+    assert len(types) == 281
+    assert len(probs) == 281
+
     _rm_dir(save_dir)
 
 
-def test_nucleus_detector_patch(
+def test_nucleus_detector_patch_annotation_store_output(
     remote_sample: Callable, tmp_path: pathlib.Path
 ) -> None:
     """Test for nucleus detection engine in patch mode."""
@@ -183,7 +118,7 @@ def test_nucleus_detector_patch(
     _ = nucleus_detector.run(
         patch_mode=True,
         device=device,
-        output_type="zarr",
+        output_type="annotationstore",
         memory_threshold=50,
         images=[save_dir / "patch_0.png", save_dir / "patch_1.png"],
         save_dir=save_dir,
@@ -201,30 +136,63 @@ def test_nucleus_detector_patch(
     _rm_dir(save_dir)
 
 
-def test_nucleus_detector_write_centroid_maps(tmp_path: pathlib.Path) -> None:
-    """Test for _write_centroid_maps function."""
-    detection_maps = np.zeros((20, 20, 1), dtype=np.uint8)
-    detection_maps = da.from_array(detection_maps, chunks=(20, 20, 1))
+def test_nucleus_detector_patches_dict_output(
+    remote_sample: Callable,
+) -> None:
+    """Test for nucleus detection engine in patch mode."""
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
 
-    store = NucleusDetector.write_centroid_maps_to_store(
-        detection_maps=detection_maps, class_dict=None
-    )
-    assert len(store.values()) == 0
-    store.close()
+    wsi_reader = WSIReader.open(mini_wsi_svs)
+    patch_1 = wsi_reader.read_rect((0, 0), (252, 252), resolution=0.5, units="mpp")
+    patch_2 = wsi_reader.read_rect((252, 252), (252, 252), resolution=0.5, units="mpp")
+    patch_3 = np.zeros((252, 252, 3), dtype=np.uint8)
 
-    detection_maps = np.zeros((20, 20, 1), dtype=np.uint8)
-    detection_maps[10, 10, 0] = 1
-    detection_maps = da.from_array(detection_maps, chunks=(20, 20, 1))
-    _ = NucleusDetector.write_centroid_maps_to_store(
-        detection_maps=detection_maps,
-        save_path=tmp_path / "test.db",
-        class_dict={0: "nucleus"},
+    pretrained_model = "mapde-conic"
+
+    nucleus_detector = NucleusDetector(model=pretrained_model)
+
+    output_dict = nucleus_detector.run(
+        patch_mode=True,
+        device=device,
+        output_type="dict",
+        memory_threshold=50,
+        images=[patch_1, patch_2, patch_3],
+        save_dir=None,
+        class_dict=None,
     )
-    store = SQLiteStore.open(tmp_path / "test.db")
-    assert len(store.values()) == 1
-    annotation = next(iter(store.values()))
-    print(annotation)
-    assert annotation.properties["type"] == "nucleus"
-    assert annotation.geometry.centroid.x == 10.0
-    assert annotation.geometry.centroid.y == 10.0
-    store.close()
+    assert len(output_dict["x"]) == 3
+    assert len(output_dict["y"]) == 3
+    assert len(output_dict["types"]) == 3
+    assert len(output_dict["probs"]) == 3
+    assert len(output_dict["x"][0]) == 270
+    assert len(output_dict["x"][1]) == 52
+    assert len(output_dict["x"][2]) == 0
+    assert len(output_dict["y"][0]) == 270
+    assert len(output_dict["y"][1]) == 52
+    assert len(output_dict["y"][2]) == 0
+    assert len(output_dict["types"][0]) == 270
+    assert len(output_dict["types"][1]) == 52
+    assert len(output_dict["types"][2]) == 0
+    assert len(output_dict["probs"][0]) == 270
+    assert len(output_dict["probs"][1]) == 52
+    assert len(output_dict["probs"][2]) == 0
+
+
+def test_centroid_maps_to_detection_arrays() -> None:
+    """Convert centroid maps to detection arrays."""
+    detection_maps = np.zeros((4, 4, 2), dtype=np.float32)
+    detection_maps[1, 1, 0] = 1.0
+    detection_maps[2, 3, 1] = 0.5
+    detection_maps = da.from_array(detection_maps, chunks=(2, 2, 2))
+
+    detections = NucleusDetector._centroid_maps_to_detection_arrays(detection_maps)
+
+    xs = detections["x"]
+    ys = detections["y"]
+    types = detections["types"]
+    probs = detections["probs"]
+
+    np.testing.assert_array_equal(xs, np.array([1, 3], dtype=np.uint32))
+    np.testing.assert_array_equal(ys, np.array([1, 2], dtype=np.uint32))
+    np.testing.assert_array_equal(types, np.array([0, 1], dtype=np.uint32))
+    np.testing.assert_array_equal(probs, np.array([1.0, 0.5], dtype=np.float32))
