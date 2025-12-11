@@ -1950,14 +1950,6 @@ host = "127.0.0.1"
 host2 = "127.0.0.1"
 port = os.environ.get("TIATOOLBOX_TILESERVER_PORT", "5000")
 
-_LOCAL_PROXY_BYPASS = {"127.0.0.1", "localhost"}
-for env_var in ("NO_PROXY", "no_proxy"):
-    existing = os.environ.get(env_var, "")
-    entries = {item.strip() for item in existing.split(",") if item.strip()}
-    if not _LOCAL_PROXY_BYPASS.issubset(entries):
-        entries |= _LOCAL_PROXY_BYPASS
-        os.environ[env_var] = ",".join(sorted(entries))
-
 
 def update() -> None:
     """Callback to ensure tiles are updated when needed."""
