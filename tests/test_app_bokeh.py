@@ -9,6 +9,7 @@ import multiprocessing
 import re
 import time
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import bokeh.models as bkmodels
@@ -25,7 +26,7 @@ from PIL import Image
 from scipy.ndimage import label
 
 from tiatoolbox.data import _fetch_remote_sample
-from tiatoolbox.visualization.bokeh_app import main
+from tiatoolbox.visualization.bokeh_app import app_hooks, main
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
 
@@ -39,6 +40,13 @@ BOKEH_PATH = importlib_resources.files("tiatoolbox.visualization.bokeh_app")
 FILLED = 0
 MICRON_FORMATTER = 1
 GRIDLINES = 2
+
+
+class _DummySessionContext:
+    """Simple shim matching the subset of Bokeh's SessionContext we use."""
+
+    def __init__(self: _DummySessionContext, user: str) -> None:
+        self.request = SimpleNamespace(arguments={"user": user})
 
 
 # helper functions and fixtures
@@ -831,3 +839,47 @@ def test_clearing_doc(doc: Document) -> None:
     """Test that the doc can be cleared."""
     doc.clear()
     assert len(doc.roots) == 0
+
+
+def test_app_hooks_session_destroyed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hook should call reset endpoint and exit."""
+    recorded: dict[str, object] = {}
+
+    def fake_get(url: str, *, timeout: int) -> None:
+        recorded["url"] = url
+        recorded["timeout"] = timeout
+
+    monkeypatch.setattr(app_hooks, "PORT", "6150")
+    monkeypatch.setattr(app_hooks.requests, "get", fake_get)
+    exited = False
+
+    def fake_exit() -> None:
+        nonlocal exited
+        exited = True
+
+    monkeypatch.setattr(app_hooks, "sys", SimpleNamespace(exit=fake_exit))
+    app_hooks.on_session_destroyed(_DummySessionContext("user-1"))
+    assert recorded["url"] == "http://127.0.0.1:6150/tileserver/reset/user-1"
+    assert recorded["timeout"] == 5
+    assert exited
+
+
+def test_app_hooks_session_destroyed_suppresses_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ReadTimeout should be suppressed and exit still called."""
+
+    def fake_get(*_: object, **__: object) -> None:
+        raise app_hooks.requests.exceptions.ReadTimeout  # type: ignore[attr-defined]
+
+    monkeypatch.setattr(app_hooks, "PORT", "6160")
+    monkeypatch.setattr(app_hooks.requests, "get", fake_get)
+    exited = False
+
+    def fake_exit() -> None:
+        nonlocal exited
+        exited = True
+
+    monkeypatch.setattr(app_hooks, "sys", SimpleNamespace(exit=fake_exit))
+    app_hooks.on_session_destroyed(_DummySessionContext("user-2"))
+    assert exited
