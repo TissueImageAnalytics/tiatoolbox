@@ -40,18 +40,11 @@ def _flatten_predictions_to_dask(
         arr = arr.compute()
 
     arr_list = list(arr)
-    if arr_list is not None:
-        if len(arr_list) == 0:
-            flat_np = np.empty((0,), dtype=np.float32)
-            return da.from_array(flat_np, chunks="auto")
-
-        dask_parts = [
-            a if isinstance(a, da.Array) else da.from_array(a, chunks="auto")
-            for a in arr_list
-        ]
-        return da.concatenate(dask_parts, axis=0)
-
-    return da.from_array(arr, chunks="auto")
+    dask_parts = [
+        a if isinstance(a, da.Array) else da.from_array(a, chunks="auto")
+        for a in arr_list
+    ]
+    return da.concatenate(dask_parts, axis=0)
 
 
 class NucleusDetector(SemanticSegmentor):
@@ -280,13 +273,6 @@ class NucleusDetector(SemanticSegmentor):
                 - returns AnnotationStore or path to .db file.
 
         """
-        if output_type.lower() not in ["dict", "zarr", "annotationstore"]:
-            msg = (
-                f"Unsupported output_type '{output_type}'. "
-                "Supported types are 'dict', 'zarr', and 'annotationstore'."
-            )
-            raise ValueError(msg)
-
         # scale_factor set from kwargs
         scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
         # class_dict set from kwargs
@@ -555,10 +541,8 @@ class NucleusDetector(SemanticSegmentor):
                 for rec_tuple in recs_delayed
             ]
 
-        def concat_parts(parts: list[da.Array], dtype: np.dtype) -> da.Array:
+        def concat_parts(parts: list[da.Array]) -> da.Array:
             """Concatenate parts while handling empty inputs."""
-            if not parts:
-                return da.from_array(np.empty((0,), dtype=dtype), chunks=(0,))
             return da.concatenate(parts)
 
         x_parts = make_parts(0, np.uint32)
@@ -566,10 +550,10 @@ class NucleusDetector(SemanticSegmentor):
         type_parts = make_parts(2, np.uint32)
         prob_parts = make_parts(3, np.float32)
 
-        x_da = concat_parts(x_parts, np.uint32)
-        y_da = concat_parts(y_parts, np.uint32)
-        types_da = concat_parts(type_parts, np.uint32)
-        probs_da = concat_parts(prob_parts, np.float32)
+        x_da = concat_parts(x_parts)
+        y_da = concat_parts(y_parts)
+        types_da = concat_parts(type_parts)
+        probs_da = concat_parts(prob_parts)
 
         # Compute once to avoid nested delayed graphs downstream.
         with ProgressBar():

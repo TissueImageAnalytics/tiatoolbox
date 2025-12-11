@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 import dask.array as da
 import numpy as np
+import pytest
 import zarr
 
 from tiatoolbox.annotation.storage import SQLiteStore
@@ -32,6 +33,7 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
     save_dir = tmp_path
 
     nucleus_detector = NucleusDetector(model=pretrained_model)
+    nucleus_detector.drop_keys = []
     _ = nucleus_detector.run(
         patch_mode=False,
         device=device,
@@ -66,6 +68,28 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
     assert len(ys) == 281
     assert len(types) == 281
     assert len(probs) == 281
+
+    nucleus_detector.drop_keys = ["probs"]
+    result_path = nucleus_detector.run(
+        patch_mode=False,
+        device=device,
+        output_type="zarr",
+        memory_threshold=50,
+        images=[mini_wsi_svs],
+        save_dir=save_dir,
+        overwrite=True,
+    )
+
+    zarr_path = result_path[mini_wsi_svs]
+    zarr_group = zarr.open(zarr_path, mode="r")
+    xs = zarr_group["x"][:]
+    ys = zarr_group["y"][:]
+    types = zarr_group["types"][:]
+    probs = zarr_group.get("probs", None)
+    assert probs is None
+    assert len(xs) == 281
+    assert len(ys) == 281
+    assert len(types) == 281
 
     _rm_dir(save_dir)
 
@@ -218,6 +242,31 @@ def test_nucleus_detector_patches_zarr_output(
     assert len(output_dict["probs"]) == 322
     assert len(output_dict["patch_offsets"]) == 4
 
+    patch_1_start, patch_1_end = (
+        output_dict["patch_offsets"][0],
+        output_dict["patch_offsets"][1],
+    )
+    patch_2_start, patch_2_end = (
+        output_dict["patch_offsets"][1],
+        output_dict["patch_offsets"][2],
+    )
+    patch_3_start, patch_3_end = (
+        output_dict["patch_offsets"][2],
+        output_dict["patch_offsets"][3],
+    )
+    assert len(output_dict["x"][patch_1_start:patch_1_end]) == 270
+    assert len(output_dict["x"][patch_2_start:patch_2_end]) == 52
+    assert len(output_dict["x"][patch_3_start:patch_3_end]) == 0
+    assert len(output_dict["y"][patch_1_start:patch_1_end]) == 270
+    assert len(output_dict["y"][patch_2_start:patch_2_end]) == 52
+    assert len(output_dict["y"][patch_3_start:patch_3_end]) == 0
+    assert len(output_dict["types"][patch_1_start:patch_1_end]) == 270
+    assert len(output_dict["types"][patch_2_start:patch_2_end]) == 52
+    assert len(output_dict["types"][patch_3_start:patch_3_end]) == 0
+    assert len(output_dict["probs"][patch_1_start:patch_1_end]) == 270
+    assert len(output_dict["probs"][patch_2_start:patch_2_end]) == 52
+    assert len(output_dict["probs"][patch_3_start:patch_3_end]) == 0
+
     _rm_dir(save_dir)
 
 
@@ -239,3 +288,43 @@ def test_centroid_maps_to_detection_arrays() -> None:
     np.testing.assert_array_equal(ys, np.array([1, 2], dtype=np.uint32))
     np.testing.assert_array_equal(types, np.array([0, 1], dtype=np.uint32))
     np.testing.assert_array_equal(probs, np.array([1.0, 0.5], dtype=np.float32))
+
+
+def test_write_detection_arrays_to_store() -> None:
+    """Test writing detection arrays to annotation store."""
+    detection_arrays = {
+        "x": np.array([1, 3], dtype=np.uint32),
+        "y": np.array([1, 2], dtype=np.uint32),
+        "types": np.array([0, 1], dtype=np.uint32),
+        "probs": np.array([1.0, 0.5], dtype=np.float32),
+    }
+
+    store = NucleusDetector.write_detection_arrays_to_store(detection_arrays)
+    assert len(store.values()) == 2
+
+    detection_arrays = {
+        "x": np.array([1], dtype=np.uint32),
+        "y": np.array([1, 2], dtype=np.uint32),
+        "types": np.array([0], dtype=np.uint32),
+        "probs": np.array([1.0, 0.5], dtype=np.float32),
+    }
+    with pytest.raises(
+        ValueError,
+        match=r"Detection record lengths are misaligned.",
+    ):
+        _ = NucleusDetector.write_detection_arrays_to_store(detection_arrays)
+
+
+def test_write_detection_records_to_store_no_class_dict() -> None:
+    """Test writing detection records to annotation store."""
+    detection_records = (np.array([1]), np.array([2]), np.array([0]), np.array([1.0]))
+
+    dummy_store = SQLiteStore()
+    total = NucleusDetector._write_detection_records_to_store(
+        detection_records, store=dummy_store, scale_factor=(1.0, 1.0), class_dict=None
+    )
+    assert len(dummy_store.values()) == 1
+    assert total == 1
+    annotation = next(iter(dummy_store.values()))
+    assert annotation.properties["type"] == 0
+    dummy_store.close()
