@@ -23,10 +23,6 @@ def _rm_dir(path: pathlib.Path) -> None:
         shutil.rmtree(path, ignore_errors=True)
 
 
-def check_output(path: pathlib.Path) -> None:
-    """Check NucleusDetector output."""
-
-
 def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -> None:
     """Test for nucleus detection engine."""
     mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
@@ -160,6 +156,7 @@ def test_nucleus_detector_patches_dict_output(
         save_dir=None,
         class_dict=None,
     )
+    output_dict = output_dict["predictions"]
     assert len(output_dict["x"]) == 3
     assert len(output_dict["y"]) == 3
     assert len(output_dict["types"]) == 3
@@ -176,6 +173,52 @@ def test_nucleus_detector_patches_dict_output(
     assert len(output_dict["probs"][0]) == 270
     assert len(output_dict["probs"][1]) == 52
     assert len(output_dict["probs"][2]) == 0
+
+
+def test_nucleus_detector_patches_zarr_output(
+    remote_sample: Callable, tmp_path: pathlib.Path
+) -> None:
+    """Test for nucleus detection engine in patch mode."""
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+
+    wsi_reader = WSIReader.open(mini_wsi_svs)
+    patch_1 = wsi_reader.read_rect((0, 0), (252, 252), resolution=0.5, units="mpp")
+    patch_2 = wsi_reader.read_rect((252, 252), (252, 252), resolution=0.5, units="mpp")
+    patch_3 = np.zeros((252, 252, 3), dtype=np.uint8)
+
+    pretrained_model = "mapde-conic"
+
+    nucleus_detector = NucleusDetector(model=pretrained_model)
+
+    save_dir = tmp_path
+
+    output_path = nucleus_detector.run(
+        patch_mode=True,
+        device=device,
+        output_type="zarr",
+        memory_threshold=50,
+        images=[patch_1, patch_2, patch_3],
+        save_dir=save_dir,
+        class_dict=None,
+        overwrite=True,
+    )
+
+    zarr_group = zarr.open(output_path, mode="r")
+    output_dict = {
+        "x": zarr_group["x"][:],
+        "y": zarr_group["y"][:],
+        "types": zarr_group["types"][:],
+        "probs": zarr_group["probs"][:],
+        "patch_offsets": zarr_group["patch_offsets"][:],
+    }
+
+    assert len(output_dict["x"]) == 322
+    assert len(output_dict["y"]) == 322
+    assert len(output_dict["types"]) == 322
+    assert len(output_dict["probs"]) == 322
+    assert len(output_dict["patch_offsets"]) == 4
+
+    _rm_dir(save_dir)
 
 
 def test_centroid_maps_to_detection_arrays() -> None:

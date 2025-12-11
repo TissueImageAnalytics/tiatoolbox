@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING
 import dask
 import dask.array as da
 import numpy as np
+import zarr
+from dask import compute
 from dask.diagnostics.progress import ProgressBar
 from shapely.geometry import Point
 
@@ -17,11 +19,39 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
 )
+from tiatoolbox.wsicore.wsireader import is_zarr
 
 if TYPE_CHECKING:  # pragma: no cover
     from typing import Unpack
 
     from tiatoolbox.annotation import AnnotationStore
+
+
+def _flatten_predictions_to_dask(
+    arr: da.Array | list[np.ndarray] | np.ndarray,
+) -> da.Array:
+    """Normalise predictions to a flat 1D Dask array."""
+    # # Case 1: already a Dask array
+    if isinstance(arr, da.Array):
+        # If it's already a flat numeric Dask array, just return it
+        if arr.dtype != object:
+            return arr
+        # Object-dtype Dask array: materialise then treat as list
+        arr = arr.compute()
+
+    arr_list = list(arr)
+    if arr_list is not None:
+        if len(arr_list) == 0:
+            flat_np = np.empty((0,), dtype=np.float32)
+            return da.from_array(flat_np, chunks="auto")
+
+        dask_parts = [
+            a if isinstance(a, da.Array) else da.from_array(a, chunks="auto")
+            for a in arr_list
+        ]
+        return da.concatenate(dask_parts, axis=0)
+
+    return da.from_array(arr, chunks="auto")
 
 
 class NucleusDetector(SemanticSegmentor):
@@ -138,21 +168,16 @@ class NucleusDetector(SemanticSegmentor):
             for i in range(postproc_maps.shape[0])
         ]
 
-        def to_object_da(values: list[np.ndarray]) -> da.Array:
-            """Wrap list of numpy arrays into a single object-dtype dask array."""
-            obj_array = np.array(values, dtype=object)
-            return da.from_array(obj_array, chunks=(len(values),))
-
-        x_list = [det["x"] for det in detections]
-        y_list = [det["y"] for det in detections]
-        types_list = [det["types"] for det in detections]
-        probs_list = [det["probs"] for det in detections]
+        def to_object_da(arrs: list[da.Array]) -> da.Array:
+            """Wrap list of variable-length arrays into object-dtype dask array."""
+            obj_array = np.array(arrs, dtype=object)
+            return da.from_array(obj_array, chunks=(len(arrs),))
 
         return {
-            "x": to_object_da(x_list),
-            "y": to_object_da(y_list),
-            "types": to_object_da(types_list),
-            "probs": to_object_da(probs_list),
+            "x": to_object_da([det["x"] for det in detections]),
+            "y": to_object_da([det["y"] for det in detections]),
+            "types": to_object_da([det["types"] for det in detections]),
+            "probs": to_object_da([det["probs"] for det in detections]),
         }
 
     def post_process_wsi(
@@ -220,7 +245,7 @@ class NucleusDetector(SemanticSegmentor):
         output_type: str,
         save_path: Path | None = None,
         **kwargs: Unpack[SemanticSegmentorRunParams],
-    ) -> dict | AnnotationStore | Path:
+    ) -> dict | AnnotationStore | Path | list[Path]:
         """Save nucleus detections to disk or return them in memory.
 
         This method saves predictions in one of the supported formats:
@@ -255,13 +280,12 @@ class NucleusDetector(SemanticSegmentor):
                 - returns AnnotationStore or path to .db file.
 
         """
-        if output_type.lower() != "annotationstore":
-            return super().save_predictions(
-                processed_predictions["predictions"],
-                output_type,
-                save_path=save_path,
-                **kwargs,
+        if output_type.lower() not in ["dict", "zarr", "annotationstore"]:
+            msg = (
+                f"Unsupported output_type '{output_type}'. "
+                "Supported types are 'dict', 'zarr', and 'annotationstore'."
             )
+            raise ValueError(msg)
 
         # scale_factor set from kwargs
         scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
@@ -270,9 +294,147 @@ class NucleusDetector(SemanticSegmentor):
         if class_dict is None:
             class_dict = self.model.output_class_dict
 
-        # Need to add support for zarr conversion.
-        save_paths = []
+        if output_type.lower() == "dict":
+            return super().save_predictions(
+                processed_predictions,
+                output_type,
+                save_path=save_path,
+                **kwargs,
+            )
+        if output_type.lower() == "annotationstore":
+            return self._save_predictions_annotation_store(
+                processed_predictions,
+                save_path=save_path,
+                scale_factor=scale_factor,
+                class_dict=class_dict,
+            )
+        return self._save_predictions_zarr(
+            processed_predictions,
+            save_path=save_path,
+        )
 
+    def _save_predictions_zarr(
+        self: NucleusDetector,
+        processed_predictions: dict,
+        save_path: Path | None = None,
+    ) -> Path | list[Path]:
+        """Save predictions to a Zarr store.
+
+        Args:
+            processed_predictions (dict):
+                Dictionary containing processed model predictions.
+                keys:
+                - "predictions":
+                {
+                    - 'x': dask array of x coordinates (np.uint32).
+                    - 'y': dask array of y coordinates (np.uint32).
+                    - 'types': dask array of detection types (np.uint32).
+                    - 'probs': dask array of detection probabilities (np.float32).
+                }
+            save_path (Path | None):
+                Path to save the output Zarr store.
+
+        Returns:
+            Path | list[Path]:
+                Path to the saved Zarr store(s).
+
+        """
+        predictions = processed_predictions["predictions"]
+
+        keys_to_compute = [k for k in predictions if k not in self.drop_keys]
+
+        # If appending to an existing Zarr, skip keys that are already present
+        if is_zarr(save_path):
+            zarr_group = zarr.open(save_path, mode="r")
+            keys_to_compute = [k for k in keys_to_compute if k not in zarr_group]
+
+        write_tasks = []
+
+        # --- NEW: compute patch_offsets from 'x' if we are in patch mode ----
+        patch_offsets = None
+        if self.patch_mode and "x" in predictions:
+            x_arr_list = predictions["x"].compute()
+            if x_arr_list is not None:
+                # lengths[i] = number of detections in patch i
+                lengths = np.array([len(a) for a in x_arr_list], dtype=np.int64)
+                patch_offsets = np.empty(len(lengths) + 1, dtype=np.int64)
+                patch_offsets[0] = 0
+                np.cumsum(lengths, out=patch_offsets[1:])
+
+                # Save patch_offsets as its own 1D dataset
+                offsets_da = da.from_array(patch_offsets, chunks="auto")
+                write_tasks.append(
+                    offsets_da.to_zarr(
+                        url=save_path,
+                        component="patch_offsets",
+                        compute=False,
+                    )
+                )
+
+        # ---------------- save flattened predictions -----------------
+        for key in keys_to_compute:
+            raw = predictions[key]
+
+            # Normalise ragged per-patch predictions to a flat 1D Dask array
+            dask_array = _flatten_predictions_to_dask(raw)
+
+            # Type casting for storage
+            if key != "probs":
+                dask_array = dask_array.astype(np.uint32)
+            else:
+                dask_array = dask_array.astype(np.float32)
+
+            task = dask_array.to_zarr(
+                url=save_path,
+                component=key,
+                compute=False,
+            )
+            write_tasks.append(task)
+
+        msg = f"Saving output to {save_path}."
+        logger.info(msg=msg)
+        with ProgressBar():
+            compute(*write_tasks)
+
+        zarr_group = zarr.open(save_path, mode="r+")
+        for key in self.drop_keys:
+            if key in zarr_group:
+                del zarr_group[key]
+
+        return save_path
+
+    def _save_predictions_annotation_store(
+        self: NucleusDetector,
+        processed_predictions: dict,
+        save_path: Path | None = None,
+        scale_factor: tuple[float, float] = (1.0, 1.0),
+        class_dict: dict | None = None,
+    ) -> AnnotationStore | Path | list[Path]:
+        """Save predictions to an AnnotationStore.
+
+        Args:
+            processed_predictions (dict):
+                Dictionary containing processed model predictions.
+                keys:
+                - "predictions":
+                {
+                    - 'x': dask array of x coordinates (np.uint32).
+                    - 'y': dask array of y coordinates (np.uint32).
+                    - 'types': dask array of detection types (np.uint32).
+                    - 'probs': dask array of detection probabilities (np.float32).
+                }
+            save_path (Path | None):
+                Path to save the output file.
+            scale_factor (tuple[float, float]):
+                Scaling factors for x and y coordinates.
+            class_dict (dict | None):
+                Mapping from original class IDs to new class names.
+
+        Returns:
+            AnnotationStore | Path:
+                - returns AnnotationStore or path to .db file.
+
+        """
         logger.info("Saving predictions as AnnotationStore.")
         if self.patch_mode:
             save_paths = []
