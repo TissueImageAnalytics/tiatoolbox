@@ -2861,8 +2861,8 @@ class SQLiteStore(AnnotationStore):
 
         return query_string, query_parameters
 
+    @staticmethod
     def _warn_if_query_not_using_index(
-        self: SQLiteStore,
         cur: sqlite3.Cursor,
         query_string: str,
         query_parameters: dict[str, object],

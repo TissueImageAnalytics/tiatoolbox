@@ -846,6 +846,7 @@ def test_app_hooks_session_destroyed(monkeypatch: pytest.MonkeyPatch) -> None:
     recorded: dict[str, object] = {}
 
     def fake_get(url: str, *, timeout: int) -> None:
+        """Fake requests.get to record parameters."""
         recorded["url"] = url
         recorded["timeout"] = timeout
 
@@ -854,6 +855,7 @@ def test_app_hooks_session_destroyed(monkeypatch: pytest.MonkeyPatch) -> None:
     exited = False
 
     def fake_exit() -> None:
+        """Fake sys.exit to record call."""
         nonlocal exited
         exited = True
 
@@ -870,6 +872,7 @@ def test_app_hooks_session_destroyed_suppresses_timeout(
     """ReadTimeout should be suppressed and exit still called."""
 
     def fake_get(*_: object, **__: object) -> None:
+        """Fake requests.get to raise ReadTimeout."""
         raise app_hooks.requests.exceptions.ReadTimeout  # type: ignore[attr-defined]
 
     monkeypatch.setattr(app_hooks, "PORT", "6160")
@@ -877,6 +880,7 @@ def test_app_hooks_session_destroyed_suppresses_timeout(
     exited = False
 
     def fake_exit() -> None:
+        """Fake sys.exit to record call."""
         nonlocal exited
         exited = True
 
