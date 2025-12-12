@@ -51,6 +51,57 @@ def _flatten_predictions_to_dask(
     return da.concatenate(dask_parts, axis=0)
 
 
+class NucleusDetectorRunParams(SemanticSegmentorRunParams, total=False):
+    """Runtime parameters for configuring the `NucleusDetector.run()` method.
+
+    This class extends `SemanticSegmentorRunParams`,
+    and adds parameters specific to nucleus detection workflows.
+
+    Attributes:
+        auto_get_mask (bool):
+            Whether to automatically generate segmentation masks using
+            `wsireader.tissue_mask()` during processing.
+        batch_size (int):
+            Number of image patches to feed to the model in a forward pass.
+        class_dict (dict):
+            Optional dictionary mapping classification outputs to class names.
+        device (str):
+            Device to run the model on (e.g., "cpu", "cuda").
+        labels (list):
+            Optional labels for input images. Only a single label per image
+            is supported.
+        memory_threshold (int):
+            Memory usage threshold (in percentage) to trigger caching behavior.
+        num_workers (int):
+            Number of workers used in DataLoader.
+        output_file (str):
+            Output file name for saving results (e.g., .zarr or .db).
+        output_resolutions (Resolution):
+            Resolution used for writing output predictions.
+        patch_output_shape (tuple[int, int]):
+            Shape of output patches (height, width).
+        min_distance (int):
+            Minimum distance separating two nuclei (in pixels).
+        postproc_tile_shape (tuple[int, int]):
+            Tile shape (height, width) for post-processing (in pixels).
+        return_labels (bool):
+            Whether to return labels with predictions.
+        return_probabilities (bool):
+            Whether to return per-class probabilities.
+        scale_factor (tuple[float, float]):
+            Scale factor for converting annotations to baseline resolution.
+            Typically model_mpp / slide_mpp.
+        stride_shape (tuple[int, int]):
+            Stride used during WSI processing. Defaults to patch_input_shape.
+        verbose (bool):
+            Whether to output logging information.
+
+    """
+
+    min_distance: int
+    postproc_tile_shape: IntPair
+
+
 class NucleusDetector(SemanticSegmentor):
     r"""Nucleus detection engine for digital pathology images.
 
@@ -110,7 +161,7 @@ class NucleusDetector(SemanticSegmentor):
         raw_predictions: da.Array,
         prediction_shape: tuple[int, ...],
         prediction_dtype: type,
-        **kwargs: Unpack[SemanticSegmentorRunParams],
+        **kwargs: Unpack[NucleusDetectorRunParams],
     ) -> dict[str, da.Array]:
         """Define how to post-process patch predictions.
 
@@ -118,7 +169,7 @@ class NucleusDetector(SemanticSegmentor):
             raw_predictions (da.Array): The raw predictions from the model.
             prediction_shape (tuple[int, ...]): The shape of the predictions.
             prediction_dtype (type): The data type of the predictions.
-            **kwargs (SemanticSegmentorRunParams):
+            **kwargs (NucleusDetectorRunParams):
                 Additional runtime parameters
 
         Returns:
@@ -170,7 +221,7 @@ class NucleusDetector(SemanticSegmentor):
         raw_predictions: da.Array,
         prediction_shape: tuple[int, ...],
         prediction_dtype: type,
-        **kwargs: Unpack[SemanticSegmentorRunParams],  # noqa: ARG002
+        **kwargs: Unpack[NucleusDetectorRunParams],
     ) -> da.Array:
         """Define how to post-process WSI predictions.
 
@@ -182,7 +233,7 @@ class NucleusDetector(SemanticSegmentor):
             raw_predictions (da.Array): The raw predictions from the model.
             prediction_shape (tuple[int, ...]): The shape of the predictions.
             prediction_dtype (type): The data type of the predictions.
-            **kwargs (SemanticSegmentorRunParams):
+            **kwargs (NucleusDetectorRunParams):
                 Additional runtime parameters
 
         Returns:
@@ -198,14 +249,20 @@ class NucleusDetector(SemanticSegmentor):
 
         logger.info("Post processing WSI predictions in NucleusDetector")
 
+        min_distance = kwargs.get("min_distance", (self.model.min_distance))
+        postproc_tile_shape = kwargs.get(
+            "postproc_tile_shape",
+            self.model.postproc_tile_shape,
+        )
+
         # Add halo (overlap) around each block for post-processing
-        depth_h = self.model.min_distance
-        depth_w = self.model.min_distance
+        depth_h = min_distance
+        depth_w = min_distance
         depth = {0: depth_h, 1: depth_w, 2: 0}
 
         # Re-chunk to post-processing tile shape for more efficient processing
         rechunked_prediction_map = raw_predictions.rechunk(
-            (self.model.postproc_tile_shape[0], self.model.postproc_tile_shape[1], -1)
+            (postproc_tile_shape[0], postproc_tile_shape[1], -1)
         )
         logger.info("Post-processing tile size: %s", rechunked_prediction_map.chunks)
         logger.info("Post-processing tiles overlap: (h=%d, w=%d)", depth_h, depth_w)
@@ -228,7 +285,7 @@ class NucleusDetector(SemanticSegmentor):
         processed_predictions: dict,
         output_type: str,
         save_path: Path | None = None,
-        **kwargs: Unpack[SemanticSegmentorRunParams],
+        **kwargs: Unpack[NucleusDetectorRunParams],
     ) -> dict | AnnotationStore | Path | list[Path]:
         """Save nucleus detections to disk or return them in memory.
 
@@ -254,7 +311,7 @@ class NucleusDetector(SemanticSegmentor):
                 Supported values are "dict", "zarr", and "annotationstore".
             save_path (Path | None):
                 Path to save the output file.
-            **kwargs (SemanticSegmentorRunParams):
+            **kwargs (NucleusDetectorRunParams):
                 Additional runtime parameters including:
                 - scale_factor (tuple[float, float]): For coordinate transformation.
                 - class_dict (dict): Mapping of class indices to names.
@@ -693,7 +750,7 @@ class NucleusDetector(SemanticSegmentor):
         save_dir: os.PathLike | Path | None = None,
         overwrite: bool = False,
         output_type: str = "dict",
-        **kwargs: Unpack[SemanticSegmentorRunParams],
+        **kwargs: Unpack[NucleusDetectorRunParams],
     ) -> AnnotationStore | Path | str | dict | list[Path]:
         """Run the nucleus detection engine on input images.
 
@@ -727,44 +784,50 @@ class NucleusDetector(SemanticSegmentor):
             output_type (str):
                 Desired output format: "dict", "zarr", or "annotationstore". Default
                 is "dict".
-            **kwargs (SemanticSegmentorRunParams):
+            **kwargs (NucleusDetectorRunParams):
                 Additional runtime parameters to configure segmentation.
 
                 Optional Keys:
                     auto_get_mask (bool):
-                        Automatically generate segmentation masks using
+                        Whether to automatically generate segmentation masks using
                         `wsireader.tissue_mask()` during processing.
                     batch_size (int):
-                        Number of image patches per forward pass.
+                        Number of image patches to feed to the model in a forward pass.
                     class_dict (dict):
-                        Mapping of classification outputs to class names.
+                        Optional dictionary mapping classification outputs to
+                        class names.
                     device (str):
                         Device to run the model on (e.g., "cpu", "cuda").
                     labels (list):
                         Optional labels for input images. Only a single label per image
                         is supported.
                     memory_threshold (int):
-                        Memory usage threshold (percentage) to trigger caching behavior.
+                        Memory usage threshold (in percentage) to
+                        trigger caching behavior.
                     num_workers (int):
-                        Number of workers for DataLoader and post-processing.
+                        Number of workers used in DataLoader.
                     output_file (str):
-                        Filename for saving output (e.g., ".zarr" or ".db").
+                        Output file name for saving results (e.g., .zarr or .db).
                     output_resolutions (Resolution):
                         Resolution used for writing output predictions.
                     patch_output_shape (tuple[int, int]):
                         Shape of output patches (height, width).
+                    min_distance (int):
+                        Minimum distance separating two nuclei (in pixels).
+                    postproc_tile_shape (tuple[int, int]):
+                        Tile shape (height, width) for post-processing (in pixels).
                     return_labels (bool):
                         Whether to return labels with predictions.
                     return_probabilities (bool):
                         Whether to return per-class probabilities.
                     scale_factor (tuple[float, float]):
-                        Scale factor for annotations (model_mpp / slide_mpp).
-                        Used to convert coordinates to baseline resolution.
+                        Scale factor for converting annotations to baseline resolution.
+                        Typically model_mpp / slide_mpp.
                     stride_shape (tuple[int, int]):
                         Stride used during WSI processing.
-                        Defaults to `patch_input_shape` if not provided.
+                        Defaults to patch_input_shape.
                     verbose (bool):
-                        Whether to enable verbose logging.
+                        Whether to output logging information.
 
         Returns:
             AnnotationStore | Path | str | dict | list[Path]:

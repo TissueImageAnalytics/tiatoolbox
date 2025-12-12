@@ -47,6 +47,8 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
         overwrite=True,
         batch_size=8,
         class_dict={0: "test_nucleus"},
+        min_distance=5,
+        postproc_tile_shape=(2048, 2048),
     )
 
     store = SQLiteStore.open(save_dir / "wsi4_512_512.db")
