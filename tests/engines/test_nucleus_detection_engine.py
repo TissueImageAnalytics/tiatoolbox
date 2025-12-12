@@ -10,7 +10,10 @@ import pytest
 import zarr
 
 from tiatoolbox.annotation.storage import SQLiteStore
-from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
+from tiatoolbox.models.engine.nucleus_detector import (
+    NucleusDetector,
+    _flatten_predictions_to_dask,
+)
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.wsicore.wsireader import WSIReader
@@ -43,33 +46,14 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
         save_dir=save_dir,
         overwrite=True,
         batch_size=8,
+        class_dict={0: "test_nucleus"},
     )
 
     store = SQLiteStore.open(save_dir / "wsi4_512_512.db")
     assert 255 <= len(store.values()) <= 265
+    annotation = next(iter(store.values()))
+    assert annotation.properties["type"] == "test_nucleus"
     store.close()
-
-    result_path = nucleus_detector.run(
-        patch_mode=False,
-        device=device,
-        output_type="zarr",
-        memory_threshold=50,
-        images=[mini_wsi_svs],
-        save_dir=save_dir,
-        overwrite=True,
-        batch_size=8,
-    )
-
-    zarr_path = result_path[mini_wsi_svs]
-    zarr_group = zarr.open(zarr_path, mode="r")
-    xs = zarr_group["x"][:]
-    ys = zarr_group["y"][:]
-    types = zarr_group["types"][:]
-    probs = zarr_group["probs"][:]
-    assert 255 <= len(xs) <= 265
-    assert 255 <= len(ys) <= 265
-    assert 255 <= len(types) <= 265
-    assert 255 <= len(probs) <= 265
 
     nucleus_detector.drop_keys = ["probs"]
     result_path = nucleus_detector.run(
@@ -330,3 +314,32 @@ def test_write_detection_records_to_store_no_class_dict() -> None:
     annotation = next(iter(dummy_store.values()))
     assert annotation.properties["type"] == 0
     dummy_store.close()
+
+
+def test_flatten_predictions_to_dask() -> None:
+    """Test flattening ragged predictions to Dask array."""
+    ragged_obj_array = np.empty(3, dtype=object)
+    ragged_obj_array[0] = np.array([1.0, 0.0], dtype=np.float32)
+    ragged_obj_array[1] = np.array([0.5, 0.5], dtype=np.float32)
+    ragged_obj_array[2] = np.array([0.2, 0.8, 0.8, 0.2], dtype=np.float32)
+
+    ragged_da_array = da.from_array(ragged_obj_array, chunks=(len(ragged_obj_array),))
+
+    flat_dask_array = _flatten_predictions_to_dask(ragged_da_array)
+    expected_array = np.array(
+        [
+            1.0,
+            0.0,
+            0.5,
+            0.5,
+            0.2,
+            0.8,
+            0.8,
+            0.2,
+        ],
+        dtype=np.float32,
+    )
+    np.testing.assert_array_equal(flat_dask_array.compute(), expected_array)
+
+    flat_dask_array = _flatten_predictions_to_dask(ragged_obj_array)
+    np.testing.assert_array_equal(flat_dask_array.compute(), expected_array)

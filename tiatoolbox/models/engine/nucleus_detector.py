@@ -38,10 +38,9 @@ def _flatten_predictions_to_dask(
     """Normalise predictions to a flat 1D Dask array."""
     # # Case 1: already a Dask array
     if isinstance(arr, da.Array):
-        # If it's already a flat numeric Dask array, just return it
+        # If it's already a numeric Dask array, just return it
         if arr.dtype != object:
             return arr
-        # Object-dtype Dask array: materialise then treat as list
         arr = arr.compute()
 
     arr_list = list(arr)
@@ -134,37 +133,20 @@ class NucleusDetector(SemanticSegmentor):
                 - "probs": dask array of detection probabilities (np.float32).
 
         """
+        logger.info("Post processing patch predictions in NucleusDetector")
         _ = kwargs.get("return_probabilities")
         _ = prediction_shape
         _ = prediction_dtype
 
-        # Ensure chunks are full in spatial/channel dims; batch dim can vary
-        raw_predictions = raw_predictions.rechunk({0: 1})
-
-        def block_fn(block: np.ndarray) -> np.ndarray:
-            """Apply model's post-processing function to each block.
-
-            Args:
-                block: (b_chunk, H, W, C) NumPy array representing a chunk of
-                raw patch predictions.
-            returns:
-                Processed NumPy array after applying the model's post-processing.
-            """
-            return np.stack(
-                [self.model.postproc_func(sample) for sample in block], axis=0
+        detection_arrays = []
+        for i in range(raw_predictions.shape[0]):
+            patch_pred = raw_predictions[i]
+            postproc_map = da.from_array(
+                self.model.postproc(patch_pred), chunks=patch_pred.chunks
             )
-
-        postproc_maps = da.map_blocks(
-            block_fn,
-            raw_predictions,
-            dtype=raw_predictions.dtype,
-        )
-
-        # Convert each patch's centroid map to detection records and aggregate
-        detections = [
-            self._centroid_maps_to_detection_arrays(postproc_maps[i])
-            for i in range(postproc_maps.shape[0])
-        ]
+            detection_arrays.append(
+                self._centroid_maps_to_detection_arrays(postproc_map)
+            )
 
         def to_object_da(arrs: list[da.Array]) -> da.Array:
             """Wrap list of variable-length arrays into object-dtype dask array."""
@@ -177,10 +159,10 @@ class NucleusDetector(SemanticSegmentor):
             return da.from_array(obj_array, chunks=(len(arrs),))
 
         return {
-            "x": to_object_da([det["x"] for det in detections]),
-            "y": to_object_da([det["y"] for det in detections]),
-            "types": to_object_da([det["types"] for det in detections]),
-            "probs": to_object_da([det["probs"] for det in detections]),
+            "x": to_object_da([det["x"] for det in detection_arrays]),
+            "y": to_object_da([det["y"] for det in detection_arrays]),
+            "types": to_object_da([det["types"] for det in detection_arrays]),
+            "probs": to_object_da([det["probs"] for det in detection_arrays]),
         }
 
     def post_process_wsi(
@@ -212,10 +194,9 @@ class NucleusDetector(SemanticSegmentor):
                 - "probs": dask array of detection probabilities.
 
         """
+        _ = prediction_shape
+
         logger.info("Post processing WSI predictions in NucleusDetector")
-        logger.info("Raw probabilities shape: %s", prediction_shape)
-        logger.info("Raw probabilities dtype %s", prediction_dtype)
-        logger.info("Raw chunk size: %s", raw_predictions.chunks)
 
         # Add halo (overlap) around each block for post-processing
         depth_h = self.model.min_distance
@@ -350,35 +331,35 @@ class NucleusDetector(SemanticSegmentor):
         patch_offsets = None
         if self.patch_mode and "x" in predictions:
             x_arr_list = predictions["x"].compute()
-            if x_arr_list is not None:
-                # lengths[i] = number of detections in patch i
-                lengths = np.array([len(a) for a in x_arr_list], dtype=np.int64)
-                patch_offsets = np.empty(len(lengths) + 1, dtype=np.int64)
-                patch_offsets[0] = 0
-                np.cumsum(lengths, out=patch_offsets[1:])
 
-                # Save patch_offsets as its own 1D dataset
-                offsets_da = da.from_array(patch_offsets, chunks="auto")
-                write_tasks.append(
-                    offsets_da.to_zarr(
-                        url=save_path,
-                        component="patch_offsets",
-                        compute=False,
-                    )
+            # lengths[i] = number of detections in patch i
+            lengths = np.array([len(a) for a in x_arr_list], dtype=np.int64)
+            patch_offsets = np.empty(len(lengths) + 1, dtype=np.int64)
+            patch_offsets[0] = 0
+            np.cumsum(lengths, out=patch_offsets[1:])
+
+            # Save patch_offsets as its own 1D dataset
+            offsets_da = da.from_array(patch_offsets, chunks="auto")
+            write_tasks.append(
+                offsets_da.to_zarr(
+                    url=save_path,
+                    component="patch_offsets",
+                    compute=False,
                 )
+            )
 
         # ---------------- save flattened predictions -----------------
         for key in keys_to_compute:
             raw = predictions[key]
 
-            # Normalise ragged per-patch predictions to a flat 1D Dask array
             dask_array = _flatten_predictions_to_dask(raw)
-
             # Type casting for storage
             if key != "probs":
                 dask_array = dask_array.astype(np.uint32)
             else:
                 dask_array = dask_array.astype(np.float32)
+
+            # Normalise ragged per-patch predictions to a flat 1D Dask array
 
             task = dask_array.to_zarr(
                 url=save_path,
