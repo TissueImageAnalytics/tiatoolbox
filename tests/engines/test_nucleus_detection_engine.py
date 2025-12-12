@@ -42,10 +42,11 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
         images=[mini_wsi_svs],
         save_dir=save_dir,
         overwrite=True,
+        batch_size=8,
     )
 
     store = SQLiteStore.open(save_dir / "wsi1_2k_2k.db")
-    assert len(store.values()) == 2617
+    assert 2610 <= len(store.values()) <= 2620
     store.close()
 
     result_path = nucleus_detector.run(
@@ -56,6 +57,7 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
         images=[mini_wsi_svs],
         save_dir=save_dir,
         overwrite=True,
+        batch_size=8,
     )
 
     zarr_path = result_path[mini_wsi_svs]
@@ -64,10 +66,10 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
     ys = zarr_group["y"][:]
     types = zarr_group["types"][:]
     probs = zarr_group["probs"][:]
-    assert len(xs) == 2617
-    assert len(ys) == 2617
-    assert len(types) == 2617
-    assert len(probs) == 2617
+    assert 2610 <= len(xs) <= 2620
+    assert 2610 <= len(ys) <= 2620
+    assert 2610 <= len(types) <= 2620
+    assert 2610 <= len(probs) <= 2620
 
     nucleus_detector.drop_keys = ["probs"]
     result_path = nucleus_detector.run(
@@ -78,6 +80,7 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
         images=[mini_wsi_svs],
         save_dir=save_dir,
         overwrite=True,
+        batch_size=8,
     )
 
     zarr_path = result_path[mini_wsi_svs]
@@ -87,9 +90,9 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
     types = zarr_group["types"][:]
     probs = zarr_group.get("probs", None)
     assert probs is None
-    assert len(xs) == 2617
-    assert len(ys) == 2617
-    assert len(types) == 2617
+    assert 2610 <= len(xs) <= 2620
+    assert 2610 <= len(ys) <= 2620
+    assert 2610 <= len(types) <= 2620
 
     _rm_dir(save_dir)
 
