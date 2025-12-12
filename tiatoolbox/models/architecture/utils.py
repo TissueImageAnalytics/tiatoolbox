@@ -254,7 +254,7 @@ def argmax_last_axis(image: np.ndarray) -> np.ndarray:
     return image.argmax(axis=-1)
 
 
-def peak_detection_da_map_overlap(
+def peak_detection_map_overlap(
     block: np.ndarray,
     min_distance: int,
     threshold_abs: float | None = None,

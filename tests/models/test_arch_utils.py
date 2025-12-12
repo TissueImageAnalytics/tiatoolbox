@@ -9,7 +9,7 @@ from tiatoolbox.models.architecture.utils import (
     UpSample2x,
     centre_crop,
     centre_crop_to_shape,
-    peak_detection_da_map_overlap,
+    peak_detection_map_overlap,
 )
 
 
@@ -76,7 +76,7 @@ def test_peak_detection() -> None:
 
     heatmap = np.zeros((7, 7, 1), dtype=np.float32)
 
-    peak_map = peak_detection_da_map_overlap(
+    peak_map = peak_detection_map_overlap(
         heatmap,
         min_distance=min_distance,
         threshold_abs=threshold_abs,
@@ -89,7 +89,7 @@ def test_peak_detection() -> None:
     heatmap[2, 2, 0] = 0.9  # Too close to first peak
     heatmap[3, 3, 0] = 0.9  # Second peak
 
-    peak_map = peak_detection_da_map_overlap(
+    peak_map = peak_detection_map_overlap(
         heatmap,
         min_distance=min_distance,
         threshold_abs=threshold_abs,
@@ -99,7 +99,7 @@ def test_peak_detection() -> None:
     assert np.sum(peak_map) == 2.0
 
 
-def test_peak_detection_da_map_overlap() -> None:
+def test_peak_detection_map_overlap() -> None:
     """Test for peak detection with da.map_overlap."""
     heatmap = np.zeros((7, 7, 1), dtype=np.float32)
     heatmap[0, 0, 0] = 0.9  # First peak
@@ -121,7 +121,7 @@ def test_peak_detection_da_map_overlap() -> None:
 
     da_peak_map = da.map_overlap(
         da_heatmap,
-        peak_detection_da_map_overlap,
+        peak_detection_map_overlap,
         depth=depth,
         boundary=0,
         dtype=np.float32,
@@ -144,7 +144,7 @@ def test_peak_detection_da_map_overlap() -> None:
 
     da_peak_map = da.map_overlap(
         da_heatmap,
-        peak_detection_da_map_overlap,
+        peak_detection_map_overlap,
         depth=depth,
         boundary=0,
         dtype=np.float32,

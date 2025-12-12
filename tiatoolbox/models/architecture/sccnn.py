@@ -18,7 +18,7 @@ if TYPE_CHECKING:  # pragma: no cover
 import torch
 from torch import nn
 
-from tiatoolbox.models.architecture.utils import peak_detection_da_map_overlap
+from tiatoolbox.models.architecture.utils import peak_detection_map_overlap
 from tiatoolbox.models.models_abc import ModelABC
 
 
@@ -358,7 +358,7 @@ class SCCNN(ModelABC):
         Returns:
             out: NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere.
         """
-        return peak_detection_da_map_overlap(
+        return peak_detection_map_overlap(
             block,
             min_distance=self.min_distance,
             threshold_abs=self.threshold_abs,

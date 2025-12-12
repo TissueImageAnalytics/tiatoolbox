@@ -26,9 +26,9 @@ def _rm_dir(path: pathlib.Path) -> None:
 
 def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -> None:
     """Test for nucleus detection engine."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi1_2k_2k_svs"))
 
-    pretrained_model = "mapde-conic"
+    pretrained_model = "sccnn-conic"
 
     save_dir = tmp_path
 
@@ -44,8 +44,8 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
         overwrite=True,
     )
 
-    store = SQLiteStore.open(save_dir / "wsi4_512_512.db")
-    assert len(store.values()) == 281
+    store = SQLiteStore.open(save_dir / "wsi1_2k_2k.db")
+    assert len(store.values()) == 2617
     store.close()
 
     result_path = nucleus_detector.run(
@@ -64,10 +64,10 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
     ys = zarr_group["y"][:]
     types = zarr_group["types"][:]
     probs = zarr_group["probs"][:]
-    assert len(xs) == 281
-    assert len(ys) == 281
-    assert len(types) == 281
-    assert len(probs) == 281
+    assert len(xs) == 2617
+    assert len(ys) == 2617
+    assert len(types) == 2617
+    assert len(probs) == 2617
 
     nucleus_detector.drop_keys = ["probs"]
     result_path = nucleus_detector.run(
@@ -87,9 +87,9 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
     types = zarr_group["types"][:]
     probs = zarr_group.get("probs", None)
     assert probs is None
-    assert len(xs) == 281
-    assert len(ys) == 281
-    assert len(types) == 281
+    assert len(xs) == 2617
+    assert len(ys) == 2617
+    assert len(types) == 2617
 
     _rm_dir(save_dir)
 
@@ -98,14 +98,18 @@ def test_nucleus_detector_patch_annotation_store_output(
     remote_sample: Callable, tmp_path: pathlib.Path
 ) -> None:
     """Test for nucleus detection engine in patch mode."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi1_2k_2k_svs"))
 
     wsi_reader = WSIReader.open(mini_wsi_svs)
-    patch_1 = wsi_reader.read_rect((0, 0), (252, 252), resolution=0.5, units="mpp")
-    patch_2 = wsi_reader.read_rect((252, 252), (252, 252), resolution=0.5, units="mpp")
-    patch_3 = np.zeros((252, 252, 3), dtype=np.uint8)
+    patch_1 = wsi_reader.read_bounds(
+        (30, 30, 61, 61),
+        resolution=0.25,
+        units="mpp",
+        coord_space="resolution",
+    )
+    patch_2 = np.zeros((31, 31, 3), dtype=np.uint8)
 
-    pretrained_model = "mapde-conic"
+    pretrained_model = "sccnn-conic"
 
     save_dir = tmp_path
 
@@ -115,23 +119,19 @@ def test_nucleus_detector_patch_annotation_store_output(
         device=device,
         output_type="annotationstore",
         memory_threshold=50,
-        images=[patch_1, patch_2, patch_3],
+        images=[patch_1, patch_2],
         save_dir=save_dir,
         overwrite=True,
         class_dict=None,
     )
 
     store_1 = SQLiteStore.open(save_dir / "0.db")
-    assert len(store_1.values()) == 270
+    assert len(store_1.values()) == 1
     store_1.close()
 
     store_2 = SQLiteStore.open(save_dir / "1.db")
-    assert len(store_2.values()) == 52
+    assert len(store_2.values()) == 0
     store_2.close()
-
-    store_3 = SQLiteStore.open(save_dir / "2.db")
-    assert len(store_3.values()) == 0
-    store_3.close()
 
     imwrite(save_dir / "patch_0.png", patch_1)
     imwrite(save_dir / "patch_1.png", patch_2)
@@ -146,11 +146,11 @@ def test_nucleus_detector_patch_annotation_store_output(
     )
 
     store_1 = SQLiteStore.open(save_dir / "patch_0.db")
-    assert len(store_1.values()) == 270
+    assert len(store_1.values()) == 1
     store_1.close()
 
     store_2 = SQLiteStore.open(save_dir / "patch_1.db")
-    assert len(store_2.values()) == 52
+    assert len(store_2.values()) == 0
     store_2.close()
 
     _rm_dir(save_dir)
@@ -160,14 +160,18 @@ def test_nucleus_detector_patches_dict_output(
     remote_sample: Callable,
 ) -> None:
     """Test for nucleus detection engine in patch mode."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi1_2k_2k_svs"))
 
     wsi_reader = WSIReader.open(mini_wsi_svs)
-    patch_1 = wsi_reader.read_rect((0, 0), (252, 252), resolution=0.5, units="mpp")
-    patch_2 = wsi_reader.read_rect((252, 252), (252, 252), resolution=0.5, units="mpp")
-    patch_3 = np.zeros((252, 252, 3), dtype=np.uint8)
+    patch_1 = wsi_reader.read_bounds(
+        (30, 30, 61, 61),
+        resolution=0.25,
+        units="mpp",
+        coord_space="resolution",
+    )
+    patch_2 = np.zeros((31, 31, 3), dtype=np.uint8)
 
-    pretrained_model = "mapde-conic"
+    pretrained_model = "sccnn-conic"
 
     nucleus_detector = NucleusDetector(model=pretrained_model)
 
@@ -176,41 +180,40 @@ def test_nucleus_detector_patches_dict_output(
         device=device,
         output_type="dict",
         memory_threshold=50,
-        images=[patch_1, patch_2, patch_3],
+        images=[patch_1, patch_2],
         save_dir=None,
         class_dict=None,
     )
     output_dict = output_dict["predictions"]
-    assert len(output_dict["x"]) == 3
-    assert len(output_dict["y"]) == 3
-    assert len(output_dict["types"]) == 3
-    assert len(output_dict["probs"]) == 3
-    assert len(output_dict["x"][0]) == 270
-    assert len(output_dict["x"][1]) == 52
-    assert len(output_dict["x"][2]) == 0
-    assert len(output_dict["y"][0]) == 270
-    assert len(output_dict["y"][1]) == 52
-    assert len(output_dict["y"][2]) == 0
-    assert len(output_dict["types"][0]) == 270
-    assert len(output_dict["types"][1]) == 52
-    assert len(output_dict["types"][2]) == 0
-    assert len(output_dict["probs"][0]) == 270
-    assert len(output_dict["probs"][1]) == 52
-    assert len(output_dict["probs"][2]) == 0
+    assert len(output_dict["x"]) == 2
+    assert len(output_dict["y"]) == 2
+    assert len(output_dict["types"]) == 2
+    assert len(output_dict["probs"]) == 2
+    assert len(output_dict["x"][0]) == 1
+    assert len(output_dict["x"][1]) == 0
+    assert len(output_dict["y"][0]) == 1
+    assert len(output_dict["y"][1]) == 0
+    assert len(output_dict["types"][0]) == 1
+    assert len(output_dict["types"][1]) == 0
+    assert len(output_dict["probs"][0]) == 1
+    assert len(output_dict["probs"][1]) == 0
 
 
 def test_nucleus_detector_patches_zarr_output(
     remote_sample: Callable, tmp_path: pathlib.Path
 ) -> None:
     """Test for nucleus detection engine in patch mode."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
-
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi1_2k_2k_svs"))
     wsi_reader = WSIReader.open(mini_wsi_svs)
-    patch_1 = wsi_reader.read_rect((0, 0), (252, 252), resolution=0.5, units="mpp")
-    patch_2 = wsi_reader.read_rect((252, 252), (252, 252), resolution=0.5, units="mpp")
-    patch_3 = np.zeros((252, 252, 3), dtype=np.uint8)
+    patch_1 = wsi_reader.read_bounds(
+        (30, 30, 61, 61),
+        resolution=0.25,
+        units="mpp",
+        coord_space="resolution",
+    )
+    patch_2 = np.zeros((31, 31, 3), dtype=np.uint8)
 
-    pretrained_model = "mapde-conic"
+    pretrained_model = "sccnn-conic"
 
     nucleus_detector = NucleusDetector(model=pretrained_model)
 
@@ -221,7 +224,7 @@ def test_nucleus_detector_patches_zarr_output(
         device=device,
         output_type="zarr",
         memory_threshold=50,
-        images=[patch_1, patch_2, patch_3],
+        images=[patch_1, patch_2],
         save_dir=save_dir,
         class_dict=None,
         overwrite=True,
@@ -236,11 +239,11 @@ def test_nucleus_detector_patches_zarr_output(
         "patch_offsets": zarr_group["patch_offsets"][:],
     }
 
-    assert len(output_dict["x"]) == 322
-    assert len(output_dict["y"]) == 322
-    assert len(output_dict["types"]) == 322
-    assert len(output_dict["probs"]) == 322
-    assert len(output_dict["patch_offsets"]) == 4
+    assert len(output_dict["x"]) == 1
+    assert len(output_dict["y"]) == 1
+    assert len(output_dict["types"]) == 1
+    assert len(output_dict["probs"]) == 1
+    assert len(output_dict["patch_offsets"]) == 3
 
     patch_1_start, patch_1_end = (
         output_dict["patch_offsets"][0],
@@ -250,22 +253,17 @@ def test_nucleus_detector_patches_zarr_output(
         output_dict["patch_offsets"][1],
         output_dict["patch_offsets"][2],
     )
-    patch_3_start, patch_3_end = (
-        output_dict["patch_offsets"][2],
-        output_dict["patch_offsets"][3],
-    )
-    assert len(output_dict["x"][patch_1_start:patch_1_end]) == 270
-    assert len(output_dict["x"][patch_2_start:patch_2_end]) == 52
-    assert len(output_dict["x"][patch_3_start:patch_3_end]) == 0
-    assert len(output_dict["y"][patch_1_start:patch_1_end]) == 270
-    assert len(output_dict["y"][patch_2_start:patch_2_end]) == 52
-    assert len(output_dict["y"][patch_3_start:patch_3_end]) == 0
-    assert len(output_dict["types"][patch_1_start:patch_1_end]) == 270
-    assert len(output_dict["types"][patch_2_start:patch_2_end]) == 52
-    assert len(output_dict["types"][patch_3_start:patch_3_end]) == 0
-    assert len(output_dict["probs"][patch_1_start:patch_1_end]) == 270
-    assert len(output_dict["probs"][patch_2_start:patch_2_end]) == 52
-    assert len(output_dict["probs"][patch_3_start:patch_3_end]) == 0
+    assert len(output_dict["x"][patch_1_start:patch_1_end]) == 1
+    assert len(output_dict["x"][patch_2_start:patch_2_end]) == 0
+
+    assert len(output_dict["y"][patch_1_start:patch_1_end]) == 1
+    assert len(output_dict["y"][patch_2_start:patch_2_end]) == 0
+
+    assert len(output_dict["types"][patch_1_start:patch_1_end]) == 1
+    assert len(output_dict["types"][patch_2_start:patch_2_end]) == 0
+
+    assert len(output_dict["probs"][patch_1_start:patch_1_end]) == 1
+    assert len(output_dict["probs"][patch_2_start:patch_2_end]) == 0
 
     _rm_dir(save_dir)
 

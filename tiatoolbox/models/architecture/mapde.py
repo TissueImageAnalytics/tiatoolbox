@@ -13,7 +13,7 @@ import torch
 import torch.nn.functional as F  # noqa: N812
 
 from tiatoolbox.models.architecture.micronet import MicroNet
-from tiatoolbox.models.architecture.utils import peak_detection_da_map_overlap
+from tiatoolbox.models.architecture.utils import peak_detection_map_overlap
 
 
 class MapDe(MicroNet):
@@ -252,18 +252,20 @@ class MapDe(MicroNet):
         Returns same spatial shape as the input block
 
         Args:
-            block: NumPy array (H, W, C).
-            block_info: Dask block info dict.
-                Only used when called inside dask.array.map_overlap.
+            block (np.ndarray):
+                NumPy array (H, W, C).
+            block_info (dict):
+                Dask block info dict. Only used when called from
+                dask.array.map_overlap.
             depth_h: Halo size in pixels for height (rows).
-                Only used when it's called inside dask.array.map_overlap.
+                Only used when it's called from dask.array.map_overlap.
             depth_w: Halo size in pixels for width (cols).
-                Only used when it's called inside dask.array.map_overlap.
+                Only used when it's called from dask.array.map_overlap.
 
         Returns:
             out: NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere.
         """
-        return peak_detection_da_map_overlap(
+        return peak_detection_map_overlap(
             block,
             min_distance=self.min_distance,
             threshold_abs=self.threshold_abs,

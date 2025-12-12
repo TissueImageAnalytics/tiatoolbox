@@ -61,7 +61,6 @@ def test_functionality(remote_sample: Callable) -> None:
         coord_space="resolution",
     )
 
-    model, weights_path = _load_mapde(name="mapde-conic")
     patch = model.preproc(patch)
     batch = torch.from_numpy(patch)[None]
     output = model.infer_batch(model, batch, device=select_device(on_gpu=ON_GPU))

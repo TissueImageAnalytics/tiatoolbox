@@ -163,7 +163,12 @@ class NucleusDetector(SemanticSegmentor):
 
         def to_object_da(arrs: list[da.Array]) -> da.Array:
             """Wrap list of variable-length arrays into object-dtype dask array."""
-            obj_array = np.array(arrs, dtype=object)
+            # np.array(arrs, dtype=object) can collapse to 2-D (e.g., shape (n, 0))
+            # when all elements are empty, which breaks dask chunk validation.
+            # Build the object array explicitly to keep it 1-D.
+            obj_array = np.empty(len(arrs), dtype=object)
+            for idx, arr in enumerate(arrs):
+                obj_array[idx] = arr
             return da.from_array(obj_array, chunks=(len(arrs),))
 
         return {
