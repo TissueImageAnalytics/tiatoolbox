@@ -172,7 +172,7 @@ def test_nucleus_detector_patches_dict_output(
         units="mpp",
         coord_space="resolution",
     )
-    patch_2 = np.zeros((31, 31, 3), dtype=np.uint8)
+    patch_2 = np.zeros_like(patch_1)
 
     pretrained_model = "sccnn-conic"
 
@@ -183,7 +183,7 @@ def test_nucleus_detector_patches_dict_output(
         device=device,
         output_type="dict",
         memory_threshold=50,
-        images=[patch_1, patch_2],
+        images=np.stack([patch_1, patch_2], axis=0),
         save_dir=None,
         class_dict=None,
     )
@@ -214,7 +214,7 @@ def test_nucleus_detector_patches_zarr_output(
         units="mpp",
         coord_space="resolution",
     )
-    patch_2 = np.zeros((31, 31, 3), dtype=np.uint8)
+    patch_2 = np.zeros_like(patch_1)
 
     pretrained_model = "sccnn-conic"
 
@@ -227,7 +227,7 @@ def test_nucleus_detector_patches_zarr_output(
         device=device,
         output_type="zarr",
         memory_threshold=50,
-        images=[patch_1, patch_2],
+        images=np.stack([patch_1, patch_2], axis=0),
         save_dir=save_dir,
         class_dict=None,
         overwrite=True,
