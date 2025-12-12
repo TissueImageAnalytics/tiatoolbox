@@ -26,7 +26,7 @@ def _rm_dir(path: pathlib.Path) -> None:
 
 def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -> None:
     """Test for nucleus detection engine."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi1_2k_2k_svs"))
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
 
     pretrained_model = "sccnn-conic"
 
@@ -45,8 +45,8 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
         batch_size=8,
     )
 
-    store = SQLiteStore.open(save_dir / "wsi1_2k_2k.db")
-    assert 2610 <= len(store.values()) <= 2620
+    store = SQLiteStore.open(save_dir / "wsi4_512_512.db")
+    assert 255 <= len(store.values()) <= 265
     store.close()
 
     result_path = nucleus_detector.run(
@@ -66,10 +66,10 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
     ys = zarr_group["y"][:]
     types = zarr_group["types"][:]
     probs = zarr_group["probs"][:]
-    assert 2610 <= len(xs) <= 2620
-    assert 2610 <= len(ys) <= 2620
-    assert 2610 <= len(types) <= 2620
-    assert 2610 <= len(probs) <= 2620
+    assert 255 <= len(xs) <= 265
+    assert 255 <= len(ys) <= 265
+    assert 255 <= len(types) <= 265
+    assert 255 <= len(probs) <= 265
 
     nucleus_detector.drop_keys = ["probs"]
     result_path = nucleus_detector.run(
@@ -90,11 +90,12 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
     types = zarr_group["types"][:]
     probs = zarr_group.get("probs", None)
     assert probs is None
-    assert 2610 <= len(xs) <= 2620
-    assert 2610 <= len(ys) <= 2620
-    assert 2610 <= len(types) <= 2620
+    assert 255 <= len(xs) <= 265
+    assert 255 <= len(ys) <= 265
+    assert 255 <= len(types) <= 265
 
     _rm_dir(save_dir)
+    pathlib.Path.unlink(mini_wsi_svs)
 
 
 def test_nucleus_detector_patch_annotation_store_output(
