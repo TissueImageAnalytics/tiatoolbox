@@ -12,7 +12,7 @@ import zarr
 from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.models.engine.nucleus_detector import (
     NucleusDetector,
-    _flatten_predictions_to_dask,
+    # _flatten_predictions_to_dask,
 )
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imwrite
@@ -54,7 +54,7 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
     store = SQLiteStore.open(save_dir / "wsi4_512_512.db")
     assert 255 <= len(store.values()) <= 265
     annotation = next(iter(store.values()))
-    assert annotation.properties["type"] == "test_nucleus"
+    assert annotation.properties["class"] == "test_nucleus"
     store.close()
 
     nucleus_detector.drop_keys = ["probs"]
@@ -68,17 +68,18 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
         overwrite=True,
         batch_size=8,
     )
+    print("Result path:", result_path)
 
     zarr_path = result_path[mini_wsi_svs]
     zarr_group = zarr.open(zarr_path, mode="r")
     xs = zarr_group["x"][:]
     ys = zarr_group["y"][:]
-    types = zarr_group["types"][:]
+    classes = zarr_group["classes"][:]
     probs = zarr_group.get("probs", None)
     assert probs is None
     assert 255 <= len(xs) <= 265
     assert 255 <= len(ys) <= 265
-    assert 255 <= len(types) <= 265
+    assert 255 <= len(classes) <= 265
 
     _rm_dir(save_dir)
     pathlib.Path.unlink(mini_wsi_svs)
@@ -174,17 +175,16 @@ def test_nucleus_detector_patches_dict_output(
         save_dir=None,
         class_dict=None,
     )
-    output_dict = output_dict["predictions"]
     assert len(output_dict["x"]) == 2
     assert len(output_dict["y"]) == 2
-    assert len(output_dict["types"]) == 2
+    assert len(output_dict["classes"]) == 2
     assert len(output_dict["probs"]) == 2
     assert len(output_dict["x"][0]) == 1
     assert len(output_dict["x"][1]) == 0
     assert len(output_dict["y"][0]) == 1
     assert len(output_dict["y"][1]) == 0
-    assert len(output_dict["types"][0]) == 1
-    assert len(output_dict["types"][1]) == 0
+    assert len(output_dict["classes"][0]) == 1
+    assert len(output_dict["classes"][1]) == 0
     assert len(output_dict["probs"][0]) == 1
     assert len(output_dict["probs"][1]) == 0
 
@@ -220,40 +220,16 @@ def test_nucleus_detector_patches_zarr_output(
         overwrite=True,
     )
 
-    zarr_group = zarr.open(output_path, mode="r")
-    output_dict = {
-        "x": zarr_group["x"][:],
-        "y": zarr_group["y"][:],
-        "types": zarr_group["types"][:],
-        "probs": zarr_group["probs"][:],
-        "patch_offsets": zarr_group["patch_offsets"][:],
-    }
+    output_zarr = zarr.open(output_path, mode="r")
 
-    assert len(output_dict["x"]) == 1
-    assert len(output_dict["y"]) == 1
-    assert len(output_dict["types"]) == 1
-    assert len(output_dict["probs"]) == 1
-    assert len(output_dict["patch_offsets"]) == 3
-
-    patch_1_start, patch_1_end = (
-        output_dict["patch_offsets"][0],
-        output_dict["patch_offsets"][1],
-    )
-    patch_2_start, patch_2_end = (
-        output_dict["patch_offsets"][1],
-        output_dict["patch_offsets"][2],
-    )
-    assert len(output_dict["x"][patch_1_start:patch_1_end]) == 1
-    assert len(output_dict["x"][patch_2_start:patch_2_end]) == 0
-
-    assert len(output_dict["y"][patch_1_start:patch_1_end]) == 1
-    assert len(output_dict["y"][patch_2_start:patch_2_end]) == 0
-
-    assert len(output_dict["types"][patch_1_start:patch_1_end]) == 1
-    assert len(output_dict["types"][patch_2_start:patch_2_end]) == 0
-
-    assert len(output_dict["probs"][patch_1_start:patch_1_end]) == 1
-    assert len(output_dict["probs"][patch_2_start:patch_2_end]) == 0
+    assert output_zarr["x"][0].size == 1
+    assert output_zarr["x"][1].size == 0
+    assert output_zarr["y"][0].size == 1
+    assert output_zarr["y"][1].size == 0
+    assert output_zarr["classes"][0].size == 1
+    assert output_zarr["classes"][1].size == 0
+    assert output_zarr["probs"][0].size == 1
+    assert output_zarr["probs"][1].size == 0
 
     _rm_dir(save_dir)
 
@@ -269,12 +245,12 @@ def test_centroid_maps_to_detection_arrays() -> None:
 
     xs = detections["x"]
     ys = detections["y"]
-    types = detections["types"]
+    classes = detections["classes"]
     probs = detections["probs"]
 
     np.testing.assert_array_equal(xs, np.array([1, 3], dtype=np.uint32))
     np.testing.assert_array_equal(ys, np.array([1, 2], dtype=np.uint32))
-    np.testing.assert_array_equal(types, np.array([0, 1], dtype=np.uint32))
+    np.testing.assert_array_equal(classes, np.array([0, 1], dtype=np.uint32))
     np.testing.assert_array_equal(probs, np.array([1.0, 0.5], dtype=np.float32))
 
 
@@ -283,24 +259,24 @@ def test_write_detection_arrays_to_store() -> None:
     detection_arrays = {
         "x": np.array([1, 3], dtype=np.uint32),
         "y": np.array([1, 2], dtype=np.uint32),
-        "types": np.array([0, 1], dtype=np.uint32),
+        "classes": np.array([0, 1], dtype=np.uint32),
         "probs": np.array([1.0, 0.5], dtype=np.float32),
     }
 
-    store = NucleusDetector.write_detection_arrays_to_store(detection_arrays)
+    store = NucleusDetector.save_detection_arrays_to_store(detection_arrays)
     assert len(store.values()) == 2
 
     detection_arrays = {
         "x": np.array([1], dtype=np.uint32),
         "y": np.array([1, 2], dtype=np.uint32),
-        "types": np.array([0], dtype=np.uint32),
+        "classes": np.array([0], dtype=np.uint32),
         "probs": np.array([1.0, 0.5], dtype=np.float32),
     }
     with pytest.raises(
         ValueError,
         match=r"Detection record lengths are misaligned.",
     ):
-        _ = NucleusDetector.write_detection_arrays_to_store(detection_arrays)
+        _ = NucleusDetector.save_detection_arrays_to_store(detection_arrays)
 
 
 def test_write_detection_records_to_store_no_class_dict() -> None:
@@ -308,40 +284,11 @@ def test_write_detection_records_to_store_no_class_dict() -> None:
     detection_records = (np.array([1]), np.array([2]), np.array([0]), np.array([1.0]))
 
     dummy_store = SQLiteStore()
-    total = NucleusDetector._write_detection_records_to_store(
+    total = NucleusDetector._write_detection_arrays_to_store(
         detection_records, store=dummy_store, scale_factor=(1.0, 1.0), class_dict=None
     )
     assert len(dummy_store.values()) == 1
     assert total == 1
     annotation = next(iter(dummy_store.values()))
-    assert annotation.properties["type"] == 0
+    assert annotation.properties["class"] == 0
     dummy_store.close()
-
-
-def test_flatten_predictions_to_dask() -> None:
-    """Test flattening ragged predictions to Dask array."""
-    ragged_obj_array = np.empty(3, dtype=object)
-    ragged_obj_array[0] = np.array([1.0, 0.0], dtype=np.float32)
-    ragged_obj_array[1] = np.array([0.5, 0.5], dtype=np.float32)
-    ragged_obj_array[2] = np.array([0.2, 0.8, 0.8, 0.2], dtype=np.float32)
-
-    ragged_da_array = da.from_array(ragged_obj_array, chunks=(len(ragged_obj_array),))
-
-    flat_dask_array = _flatten_predictions_to_dask(ragged_da_array)
-    expected_array = np.array(
-        [
-            1.0,
-            0.0,
-            0.5,
-            0.5,
-            0.2,
-            0.8,
-            0.8,
-            0.2,
-        ],
-        dtype=np.float32,
-    )
-    np.testing.assert_array_equal(flat_dask_array.compute(), expected_array)
-
-    flat_dask_array = _flatten_predictions_to_dask(ragged_obj_array)
-    np.testing.assert_array_equal(flat_dask_array.compute(), expected_array)

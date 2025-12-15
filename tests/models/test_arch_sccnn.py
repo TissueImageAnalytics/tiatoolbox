@@ -7,7 +7,6 @@ import torch
 
 from tiatoolbox.models import SCCNN
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
 from tiatoolbox.utils import env_detection
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
@@ -49,7 +48,7 @@ def test_functionality(remote_sample: Callable) -> None:
         device=select_device(on_gpu=env_detection.has_gpu()),
     )
     output = model.postproc(output[0])
-    xs, ys, _, _ = NucleusDetector._extract_detection_arrays_from_block(output, None)
+    ys, xs, _ = np.nonzero(output)
 
     np.testing.assert_array_equal(xs, np.array([8]))
     np.testing.assert_array_equal(ys, np.array([7]))
@@ -66,7 +65,7 @@ def test_functionality(remote_sample: Callable) -> None:
         }
     }
     output = model.postproc(output[0], block_info=block_info)
-    xs, ys, _, _ = NucleusDetector._extract_detection_arrays_from_block(output, None)
+    ys, xs, _ = np.nonzero(output)
     np.testing.assert_array_equal(xs, np.array([7]))
     np.testing.assert_array_equal(ys, np.array([8]))
 
@@ -85,6 +84,6 @@ def test_functionality(remote_sample: Callable) -> None:
         }
     }
     output = model.postproc(output[0], block_info=block_info)
-    xs, ys, _, _ = NucleusDetector._extract_detection_arrays_from_block(output, None)
+    ys, xs, _, _ = np.nonzero(output)
     np.testing.assert_array_equal(xs, np.array([]))
     np.testing.assert_array_equal(ys, np.array([]))

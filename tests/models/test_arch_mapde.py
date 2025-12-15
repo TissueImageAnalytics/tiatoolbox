@@ -8,7 +8,6 @@ import torch
 
 from tiatoolbox.models import MapDe
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
@@ -49,7 +48,11 @@ def test_functionality(remote_sample: Callable) -> None:
     batch = torch.from_numpy(patch)[None]
     output = model.infer_batch(model, batch, device=select_device(on_gpu=ON_GPU))
     output = model.postproc(output[0])
-    xs, ys, _, _ = NucleusDetector._extract_detection_arrays_from_block(output, None)
+    (
+        ys,
+        xs,
+        _,
+    ) = np.nonzero(output)
 
     np.testing.assert_array_equal(xs[0:2], np.array([242, 192]))
     np.testing.assert_array_equal(ys[0:2], np.array([10, 13]))
@@ -73,7 +76,7 @@ def test_functionality(remote_sample: Callable) -> None:
         }
     }
     output = model.postproc(output[0], block_info=block_info)
-    xs, ys, _, _ = NucleusDetector._extract_detection_arrays_from_block(output, None)
+    ys, xs, _ = np.nonzero(output)
     np.testing.assert_array_equal(xs, np.array([]))
     np.testing.assert_array_equal(ys, np.array([]))
 
