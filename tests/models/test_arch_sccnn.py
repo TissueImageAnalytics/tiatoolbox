@@ -87,3 +87,36 @@ def test_functionality(remote_sample: Callable) -> None:
     ys, xs, _ = np.nonzero(output)
     np.testing.assert_array_equal(xs, np.array([]))
     np.testing.assert_array_equal(ys, np.array([]))
+
+
+def test_postproc_params_override(remote_sample: Callable) -> None:
+    """Test postproc parameters override."""
+    sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
+    reader = WSIReader.open(sample_wsi)
+
+    # * test fast mode (architecture used in PanNuke paper)
+    patch = reader.read_bounds(
+        (30, 30, 61, 61),
+        resolution=0.25,
+        units="mpp",
+        coord_space="resolution",
+    )
+    model = _load_sccnn(name="sccnn-crchisto")
+    patch = model.preproc(patch)
+    batch = torch.from_numpy(patch)[None]
+    raw_output = model.infer_batch(
+        model,
+        batch,
+        device=select_device(on_gpu=env_detection.has_gpu()),
+    )
+    # Override to a high threshold to get no detections
+    output = model.postproc(raw_output[0], threshold_abs=0.9)
+    ys, xs, _ = np.nonzero(output)
+    np.testing.assert_array_equal(xs, np.array([]))
+    np.testing.assert_array_equal(ys, np.array([]))
+
+    # Override with small min_distance
+    output = model.postproc(raw_output[0], min_distance=1)
+    ys, xs, _ = np.nonzero(output)
+    np.testing.assert_array_equal(xs, np.array([8]))
+    np.testing.assert_array_equal(ys, np.array([7]))

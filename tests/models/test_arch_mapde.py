@@ -83,6 +83,56 @@ def test_functionality(remote_sample: Callable) -> None:
     Path(weights_path).unlink()
 
 
+def test_postproc_params_override(remote_sample: Callable) -> None:
+    """Test MapDe post-processing with overridden parameters."""
+    sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
+    reader = WSIReader.open(sample_wsi)
+
+    # * test fast mode (architecture used in PanNuke paper)
+    patch = reader.read_bounds(
+        (0, 0, 252, 252),
+        resolution=0.50,
+        units="mpp",
+        coord_space="resolution",
+    )
+
+    model, weight_path = _load_mapde(name="mapde-conic")
+    patch = model.preproc(patch)
+    batch = torch.from_numpy(patch)[None]
+    raw_output = model.infer_batch(model, batch, device=select_device(on_gpu=ON_GPU))
+
+    output_normal = model.postproc(raw_output[0])
+    (
+        ys_normal,
+        xs_normal,
+        _,
+    ) = np.nonzero(output_normal)
+
+    # Use higher threshold should result in less detections
+    output_high_threshold = model.postproc(raw_output[0], threshold_abs=500)
+    (
+        ys_high_threshold,
+        xs_high_threshold,
+        _,
+    ) = np.nonzero(output_high_threshold)
+
+    # Use bigger min_distance should result in less detections
+    output_large_min_distance = model.postproc(raw_output[0], min_distance=9)
+    (
+        ys_large_min_distance,
+        xs_large_min_distance,
+        _,
+    ) = np.nonzero(output_large_min_distance)
+
+    assert len(xs_high_threshold) < len(xs_normal)
+    assert len(ys_high_threshold) < len(ys_normal)
+
+    assert len(xs_large_min_distance) < len(xs_normal)
+    assert len(ys_large_min_distance) < len(ys_normal)
+
+    Path(weight_path).unlink()
+
+
 def test_multiclass_output() -> None:
     """Test the architecture for multi-class output."""
     multiclass_model = MapDe(num_input_channels=3, num_classes=3)

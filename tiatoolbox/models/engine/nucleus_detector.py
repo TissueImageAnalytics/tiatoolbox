@@ -679,7 +679,7 @@ class NucleusDetector(SemanticSegmentor):
         classes = np.atleast_1d(np.asarray(classes))
         probs = np.atleast_1d(np.asarray(probs))
 
-        if not (len(xs) == len(ys) == len(classes) == len(probs)):
+        if not len(xs) == len(ys) == len(classes) == len(probs):
             msg = "Detection record lengths are misaligned."
             raise ValueError(msg)
 

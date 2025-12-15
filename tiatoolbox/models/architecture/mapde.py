@@ -240,6 +240,9 @@ class MapDe(MicroNet):
     def postproc(
         self: MapDe,
         block: np.ndarray,
+        min_distance: int | None = None,
+        threshold_abs: float | None = None,
+        threshold_rel: float | None = None,
         block_info: dict | None = None,
         depth_h: int = 0,
         depth_w: int = 0,
@@ -253,22 +256,37 @@ class MapDe(MicroNet):
 
         Args:
             block (np.ndarray):
-                NumPy array (H, W, C).
-            block_info (dict):
+                shape (H, W, C).
+            min_distance (int | None):
+                The minimal allowed distance separating peaks.
+            threshold_abs (float | None):
+                Minimum intensity of peaks.
+            threshold_rel (float | None):
+                Minimum intensity of peaks.
+            block_info (dict | None):
                 Dask block info dict. Only used when called from
                 dask.array.map_overlap.
-            depth_h: Halo size in pixels for height (rows).
-                Only used when it's called from dask.array.map_overlap.
-            depth_w: Halo size in pixels for width (cols).
-                Only used when it's called from dask.array.map_overlap.
+            depth_h (int):
+                Halo size in pixels for height (rows). Only used
+                when it's called from dask.array.map_overlap.
+            depth_w (int):
+                Halo size in pixels for width (cols). Only used
+                when it's called from dask.array.map_overlap.
 
         Returns:
             out: NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere.
         """
+        min_distance_to_use = (
+            self.min_distance if min_distance is None else min_distance
+        )
+        threshold_abs_to_use = (
+            self.threshold_abs if threshold_abs is None else threshold_abs
+        )
         return peak_detection_map_overlap(
             block,
-            min_distance=self.min_distance,
-            threshold_abs=self.threshold_abs,
+            min_distance=min_distance_to_use,
+            threshold_abs=threshold_abs_to_use,
+            threshold_rel=threshold_rel,
             block_info=block_info,
             depth_h=depth_h,
             depth_w=depth_w,
