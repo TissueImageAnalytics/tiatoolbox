@@ -161,9 +161,9 @@ def test_nucleus_detector_patches_dict_output(
     )
     patch_2 = np.zeros_like(patch_1)
 
-    pretrained_model = "sccnn-conic"
+    model = "sccnn-conic"
 
-    nucleus_detector = NucleusDetector(model=pretrained_model)
+    nucleus_detector = NucleusDetector(model=model)
 
     output_dict = nucleus_detector.run(
         patch_mode=True,

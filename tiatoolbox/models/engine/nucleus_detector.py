@@ -521,6 +521,7 @@ class NucleusDetector(SemanticSegmentor):
 
         Returns:
             Tuple of ([x_coords], [y_coords], [class_ids], [probs])
+
         """
         # block: (h, w, C) NumPy chunk (post-stitching, no halos)
         if block_info is not None:
@@ -547,7 +548,7 @@ class NucleusDetector(SemanticSegmentor):
 
         # read detection probabilities
         p = block[ys, xs, cs].astype(np.float32, copy=False)
-        return (x, y, t, p)
+        return x, y, t, p
 
     @staticmethod
     def _centroid_maps_to_detection_arrays(

@@ -289,6 +289,7 @@ def peak_detection_map_overlap(
 
     Returns:
         out: NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere.
+
     """
     block_height, block_width, block_channels = block.shape
 
