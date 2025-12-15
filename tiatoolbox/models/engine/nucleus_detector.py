@@ -59,6 +59,10 @@ class NucleusDetectorRunParams(SemanticSegmentorRunParams, total=False):
             Shape of output patches (height, width).
         min_distance (int):
             Minimum distance separating two nuclei (in pixels).
+        threshold_abs (float):
+            Absolute threshold for nucleus detection.
+        threshold_rel (float):
+            Relative threshold for nucleus detection.
         postproc_tile_shape (tuple[int, int]):
             Tile shape (height, width) for post-processing (in pixels).
         return_labels (bool):
@@ -76,6 +80,8 @@ class NucleusDetectorRunParams(SemanticSegmentorRunParams, total=False):
     """
 
     min_distance: int
+    threshold_abs: float
+    threshold_rel: float
     postproc_tile_shape: IntPair
 
 
@@ -271,7 +277,7 @@ class NucleusDetector(SemanticSegmentor):
         raw_predictions: da.Array,
         prediction_shape: tuple[int, ...],
         prediction_dtype: type,
-        **kwargs: Unpack[NucleusDetectorRunParams],  # noqa: ARG002
+        **kwargs: Unpack[NucleusDetectorRunParams],
     ) -> dict:
         """Define how to post-process patch predictions.
 
@@ -302,6 +308,11 @@ class NucleusDetector(SemanticSegmentor):
 
         probabilities = raw_predictions.persist()
 
+        # If these are not provided, defaults from model will be used in postproc
+        min_distance = kwargs.get("min_distance")
+        threshold_abs = kwargs.get("threshold_abs")
+        threshold_rel = kwargs.get("threshold_rel")
+
         # Lists to hold per-patch detection arrays
         xs = []
         ys = []
@@ -311,7 +322,12 @@ class NucleusDetector(SemanticSegmentor):
         # Process each patch's predictions
         for i in range(probabilities.shape[0]):
             probs_prediction_patch = probabilities[i].compute()
-            centroids_map_patch = self.model.postproc(probs_prediction_patch)
+            centroids_map_patch = self.model.postproc(
+                probs_prediction_patch,
+                min_distance=min_distance,
+                threshold_abs=threshold_abs,
+                threshold_rel=threshold_rel,
+            )
             centroids_map_patch = da.from_array(centroids_map_patch, chunks="auto")
             xs_patch, ys_patch, classes_patch, probs_patch = (
                 self._centroid_maps_to_detection_arrays(centroids_map_patch).values()
@@ -358,7 +374,11 @@ class NucleusDetector(SemanticSegmentor):
 
         logger.info("Post processing WSI predictions in NucleusDetector")
 
-        min_distance = kwargs.get("min_distance", (self.model.min_distance))
+        # If these are not provided, defaults from model will be used in postproc
+        min_distance = kwargs.get("min_distance", self.model.min_distance)
+        threshold_abs = kwargs.get("threshold_abs")
+        threshold_rel = kwargs.get("threshold_rel")
+
         postproc_tile_shape = kwargs.get(
             "postproc_tile_shape",
             self.model.postproc_tile_shape,
@@ -377,6 +397,9 @@ class NucleusDetector(SemanticSegmentor):
         centroid_maps = da.map_overlap(
             rechunked_prediction_map,
             self.model.postproc,
+            min_distance=min_distance,
+            threshold_abs=threshold_abs,
+            threshold_rel=threshold_rel,
             depth=depth,
             boundary=0,
             dtype=prediction_dtype,
