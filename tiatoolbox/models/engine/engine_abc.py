@@ -700,45 +700,11 @@ class EngineABC(ABC):  # noqa: B024
         keys_to_compute = [k for k in processed_predictions if k not in self.drop_keys]
 
         if output_type.lower() == "zarr":
-            if is_zarr(save_path):
-                zarr_group = zarr.open(save_path, mode="r")
-                keys_to_compute = [k for k in keys_to_compute if k not in zarr_group]
-            write_tasks = []
-            for key in keys_to_compute:
-                dask_output = processed_predictions[key]
-                if isinstance(dask_output, da.Array):
-                    dask_output = dask_output.rechunk("auto")
-                    task = dask_output.to_zarr(
-                        url=save_path, component=key, compute=False, object_codec=None
-                    )
-                    write_tasks.append(task)
-
-                if isinstance(dask_output, list) and all(
-                    isinstance(dask_array, da.Array) for dask_array in dask_output
-                ):
-                    for i, dask_array in enumerate(dask_output):
-                        object_codec = (
-                            Pickle() if dask_array.dtype == "object" else None
-                        )
-                        task = dask_array.to_zarr(
-                            url=save_path,
-                            component=f"{key}/{i}",
-                            compute=False,
-                            object_codec=object_codec,
-                        )
-                        write_tasks.append(task)
-
-            msg = f"Saving output to {save_path}."
-            logger.info(msg=msg)
-            with ProgressBar():
-                compute(*write_tasks)
-
-            zarr_group = zarr.open(save_path, mode="r+")
-            for key in self.drop_keys:
-                if key in zarr_group:
-                    del zarr_group[key]
-
-            return save_path
+            return self.save_predictions_as_zarr(
+                processed_predictions=processed_predictions,
+                save_path=save_path,
+                keys_to_compute=keys_to_compute,
+            )
 
         values_to_compute = [processed_predictions[k] for k in keys_to_compute]
 
@@ -770,6 +736,68 @@ class EngineABC(ABC):  # noqa: B024
 
         msg = f"Unsupported output type: {output_type}"
         raise TypeError(msg)
+
+    def save_predictions_as_zarr(
+        self: EngineABC,
+        processed_predictions: dict,
+        save_path: Path,
+        keys_to_compute: list,
+    ) -> Path:
+        """Save model predictions as a zarr file.
+
+        This method saves the processed predictions to a zarr file at the specified
+        path.
+
+        Args:
+            processed_predictions (dict):
+                Dictionary containing processed model predictions.
+            save_path (Path):
+                Path to save the zarr file.
+            keys_to_compute (list):
+                List of keys in processed_predictions to save.
+
+        Returns:
+            save_path (Path):
+                Path to the saved zarr file.
+
+        """
+        if is_zarr(save_path):
+            zarr_group = zarr.open(save_path, mode="r")
+            keys_to_compute = [k for k in keys_to_compute if k not in zarr_group]
+        write_tasks = []
+        for key in keys_to_compute:
+            dask_output = processed_predictions[key]
+            if isinstance(dask_output, da.Array):
+                dask_output = dask_output.rechunk("auto")
+                task = dask_output.to_zarr(
+                    url=save_path, component=key, compute=False, object_codec=None
+                )
+                write_tasks.append(task)
+
+            if isinstance(dask_output, list) and all(
+                isinstance(dask_array, da.Array) for dask_array in dask_output
+            ):
+                for i, dask_array in enumerate(dask_output):
+                    object_codec = Pickle() if dask_array.dtype == "object" else None
+                    task = dask_array.to_zarr(
+                        url=save_path,
+                        component=f"{key}/{i}",
+                        compute=False,
+                        object_codec=object_codec,
+                    )
+                    write_tasks.append(task)
+
+        msg = f"Saving output to {save_path}."
+        logger.info(msg=msg)
+        with ProgressBar():
+            compute(*write_tasks)
+
+        zarr_group = zarr.open(save_path, mode="r+")
+        for key in self.drop_keys:
+            if key in zarr_group:
+                del zarr_group[key]
+
+        return save_path
 
     def infer_wsi(
         self: EngineABC,
