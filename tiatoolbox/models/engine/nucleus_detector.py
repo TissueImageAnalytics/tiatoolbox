@@ -525,15 +525,17 @@ class NucleusDetector(SemanticSegmentor):
         """
         # block: (h, w, C) NumPy chunk (post-stitching, no halos)
         if block_info is not None:
-            info = block_info[0]
-            (r0, _), (c0, _), _ = info["array-location"]  # global interior start/stop
+            info = block_info[0]  # block_info[0] is input block info
+            (global_y_start, _), (global_x_start, _), _ = info[
+                "array-location"
+            ]  # global interior start/stop
         else:
-            r0, c0 = 0, 0
+            global_y_start, global_x_start = 0, 0
 
         # find the coordinates and channel indices of nonzeros
-        ys, xs, cs = np.nonzero(block)
+        ys_local, xs_local, classes = np.nonzero(block)
 
-        if ys.size == 0:
+        if ys_local.size == 0:
             # return empty arrays
             return (
                 np.empty(0, dtype=np.uint32),
@@ -542,13 +544,13 @@ class NucleusDetector(SemanticSegmentor):
                 np.empty(0, dtype=np.float32),
             )
 
-        x = xs.astype(np.uint32, copy=False) + int(c0)
-        y = ys.astype(np.uint32, copy=False) + int(r0)
-        t = cs.astype(np.uint32, copy=False)
+        xs_global = xs_local.astype(np.uint32, copy=False) + int(global_x_start)
+        ys_global = ys_local.astype(np.uint32, copy=False) + int(global_y_start)
+        classes = classes.astype(np.uint32, copy=False)
 
         # read detection probabilities
-        p = block[ys, xs, cs].astype(np.float32, copy=False)
-        return x, y, t, p
+        probs = block[ys_local, xs_local, classes].astype(np.float32, copy=False)
+        return xs_global, ys_global, classes, probs
 
     @staticmethod
     def _centroid_maps_to_detection_arrays(
