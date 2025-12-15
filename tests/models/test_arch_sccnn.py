@@ -84,6 +84,6 @@ def test_functionality(remote_sample: Callable) -> None:
         }
     }
     output = model.postproc(output[0], block_info=block_info)
-    ys, xs, _, _ = np.nonzero(output)
+    ys, xs, _ = np.nonzero(output)
     np.testing.assert_array_equal(xs, np.array([]))
     np.testing.assert_array_equal(ys, np.array([]))
