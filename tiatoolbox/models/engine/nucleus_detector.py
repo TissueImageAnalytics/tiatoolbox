@@ -506,10 +506,10 @@ class NucleusDetector(SemanticSegmentor):
         )
 
     @staticmethod
-    def _centroid_maps_to_detection_records(
+    def _extract_detection_arrays_from_block(
         block: np.ndarray, block_info: dict | None = None
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """Convert a block of centroid maps to detection records.
+        """Extract detection arrays from a block of centroid maps.
 
         Each block is a NumPy array of shape (h, w, C) containing detection
         probabilities of each class c. This function finds non-zero detections
@@ -570,7 +570,7 @@ class NucleusDetector(SemanticSegmentor):
         """
         recs_delayed = (
             detection_maps.map_blocks(
-                NucleusDetector._centroid_maps_to_detection_records,
+                NucleusDetector._extract_detection_arrays_from_block,
                 dtype=object,
                 block_info=True,
             )
