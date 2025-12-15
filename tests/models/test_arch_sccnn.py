@@ -49,7 +49,7 @@ def test_functionality(remote_sample: Callable) -> None:
         device=select_device(on_gpu=env_detection.has_gpu()),
     )
     output = model.postproc(output[0])
-    xs, ys, _, _ = NucleusDetector._centroid_maps_to_detection_records(output, None)
+    xs, ys, _, _ = NucleusDetector._centroid_maps_to_detection_arrays(output, None)
 
     np.testing.assert_array_equal(xs, np.array([8]))
     np.testing.assert_array_equal(ys, np.array([7]))
@@ -66,7 +66,7 @@ def test_functionality(remote_sample: Callable) -> None:
         }
     }
     output = model.postproc(output[0], block_info=block_info)
-    xs, ys, _, _ = NucleusDetector._centroid_maps_to_detection_records(output, None)
+    xs, ys, _, _ = NucleusDetector._centroid_maps_to_detection_arrays(output, None)
     np.testing.assert_array_equal(xs, np.array([7]))
     np.testing.assert_array_equal(ys, np.array([8]))
 
@@ -85,6 +85,6 @@ def test_functionality(remote_sample: Callable) -> None:
         }
     }
     output = model.postproc(output[0], block_info=block_info)
-    xs, ys, _, _ = NucleusDetector._centroid_maps_to_detection_records(output, None)
+    xs, ys, _, _ = NucleusDetector._centroid_maps_to_detection_arrays(output, None)
     np.testing.assert_array_equal(xs, np.array([]))
     np.testing.assert_array_equal(ys, np.array([]))
