@@ -382,7 +382,6 @@ class EngineABC(ABC):  # noqa: B024
             module = getattr(self.model, "module", None)
             return getattr(module, attr_name, None)
 
-
     def get_dataloader(
         self: EngineABC,
         images: str | Path | list[str | Path] | np.ndarray,
