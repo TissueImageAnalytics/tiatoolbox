@@ -1,4 +1,52 @@
-"""This module implements nucleus detection engine."""
+"""Nucleus Detection Engine for Digital Pathology (WSIs and patches).
+
+This module implements the `NucleusDetector` class—which extends
+`SemanticSegmentor`—to perform instance-level nucleus detection on
+histology images. It supports patch-mode and whole slide image (WSI)
+workflows using TIAToolbox or custom PyTorch models, and provides
+utilities for halo-aware post-processing (centroid extraction,
+thresholding), merging detections across patch seams, and exporting
+results in multiple formats (in-memory dict, Zarr, AnnotationStore).
+
+Classes
+-------
+NucleusDetectorRunParams
+    TypedDict specifying runtime configuration keys for detection.
+NucleusDetector
+    Core engine for nucleus detection; orchestrates preprocessing,
+    inference, post-processing, and output saving.
+
+Examples:
+--------
+>>> from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
+>>> detector = NucleusDetector(model="mapde-conic", batch_size=16, num_workers=8)
+>>> # WSI workflow: save to AnnotationStore (.db)
+>>> out = detector.run(
+...     images=[pathlib.Path("example_wsi.tiff")],
+...     patch_mode=False,
+...     device="cuda",
+...     save_dir=pathlib.Path("output_directory/"),
+...     overwrite=True,
+...     output_type="annotationstore",
+...     class_dict={0: "nucleus"},
+...     auto_get_mask=True,
+...     memory_threshold=80,
+... )
+>>> # Patch workflow: return in-memory detections
+>>> patches = [np.ndarray, np.ndarray]  # NHWC
+>>> out = detector.run(patches, patch_mode=True, output_type="dict")
+
+Notes:
+-----
+- Consistent with TIAToolbox engines, outputs can be returned as Python
+  dictionaries, saved as Zarr groups, or converted to AnnotationStore (.db).
+- Post-processing uses tile rechunking and halo padding to ensure robust
+  centroid extraction across chunk boundaries.
+- Coordinate scaling for AnnotationStore is derived from the dataloader's
+  resolution metadata (see base engine); it can be overridden via
+  `scale_factor` in `NucleusDetectorRunParams`.
+
+"""
 
 from __future__ import annotations
 
@@ -32,17 +80,18 @@ if TYPE_CHECKING:  # pragma: no cover
 class NucleusDetectorRunParams(SemanticSegmentorRunParams, total=False):
     """Runtime parameters for configuring the `NucleusDetector.run()` method.
 
-    This class extends `SemanticSegmentorRunParams`,
-    and adds parameters specific to nucleus detection workflows.
+    This class extends `SemanticSegmentorRunParams` (and transitively
+    `PredictorRunParams` → `EngineABCRunParams`) with additional options
+    specific to nucleus detection workflows.
 
     Attributes:
         auto_get_mask (bool):
             Whether to automatically generate segmentation masks using
-            `wsireader.tissue_mask()` during processing.
+            `wsireader.tissue_mask()` during WSI processing.
         batch_size (int):
             Number of image patches to feed to the model in a forward pass.
         class_dict (dict):
-            Optional dictionary mapping classification outputs to class names.
+            Optional dictionary mapping numeric class IDs to class names.
         device (str):
             Device to run the model on (e.g., "cpu", "cuda").
         labels (list):
@@ -51,32 +100,34 @@ class NucleusDetectorRunParams(SemanticSegmentorRunParams, total=False):
         memory_threshold (int):
             Memory usage threshold (in percentage) to trigger caching behavior.
         num_workers (int):
-            Number of workers used in DataLoader.
+            Number of workers used in the DataLoader.
         output_file (str):
-            Output file name for saving results (e.g., .zarr or .db).
+            Output file name for saving results (e.g., ".zarr" or ".db").
         output_resolutions (Resolution):
-            Resolution used for writing output predictions.
+            Resolution used for writing output predictions/coordinates.
         patch_output_shape (tuple[int, int]):
             Shape of output patches (height, width).
         min_distance (int):
-            Minimum distance separating two nuclei (in pixels).
+            Minimum separation between nuclei (in pixels) used during
+            centroid extraction/post-processing.
         threshold_abs (float):
-            Absolute threshold for nucleus detection.
+            Absolute detection threshold applied to model outputs.
         threshold_rel (float):
-            Relative threshold for nucleus detection.
+            Relative detection threshold (e.g., with respect to local maxima).
         postproc_tile_shape (tuple[int, int]):
-            Tile shape (height, width) for post-processing (in pixels).
+            Tile shape (height, width) used during post-processing
+            (in pixels) to control rechunking and overlap behavior.
         return_labels (bool):
             Whether to return labels with predictions.
         return_probabilities (bool):
-            Whether to return per-class probabilities.
+            Whether to include per-class probabilities in the output.
         scale_factor (tuple[float, float]):
-            Scale factor for converting annotations to baseline resolution.
-            Typically model_mpp / slide_mpp.
+            Scale factor for converting coordinates to baseline resolution.
+            Typically, `model_mpp / slide_mpp`.
         stride_shape (tuple[int, int]):
-            Stride used during WSI processing. Defaults to patch_input_shape.
+            Stride used during WSI processing. Defaults to `patch_input_shape`.
         verbose (bool):
-            Whether to output logging information.
+            Whether to enable verbose logging.
 
     """
 
@@ -87,12 +138,24 @@ class NucleusDetectorRunParams(SemanticSegmentorRunParams, total=False):
 
 
 class NucleusDetector(SemanticSegmentor):
-    r"""Nucleus detection engine for digital pathology images.
+    r"""Nucleus detection engine for digital histology images.
 
-    This class extends SemanticSegmentor to support nucleus detection tasks
-    using pretrained or custom models from TIAToolbox. It supports both patch-level
-    and whole slide image (WSI) processing, and provides utilities for merging,
-    post-processing, and saving predictions.
+    This class extends :class:`SemanticSegmentor` to support instance-level
+    nucleus detection using pretrained or custom models from TIAToolbox.
+    It operates in both patch-level and whole slide image (WSI) modes and
+    provides utilities for post-processing (e.g., centroid extraction,
+    thresholding, tile-overlap handling), merging predictions, and saving
+    results in multiple output formats. Supported TIAToolbox models include
+    nucleus-detection architectures such as ``mapde-conic`` and
+    ``mapde-crchisto``. For the full list of pretrained models, refer to the
+    model zoo documentation:
+    https://tia-toolbox.readthedocs.io/en/latest/pretrained.html
+
+    The class integrates seamlessly with the TIAToolbox engine interface,
+    inheriting the data loading, inference orchestration, memory-aware
+    chunking, and output-saving conventions of :class:`SemanticSegmentor`,
+    while overriding only the nucleus-specific post-processing and export
+    routines.
 
     Args:
         model (str or nn.Module):
@@ -104,26 +167,56 @@ class NucleusDetector(SemanticSegmentor):
             be downloaded. However, you can override with your own set
             of weights via the `weights` argument. Argument is case insensitive.
         batch_size (int):
-            Number of images fed into the model each time.
+            Number of image patches processed per forward pass.
+            Default is ``8``.
         num_workers (int):
-            Number of workers used in torch.utils.data.DataLoader.
-        weights (str or pathlib.Path, optional):
-            Pretrained weights file path or name of the existing weights
-            supported by tiatoolbox. If ``None``, and `model` is a string,
-            the default pretrained weights for the specified model will be used.
-            If `model` is a nn.Module, no weights will be loaded
-            unless specified here.
+            Number of workers for ``torch.utils.data.DataLoader``.
+            Default is ``0``.
+        weights (str or pathlib.Path or None):
+            Optional path to pretrained weights. If ``None`` and ``model`` is
+            a string, default pretrained weights for that model will be used.
+            If ``model`` is an ``nn.Module``, weights are loaded only if
+            provided.
         device (str):
-            Device to run the model on, e.g., 'cpu' or 'cuda:0'.
+            Device on which the model will run (e.g., ``"cpu"``, ``"cuda"``).
+            Default is ``"cpu"``.
         verbose (bool):
-            Whether to output logging information.
+            Whether to output logging information. Default is ``True``.
 
-    Supported TIAToolBox Pre-trained Models:
-        - `mapde-conic`
-        - `mapde-crchisto`
-
+    Attributes:
+        images (list[str or Path] or np.ndarray):
+            Input images supplied to the engine, either as WSI paths or
+            NHWC-formatted patches.
+        masks (list[str or Path] or np.ndarray):
+            Optional tissue masks for WSI processing. Only used when
+            ``patch_mode=False``.
+        patch_mode (bool):
+            Whether input is treated as image patches (``True``) or as WSIs
+            (``False``).
+        model (ModelABC):
+            Loaded PyTorch model. Can be a pretrained TIAToolbox model or a
+            custom user-provided model.
+        ioconfig (ModelIOConfigABC):
+            IO configuration specifying patch extraction shape, stride, and
+            resolution settings for inference.
+        return_labels (bool):
+            Whether to include labels in the output, if provided.
+        input_resolutions (list[dict]):
+            Resolution settings for model input heads. Supported units are
+            ``"level"``, ``"power"``, and ``"mpp"``.
+        patch_input_shape (tuple[int, int]):
+            Height and width of input patches read from slides, expressed in
+            read resolution space.
+        stride_shape (tuple[int, int]):
+            Stride used during patch extraction. Defaults to
+            ``patch_input_shape``.
+        drop_keys (list):
+            Keys to exclude from model output when saving results.
+        output_type (str):
+            Output format (``"dict"``, ``"zarr"``, or ``"annotationstore"``).
 
     Examples:
+        >>> from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
         >>> model_name = "mapde-conic"
         >>> detector = NucleusDetector(model=model_name, batch_size=16, num_workers=8)
         >>> detector.run(
@@ -135,7 +228,7 @@ class NucleusDetector(SemanticSegmentor):
         ...     output_type="annotationstore",
         ...     class_dict={0: "nucleus"},
         ...     auto_get_mask=True,
-        ...     memory_threshold=80
+        ...     memory_threshold=80,
         ... )
 
     """
@@ -152,21 +245,41 @@ class NucleusDetector(SemanticSegmentor):
     ) -> None:
         """Initialize :class:`NucleusDetector`.
 
+        This constructor follows the standard TIAToolbox engine initialization
+        workflow. A model may be provided either as a string referring to a
+        pretrained TIAToolbox architecture or as a custom ``torch.nn.Module``.
+        When ``model`` is a string, the corresponding pretrained weights are
+        automatically downloaded unless explicitly overridden via ``weights``.
+        The engine configures batch size, workers, IO settings, and device
+        placement consistently with the base classes.
+
         Args:
-            model (str | ModelABC):
-                A PyTorch model instance or name of a pretrained model from TIAToolbox.
-                If a string is provided, the corresponding pretrained weights will be
-                downloaded unless overridden via `weights`.
+            model (str or ModelABC):
+                A PyTorch model instance or the name of a pretrained TIAToolbox
+                model. If a string is provided, default pretrained weights are
+                loaded unless ``weights`` is supplied to override them.
+
             batch_size (int):
-                Number of image patches processed per forward pass. Default is 8.
+                Number of image patches processed per forward pass.
+                Default is ``8``.
+
             num_workers (int):
-                Number of workers for data loading. Default is 0.
-            weights (str | Path | None):
-                Path to model weights. If None, default weights are used.
+                Number of workers used for ``torch.utils.data.DataLoader``.
+                Default is ``0``.
+
+            weights (str or Path or None):
+                Path to model weights. If ``None`` and ``model`` is a string,
+                the default pretrained weights for that model will be used.
+                If ``model`` is a ``nn.Module``, weights are loaded only when
+                specified here.
+
             device (str):
-                Device to run the model on (e.g., "cpu", "cuda"). Default is "cpu".
+                Device on which the model will run (e.g., ``"cpu"``, ``"cuda"``).
+                Default is ``"cpu"``.
+
             verbose (bool):
-                Whether to enable verbose logging. Default is True.
+                Whether to enable verbose logging during initialization and
+                inference. Default is ``True``.
 
         """
         super().__init__(
@@ -185,31 +298,82 @@ class NucleusDetector(SemanticSegmentor):
         prediction_dtype: type,
         **kwargs: Unpack[NucleusDetectorRunParams],
     ) -> dict:
-        """Define how to post-process patch predictions.
+        """Post-process patch-level detection outputs.
+
+        Applies the model's post-processing routine (e.g., centroid extraction and
+        thresholding) to each patch's probability map, yielding per-patch detection
+        arrays suitable for saving or further merging. The behavior and parameters
+        mirror the conventions used in TIAToolbox engines.
 
         Args:
             raw_predictions (da.Array):
-                Predicted probabilities from the model (B, H, W, C),
-                B is number of patches.
-            prediction_shape (tuple[int, ...]): The shape of the predictions.
-            prediction_dtype (type): The data type of the predictions.
+                Patch predictions of shape ``(B, H, W, C)``, where ``B`` is the number
+                of patches (probabilities/logits).
+            prediction_shape (tuple[int, ...]):
+                Expected prediction shape for validation/logging.
+            prediction_dtype (type):
+                Expected prediction dtype for validation/logging.
             **kwargs (NucleusDetectorRunParams):
-                Additional runtime parameters
+                Additional runtime parameters to configure segmentation.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Whether to automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches to feed to the model in a forward pass.
+                    class_dict (dict):
+                        Optional dictionary mapping classification outputs to
+                        class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (in percentage) to
+                        trigger caching behavior.
+                    num_workers (int):
+                        Number of workers used in DataLoader.
+                    output_file (str):
+                        Output file name for saving results (e.g., .zarr or .db).
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    min_distance (int):
+                        Minimum distance separating two nuclei (in pixels).
+                    postproc_tile_shape (tuple[int, int]):
+                        Tile shape (height, width) for post-processing (in pixels).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for converting annotations to baseline resolution.
+                        Typically model_mpp / slide_mpp.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to patch_input_shape.
+                    verbose (bool):
+                        Whether to output logging information.
 
         Returns:
             dict[str, list[da.Array]]:
-                Detection arrays aggregated per patch. Each key ('x', 'y',
-                'classes', 'probabilities') maps to a 1-D object dask array
-                corresponds to a patch's detections.
-                keys:
-                    - "x" (list[dask array]):
-                        x coordinates (np.uint32).
-                    - "y" (list[dask array]):
-                        y coordinates (np.uint32).
-                    - "classes" (list[dask array]):
-                        detection classes (np.uint32).
-                    - "probabilities" (list[dask array]):
-                        detection probabilities (np.float32).
+                A dictionary of lists (one list per patch), with keys:
+                - ``"x"`` (list[dask array]):
+                    1-D object dask arrays of x coordinates (``np.uint32``).
+                - ``"y"`` (list[dask array]):
+                    1-D object dask arrays of y coordinates (``np.uint32``).
+                - ``"classes"`` (list[dask array]):
+                    1-D object dask arrays of class IDs (``np.uint32``).
+                - ``"probabilities"`` (list[dask array]):
+                    1-D object dask arrays of detection scores (``np.float32``).
+
+        Notes:
+            - If thresholds are not provided via ``kwargs``, model defaults are used.
+            - The output structure intentionally mirrors other TIAToolbox engines,
+              enabling downstream saving as ``dict``, ``zarr``, or ``annotationstore``.
 
         """
         logger.info("Post processing patch predictions in NucleusDetector")
@@ -254,28 +418,83 @@ class NucleusDetector(SemanticSegmentor):
         prediction_dtype: type,
         **kwargs: Unpack[NucleusDetectorRunParams],
     ) -> dict[str, da.Array]:
-        """Define how to post-process WSI predictions.
+        """Post-process WSI-level nucleus detection outputs.
 
-        Processes the raw prediction dask array using map_overlap
-        to apply the model's post-processing function on each chunk
-        with appropriate overlaps on chunk boundaries.
+        Processes the full-slide prediction map using Dask's block-wise operations
+        to extract nuclei centroids across the entire WSI. The prediction map is
+        first re-chunked to the model's preferred post-processing tile shape, and
+        `dask.map_overlap` is used to ensure accurate centroid extraction along
+        chunk boundaries via halo padding. The resulting centroid maps are then
+        converted into final detection arrays (x, y, classes, probabilities).
 
         Args:
             raw_predictions (da.Array):
-                Predicted probabilities from the model with shape (H, W, C).
-            prediction_shape (tuple[int, ...]): The shape of the predictions.
-            prediction_dtype (type): The data type of the predictions.
+                WSI prediction map of shape ``(H, W, C)`` containing
+                per-class probabilities or logits.
+            prediction_shape (tuple[int, ...]):
+                Expected prediction shape (provided for consistency with the
+                base engine interface).
+            prediction_dtype (type):
+                Expected prediction dtype (also provided for consistency).
             **kwargs (NucleusDetectorRunParams):
-                Additional runtime parameters
+                Additional runtime parameters to configure segmentation.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Whether to automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches to feed to the model in a forward pass.
+                    class_dict (dict):
+                        Optional dictionary mapping classification outputs to
+                        class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (in percentage) to
+                        trigger caching behavior.
+                    num_workers (int):
+                        Number of workers used in DataLoader.
+                    output_file (str):
+                        Output file name for saving results (e.g., .zarr or .db).
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    min_distance (int):
+                        Minimum distance separating two nuclei (in pixels).
+                    postproc_tile_shape (tuple[int, int]):
+                        Tile shape (height, width) for post-processing (in pixels).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for converting annotations to baseline resolution.
+                        Typically model_mpp / slide_mpp.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to patch_input_shape.
+                    verbose (bool):
+                        Whether to output logging information.
 
         Returns:
             dict[str, da.Array]:
-            Each key ('x', 'y', 'classes', 'probabilities') maps to a 1-D dask array
-            of all detections.
-            - "x" (dask array): x coordinates (np.uint32).
-            - "y" (dask array): y coordinates (np.uint32).
-            - "classes" (dask array): detection classes (np.uint32).
-            - "probabilities" (dask array): detection probabilities (np.float32).
+                A dictionary mapping detection fields to 1-D Dask arrays:
+                - ``"x"``: x coordinates of detected nuclei (``np.uint32``).
+                - ``"y"``: y coordinates of detected nuclei (``np.uint32``).
+                - ``"classes"``: class IDs (``np.uint32``).
+                - ``"probabilities"``: detection scores (``np.float32``).
+
+        Notes:
+            - Halo padding ensures that nuclei crossing tile/chunk boundaries
+              are not fragmented or duplicated.
+            - If thresholds are not explicitly provided, model defaults are used.
+            - The output structure matches TIAToolbox conventions so it can be
+              saved directly as a ``dict``, ``zarr`` group, or ``annotationstore``.
 
         """
         _ = prediction_shape
@@ -327,53 +546,105 @@ class NucleusDetector(SemanticSegmentor):
     ) -> dict | AnnotationStore | Path | list[Path]:
         """Save nucleus detections to disk or return them in memory.
 
-        This method saves predictions in one of the supported formats:
-        - "annotationstore": converts predictions to an AnnotationStore (.db file).
-
-        If `patch_mode` is True, predictions are saved per image. If False,
-        predictions are merged and saved as a single output.
+        Saves post-processed detection outputs in one of the supported formats.
+        If ``patch_mode=True``, predictions are saved per image. If
+        ``patch_mode=False``, detections are merged and saved as a single output.
 
         Args:
             processed_predictions (dict):
-                Dictionary containing processed model predictions.
-                keys:
-                WSI mode:
-                    - "predictions":
-                    {
-                        - 'x' (da.Array):
-                            x coordinates (np.uint32).
-                        - 'y' (da.Array):
-                            y coordinates (np.uint32).
-                        - 'types' (da.Array):
-                            detection types (np.uint32).
-                        - 'probabilities' (da.Array):
-                            detection probabilities (np.float32).
-                    }
-                Patch mode:
-                    - "predictions":
-                    {
-                        - "x" (list[dask array]):
-                            x coordinates (np.uint32).
-                        - "y" (list[dask array]):
-                            y coordinates (np.uint32).
-                        - "classes" (list[dask array]):
-                            detection classes (np.uint32).
-                        - "probabilities" (list[dask array]):
-                            detection probabilities (np.float32).
-                    }
+                Dictionary containing processed detection results. Expected to include
+                a ``"predictions"`` key with detection arrays. The internal structure
+                follows TIAToolbox conventions and may differ slightly between patch
+                and WSI modes:
+                - Patch mode:
+                  - ``"x"`` (list[da.Array]):
+                    per-patch x coordinates (np.uint32).
+                  - ``"y"`` (list[da.Array]):
+                    per-patch y coordinates (np.uint32).
+                  - ``"classes"`` (list[da.Array]):
+                    per-patch class IDs (np.uint32).
+                  - ``"probabilities"`` (list[da.Array]):
+                    per-patch detection scores (np.float32).
+                - WSI mode:
+                  - ``"x"`` (da.Array):
+                    x coordinates (np.uint32).
+                  - ``"y"`` (da.Array):
+                    y coordinates (np.uint32).
+                  - ``"classes"`` (da.Array):
+                    class IDs (np.uint32).
+                  - ``"probabilities"`` (da.Array):
+                    detection scores (np.float32).
+
             output_type (str):
-                Desired output format.
-                Supported values are "dict", "zarr", and "annotationstore".
+                Desired output format: ``"dict"``, ``"zarr"``, or ``"annotationstore"``.
+
             save_path (Path | None):
-                Path to save the output file.
+                Path at which to save the output file(s). Required for file outputs
+                (e.g., Zarr or SQLite .db). If ``None`` and ``output_type="dict"``,
+                results are returned in memory.
+
             **kwargs (NucleusDetectorRunParams):
-                Additional runtime parameters including:
-                - scale_factor (tuple[float, float]): For coordinate transformation.
-                - class_dict (dict): Mapping of class indices to names.
+                Additional runtime parameters to configure segmentation.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Whether to automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches to feed to the model in a forward pass.
+                    class_dict (dict):
+                        Optional dictionary mapping classification outputs to
+                        class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (in percentage) to
+                        trigger caching behavior.
+                    num_workers (int):
+                        Number of workers used in DataLoader.
+                    output_file (str):
+                        Output file name for saving results (e.g., .zarr or .db).
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    min_distance (int):
+                        Minimum distance separating two nuclei (in pixels).
+                    postproc_tile_shape (tuple[int, int]):
+                        Tile shape (height, width) for post-processing (in pixels).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for converting annotations to baseline resolution.
+                        Typically model_mpp / slide_mpp.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to patch_input_shape.
+                    verbose (bool):
+                        Whether to output logging information.
 
         Returns:
-            AnnotationStore | Path:
-                - returns AnnotationStore or path to .db file.
+            dict | AnnotationStore | Path | list[Path]:
+                - If ``output_type="dict"``:
+                    returns a Python dictionary of predictions.
+                - If ``output_type="zarr"``:
+                    returns the path to the saved ``.zarr`` group.
+                - If ``output_type="annotationstore"``:
+                    returns an AnnotationStore handle or the path(s) to saved
+                    ``.db`` file(s). In patch mode, a list of per-image paths
+                    may be returned.
+
+        Notes:
+            - For non-AnnotationStore outputs, this method delegates to the
+              base engine's saving function to preserve consistency across
+              TIAToolbox engines.
+            - Coordinate scaling and class name mapping are applied only when saving
+              to AnnotationStore and when provided via ``kwargs``.
 
         """
         if output_type.lower() != "annotationstore":
@@ -405,33 +676,54 @@ class NucleusDetector(SemanticSegmentor):
         scale_factor: tuple[float, float] = (1.0, 1.0),
         class_dict: dict | None = None,
     ) -> AnnotationStore | Path | list[Path]:
-        """Save predictions to an AnnotationStore.
+        """Save nucleus detections to an AnnotationStore (.db).
+
+        Converts the processed detection arrays into per-instance `Annotation`
+        records, applies coordinate scaling and optional class-ID remapping,
+        and writes the results into an SQLite-backed AnnotationStore. In patch
+        mode, detections are written to separate `.db` files per input image;
+        in WSI mode, all detections are merged and written to a single store.
 
         Args:
             processed_predictions (dict):
-                Dictionary containing processed model predictions.
-                keys:
-                - "predictions":
-                {
-                    - 'x':
-                        dask array of x coordinates (np.uint32).
-                    - 'y':
-                        dask array of y coordinates (np.uint32).
-                    - 'classes':
-                        dask array of detection classes (np.uint32).
-                    - 'probabilities':
-                        dask array of detection probabilities (np.float32).
-                }
-            save_path (Path | None):
-                Path to save the output file.
-            scale_factor (tuple[float, float]):
-                Scaling factors for x and y coordinates.
-            class_dict (dict | None):
-                Mapping from original class IDs to new class names.
+                Dictionary containing the computed detection outputs. Expected to
+                include a top-level key ``"predictions"`` with fields:
+                - ``"x"`` (da.Array):
+                    dask array of x coordinates (``np.uint32``)
+                - ``"y"`` (da.Array):
+                    dask array of y coordinates (``np.uint32``)
+                - ``"classes"`` (da.Array):
+                    dask array of class IDs (``np.uint32``)
+                - ``"probabilities"`` (da.Array): d
+                    dask array of detection scores (``np.float32``)
+
+            save_path (Path or None):
+                Output path for saving the AnnotationStore. If ``None``, an in-memory
+                store is returned. When patch mode is active, this path serves as the
+                directory for producing one `.db` file per patch input.
+
+            scale_factor (tuple[float, float], optional):
+                Scaling factors applied to x and y coordinates prior to writing.
+                Typically corresponds to ``model_mpp / slide_mpp``.
+                Defaults to ``(1.0, 1.0)``.
+
+            class_dict (dict or None):
+                Optional mapping from original class IDs to class names or remapped IDs.
+                If ``None``, an identity mapping based on present classes is used.
 
         Returns:
-            AnnotationStore | Path:
-                - returns AnnotationStore or path to .db file.
+            AnnotationStore or Path or list[Path]:
+                - For WSI mode: a single AnnotationStore handle or the path to the saved
+                  `.db` file.
+                - For patch mode: a list of paths, one per saved patch-level
+                  AnnotationStore.
+
+        Notes:
+            - This method centralizes the translation of detection arrays into
+              `Annotation` objects and abstracts batching logic via
+              ``_write_detection_arrays_to_store``.
+            - When writing to disk, the resulting file always uses a ``.db`` suffix,
+              consistent with other TIAToolbox engines.
 
         """
         logger.info("Saving predictions as AnnotationStore.")
@@ -474,22 +766,38 @@ class NucleusDetector(SemanticSegmentor):
     def _centroid_maps_to_detection_arrays(
         detection_maps: da.Array,
     ) -> dict[str, da.Array]:
-        """Convert centroid maps to detection records stored as dask arrays.
+        """Convert centroid maps into 1-D detection arrays.
 
-        Returns a dictionary with four 1-D dask arrays: x, y, types, probabilities.
+        This helper function extracts non-zero centroid predictions from a
+        Dask array of centroid maps and flattens them into coordinate,
+        class, and probability arrays suitable for saving or further
+        processing. The output format mirrors the detection structure used
+        throughout TIAToolbox engines.
 
         Args:
             detection_maps (da.Array):
-                Dask array (H, W, C) of centroid maps,
-                with detection probabilities at nuclei centroids,
-                0 elsewhere.
+                A Dask array of shape ``(H, W, C)`` representing centroid
+                probability maps, where non-zero values correspond to nucleus
+                detections. Each non-zero entry encodes both the class channel
+                and its associated probability.
 
         Returns:
-            dict with keys:
-                - "x": dask array of x coordinates (np.uint32).
-                - "y": dask array of y coordinates (np.uint32).
-                - "classes": dask array of detection classes (np.uint32).
-                - "probabilities": dask array of detection probabilities (np.float32).
+            dict[str, da.Array]:
+                A dictionary containing four 1-D Dask arrays:
+                - ``"x"``:
+                    x coordinates of detected nuclei (``np.uint32``).
+                - ``"y"``:
+                    y coordinates of detected nuclei (``np.uint32``).
+                - ``"classes"``:
+                    class IDs for each detection (``np.uint32``).
+                - ``"probabilities"``:
+                    detection probabilities (``np.float32``).
+
+        Notes:
+            - All arrays are returned with chunk sizes computed to ensure
+              compatibility with downstream Dask operations.
+            - This method is used by both patch-level and WSI-level
+              post-processing routines to unify detection formatting.
 
         """
         # Lists of da.Array parts from each block
@@ -511,24 +819,43 @@ class NucleusDetector(SemanticSegmentor):
         class_dict: dict[int, str | int] | None,
         batch_size: int = 5000,
     ) -> int:
-        """Write detection arrays to AnnotationStore in batches.
+        """Write detection arrays to an AnnotationStore in batches.
+
+        Converts coordinate, class, and probability arrays into `Annotation`
+        records and appends them to an SQLite-backed store in configurable
+        batch sizes. Coordinates are scaled to baseline slide resolution using
+        the provided `scale_factor`, and optional class-ID remapping is applied
+        via `class_dict`.
 
         Args:
             detection_arrays (tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]):
-                Tuple of ([x_coords], [y_coords], [class_ids], [probabilities]).
+                Tuple of arrays in the order:
+                `(x_coords, y_coords, class_ids, probabilities)`.
+                Each element must be a 1-D NumPy array of equal length.
             store (SQLiteStore):
-                AnnotationStore to write the detections into.
+                Target `AnnotationStore` instance to receive the detections.
             scale_factor (tuple[float, float]):
-                Scaling factors for x and y coordinates.
+                Factors applied to `(x, y)` coordinates prior to writing,
+                typically `(model_mpp / slide_mpp)`. The scaled coordinates are
+                rounded to `np.uint32`.
             class_dict (dict[int, str | int] | None):
-                Mapping from original class IDs to new class names.
+                Optional mapping from original class IDs to names or remapped IDs.
+                If `None`, an identity mapping is used for the set of present classes.
             batch_size (int):
-                Number of records to write in each batch,
-                default is 5000.
+                Number of records to write per batch. Default is `5000`.
 
         Returns:
             int:
-                Total number of records written
+                Total number of detection records written to the store.
+
+        Notes:
+            - Coordinates are scaled and rounded to integers to ensure consistent
+              geometry creation for `Annotation` points.
+            - Class mapping is applied per-record; unmapped IDs fall back to their
+              original values.
+            - Writing in batches reduces memory pressure and improves throughput
+              on large detections.
+
         """
         xs, ys, classes, probs = detection_arrays
         n = len(xs)
@@ -580,29 +907,55 @@ class NucleusDetector(SemanticSegmentor):
         save_path: Path | None = None,
         batch_size: int = 5000,
     ) -> Path | SQLiteStore:
-        """Write detection arrays to an SQLiteStore.
+        """Write nucleus detection arrays to an SQLite-backed AnnotationStore.
 
-        Expects detection_arrays to contain dask arrays for keys
-        ``x``, ``y``, ``classes``, and ``probabilities``.
+        Converts the detection arrays into NumPy form, applies coordinate scaling
+        and optional class-ID remapping, and writes the results into an in-memory
+        SQLiteStore. If `save_path` is provided, the store is committed and saved
+        to disk as a `.db` file. This method provides a unified interface for
+        converting Dask-based detection outputs into persistent annotation storage.
 
         Args:
             detection_arrays (dict[str, da.Array]):
-                - "x": dask array of x coordinates (np.uint32).
-                - "y": dask array of y coordinates (np.uint32).
-                - "classes": dask array of class ids (np.uint32).
-                - "probabilities": dask array of detection probabilities (np.float32).
-            scale_factor (tuple[float, float]):
-                Scale factor to scale coordinates before saving.
-            class_dict (dict | None):
-                Optional dict mapping class indices to names.
-            save_path (Path | None):
-                Optional Path to save the .db file.
-                If None, returns in-memory store.
+                A dictionary containing the detection fields:
+                - ``"x"``: dask array of x coordinates (``np.uint32``).
+                - ``"y"``: dask array of y coordinates (``np.uint32``).
+                - ``"classes"``: dask array of class IDs (``np.uint32``).
+                - ``"probabilities"``: dask array of detection scores (``np.float32``).
+
+            scale_factor (tuple[float, float], optional):
+                Multiplicative factors applied to the x and y coordinates before
+                saving. The scaled coordinates are rounded to integer pixel
+                locations. Defaults to ``(1.0, 1.0)``.
+
+            class_dict (dict or None):
+                Optional mapping of class IDs to class names or remapped IDs.
+                If ``None``, an identity mapping is used based on the detected
+                class IDs.
+
+            save_path (Path or None):
+                Destination path for saving the `.db` file. If ``None``, the
+                resulting SQLiteStore is returned in memory. If provided, the
+                parent directory is created if needed, and the final store is
+                written as ``save_path.with_suffix(".db")``.
+
             batch_size (int):
-                Number of records to write per batch, default is 5000.
+                Number of detection records to write per batch. Defaults to ``5000``.
 
         Returns:
-            Path to saved .db file if save_path is provided, else in-memory SQLiteStore.
+            Path or SQLiteStore:
+                - If `save_path` is provided: the path to the saved `.db` file.
+                - If `save_path` is ``None``: an in-memory `SQLiteStore` containing
+                  all detections.
+
+        Notes:
+            - All detection arrays are converted to NumPy using ``np.asarray`` to
+              ensure consistent batching.
+            - The heavy lifting is delegated to
+              :meth:`NucleusDetector._write_detection_arrays_to_store`,
+              which performs coordinate scaling, class mapping, and batch writing.
+            - The database always uses the ``.db`` suffix for consistency with
+              TIAToolbox's AnnotationStore format TIAToolbox's AnnotationStore format.
 
         """
         xs = detection_arrays["x"]
