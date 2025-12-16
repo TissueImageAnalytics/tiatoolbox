@@ -1,14 +1,16 @@
 """Tests for NucleusDetector."""
 
-import pathlib
 import shutil
 from collections.abc import Callable
+from pathlib import Path
 
 import dask.array as da
 import numpy as np
 import pytest
 import zarr
+from click.testing import CliRunner
 
+from tiatoolbox import cli
 from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.models.engine.nucleus_detector import (
     NucleusDetector,
@@ -21,9 +23,9 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
 
-def _rm_dir(path: pathlib.Path) -> None:
+def _rm_dir(path: Path) -> None:
     """Helper func to remove directory."""
-    if pathlib.Path(path).exists():
+    if path.exists():
         shutil.rmtree(path, ignore_errors=True)
 
 
@@ -88,10 +90,10 @@ def test_write_detection_records_to_store_no_class_dict() -> None:
 
 
 def test_nucleus_detector_patch_annotation_store_output(
-    remote_sample: Callable, tmp_path: pathlib.Path
+    remote_sample: Callable, tmp_path: Path
 ) -> None:
     """Test for nucleus detection engine in patch mode."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi1_2k_2k_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi1_2k_2k_svs"))
 
     wsi_reader = WSIReader.open(mini_wsi_svs)
     patch_1 = wsi_reader.read_bounds(
@@ -153,7 +155,7 @@ def test_nucleus_detector_patches_dict_output(
     remote_sample: Callable,
 ) -> None:
     """Test for nucleus detection engine in patch mode."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi1_2k_2k_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi1_2k_2k_svs"))
 
     wsi_reader = WSIReader.open(mini_wsi_svs)
     patch_1 = wsi_reader.read_bounds(
@@ -193,10 +195,10 @@ def test_nucleus_detector_patches_dict_output(
 
 
 def test_nucleus_detector_patches_zarr_output(
-    remote_sample: Callable, tmp_path: pathlib.Path
+    remote_sample: Callable, tmp_path: Path
 ) -> None:
     """Test for nucleus detection engine in patch mode."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi1_2k_2k_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi1_2k_2k_svs"))
     wsi_reader = WSIReader.open(mini_wsi_svs)
     patch_1 = wsi_reader.read_bounds(
         (30, 30, 61, 61),
@@ -238,9 +240,9 @@ def test_nucleus_detector_patches_zarr_output(
     _rm_dir(save_dir)
 
 
-def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -> None:
+def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: Path) -> None:
     """Test for nucleus detection engine."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     pretrained_model = "sccnn-conic"
 
@@ -293,4 +295,30 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
     assert 255 <= len(classes) <= 265
 
     _rm_dir(save_dir)
-    pathlib.Path.unlink(mini_wsi_svs)
+    mini_wsi_svs.unlink()
+
+
+# -------------------------------------------------------------------------------------
+# Command Line Interface
+# -------------------------------------------------------------------------------------
+
+
+def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) -> None:
+    """Test nucleus detector CLI single file."""
+    runner = CliRunner()
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
+    models_wsi_result = runner.invoke(
+        cli.main,
+        [
+            "nucleus-detector",
+            "--img-input",
+            str(mini_wsi_svs),
+            "--patch-mode",
+            "False",
+            "--output-path",
+            str(track_tmp_path / "output"),
+        ],
+    )
+
+    assert models_wsi_result.exit_code == 0, models_wsi_result.output
+    assert (track_tmp_path / "output" / ("wsi4_512_512" + ".db")).exists()

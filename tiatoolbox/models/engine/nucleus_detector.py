@@ -426,14 +426,16 @@ class NucleusDetector(SemanticSegmentor):
         logger.info("Post processing WSI predictions in NucleusDetector")
 
         # If these are not provided, defaults from model will be used in postproc
-        min_distance = kwargs.get("min_distance", self.model.min_distance)
         threshold_abs = kwargs.get("threshold_abs")
         threshold_rel = kwargs.get("threshold_rel")
 
-        postproc_tile_shape = kwargs.get(
-            "postproc_tile_shape",
-            self.model.postproc_tile_shape,
-        )
+        # min_distance and postproc_tile_shape cannot be None here
+        min_distance = kwargs.get("min_distance")
+        if min_distance is None:
+            min_distance = self.model.min_distance
+        postproc_tile_shape = kwargs.get("postproc_tile_shape")
+        if postproc_tile_shape is None:
+            postproc_tile_shape = self.model.postproc_tile_shape
 
         # Add halo (overlap) around each block for post-processing
         depth_h = min_distance
