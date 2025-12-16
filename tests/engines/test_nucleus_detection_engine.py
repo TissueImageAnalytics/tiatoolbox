@@ -57,7 +57,7 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
     assert annotation.properties["class"] == "test_nucleus"
     store.close()
 
-    nucleus_detector.drop_keys = ["probs"]
+    nucleus_detector.drop_keys = ["probabilities"]
     result_path = nucleus_detector.run(
         patch_mode=False,
         device=device,
@@ -75,7 +75,7 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -
     xs = zarr_group["x"][:]
     ys = zarr_group["y"][:]
     classes = zarr_group["classes"][:]
-    probs = zarr_group.get("probs", None)
+    probs = zarr_group.get("probabilities", None)
     assert probs is None
     assert 255 <= len(xs) <= 265
     assert 255 <= len(ys) <= 265
@@ -174,19 +174,20 @@ def test_nucleus_detector_patches_dict_output(
         images=np.stack([patch_1, patch_2], axis=0),
         save_dir=None,
         class_dict=None,
+        return_probabilities=True,
     )
     assert len(output_dict["x"]) == 2
     assert len(output_dict["y"]) == 2
     assert len(output_dict["classes"]) == 2
-    assert len(output_dict["probs"]) == 2
+    assert len(output_dict["probabilities"]) == 2
     assert len(output_dict["x"][0]) == 1
     assert len(output_dict["x"][1]) == 0
     assert len(output_dict["y"][0]) == 1
     assert len(output_dict["y"][1]) == 0
     assert len(output_dict["classes"][0]) == 1
     assert len(output_dict["classes"][1]) == 0
-    assert len(output_dict["probs"][0]) == 1
-    assert len(output_dict["probs"][1]) == 0
+    assert len(output_dict["probabilities"][0]) == 1
+    assert len(output_dict["probabilities"][1]) == 0
 
 
 def test_nucleus_detector_patches_zarr_output(
@@ -218,6 +219,7 @@ def test_nucleus_detector_patches_zarr_output(
         save_dir=save_dir,
         class_dict=None,
         overwrite=True,
+        return_probabilities=True,
     )
 
     output_zarr = zarr.open(output_path, mode="r")
@@ -228,8 +230,8 @@ def test_nucleus_detector_patches_zarr_output(
     assert output_zarr["y"][1].size == 0
     assert output_zarr["classes"][0].size == 1
     assert output_zarr["classes"][1].size == 0
-    assert output_zarr["probs"][0].size == 1
-    assert output_zarr["probs"][1].size == 0
+    assert output_zarr["probabilities"][0].size == 1
+    assert output_zarr["probabilities"][1].size == 0
 
     _rm_dir(save_dir)
 
@@ -246,7 +248,7 @@ def test_centroid_maps_to_detection_arrays() -> None:
     xs = detections["x"]
     ys = detections["y"]
     classes = detections["classes"]
-    probs = detections["probs"]
+    probs = detections["probabilities"]
 
     np.testing.assert_array_equal(xs, np.array([1, 3], dtype=np.uint32))
     np.testing.assert_array_equal(ys, np.array([1, 2], dtype=np.uint32))
@@ -260,7 +262,7 @@ def test_write_detection_arrays_to_store() -> None:
         "x": np.array([1, 3], dtype=np.uint32),
         "y": np.array([1, 2], dtype=np.uint32),
         "classes": np.array([0, 1], dtype=np.uint32),
-        "probs": np.array([1.0, 0.5], dtype=np.float32),
+        "probabilities": np.array([1.0, 0.5], dtype=np.float32),
     }
 
     store = NucleusDetector.save_detection_arrays_to_store(detection_arrays)
@@ -270,7 +272,7 @@ def test_write_detection_arrays_to_store() -> None:
         "x": np.array([1], dtype=np.uint32),
         "y": np.array([1, 2], dtype=np.uint32),
         "classes": np.array([0], dtype=np.uint32),
-        "probs": np.array([1.0, 0.5], dtype=np.float32),
+        "probabilities": np.array([1.0, 0.5], dtype=np.float32),
     }
     with pytest.raises(
         ValueError,

@@ -293,13 +293,17 @@ class NucleusDetector(SemanticSegmentor):
         Returns:
             dict[str, list[da.Array]]:
                 Detection arrays aggregated per patch. Each key ('x', 'y',
-                'classes', 'probs') maps to a 1-D object dask array
+                'classes', 'probabilities') maps to a 1-D object dask array
                 corresponds to a patch's detections.
                 keys:
-                    - "x" (list[dask array]): x coordinates (np.uint32).
-                    - "y" (list[dask array]): y coordinates (np.uint32).
-                    - "classes" (list[dask array]): detection classes (np.uint32).
-                    - "probs" (list[dask array]): detection probabilities (np.float32).
+                    - "x" (list[dask array]):
+                        x coordinates (np.uint32).
+                    - "y" (list[dask array]):
+                        y coordinates (np.uint32).
+                    - "classes" (list[dask array]):
+                        detection classes (np.uint32).
+                    - "probabilities" (list[dask array]):
+                        detection probabilities (np.float32).
 
         """
         logger.info("Post processing patch predictions in NucleusDetector")
@@ -335,7 +339,7 @@ class NucleusDetector(SemanticSegmentor):
             classes.append(classes_patch)
             probs.append(probs_patch)
 
-        return {"x": xs, "y": ys, "classes": classes, "probs": probs}
+        return {"x": xs, "y": ys, "classes": classes, "probabilities": probs}
 
     def post_process_wsi(
         self: NucleusDetector,
@@ -360,12 +364,12 @@ class NucleusDetector(SemanticSegmentor):
 
         Returns:
             dict[str, da.Array]:
-            Each key ('x', 'y', 'classes', 'probs') maps to a 1-D dask array
+            Each key ('x', 'y', 'classes', 'probabilities') maps to a 1-D dask array
             of all detections.
             - "x" (dask array): x coordinates (np.uint32).
             - "y" (dask array): y coordinates (np.uint32).
             - "classes" (dask array): detection classes (np.uint32).
-            - "probs" (dask array): detection probabilities (np.float32).
+            - "probabilities" (dask array): detection probabilities (np.float32).
 
         """
         _ = prediction_shape
@@ -436,7 +440,7 @@ class NucleusDetector(SemanticSegmentor):
                             y coordinates (np.uint32).
                         - 'types' (da.Array):
                             detection types (np.uint32).
-                        - 'probs' (da.Array):
+                        - 'probabilities' (da.Array):
                             detection probabilities (np.float32).
                     }
                 Patch mode:
@@ -448,7 +452,7 @@ class NucleusDetector(SemanticSegmentor):
                             y coordinates (np.uint32).
                         - "classes" (list[dask array]):
                             detection classes (np.uint32).
-                        - "probs" (list[dask array]):
+                        - "probabilities" (list[dask array]):
                             detection probabilities (np.float32).
                     }
             output_type (str):
@@ -466,13 +470,6 @@ class NucleusDetector(SemanticSegmentor):
                 - returns AnnotationStore or path to .db file.
 
         """
-        # scale_factor set from kwargs
-        scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
-        # class_dict set from kwargs
-        class_dict = kwargs.get("class_dict")
-        if class_dict is None:
-            class_dict = self.model.output_class_dict
-
         if output_type.lower() != "annotationstore":
             return super().save_predictions(
                 processed_predictions["predictions"],
@@ -480,6 +477,14 @@ class NucleusDetector(SemanticSegmentor):
                 save_path=save_path,
                 **kwargs,
             )
+
+        # scale_factor set from kwargs
+        scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
+        # class_dict set from kwargs
+        class_dict = kwargs.get("class_dict")
+        if class_dict is None:
+            class_dict = self.model.output_class_dict
+
         return self._save_predictions_annotation_store(
             processed_predictions,
             save_path=save_path,
@@ -502,10 +507,14 @@ class NucleusDetector(SemanticSegmentor):
                 keys:
                 - "predictions":
                 {
-                    - 'x': dask array of x coordinates (np.uint32).
-                    - 'y': dask array of y coordinates (np.uint32).
-                    - 'classes': dask array of detection classes (np.uint32).
-                    - 'probs': dask array of detection probabilities (np.float32).
+                    - 'x':
+                        dask array of x coordinates (np.uint32).
+                    - 'y':
+                        dask array of y coordinates (np.uint32).
+                    - 'classes':
+                        dask array of detection classes (np.uint32).
+                    - 'probabilities':
+                        dask array of detection probabilities (np.float32).
                 }
             save_path (Path | None):
                 Path to save the output file.
@@ -535,7 +544,7 @@ class NucleusDetector(SemanticSegmentor):
                     "x": detections["x"][i],
                     "y": detections["y"][i],
                     "classes": detections["classes"][i],
-                    "probs": detections["probs"][i],
+                    "probabilities": detections["probabilities"][i],
                 }
 
                 out_file = self.save_detection_arrays_to_store(
@@ -561,7 +570,7 @@ class NucleusDetector(SemanticSegmentor):
     ) -> dict[str, da.Array]:
         """Convert centroid maps to detection records stored as dask arrays.
 
-        Returns a dictionary with four 1-D dask arrays: x, y, types, probs.
+        Returns a dictionary with four 1-D dask arrays: x, y, types, probabilities.
 
         Args:
             detection_maps (da.Array):
@@ -574,7 +583,7 @@ class NucleusDetector(SemanticSegmentor):
                 - "x": dask array of x coordinates (np.uint32).
                 - "y": dask array of y coordinates (np.uint32).
                 - "classes": dask array of detection classes (np.uint32).
-                - "probs": dask array of detection probabilities (np.float32).
+                - "probabilities": dask array of detection probabilities (np.float32).
 
         """
         # Lists of da.Array parts from each block
@@ -586,7 +595,7 @@ class NucleusDetector(SemanticSegmentor):
         classes = classes.compute_chunk_sizes()
         probs = probs.compute_chunk_sizes()
 
-        return {"x": xs, "y": ys, "classes": classes, "probs": probs}
+        return {"x": xs, "y": ys, "classes": classes, "probabilities": probs}
 
     @staticmethod
     def _write_detection_arrays_to_store(
@@ -600,7 +609,7 @@ class NucleusDetector(SemanticSegmentor):
 
         Args:
             detection_arrays (tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]):
-                Tuple of ([x_coords], [y_coords], [class_ids], [probs]).
+                Tuple of ([x_coords], [y_coords], [class_ids], [probabilities]).
             store (SQLiteStore):
                 AnnotationStore to write the detections into.
             scale_factor (tuple[float, float]):
@@ -668,14 +677,14 @@ class NucleusDetector(SemanticSegmentor):
         """Write detection arrays to an SQLiteStore.
 
         Expects detection_arrays to contain dask arrays for keys
-        ``x``, ``y``, ``classes``, and ``probs``.
+        ``x``, ``y``, ``classes``, and ``probabilities``.
 
         Args:
             detection_arrays (dict[str, da.Array]):
                 - "x": dask array of x coordinates (np.uint32).
                 - "y": dask array of y coordinates (np.uint32).
                 - "classes": dask array of class ids (np.uint32).
-                - "probs": dask array of detection probabilities (np.float32).
+                - "probabilities": dask array of detection probabilities (np.float32).
             scale_factor (tuple[float, float]):
                 Scale factor to scale coordinates before saving.
             class_dict (dict | None):
@@ -693,7 +702,7 @@ class NucleusDetector(SemanticSegmentor):
         xs = detection_arrays["x"]
         ys = detection_arrays["y"]
         classes = detection_arrays["classes"]
-        probs = detection_arrays["probs"]
+        probs = detection_arrays["probabilities"]
 
         xs = np.atleast_1d(np.asarray(xs))
         ys = np.atleast_1d(np.asarray(ys))
