@@ -361,7 +361,7 @@ class SemanticSegmentor(PatchPredictor):
                 auto_get_mask=auto_get_mask,
             )
 
-            dataset.preproc_func = self.model.preproc_func
+            dataset.preproc_func = self._get_model_attr("preproc_func")
             self.output_locations = dataset.outputs
 
             # preprocessing must be defined with the dataset
@@ -477,8 +477,9 @@ class SemanticSegmentor(PatchPredictor):
             else dataloader.dataset.outputs
         )
 
+        infer_batch = self._get_model_attr("infer_batch")
         for batch_idx, batch_data in enumerate(tqdm_loop):
-            batch_output = self.model.infer_batch(
+            batch_output = infer_batch(
                 self.model,
                 batch_data["image"],
                 device=self.device,

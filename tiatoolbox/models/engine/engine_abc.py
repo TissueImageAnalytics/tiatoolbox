@@ -37,7 +37,7 @@ from __future__ import annotations
 import copy
 from abc import ABC
 from pathlib import Path
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import dask
 import dask.array as da
@@ -374,6 +374,15 @@ class EngineABC(ABC):  # noqa: B024
 
         return model, None
 
+    def _get_model_attr(self: EngineABC, attr_name: str) -> Any:
+        """Return a model attribute, unwrapping DataParallel if required."""
+        try:
+            return getattr(self.model, attr_name)
+        except AttributeError:
+            module = getattr(self.model, "module", None)
+            return getattr(module, attr_name, None)
+
+
     def get_dataloader(
         self: EngineABC,
         images: str | Path | list[str | Path] | np.ndarray,
@@ -427,7 +436,7 @@ class EngineABC(ABC):  # noqa: B024
                 auto_get_mask=auto_get_mask,
             )
 
-            dataset.preproc_func = self.model.preproc_func
+            dataset.preproc_func = self._get_model_attr("preproc_func")
 
             # preprocessing must be defined with the dataset
             return torch.utils.data.DataLoader(
@@ -443,7 +452,7 @@ class EngineABC(ABC):  # noqa: B024
             inputs=images, labels=labels, patch_input_shape=ioconfig.patch_input_shape
         )
 
-        dataset.preproc_func = self.model.preproc_func
+        dataset.preproc_func = self._get_model_attr("preproc_func")
 
         # preprocessing must be defined with the dataset
         return torch.utils.data.DataLoader(
@@ -528,8 +537,9 @@ class EngineABC(ABC):  # noqa: B024
             else self.dataloader
         )
 
+        infer_batch = self._get_model_attr("infer_batch")
         for batch_data in tqdm_loop:
-            batch_output = self.model.infer_batch(
+            batch_output = infer_batch(
                 self.model,
                 batch_data["image"],
                 device=self.device,

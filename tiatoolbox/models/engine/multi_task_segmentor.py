@@ -415,7 +415,7 @@ class MultiTaskSegmentor(NucleusInstanceSegmentor):
             tile_mode,
             tile_output,
             self._wsi_inst_info,
-            self.model.postproc_func,
+            self._get_model_attr("postproc_func"),
             self.merge_prediction,
             self.pretrained_model,
         ]
