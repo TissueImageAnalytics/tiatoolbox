@@ -27,62 +27,64 @@ def _rm_dir(path: pathlib.Path) -> None:
         shutil.rmtree(path, ignore_errors=True)
 
 
-def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -> None:
-    """Test for nucleus detection engine."""
-    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
+def test_centroid_maps_to_detection_arrays() -> None:
+    """Convert centroid maps to detection arrays."""
+    detection_maps = np.zeros((4, 4, 2), dtype=np.float32)
+    detection_maps[1, 1, 0] = 1.0
+    detection_maps[2, 3, 1] = 0.5
+    detection_maps = da.from_array(detection_maps, chunks=(2, 2, 2))
 
-    pretrained_model = "sccnn-conic"
+    detections = NucleusDetector._centroid_maps_to_detection_arrays(detection_maps)
 
-    save_dir = tmp_path
+    xs = detections["x"]
+    ys = detections["y"]
+    classes = detections["classes"]
+    probs = detections["probabilities"]
 
-    nucleus_detector = NucleusDetector(model=pretrained_model)
-    nucleus_detector.drop_keys = []
-    _ = nucleus_detector.run(
-        patch_mode=False,
-        device=device,
-        output_type="annotationstore",
-        memory_threshold=50,
-        images=[mini_wsi_svs],
-        save_dir=save_dir,
-        overwrite=True,
-        batch_size=8,
-        class_dict={0: "test_nucleus"},
-        min_distance=5,
-        postproc_tile_shape=(2048, 2048),
+    np.testing.assert_array_equal(xs, np.array([1, 3], dtype=np.uint32))
+    np.testing.assert_array_equal(ys, np.array([1, 2], dtype=np.uint32))
+    np.testing.assert_array_equal(classes, np.array([0, 1], dtype=np.uint32))
+    np.testing.assert_array_equal(probs, np.array([1.0, 0.5], dtype=np.float32))
+
+
+def test_write_detection_arrays_to_store() -> None:
+    """Test writing detection arrays to annotation store."""
+    detection_arrays = {
+        "x": np.array([1, 3], dtype=np.uint32),
+        "y": np.array([1, 2], dtype=np.uint32),
+        "classes": np.array([0, 1], dtype=np.uint32),
+        "probabilities": np.array([1.0, 0.5], dtype=np.float32),
+    }
+
+    store = NucleusDetector.save_detection_arrays_to_store(detection_arrays)
+    assert len(store.values()) == 2
+
+    detection_arrays = {
+        "x": np.array([1], dtype=np.uint32),
+        "y": np.array([1, 2], dtype=np.uint32),
+        "classes": np.array([0], dtype=np.uint32),
+        "probabilities": np.array([1.0, 0.5], dtype=np.float32),
+    }
+    with pytest.raises(
+        ValueError,
+        match=r"Detection record lengths are misaligned.",
+    ):
+        _ = NucleusDetector.save_detection_arrays_to_store(detection_arrays)
+
+
+def test_write_detection_records_to_store_no_class_dict() -> None:
+    """Test writing detection records to annotation store."""
+    detection_records = (np.array([1]), np.array([2]), np.array([0]), np.array([1.0]))
+
+    dummy_store = SQLiteStore()
+    total = NucleusDetector._write_detection_arrays_to_store(
+        detection_records, store=dummy_store, scale_factor=(1.0, 1.0), class_dict=None
     )
-
-    store = SQLiteStore.open(save_dir / "wsi4_512_512.db")
-    assert 255 <= len(store.values()) <= 265
-    annotation = next(iter(store.values()))
-    assert annotation.properties["class"] == "test_nucleus"
-    store.close()
-
-    nucleus_detector.drop_keys = ["probabilities"]
-    result_path = nucleus_detector.run(
-        patch_mode=False,
-        device=device,
-        output_type="zarr",
-        memory_threshold=50,
-        images=[mini_wsi_svs],
-        save_dir=save_dir,
-        overwrite=True,
-        batch_size=8,
-    )
-    print("Result path:", result_path)
-
-    zarr_path = result_path[mini_wsi_svs]
-    zarr_group = zarr.open(zarr_path, mode="r")
-    xs = zarr_group["x"][:]
-    ys = zarr_group["y"][:]
-    classes = zarr_group["classes"][:]
-    probs = zarr_group.get("probabilities", None)
-    assert probs is None
-    assert 255 <= len(xs) <= 265
-    assert 255 <= len(ys) <= 265
-    assert 255 <= len(classes) <= 265
-
-    _rm_dir(save_dir)
-    pathlib.Path.unlink(mini_wsi_svs)
+    assert len(dummy_store.values()) == 1
+    assert total == 1
+    annotation = next(iter(dummy_store.values()))
+    assert annotation.properties["class"] == 0
+    dummy_store.close()
 
 
 def test_nucleus_detector_patch_annotation_store_output(
@@ -236,61 +238,59 @@ def test_nucleus_detector_patches_zarr_output(
     _rm_dir(save_dir)
 
 
-def test_centroid_maps_to_detection_arrays() -> None:
-    """Convert centroid maps to detection arrays."""
-    detection_maps = np.zeros((4, 4, 2), dtype=np.float32)
-    detection_maps[1, 1, 0] = 1.0
-    detection_maps[2, 3, 1] = 0.5
-    detection_maps = da.from_array(detection_maps, chunks=(2, 2, 2))
+def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: pathlib.Path) -> None:
+    """Test for nucleus detection engine."""
+    mini_wsi_svs = pathlib.Path(remote_sample("wsi4_512_512_svs"))
 
-    detections = NucleusDetector._centroid_maps_to_detection_arrays(detection_maps)
+    pretrained_model = "sccnn-conic"
 
-    xs = detections["x"]
-    ys = detections["y"]
-    classes = detections["classes"]
-    probs = detections["probabilities"]
+    save_dir = tmp_path
 
-    np.testing.assert_array_equal(xs, np.array([1, 3], dtype=np.uint32))
-    np.testing.assert_array_equal(ys, np.array([1, 2], dtype=np.uint32))
-    np.testing.assert_array_equal(classes, np.array([0, 1], dtype=np.uint32))
-    np.testing.assert_array_equal(probs, np.array([1.0, 0.5], dtype=np.float32))
-
-
-def test_write_detection_arrays_to_store() -> None:
-    """Test writing detection arrays to annotation store."""
-    detection_arrays = {
-        "x": np.array([1, 3], dtype=np.uint32),
-        "y": np.array([1, 2], dtype=np.uint32),
-        "classes": np.array([0, 1], dtype=np.uint32),
-        "probabilities": np.array([1.0, 0.5], dtype=np.float32),
-    }
-
-    store = NucleusDetector.save_detection_arrays_to_store(detection_arrays)
-    assert len(store.values()) == 2
-
-    detection_arrays = {
-        "x": np.array([1], dtype=np.uint32),
-        "y": np.array([1, 2], dtype=np.uint32),
-        "classes": np.array([0], dtype=np.uint32),
-        "probabilities": np.array([1.0, 0.5], dtype=np.float32),
-    }
-    with pytest.raises(
-        ValueError,
-        match=r"Detection record lengths are misaligned.",
-    ):
-        _ = NucleusDetector.save_detection_arrays_to_store(detection_arrays)
-
-
-def test_write_detection_records_to_store_no_class_dict() -> None:
-    """Test writing detection records to annotation store."""
-    detection_records = (np.array([1]), np.array([2]), np.array([0]), np.array([1.0]))
-
-    dummy_store = SQLiteStore()
-    total = NucleusDetector._write_detection_arrays_to_store(
-        detection_records, store=dummy_store, scale_factor=(1.0, 1.0), class_dict=None
+    nucleus_detector = NucleusDetector(model=pretrained_model)
+    nucleus_detector.drop_keys = []
+    _ = nucleus_detector.run(
+        patch_mode=False,
+        device=device,
+        output_type="annotationstore",
+        memory_threshold=50,
+        images=[mini_wsi_svs],
+        save_dir=save_dir,
+        overwrite=True,
+        batch_size=8,
+        class_dict={0: "test_nucleus"},
+        min_distance=5,
+        postproc_tile_shape=(2048, 2048),
     )
-    assert len(dummy_store.values()) == 1
-    assert total == 1
-    annotation = next(iter(dummy_store.values()))
-    assert annotation.properties["class"] == 0
-    dummy_store.close()
+
+    store = SQLiteStore.open(save_dir / "wsi4_512_512.db")
+    assert 255 <= len(store.values()) <= 265
+    annotation = next(iter(store.values()))
+    assert annotation.properties["class"] == "test_nucleus"
+    store.close()
+
+    nucleus_detector.drop_keys = ["probabilities"]
+    result_path = nucleus_detector.run(
+        patch_mode=False,
+        device=device,
+        output_type="zarr",
+        memory_threshold=50,
+        images=[mini_wsi_svs],
+        save_dir=save_dir,
+        overwrite=True,
+        batch_size=8,
+    )
+    print("Result path:", result_path)
+
+    zarr_path = result_path[mini_wsi_svs]
+    zarr_group = zarr.open(zarr_path, mode="r")
+    xs = zarr_group["x"][:]
+    ys = zarr_group["y"][:]
+    classes = zarr_group["classes"][:]
+    probs = zarr_group.get("probabilities", None)
+    assert probs is None
+    assert 255 <= len(xs) <= 265
+    assert 255 <= len(ys) <= 265
+    assert 255 <= len(classes) <= 265
+
+    _rm_dir(save_dir)
+    pathlib.Path.unlink(mini_wsi_svs)
