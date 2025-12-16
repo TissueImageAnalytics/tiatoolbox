@@ -306,8 +306,6 @@ class NucleusDetector(SemanticSegmentor):
         _ = prediction_shape
         _ = prediction_dtype
 
-        probabilities = raw_predictions.persist()
-
         # If these are not provided, defaults from model will be used in postproc
         min_distance = kwargs.get("min_distance")
         threshold_abs = kwargs.get("threshold_abs")
@@ -320,8 +318,8 @@ class NucleusDetector(SemanticSegmentor):
         probs = []
 
         # Process each patch's predictions
-        for i in range(probabilities.shape[0]):
-            probs_prediction_patch = probabilities[i].compute()
+        for i in range(raw_predictions.shape[0]):
+            probs_prediction_patch = raw_predictions[i].compute()
             centroids_map_patch = self.model.postproc(
                 probs_prediction_patch,
                 min_distance=min_distance,
