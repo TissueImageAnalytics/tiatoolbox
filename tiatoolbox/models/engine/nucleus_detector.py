@@ -22,6 +22,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from typing import Unpack
 
     from tiatoolbox.annotation import AnnotationStore
+    from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import IntPair, Resolution, Units
     from tiatoolbox.wsicore import WSIReader
 
@@ -139,137 +140,42 @@ class NucleusDetector(SemanticSegmentor):
 
     """
 
-    def run(
+    def __init__(
         self: NucleusDetector,
-        images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        model: str | ModelABC,
+        batch_size: int = 8,
+        num_workers: int = 0,
+        weights: str | Path | None = None,
         *,
-        masks: list[os.PathLike | Path] | np.ndarray | None = None,
-        input_resolutions: list[dict[Units, Resolution]] | None = None,
-        patch_input_shape: IntPair | None = None,
-        ioconfig: IOSegmentorConfig | None = None,
-        patch_mode: bool = True,
-        save_dir: os.PathLike | Path | None = None,
-        overwrite: bool = False,
-        output_type: str = "dict",
-        **kwargs: Unpack[NucleusDetectorRunParams],
-    ) -> AnnotationStore | Path | str | dict | list[Path]:
-        """Run the nucleus detection engine on input images.
-
-        This method orchestrates the full inference pipeline, including preprocessing,
-        model inference, post-processing, and saving results. It supports both
-        patch-level and whole slide image (WSI) modes.
+        device: str = "cpu",
+        verbose: bool = True,
+    ) -> None:
+        """Initialize :class:`NucleusDetector`.
 
         Args:
-            images (list[PathLike | WSIReader] | np.ndarray):
-                Input images or patches. Can be a list of file paths, WSIReader objects,
-                or a NumPy array of image patches.
-            masks (list[PathLike] | np.ndarray | None):
-                Optional masks for WSI processing. Only used when `patch_mode` is False.
-            input_resolutions (list[dict[Units, Resolution]] | None):
-                Resolution settings for input heads. Supported units are `level`,
-                `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
-                [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
-                details.
-            patch_input_shape (IntPair | None):
-                Shape of input patches (height, width), requested at read
-                resolution. Must be positive.
-            ioconfig (IOSegmentorConfig | None):
-                IO configuration for patch extraction and resolution.
-            patch_mode (bool):
-                Whether to treat input as patches (`True`) or WSIs (`False`). Default
-                is True.
-            save_dir (PathLike | None):
-                Directory to save output files. Required for WSI mode.
-            overwrite (bool):
-                Whether to overwrite existing output files. Default is False.
-            output_type (str):
-                Desired output format: "dict", "zarr", or "annotationstore". Default
-                is "dict".
-            **kwargs (NucleusDetectorRunParams):
-                Additional runtime parameters to configure segmentation.
-
-                Optional Keys:
-                    auto_get_mask (bool):
-                        Whether to automatically generate segmentation masks using
-                        `wsireader.tissue_mask()` during processing.
-                    batch_size (int):
-                        Number of image patches to feed to the model in a forward pass.
-                    class_dict (dict):
-                        Optional dictionary mapping classification outputs to
-                        class names.
-                    device (str):
-                        Device to run the model on (e.g., "cpu", "cuda").
-                    labels (list):
-                        Optional labels for input images. Only a single label per image
-                        is supported.
-                    memory_threshold (int):
-                        Memory usage threshold (in percentage) to
-                        trigger caching behavior.
-                    num_workers (int):
-                        Number of workers used in DataLoader.
-                    output_file (str):
-                        Output file name for saving results (e.g., .zarr or .db).
-                    output_resolutions (Resolution):
-                        Resolution used for writing output predictions.
-                    patch_output_shape (tuple[int, int]):
-                        Shape of output patches (height, width).
-                    min_distance (int):
-                        Minimum distance separating two nuclei (in pixels).
-                    postproc_tile_shape (tuple[int, int]):
-                        Tile shape (height, width) for post-processing (in pixels).
-                    return_labels (bool):
-                        Whether to return labels with predictions.
-                    return_probabilities (bool):
-                        Whether to return per-class probabilities.
-                    scale_factor (tuple[float, float]):
-                        Scale factor for converting annotations to baseline resolution.
-                        Typically model_mpp / slide_mpp.
-                    stride_shape (tuple[int, int]):
-                        Stride used during WSI processing.
-                        Defaults to patch_input_shape.
-                    verbose (bool):
-                        Whether to output logging information.
-
-        Returns:
-            AnnotationStore | Path | str | dict | list[Path]:
-                - If `patch_mode` is True: returns predictions or path to saved output.
-                - If `patch_mode` is False: returns a dictionary mapping each WSI
-                  to its output path.
-
-        Examples:
-            >>> wsis = ['wsi1.svs', 'wsi2.svs']
-            >>> image_patches = [np.ndarray, np.ndarray]
-            >>> nuc_detector = NucleusDetector(model="sccnn-conic")
-            >>> output = nuc_detector.run(image_patches, patch_mode=True)
-            >>> output
-            ... "/path/to/Output.db"
-
-            >>> output = nuc_detector.run(
-            ...     image_patches,
-            ...     patch_mode=True,
-            ...     output_type="zarr"
-            ... )
-            >>> output
-            ... "/path/to/Output.zarr"
-
-            >>> output = nuc_detector.run(wsis, patch_mode=False)
-            >>> output.keys()
-            ... ['wsi1.svs', 'wsi2.svs']
-            >>> output['wsi1.svs']
-            ... "/path/to/wsi1.db"
+            model (str | ModelABC):
+                A PyTorch model instance or name of a pretrained model from TIAToolbox.
+                If a string is provided, the corresponding pretrained weights will be
+                downloaded unless overridden via `weights`.
+            batch_size (int):
+                Number of image patches processed per forward pass. Default is 8.
+            num_workers (int):
+                Number of workers for data loading. Default is 0.
+            weights (str | Path | None):
+                Path to model weights. If None, default weights are used.
+            device (str):
+                Device to run the model on (e.g., "cpu", "cuda"). Default is "cpu".
+            verbose (bool):
+                Whether to enable verbose logging. Default is True.
 
         """
-        return super().run(
-            images=images,
-            masks=masks,
-            input_resolutions=input_resolutions,
-            patch_input_shape=patch_input_shape,
-            ioconfig=ioconfig,
-            patch_mode=patch_mode,
-            save_dir=save_dir,
-            overwrite=overwrite,
-            output_type=output_type,
-            **kwargs,
+        super().__init__(
+            model=model,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            weights=weights,
+            device=device,
+            verbose=verbose,
         )
 
     def post_process_patches(
@@ -731,3 +637,136 @@ class NucleusDetector(SemanticSegmentor):
             return save_path
 
         return store
+
+    def run(
+        self: NucleusDetector,
+        images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        *,
+        masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        input_resolutions: list[dict[Units, Resolution]] | None = None,
+        patch_input_shape: IntPair | None = None,
+        ioconfig: IOSegmentorConfig | None = None,
+        patch_mode: bool = True,
+        save_dir: os.PathLike | Path | None = None,
+        overwrite: bool = False,
+        output_type: str = "dict",
+        **kwargs: Unpack[NucleusDetectorRunParams],
+    ) -> AnnotationStore | Path | str | dict | list[Path]:
+        """Run the nucleus detection engine on input images.
+
+        This method orchestrates the full inference pipeline, including preprocessing,
+        model inference, post-processing, and saving results. It supports both
+        patch-level and whole slide image (WSI) modes.
+
+        Args:
+            images (list[PathLike | WSIReader] | np.ndarray):
+                Input images or patches. Can be a list of file paths, WSIReader objects,
+                or a NumPy array of image patches.
+            masks (list[PathLike] | np.ndarray | None):
+                Optional masks for WSI processing. Only used when `patch_mode` is False.
+            input_resolutions (list[dict[Units, Resolution]] | None):
+                Resolution settings for input heads. Supported units are `level`,
+                `power`, and `mpp`. Keys should be "units" and "resolution", e.g.,
+                [{"units": "mpp", "resolution": 0.25}]. See :class:`WSIReader` for
+                details.
+            patch_input_shape (IntPair | None):
+                Shape of input patches (height, width), requested at read
+                resolution. Must be positive.
+            ioconfig (IOSegmentorConfig | None):
+                IO configuration for patch extraction and resolution.
+            patch_mode (bool):
+                Whether to treat input as patches (`True`) or WSIs (`False`). Default
+                is True.
+            save_dir (PathLike | None):
+                Directory to save output files. Required for WSI mode.
+            overwrite (bool):
+                Whether to overwrite existing output files. Default is False.
+            output_type (str):
+                Desired output format: "dict", "zarr", or "annotationstore". Default
+                is "dict".
+            **kwargs (NucleusDetectorRunParams):
+                Additional runtime parameters to configure segmentation.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Whether to automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches to feed to the model in a forward pass.
+                    class_dict (dict):
+                        Optional dictionary mapping classification outputs to
+                        class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (in percentage) to
+                        trigger caching behavior.
+                    num_workers (int):
+                        Number of workers used in DataLoader.
+                    output_file (str):
+                        Output file name for saving results (e.g., .zarr or .db).
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    min_distance (int):
+                        Minimum distance separating two nuclei (in pixels).
+                    postproc_tile_shape (tuple[int, int]):
+                        Tile shape (height, width) for post-processing (in pixels).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for converting annotations to baseline resolution.
+                        Typically model_mpp / slide_mpp.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to patch_input_shape.
+                    verbose (bool):
+                        Whether to output logging information.
+
+        Returns:
+            AnnotationStore | Path | str | dict | list[Path]:
+                - If `patch_mode` is True: returns predictions or path to saved output.
+                - If `patch_mode` is False: returns a dictionary mapping each WSI
+                  to its output path.
+
+        Examples:
+            >>> wsis = ['wsi1.svs', 'wsi2.svs']
+            >>> image_patches = [np.ndarray, np.ndarray]
+            >>> nuc_detector = NucleusDetector(model="sccnn-conic")
+            >>> output = nuc_detector.run(image_patches, patch_mode=True)
+            >>> output
+            ... "/path/to/Output.db"
+
+            >>> output = nuc_detector.run(
+            ...     image_patches,
+            ...     patch_mode=True,
+            ...     output_type="zarr"
+            ... )
+            >>> output
+            ... "/path/to/Output.zarr"
+
+            >>> output = nuc_detector.run(wsis, patch_mode=False)
+            >>> output.keys()
+            ... ['wsi1.svs', 'wsi2.svs']
+            >>> output['wsi1.svs']
+            ... "/path/to/wsi1.db"
+
+        """
+        return super().run(
+            images=images,
+            masks=masks,
+            input_resolutions=input_resolutions,
+            patch_input_shape=patch_input_shape,
+            ioconfig=ioconfig,
+            patch_mode=patch_mode,
+            save_dir=save_dir,
+            overwrite=overwrite,
+            output_type=output_type,
+            **kwargs,
+        )
