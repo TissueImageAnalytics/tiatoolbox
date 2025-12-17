@@ -12,6 +12,7 @@ flask-cors>=4.0.0
 glymur>=0.12.7
 huggingface_hub>=0.33.3
 imagecodecs>=2022.9.26
+ipywidgets>=8.1.7
 joblib>=1.1.1
 jupyterlab>=3.5.2
 matplotlib>=3.6.2
