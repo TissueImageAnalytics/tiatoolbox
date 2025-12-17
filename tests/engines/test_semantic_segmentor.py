@@ -24,7 +24,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     merge_vertical_chunkwise,
 )
 from tiatoolbox.utils import env_detection as toolbox_env
-from tiatoolbox.utils.misc import imread
+from tiatoolbox.utils.misc import download_data, imread
 from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
@@ -148,6 +148,38 @@ def _test_store_output_patch(output: Path) -> None:
     assert "mask" in out
 
     assert annotations_properties is not None
+
+
+def test_semantic_segmentor_tiles(track_tmp_path: Path) -> None:
+    """Tests SemanticSegmentor on image tiles with no mpp metadata."""
+    segmentor = SemanticSegmentor(
+        model="fcn-tissue_mask", batch_size=32, verbose=False, device=device
+    )
+
+    sample_image = track_tmp_path / "breast_tissue.jpg"
+
+    download_data(
+        "https://tiatoolbox.dcs.warwick.ac.uk/sample_imgs/breast_tissue.jpg",
+        sample_image,
+    )
+
+    inputs = [sample_image]
+
+    output = segmentor.run(
+        images=inputs,
+        device=device,
+        patch_mode=False,
+        auto_get_mask=False,
+        save_dir=track_tmp_path / "output",
+        input_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        patch_input_shape=(1024, 1024),
+    )
+
+    output = zarr.open(output[sample_image], mode="r")
+
+    assert output["predictions"].shape == (2048, 3584)
+
+    sample_image.unlink()
 
 
 def test_save_annotation_store(remote_sample: Callable, track_tmp_path: Path) -> None:
