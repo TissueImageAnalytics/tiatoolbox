@@ -8,8 +8,8 @@ import click
 from tiatoolbox import __version__
 from tiatoolbox.cli.common import tiatoolbox_cli
 from tiatoolbox.cli.deep_feature_extractor import deep_feature_extractor
+from tiatoolbox.cli.nucleus_detector import nucleus_detector
 from tiatoolbox.cli.nucleus_instance_segment import nucleus_instance_segment
-from tiatoolbox.cli.nuclues_detector import nucleus_detector
 from tiatoolbox.cli.patch_predictor import patch_predictor
 from tiatoolbox.cli.read_bounds import read_bounds
 from tiatoolbox.cli.save_tiles import save_tiles

@@ -5,7 +5,7 @@ This module implements the `NucleusDetector` class which extends
 histology images. It supports patch-mode and whole slide image (WSI)
 workflows using TIAToolbox or custom PyTorch models, and provides
 utilities for parallel post-processing (centroid extraction, thresholding),
-merging detections across patch, and exporting results in multiple
+merging detections across patches, and exporting results in multiple
 formats (in-memory dict, Zarr, AnnotationStore).
 
 Classes
@@ -618,7 +618,7 @@ class NucleusDetector(SemanticSegmentor):
                     dask array of y coordinates (``np.uint32``)
                 - ``"classes"`` (da.Array):
                     dask array of class IDs (``np.uint32``)
-                - ``"probabilities"`` (da.Array): d
+                - ``"probabilities"`` (da.Array):
                     dask array of detection scores (``np.float32``)
 
             save_path (Path or None):

@@ -1,4 +1,4 @@
-"""Command line interface for semantic segmentation."""
+"""Command line interface for nucleus detection."""
 
 from __future__ import annotations
 
