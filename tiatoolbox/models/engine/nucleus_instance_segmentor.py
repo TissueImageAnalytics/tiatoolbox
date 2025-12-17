@@ -635,7 +635,6 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             position=0,
         )
 
-        infer_batch = self._get_model_attr("infer_batch")
         cum_output = []
         for _, batch_data in enumerate(self._loader):
             sample_datas, sample_infos = batch_data
@@ -646,7 +645,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
 
             # assume to return a list of L output,
             # each of shape N x etc. (N=batch size)
-            sample_outputs = infer_batch(
+            sample_outputs = self.model.infer_batch(
                 self._model,
                 sample_datas,
                 device=self._device,
@@ -775,7 +774,7 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             tile_mode,
             tile_output,
             self._wsi_inst_info,
-            self._get_model_attr("postproc_func"),
+            self.model.postproc_func,
             self.merge_prediction,
         ]
         if self._postproc_workers is not None:
