@@ -36,7 +36,6 @@ from __future__ import annotations
 
 import copy
 from abc import ABC
-from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
@@ -65,6 +64,7 @@ from .io_config import ModelIOConfigABC
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
+    from collections.abc import Callable
 
     from torch.utils.data import DataLoader
 
