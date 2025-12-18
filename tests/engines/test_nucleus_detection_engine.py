@@ -90,7 +90,7 @@ def test_write_detection_records_to_store_no_class_dict() -> None:
 
 
 def test_nucleus_detector_patch_annotation_store_output(
-    remote_sample: Callable, tmp_path: Path
+    remote_sample: Callable, track_tmp_path: Path
 ) -> None:
     """Test for nucleus detection engine in patch mode."""
     mini_wsi_svs = Path(remote_sample("wsi1_2k_2k_svs"))
@@ -106,7 +106,7 @@ def test_nucleus_detector_patch_annotation_store_output(
 
     pretrained_model = "sccnn-conic"
 
-    save_dir = tmp_path
+    save_dir = track_tmp_path
 
     nucleus_detector = NucleusDetector(model=pretrained_model)
     _ = nucleus_detector.run(
@@ -195,7 +195,7 @@ def test_nucleus_detector_patches_dict_output(
 
 
 def test_nucleus_detector_patches_zarr_output(
-    remote_sample: Callable, tmp_path: Path
+    remote_sample: Callable, track_tmp_path: Path
 ) -> None:
     """Test for nucleus detection engine in patch mode."""
     mini_wsi_svs = Path(remote_sample("wsi1_2k_2k_svs"))
@@ -212,7 +212,7 @@ def test_nucleus_detector_patches_zarr_output(
 
     nucleus_detector = NucleusDetector(model=pretrained_model)
 
-    save_dir = tmp_path
+    save_dir = track_tmp_path
 
     output_path = nucleus_detector.run(
         patch_mode=True,
@@ -240,13 +240,13 @@ def test_nucleus_detector_patches_zarr_output(
     _rm_dir(save_dir)
 
 
-def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: Path) -> None:
+def test_nucleus_detector_wsi(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test for nucleus detection engine."""
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     pretrained_model = "sccnn-conic"
 
-    save_dir = tmp_path
+    save_dir = track_tmp_path
 
     nucleus_detector = NucleusDetector(model=pretrained_model)
     nucleus_detector.drop_keys = []

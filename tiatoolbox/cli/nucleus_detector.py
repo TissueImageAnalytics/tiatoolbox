@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from typing import TYPE_CHECKING
 
 from tiatoolbox.cli.common import (
@@ -173,3 +174,5 @@ def nucleus_detector(
         overwrite=overwrite,
         verbose=verbose,
     )
+
+    shutil.rmtree(cache_path)

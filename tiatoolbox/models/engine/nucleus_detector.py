@@ -714,52 +714,6 @@ class NucleusDetector(SemanticSegmentor):
         )
 
     @staticmethod
-    def _extract_nonzero(
-        block: np.ndarray, block_info: dict | None = None
-    ) -> np.ndarray:
-        """Extract non-zero detections from a block with global coordinates.
-
-        Args:
-            block: Input block array of shape (H, W, C).
-            block_info: Dask block information containing array location.
-
-        Returns:
-            2D array of shape (N, 4) where each row is [y, x, class, prob].
-            If no detections, returns array of shape (0, 4).
-
-        """
-        # Local indices within this chunk
-        ys, xs, classes = np.nonzero(block)
-        probs = block[ys, xs, classes]
-
-        # Get chunk offset from block_info
-        if block_info is not None:
-            info = block_info[0]
-            locs = info["array-location"]
-            y_offset = locs[0][0]
-            x_offset = locs[1][0]
-
-            # Adjust to global coordinates
-            ys = ys + y_offset
-            xs = xs + x_offset
-
-        # Stack into (N, 4) array: [y, x, class, prob]
-        if len(ys) > 0:
-            result = np.column_stack(
-                [
-                    ys.astype(np.uint32),
-                    xs.astype(np.uint32),
-                    classes.astype(np.uint32),
-                    probs.astype(np.float32),
-                ]
-            )
-        else:
-            # Return empty array with correct shape
-            result = np.empty((0, 4), dtype=np.float32)
-
-        return result
-
-    @staticmethod
     def _centroid_maps_to_detection_arrays(
         detection_maps: da.Array,
     ) -> dict[str, da.Array]:
