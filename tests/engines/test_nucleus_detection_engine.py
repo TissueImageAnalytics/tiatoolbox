@@ -85,7 +85,7 @@ def test_write_detection_records_to_store_no_class_dict() -> None:
     assert len(dummy_store.values()) == 1
     assert total == 1
     annotation = next(iter(dummy_store.values()))
-    assert annotation.properties["class"] == 0
+    assert annotation.properties["type"] == 0
     dummy_store.close()
 
 
@@ -257,6 +257,7 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: Path) -> None:
         memory_threshold=50,
         images=[mini_wsi_svs],
         save_dir=save_dir,
+        cache_dir=save_dir,
         overwrite=True,
         batch_size=8,
         class_dict={0: "test_nucleus"},
@@ -267,7 +268,7 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: Path) -> None:
     store = SQLiteStore.open(save_dir / "wsi4_512_512.db")
     assert 255 <= len(store.values()) <= 265
     annotation = next(iter(store.values()))
-    assert annotation.properties["class"] == "test_nucleus"
+    assert annotation.properties["type"] == "test_nucleus"
     store.close()
 
     nucleus_detector.drop_keys = ["probabilities"]
@@ -278,6 +279,7 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: Path) -> None:
         memory_threshold=50,
         images=[mini_wsi_svs],
         save_dir=save_dir,
+        cache_dir=save_dir,
         overwrite=True,
         batch_size=8,
     )

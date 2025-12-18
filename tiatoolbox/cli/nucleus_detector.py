@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from tiatoolbox.cli.common import (
     cli_auto_get_mask,
     cli_batch_size,
+    cli_cache_path,
     cli_class_dict,
     cli_device,
     cli_file_type,
@@ -47,6 +48,10 @@ if TYPE_CHECKING:  # pragma: no cover
 @cli_img_input()
 @cli_output_path(
     usage_help="Output directory where model prediction will be saved.",
+    default="nucleus_detection",
+)
+@cli_cache_path(
+    usage_help="Directory to use for caching intermediate files.",
     default="nucleus_detection",
 )
 @cli_output_file(default=None)
@@ -90,6 +95,7 @@ def nucleus_detector(
     output_resolutions: list[dict],
     masks: str | None,
     output_path: str,
+    cache_path: str,
     patch_input_shape: IntPair | None,
     patch_output_shape: tuple[int, int] | None,
     stride_shape: IntPair | None,
@@ -151,6 +157,7 @@ def nucleus_detector(
         ioconfig=ioconfig,
         device=device,
         save_dir=output_path,
+        cache_dir=cache_path,
         output_type=output_type,
         return_probabilities=return_probabilities,
         auto_get_mask=auto_get_mask,
