@@ -546,7 +546,9 @@ class AnnotationTileGenerator(ZoomifyGenerator):
             types = self.store.pquery(f"props[{self.renderer.score_prop!r}]")
             # make a random dictionary colour map
             colors = random_colors(len(types), bright=True)
-            mapper = {key: (*color, 1) for key, color in zip(types, colors)}
+            mapper = {
+                key: (*color, 1) for key, color in zip(types, colors, strict=False)
+            }
             self.renderer.mapper = lambda x: mapper[x]
 
     def get_thumb_tile(self: AnnotationTileGenerator) -> Image.Image:

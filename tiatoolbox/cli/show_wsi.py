@@ -49,7 +49,9 @@ def show_wsi(
     if len(name) == 0:
         app = TileServer("TileServer", list(img_input), renderer=renderer)
     elif len(name) == len(img_input):
-        app = TileServer("TileServer", dict(zip(name, img_input)), renderer=renderer)
+        app = TileServer(
+            "TileServer", dict(zip(name, img_input, strict=False)), renderer=renderer
+        )
     else:
         msg = "if names are provided, must match the number of paths provided"
         raise ValueError(msg)

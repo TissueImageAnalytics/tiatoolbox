@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import torch
 import torch._dynamo
@@ -16,6 +16,7 @@ from tiatoolbox.models.architecture.utils import is_torch_compile_compatible
 torch._dynamo.config.suppress_errors = True  # skipcq: PYL-W0212  # noqa: SLF001
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
     from pathlib import Path
 
     import numpy as np

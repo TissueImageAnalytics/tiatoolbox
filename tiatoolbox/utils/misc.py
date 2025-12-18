@@ -1225,7 +1225,7 @@ def process_contours(
 
     """
     annotations_list: list[Annotation] = []
-    outer_contours: dict[int : np.ndarray] = {}
+    outer_contours: dict[int, np.ndarray] = {}
     holes_dict: dict[int, list[np.ndarray]] = {}
 
     for i, layer_ in enumerate(contours):

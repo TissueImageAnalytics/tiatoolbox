@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 from collections import deque
-from typing import Callable
+from typing import TYPE_CHECKING
 
 # replace with the sql database once the PR in place
 import joblib
@@ -20,6 +20,9 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     WSIStreamDataset,
 )
 from tiatoolbox.tools.patchextraction import PatchExtractor
+
+if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
 
 
 def _process_instance_predictions(
@@ -257,7 +260,7 @@ def _process_tile_predictions(
                 the tiling process.
 
     """
-    locations, predictions = list(zip(*tile_output))
+    locations, predictions = list(zip(*tile_output, strict=False))
 
     # convert from WSI space to tile space
     tile_tl = tile_bounds[:2]
@@ -651,13 +654,13 @@ class NucleusInstanceSegmentor(SemanticSegmentor):
             # repackage so that it's a N list, each contains
             # L x etc. output
             sample_outputs = [np.split(v, batch_size, axis=0) for v in sample_outputs]
-            sample_outputs = list(zip(*sample_outputs))
+            sample_outputs = list(zip(*sample_outputs, strict=False))
 
             # tensor to numpy, costly?
             sample_infos = sample_infos.numpy()
             sample_infos = np.split(sample_infos, batch_size, axis=0)
 
-            sample_outputs = list(zip(sample_infos, sample_outputs))
+            sample_outputs = list(zip(sample_infos, sample_outputs, strict=False))
             cum_output.extend(sample_outputs)
             pbar.update()
         pbar.close()

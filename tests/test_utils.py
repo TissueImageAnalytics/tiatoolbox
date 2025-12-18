@@ -787,7 +787,7 @@ def test_sub_pixel_read_empty_bounds() -> None:
     bounds = (0, 0, 2, 2)
     image = np.ones((10, 10))
 
-    with pytest.raises(ValueError, match="Bounds have zero size after padding."):
+    with pytest.raises(ValueError, match=r"Bounds have zero size after padding."):
         utils.image.sub_pixel_read(
             image,
             bounds=bounds,
@@ -803,7 +803,7 @@ def test_fuzz_bounds2locsize() -> None:
     for _ in range(1000):
         size = (rng.integers(-1000, 1000), rng.integers(-1000, 1000))
         location = (rng.integers(-1000, 1000), rng.integers(-1000, 1000))
-        bounds = (*location, *(sum(x) for x in zip(size, location)))
+        bounds = (*location, *(sum(x) for x in zip(size, location, strict=False)))
         assert utils.transforms.bounds2locsize(bounds)[1] == pytest.approx(size)
 
 
@@ -900,7 +900,7 @@ def test_contrast_enhancer() -> None:
     assert np.all(result_array == output_array)
 
 
-def test_load_stain_matrix(tmp_path: Path) -> None:
+def test_load_stain_matrix(track_tmp_path: Path) -> None:
     """Test to load stain matrix."""
     with pytest.raises(FileNotSupportedError):
         utils.misc.load_stain_matrix("/samplefile.xlsx")
@@ -910,12 +910,18 @@ def test_load_stain_matrix(tmp_path: Path) -> None:
         utils.misc.load_stain_matrix([1, 2, 3])
 
     stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
-    pd.DataFrame(stain_matrix).to_csv(Path(tmp_path).joinpath("sm.csv"), index=False)
-    out_stain_matrix = utils.misc.load_stain_matrix(Path(tmp_path).joinpath("sm.csv"))
+    pd.DataFrame(stain_matrix).to_csv(
+        Path(track_tmp_path).joinpath("sm.csv"), index=False
+    )
+    out_stain_matrix = utils.misc.load_stain_matrix(
+        Path(track_tmp_path).joinpath("sm.csv")
+    )
     assert np.all(out_stain_matrix == stain_matrix)
 
-    np.save(str(Path(tmp_path).joinpath("sm.npy")), stain_matrix)
-    out_stain_matrix = utils.misc.load_stain_matrix(Path(tmp_path).joinpath("sm.npy"))
+    np.save(str(Path(track_tmp_path).joinpath("sm.npy")), stain_matrix)
+    out_stain_matrix = utils.misc.load_stain_matrix(
+        Path(track_tmp_path).joinpath("sm.npy")
+    )
     assert np.all(out_stain_matrix == stain_matrix)
 
 
@@ -926,7 +932,7 @@ def test_get_luminosity_tissue_mask() -> None:
 
 
 def test_read_point_annotations(  # noqa: PLR0915
-    tmp_path: Path,
+    track_tmp_path: Path,
     patch_extr_csv: Path,
     patch_extr_csv_noheader: Path,
     patch_extr_svs_csv: Path,
@@ -1001,7 +1007,7 @@ def test_read_point_annotations(  # noqa: PLR0915
         _ = utils.misc.read_locations(labels_table.to_numpy()[:, 0:1])
 
     # Test if input npy does not have 2 or 3 columns
-    labels = tmp_path.joinpath("test_gt_3col.npy")
+    labels = track_tmp_path.joinpath("test_gt_3col.npy")
     with Path.open(labels, "wb") as f:
         np.save(f, np.zeros((3, 4)))
 
@@ -1045,10 +1051,10 @@ def test_grab_files_from_dir(sample_visual_fields: Path) -> None:
     assert len(out) == 0
 
 
-def test_download_unzip_data(tmp_path: Path) -> None:
+def test_download_unzip_data(track_tmp_path: Path) -> None:
     """Test download and unzip data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
-    save_dir_path = tmp_path / "tmp"
+    save_dir_path = track_tmp_path / "tmp"
 
     save_dir_path.mkdir()
     save_zip_path1 = misc.download_data(url, save_dir=save_dir_path)
@@ -1076,11 +1082,11 @@ def test_download_unzip_data(tmp_path: Path) -> None:
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
 
-def test_download_data(tmp_path: Path) -> None:
+def test_download_data(track_tmp_path: Path) -> None:
     """Test download data from utils.misc."""
     url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
 
-    save_dir_path = tmp_path / "downloads"
+    save_dir_path = track_tmp_path / "downloads"
     save_zip_path = save_dir_path / "test_directory.zip"
 
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
@@ -1137,7 +1143,7 @@ def test_parse_cv2_interpolaton() -> None:
     cases = [str.upper, str.lower, str.capitalize]
     mode_strings = ["cubic", "linear", "area", "lanczos"]
     mode_enums = [cv2.INTER_CUBIC, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_LANCZOS4]
-    for string, cv2_enum in zip(mode_strings, mode_enums):
+    for string, cv2_enum in zip(mode_strings, mode_enums, strict=False):
         for case in cases:
             assert utils.misc.parse_cv2_interpolaton(case(string)) == cv2_enum
             assert utils.misc.parse_cv2_interpolaton(cv2_enum) == cv2_enum
@@ -1315,7 +1321,7 @@ def test_crop_and_pad_edges_negative_max_dims() -> None:
 
 def test_crop_and_pad_edges_non_positive_bounds_size() -> None:
     """Test crop and pad edges for non positive bound size."""
-    with pytest.raises(ValueError, match="[bB]ounds.*> 0"):
+    with pytest.raises(ValueError, match=r"[bB]ounds.*> 0"):
         # Zero dimensions and negative bounds size
         utils.image.crop_and_pad_edges(
             bounds=(0, 0, -1, -1),
@@ -1349,7 +1355,7 @@ def test_select_device() -> None:
     assert device == "cpu"
 
 
-def test_save_as_json(tmp_path: Path) -> None:
+def test_save_as_json(track_tmp_path: Path) -> None:
     """Test save data to json."""
     # This should be broken up into separate tests!
     # dict with nested dict, list, and np.array
@@ -1375,35 +1381,37 @@ def test_save_as_json(tmp_path: Path) -> None:
     with pytest.raises(TypeError, match=r".*Key.*.*not jsonified.*"):
         misc.save_as_json(
             data={frozenset(key_dict): sample},
-            save_path=tmp_path / "sample_json.json",
+            save_path=track_tmp_path / "sample_json.json",
             exist_ok=True,
         )
     with pytest.raises(TypeError, match=r".*Value.*.*not jsonified.*"):
-        misc.save_as_json(not_jsonable, tmp_path / "sample_json.json", exist_ok=True)
+        misc.save_as_json(
+            not_jsonable, track_tmp_path / "sample_json.json", exist_ok=True
+        )
     with pytest.raises(TypeError, match=r".*Value.*.*not jsonified.*"):
         misc.save_as_json(
             list(not_jsonable.values()),
-            tmp_path / "sample_json.json",
+            track_tmp_path / "sample_json.json",
             exist_ok=True,
         )
     with pytest.raises(TypeError, match=r"Type.*`data`.*.*must.*dict, list.*"):
         misc.save_as_json(
             RNG.random((2, 2)),
-            tmp_path / "sample_json.json",
+            track_tmp_path / "sample_json.json",
             exist_ok=True,
         )
     # test complex nested dict
     print(sample)
-    misc.save_as_json(sample, tmp_path / "sample_json.json", exist_ok=True)
-    with Path.open(tmp_path / "sample_json.json") as fptr:
+    misc.save_as_json(sample, track_tmp_path / "sample_json.json", exist_ok=True)
+    with Path.open(track_tmp_path / "sample_json.json") as fptr:
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
     assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6
 
     # Allow parent directories
-    misc.save_as_json(sample, tmp_path / "foo" / "sample_json.json", parents=True)
-    with Path.open(tmp_path / "foo" / "sample_json.json") as fptr:
+    misc.save_as_json(sample, track_tmp_path / "foo" / "sample_json.json", parents=True)
+    with Path.open(track_tmp_path / "foo" / "sample_json.json") as fptr:
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
@@ -1412,11 +1420,11 @@ def test_save_as_json(tmp_path: Path) -> None:
     # test complex list of data
     misc.save_as_json(
         list(sample.values()),
-        tmp_path / "sample_json.json",
+        track_tmp_path / "sample_json.json",
         exist_ok=True,
     )
     # test read because == is useless when value is mutable
-    with Path.open(tmp_path / "sample_json.json") as fptr:
+    with Path.open(track_tmp_path / "sample_json.json") as fptr:
         read_sample = json.load(fptr)
     assert read_sample[-3]["a4"]["a5"]["a6"] == "a7"
     assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6
@@ -1424,48 +1432,50 @@ def test_save_as_json(tmp_path: Path) -> None:
     # test numpy generic
     misc.save_as_json(
         [np.int32(1), np.float32(2)],
-        tmp_path / "sample_json.json",
+        track_tmp_path / "sample_json.json",
         exist_ok=True,
     )
     misc.save_as_json(
         {"a": np.int32(1), "b": np.float32(2)},
-        tmp_path / "sample_json.json",
+        track_tmp_path / "sample_json.json",
         exist_ok=True,
     )
 
 
-def test_save_as_json_exists(tmp_path: Path) -> None:
+def test_save_as_json_exists(track_tmp_path: Path) -> None:
     """Test save data to json which already exists."""
     dictionary = {"a": 1, "b": 2}
-    misc.save_as_json(dictionary, tmp_path / "sample_json.json")
+    misc.save_as_json(dictionary, track_tmp_path / "sample_json.json")
     with pytest.raises(FileExistsError, match="File already exists"):
-        misc.save_as_json(dictionary, tmp_path / "sample_json.json")
-    misc.save_as_json(dictionary, tmp_path / "sample_json.json", exist_ok=True)
+        misc.save_as_json(dictionary, track_tmp_path / "sample_json.json")
+    misc.save_as_json(dictionary, track_tmp_path / "sample_json.json", exist_ok=True)
 
 
-def test_save_as_json_parents(tmp_path: Path) -> None:
+def test_save_as_json_parents(track_tmp_path: Path) -> None:
     """Test save data to json where parents need to be created and parents is False."""
     dictionary = {"a": 1, "b": 2}
     with pytest.raises(FileNotFoundError, match="No such file or directory"):
-        misc.save_as_json(dictionary, tmp_path / "foo" / "sample_json.json")
+        misc.save_as_json(dictionary, track_tmp_path / "foo" / "sample_json.json")
 
 
-def test_save_yaml_exists(tmp_path: Path) -> None:
+def test_save_yaml_exists(track_tmp_path: Path) -> None:
     """Test save data to yaml which already exists."""
     dictionary = {"a": 1, "b": 2}
-    utils.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
+    utils.save_yaml(dictionary, track_tmp_path / "sample_yaml.yaml")
     with pytest.raises(FileExistsError, match="File already exists"):
-        utils.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
-    utils.save_yaml(dictionary, tmp_path / "sample_yaml.yaml", exist_ok=True)
+        utils.save_yaml(dictionary, track_tmp_path / "sample_yaml.yaml")
+    utils.save_yaml(dictionary, track_tmp_path / "sample_yaml.yaml", exist_ok=True)
 
 
-def test_save_yaml_parents(tmp_path: Path) -> None:
+def test_save_yaml_parents(track_tmp_path: Path) -> None:
     """Test save data to yaml where parents need to be created."""
     dictionary = {"a": 1, "b": 2}
     with pytest.raises(FileNotFoundError, match="No such file or directory"):
-        utils.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml")
+        utils.save_yaml(dictionary, track_tmp_path / "foo" / "sample_yaml.yaml")
 
-    utils.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml", parents=True)
+    utils.save_yaml(
+        dictionary, track_tmp_path / "foo" / "sample_yaml.yaml", parents=True
+    )
 
 
 def test_imread_none_args() -> None:
@@ -1515,40 +1525,40 @@ def make_simple_dat(centroids: tuple[tuple, tuple] = ((0, 0), (100, 100))) -> di
     }
 
 
-def test_from_dat(tmp_path: Path) -> None:
+def test_from_dat(track_tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file."""
     data = make_simple_dat()
-    joblib.dump(data, tmp_path / "test.dat")
-    store = utils.misc.store_from_dat(tmp_path / "test.dat", cls=SQLiteStore)
+    joblib.dump(data, track_tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(track_tmp_path / "test.dat", cls=SQLiteStore)
     assert len(store) == 2
 
 
-def test_dict_store_from_dat(tmp_path: Path) -> None:
+def test_dict_store_from_dat(track_tmp_path: Path) -> None:
     """Test generating a DictionaryStore from a .dat file."""
     data = make_simple_dat()
-    joblib.dump(data, tmp_path / "test.dat")
-    store = utils.misc.store_from_dat(tmp_path / "test.dat", cls=DictionaryStore)
+    joblib.dump(data, track_tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(track_tmp_path / "test.dat", cls=DictionaryStore)
     assert len(store) == 2
 
 
-def test_from_dat_type_dict(tmp_path: Path) -> None:
+def test_from_dat_type_dict(track_tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file with a type dict."""
     data = make_simple_dat()
-    joblib.dump(data, tmp_path / "test.dat")
+    joblib.dump(data, track_tmp_path / "test.dat")
     store = utils.misc.store_from_dat(
-        tmp_path / "test.dat",
+        track_tmp_path / "test.dat",
         typedict={0: "cell0", 1: "cell1"},
     )
     result = store.query(where="props['type'] == 'cell1'")
     assert len(result) == 1
 
 
-def test_from_dat_transformed(tmp_path: Path) -> None:
+def test_from_dat_transformed(track_tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file with a transform."""
     data = make_simple_dat()
-    joblib.dump(data, tmp_path / "test.dat")
+    joblib.dump(data, track_tmp_path / "test.dat")
     store = utils.misc.store_from_dat(
-        tmp_path / "test.dat",
+        track_tmp_path / "test.dat",
         scale_factor=2,
         origin=(50, 50),
     )
@@ -1559,7 +1569,7 @@ def test_from_dat_transformed(tmp_path: Path) -> None:
     assert np.rint(poly.geometry.centroid.y) == 150
 
 
-def test_from_multi_head_dat(tmp_path: Path) -> None:
+def test_from_multi_head_dat(track_tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file with multiple heads."""
     head_a = make_simple_dat()
     head_b = make_simple_dat([(200, 200), (300, 300)])
@@ -1570,15 +1580,15 @@ def test_from_multi_head_dat(tmp_path: Path) -> None:
         "base_resolution": {"resolution": 0.25, "units": "mpp"},
         "other_meta_data": {"foo": "bar"},
     }
-    joblib.dump(data, tmp_path / "test.dat")
-    store = utils.misc.store_from_dat(tmp_path / "test.dat")
+    joblib.dump(data, track_tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(track_tmp_path / "test.dat")
     assert len(store) == 4
 
     result = store.query(where="props['type'] == 'A: 1'")
     assert len(result) == 1
 
 
-def test_invalid_poly(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+def test_invalid_poly(track_tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     """Test that invalid polygons are dealt with correctly."""
     coords = [(0, 0), (0, 2), (1, 1), (2, 2), (2, 0), (1, 1), (0, 0)]
     poly = Polygon(coords)
@@ -1589,8 +1599,8 @@ def test_invalid_poly(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
         "contour": np.array(poly.exterior.coords).tolist(),
         "type": 2,
     }
-    joblib.dump(data, tmp_path / "test.dat")
-    store = utils.misc.store_from_dat(tmp_path / "test.dat")
+    joblib.dump(data, track_tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(track_tmp_path / "test.dat")
 
     assert "Invalid geometry found, fix" in caplog.text
 
@@ -1598,14 +1608,14 @@ def test_invalid_poly(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     assert next(iter(result.values())).geometry.is_valid
 
 
-def test_from_multi_head_dat_type_dict(tmp_path: Path) -> None:
+def test_from_multi_head_dat_type_dict(track_tmp_path: Path) -> None:
     """Test generating a store from a .dat file with multiple heads, with typedict."""
     head_a = make_simple_dat()
     head_b = make_simple_dat([(200, 200), (300, 300)])
     data = {"A": head_a, "B": head_b}
-    joblib.dump(data, tmp_path / "test.dat")
+    joblib.dump(data, track_tmp_path / "test.dat")
     store = utils.misc.store_from_dat(
-        tmp_path / "test.dat",
+        track_tmp_path / "test.dat",
         typedict={"A": {0: "cell0", 1: "cell1"}, "B": {0: "gland0", 1: "gland1"}},
     )
     assert len(store) == 4
@@ -1616,30 +1626,33 @@ def test_from_multi_head_dat_type_dict(tmp_path: Path) -> None:
     assert len(result) == 2
 
 
-def test_fetch_pretrained_weights(tmp_path: Path) -> None:
+def test_fetch_pretrained_weights(track_tmp_path: Path) -> None:
     """Test fetching pretrained weights for a model."""
-    file_path = tmp_path / "test_fetch_pretrained_weights.pth"
+    model_name = "mobilenet_v3_small-pcam"
+    file_path = track_tmp_path / f"{model_name}.pth"
     if file_path.exists():
         file_path.unlink()
 
-    fetch_pretrained_weights(model_name="mobilenet_v3_small-pcam", save_path=file_path)
+    _ = fetch_pretrained_weights(
+        model_name="mobilenet_v3_small-pcam", save_path=track_tmp_path
+    )
+
     assert file_path.exists()
     assert file_path.stat().st_size > 0
     file_path.unlink()
 
     with pytest.raises(ValueError, match="does not exist"):
-        fetch_pretrained_weights("abc", file_path)
+        fetch_pretrained_weights("abc", track_tmp_path)
 
     # Test save_path is str
-    file_path_str = str(file_path)
-    file_path = fetch_pretrained_weights("mobilenet_v3_small-pcam", file_path_str)
+    file_path = fetch_pretrained_weights(model_name, str(track_tmp_path))
     assert Path(file_path).exists()
     assert Path(file_path).stat().st_size > 0
 
 
-def test_imwrite(tmp_path: Path) -> NoReturn:
+def test_imwrite(track_tmp_path: Path) -> NoReturn:
     """Create a temporary file path."""
-    image_path = tmp_path / "test_imwrite.jpg"
+    image_path = track_tmp_path / "test_imwrite.jpg"
 
     # Create a test image
     img = np.ones([100, 100, 3]).astype("uint8") * 255
@@ -1657,7 +1670,7 @@ def test_imwrite(tmp_path: Path) -> NoReturn:
 
     with pytest.raises(IOError, match="Could not write image"):
         utils.misc.imwrite(
-            tmp_path / "this_folder_does_not_exist" / "test_imwrite.jpg",
+            track_tmp_path / "this_folder_does_not_exist" / "test_imwrite.jpg",
             img,
         )
 
@@ -1728,7 +1741,7 @@ def test_patch_pred_store_sf() -> None:
         assert annotation.geometry.area == 4
 
 
-def test_patch_pred_store_zarr(tmp_path: pytest.TempPathFactory) -> None:
+def test_patch_pred_store_zarr(track_tmp_path: pytest.TempPathFactory) -> None:
     """Test patch_pred_store_zarr."""
     # Define a mock patch_output
     patch_output = {
@@ -1738,7 +1751,7 @@ def test_patch_pred_store_zarr(tmp_path: pytest.TempPathFactory) -> None:
         "labels": [1, 0, 1],
     }
 
-    save_path = tmp_path / "patch_output" / "output.zarr"
+    save_path = track_tmp_path / "patch_output" / "output.zarr"
 
     store_path = misc.dict_to_zarr(patch_output, save_path=save_path)
 
@@ -1746,7 +1759,7 @@ def test_patch_pred_store_zarr(tmp_path: pytest.TempPathFactory) -> None:
     assert Path.exists(store_path), "Zarr output file does not exist"
 
 
-def test_patch_pred_store_zarr_ext(tmp_path: pytest.TempPathFactory) -> None:
+def test_patch_pred_store_zarr_ext(track_tmp_path: pytest.TempPathFactory) -> None:
     """Test patch_pred_store_zarr and ensures the output file extension is `.zarr`."""
     # Define a mock patch_output
     patch_output = {
@@ -1757,7 +1770,7 @@ def test_patch_pred_store_zarr_ext(tmp_path: pytest.TempPathFactory) -> None:
     }
 
     # sends the path of a jpeg source image, expects .zarr file in the same directory
-    save_path = tmp_path / "patch_output" / "patch.jpeg"
+    save_path = track_tmp_path / "patch_output" / "patch.jpeg"
 
     store_path = misc.dict_to_zarr(patch_output, save_path=save_path)
 
@@ -1765,7 +1778,7 @@ def test_patch_pred_store_zarr_ext(tmp_path: pytest.TempPathFactory) -> None:
     assert Path.exists(store_path), "Zarr output file does not exist"
 
 
-def test_patch_pred_store_persist(tmp_path: pytest.TempPathFactory) -> None:
+def test_patch_pred_store_persist(track_tmp_path: pytest.TempPathFactory) -> None:
     """Test patch_pred_store. and persists store output to a .db file."""
     # Define a mock patch_output
     patch_output = {
@@ -1774,7 +1787,7 @@ def test_patch_pred_store_persist(tmp_path: pytest.TempPathFactory) -> None:
         "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
         "labels": [1, 0, 1],
     }
-    save_path = tmp_path / "patch_output" / "output.db"
+    save_path = track_tmp_path / "patch_output" / "output.db"
 
     store_path = misc.dict_to_store(patch_output, (1.0, 1.0), save_path=save_path)
 
@@ -1797,7 +1810,7 @@ def test_patch_pred_store_persist(tmp_path: pytest.TempPathFactory) -> None:
         misc.dict_to_store(patch_output, (1.0, 1.0))
 
 
-def test_patch_pred_store_persist_ext(tmp_path: pytest.TempPathFactory) -> None:
+def test_patch_pred_store_persist_ext(track_tmp_path: pytest.TempPathFactory) -> None:
     """Test patch_pred_store and ensures the output file extension is `.db`."""
     # Define a mock patch_output
     patch_output = {
@@ -1808,7 +1821,7 @@ def test_patch_pred_store_persist_ext(tmp_path: pytest.TempPathFactory) -> None:
     }
 
     # sends the path of a jpeg source image, expects .db file in the same directory
-    save_path = tmp_path / "patch_output" / "output.jpeg"
+    save_path = track_tmp_path / "patch_output" / "output.jpeg"
 
     store_path = misc.dict_to_store(patch_output, (1.0, 1.0), save_path=save_path)
 
@@ -1940,7 +1953,7 @@ def test_dict_to_store_semantic_segment() -> None:
     assert "Line String" in annotations_geometry_type
 
 
-def test_dict_to_store_semantic_segment_holes(tmp_path: Path) -> None:
+def test_dict_to_store_semantic_segment_holes(track_tmp_path: Path) -> None:
     """Tests behaviour of holes in dict_to_store and save_path."""
     test_pred = np.array(
         [
@@ -1955,7 +1968,7 @@ def test_dict_to_store_semantic_segment_holes(tmp_path: Path) -> None:
 
     patch_output = {"predictions": test_pred}
 
-    save_dir_path = tmp_path / "tmp"
+    save_dir_path = track_tmp_path / "tmp"
     save_dir_path.mkdir()
 
     _ = misc.dict_to_store_semantic_segmentor(
@@ -2111,14 +2124,14 @@ def assert_ome_metadata_value(
     pytest.fail(f"Attribute '{tag}' not found in OME metadata.")
 
 
-def test_iwrite_probability_heatmap_as_ome_tiff_errors(tmp_path: Path) -> None:
+def test_iwrite_probability_heatmap_as_ome_tiff_errors(track_tmp_path: Path) -> None:
     """Test expected errors in `write_probability_heatmap_as_ome_tiff`."""
     probability = np.zeros(shape=(256, 256, 3))
 
     # Input image must have 2 (CY) dimensions.
     with pytest.raises(ValueError, match=r".*must have 2 \(YX\).*"):
         misc.write_probability_heatmap_as_ome_tiff(
-            image_path=tmp_path / "failed_test.tif",
+            image_path=track_tmp_path / "failed_test.tif",
             probability=probability,
         )
 
@@ -2128,16 +2141,16 @@ def test_iwrite_probability_heatmap_as_ome_tiff_errors(tmp_path: Path) -> None:
     # Input image must be a NumPy array or a Zarr array.
     with pytest.raises(TypeError, match=r".*must be a NumPy array or a Zarr.*"):
         misc.write_probability_heatmap_as_ome_tiff(
-            image_path=tmp_path / "failed_test.tif",
+            image_path=track_tmp_path / "failed_test.tif",
             probability=probability,
         )
 
 
 def test_save_numpy_array_proability_ome_tiff(
-    tmp_path: Path, source_image: Path
+    track_tmp_path: Path, source_image: Path
 ) -> None:
     """Tests saving a basic NumPy array."""
-    image_path = tmp_path / "numpy_image.ome.tif"
+    image_path = track_tmp_path / "numpy_image.ome.tif"
     probability = utils.imread(source_image)
     probability_0 = probability[:, :, 0]
     misc.write_probability_heatmap_as_ome_tiff(
@@ -2166,10 +2179,10 @@ def test_save_numpy_array_proability_ome_tiff(
 
 
 def test_save_zarr_array_probability_ome_tiff(
-    tmp_path: Path, source_image: Path
+    track_tmp_path: Path, source_image: Path
 ) -> None:
     """Tests saving a Zarr array with uint8 dtype."""
-    image_path = tmp_path / "zarr_uint8_image.ome.tif"
+    image_path = track_tmp_path / "zarr_uint8_image.ome.tif"
 
     img = utils.imread(source_image)
     probability = img[:, 0:200, 0]

@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 from collections import OrderedDict
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
@@ -21,6 +21,8 @@ from tiatoolbox.utils import save_as_json
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     from tiatoolbox.type_hints import IntPair, Resolution, Units
 
 
@@ -949,7 +951,7 @@ class PatchPredictor:
             ioconfig.input_resolutions,
             ioconfig.input_resolutions[0]["units"],
         )
-        fx_list = zip(fx_list, ioconfig.input_resolutions)
+        fx_list = zip(fx_list, ioconfig.input_resolutions, strict=False)
         fx_list = sorted(fx_list, key=lambda x: x[0])
         highest_input_resolution = fx_list[0][1]
 

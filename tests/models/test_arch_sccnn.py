@@ -1,6 +1,6 @@
 """Unit test package for SCCNN."""
 
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import torch
@@ -39,15 +39,17 @@ def test_functionality(remote_sample: Callable) -> None:
         units="mpp",
         coord_space="resolution",
     )
-    batch = torch.from_numpy(patch)[None]
     model = _load_sccnn(name="sccnn-crchisto")
+    patch = model.preproc(patch)
+    batch = torch.from_numpy(patch)[None]
     output = model.infer_batch(
         model,
         batch,
         device=select_device(on_gpu=env_detection.has_gpu()),
     )
     output = model.postproc(output[0])
-    assert np.all(output == [[8, 7]])
+    np.testing.assert_array_equal(output, np.array([[8, 7]]))
+
     model = _load_sccnn(name="sccnn-conic")
     output = model.infer_batch(
         model,
@@ -55,4 +57,4 @@ def test_functionality(remote_sample: Callable) -> None:
         device=select_device(on_gpu=env_detection.has_gpu()),
     )
     output = model.postproc(output[0])
-    assert np.all(output == [[7, 8]])
+    np.testing.assert_array_equal(output, np.array([[7, 8]]))
