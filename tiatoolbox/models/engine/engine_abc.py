@@ -381,7 +381,7 @@ class EngineABC(ABC):  # noqa: B024
             return getattr(self.model, attr_name)
         except AttributeError:
             module = getattr(self.model, "module", None)
-            return getattr(module, attr_name, None)
+            return getattr(module, attr_name)
 
     def get_dataloader(
         self: EngineABC,
