@@ -23,8 +23,5 @@ sphinx:
 python:
   install:
       # Install PyTorch CPU version first
-      - method: pip
-        path: .
-        args: [ "torch", "--index-url", "https://download.pytorch.org/whl/cpu" ]
-      - requirements: requirements/requirements.txt
       - requirements: docs/requirements.txt
+      - requirements: requirements/requirements.txt
