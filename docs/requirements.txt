@@ -1,8 +1,10 @@
+
+--index-url https://download.pytorch.org/whl/cpu
 furo>=2022.12.7
 myst-nb>=0.17.1
 myst-parser>=0.18.1
 sphinx-copybutton>=0.5.1
 sphinx-design>=0.3.0
 sphinx-toolbox>=3.2.0
-torch --index-url https://download.pytorch.org/whl/cpu
-torchvision --index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
