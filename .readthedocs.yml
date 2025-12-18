@@ -24,6 +24,9 @@ python:
   install:
       # Install PyTorch CPU version first
       - method: pip
+        path: .
+        extra_requirements: [ ]
+        requirements: [ ]
         args: [ "torch", "--index-url", "https://download.pytorch.org/whl/cpu" ]
       - requirements: requirements/requirements.txt
       - requirements: docs/requirements.txt
