@@ -22,5 +22,6 @@ sphinx:
 python:
   install:
       # Install PyTorch CPU version first
+      - requirements: requirements/requirements_cpu.txt
       - requirements: docs/requirements.txt
       - requirements: requirements/requirements.txt
