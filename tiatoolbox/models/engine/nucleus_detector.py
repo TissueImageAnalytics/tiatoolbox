@@ -800,9 +800,7 @@ class NucleusDetector(SemanticSegmentor):
             xs = np.concatenate(xs_list)
             classes = np.concatenate(classes_list)
             probs = np.concatenate(probs_list)
-            logger.info(f"Found {len(ys)} detections")
         else:
-            logger.info("Found 0 detections")
             ys = np.array([], dtype=np.uint32)
             xs = np.array([], dtype=np.uint32)
             classes = np.array([], dtype=np.uint32)
