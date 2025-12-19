@@ -26,7 +26,8 @@ def run_tileserver() -> None:
             layers={},
         )
         CORS(app, send_wildcard=True)
-        app.run(host="127.0.0.1", threaded=True)
+        port = int(os.environ.get("TIATOOLBOX_TILESERVER_PORT", "5000"))
+        app.run(host="127.0.0.1", port=port, threaded=True)
 
     proc = Thread(target=run_app, daemon=True)
     proc.start()
