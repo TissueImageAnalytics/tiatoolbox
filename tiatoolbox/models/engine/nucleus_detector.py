@@ -50,14 +50,12 @@ import shutil
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
-import tempfile
 
 import dask.array as da
 import numpy as np
 from dask import compute
 from dask.diagnostics.progress import ProgressBar
 from shapely.geometry import Point
-import zarr
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, SQLiteStore
@@ -65,8 +63,6 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
 )
-from dask import compute, delayed
-from dask.diagnostics.progress import ProgressBar
 from tiatoolbox.utils.misc import get_tqdm
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -121,8 +117,6 @@ class NucleusDetectorRunParams(SemanticSegmentorRunParams, total=False):
         postproc_tile_shape (tuple[int, int]):
             Tile shape (height, width) used during post-processing
             (in pixels) to control rechunking behavior.
-        cache_dir (str or os.PathLike):
-            Directory for caching intermediate results during WSI processing.
         return_labels (bool):
             Whether to return labels with predictions.
         return_probabilities (bool):
@@ -141,7 +135,6 @@ class NucleusDetectorRunParams(SemanticSegmentorRunParams, total=False):
     threshold_abs: float
     threshold_rel: float
     postproc_tile_shape: IntPair
-    cache_dir: str | os.PathLike
 
 
 class NucleusDetector(SemanticSegmentor):
@@ -718,48 +711,6 @@ class NucleusDetector(SemanticSegmentor):
             save_path=save_path,
             class_dict=class_dict,
         )
-    
-    @staticmethod
-    def _extract_nonzero(block:np.ndarray, block_info: dict| None = None):
-        """Extract non-zero detections from a block with global coordinates.
-        
-        Args:
-            block: Input block array of shape (H, W, C).
-            block_info: Dask block information containing array location.
-            
-        Returns:
-            2D array of shape (N, 4) where each row is [y, x, class, prob].
-            If no detections, returns array of shape (0, 4).
-
-        """
-        # Local indices within this chunk
-        ys, xs, classes = np.nonzero(block)
-        probs = block[ys, xs, classes]
-
-        # Get chunk offset from block_info
-        if block_info is not None:
-            info = block_info[0]
-            locs = info["array-location"] 
-            y_offset = locs[0][0]
-            x_offset = locs[1][0]
-
-            # Adjust to global coordinates
-            ys = ys + y_offset
-            xs = xs + x_offset
-
-        # Stack into (N, 4) array: [y, x, class, prob]
-        if len(ys) > 0:
-            result = np.column_stack([
-                ys.astype(np.uint32),
-                xs.astype(np.uint32),
-                classes.astype(np.uint32),
-                probs.astype(np.float32)
-            ])
-        else:
-            # Return empty array with correct shape
-            result = np.empty((0, 4), dtype=np.float32)
-        
-        return result
 
     @staticmethod
     def _centroid_maps_to_detection_arrays(
