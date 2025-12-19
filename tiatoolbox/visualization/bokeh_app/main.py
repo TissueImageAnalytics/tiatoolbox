@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import os
 import sys
 import tempfile
 import urllib
@@ -312,7 +313,7 @@ def get_mapper_for_prop(prop: str, mapper_type: str = "auto") -> str | dict[str,
         UI["vstate"].is_categorical = True
         return UI["vstate"].mapper
     # Find out the unique values of the chosen property
-    resp = UI["s"].get(f"http://{host2}:5000/tileserver/prop_values/{prop}/all")
+    resp = UI["s"].get(f"http://{host2}:{port}/tileserver/prop_values/{prop}/all")
     prop_vals = json.loads(resp.text)
     # If auto, guess what cmap should be
     if (
@@ -350,12 +351,12 @@ def update_renderer(prop: str, value: Any) -> None:  # noqa: ANN401
             # Send keys and values separately so types are preserved
             value = {"keys": list(value.keys()), "values": list(value.values())}
         UI["s"].put(
-            f"http://{host2}:5000/tileserver/cmap",
+            f"http://{host2}:{port}/tileserver/cmap",
             data={"cmap": json.dumps(value)},
         )
         return
     UI["s"].put(
-        f"http://{host2}:5000/tileserver/renderer/{prop}",
+        f"http://{host2}:{port}/tileserver/renderer/{prop}",
         data={"val": json.dumps(value)},
     )
 
@@ -779,7 +780,7 @@ def cprop_input_cb(attr: str, old: str, new: list[str]) -> None:  # noqa: ARG001
     UI["vstate"].cprop = new[0]
     update_renderer("mapper", cmap)
     UI["s"].put(
-        f"http://{host2}:5000/tileserver/color_prop",
+        f"http://{host2}:{port}/tileserver/color_prop",
         data={"prop": json.dumps(new[0])},
     )
     UI["vstate"].update_state = 1
@@ -895,7 +896,7 @@ def slide_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
     UI["vstate"].wsi = WSIReader.open(slide_path)
     initialise_slide()
     fname = make_safe_name(str(slide_path))
-    UI["s"].put(f"http://{host2}:5000/tileserver/slide", data={"slide_path": fname})
+    UI["s"].put(f"http://{host2}:{port}/tileserver/slide", data={"slide_path": fname})
     change_tiles("slide")
 
     # Load the overlay and graph automatically if set in config
@@ -987,7 +988,7 @@ def handle_graph_layer(graph_path: str) -> None:  # skipcq: PY-R1000
 def update_ui_on_new_annotations(ann_types: list[str]) -> None:
     """Update the UI when new annotations are added."""
     UI["vstate"].types = ann_types
-    props = UI["s"].get(f"http://{host2}:5000/tileserver/prop_names/all")
+    props = UI["s"].get(f"http://{host2}:{port}/tileserver/prop_names/all")
     UI["vstate"].props = json.loads(props.text)
     # Update the color type by prop menu
     UI["type_cmap_select"].options = list(UI["vstate"].types)
@@ -1024,7 +1025,7 @@ def layer_drop_cb(attr: MenuItemClick) -> None:
     # Otherwise it's a tile-based overlay of some form
     fname = make_safe_name(attr.item)
     resp = UI["s"].put(
-        f"http://{host2}:5000/tileserver/overlay",
+        f"http://{host2}:{port}/tileserver/overlay",
         data={"overlay_path": fname},
     )
     resp = json.loads(resp.text)
@@ -1142,7 +1143,7 @@ def type_cmap_cb(attr: str, old: list[str], new: list[str]) -> None:  # noqa: AR
         # Remove type-specific coloring
         UI["type_cmap_select"].options = [*UI["vstate"].types, "graph_overlay"]
         UI["s"].put(
-            f"http://{host2}:5000/tileserver/secondary_cmap",
+            f"http://{host2}:{port}/tileserver/secondary_cmap",
             data={
                 "type_id": json.dumps("None"),
                 "prop": "None",
@@ -1185,7 +1186,7 @@ def type_cmap_cb(attr: str, old: list[str], new: list[str]) -> None:  # noqa: AR
             return
         cmap = get_mapper_for_prop(new[1])  # separate cmap select ?
         UI["s"].put(
-            f"http://{host2}:5000/tileserver/secondary_cmap",
+            f"http://{host2}:{port}/tileserver/secondary_cmap",
             data={
                 "type_id": json.dumps(UI["vstate"].orig_types.get(new[0], new[0])),
                 "prop": new[1],
@@ -1210,14 +1211,16 @@ def save_cb(attr: ButtonClick) -> None:  # noqa: ARG001
         ),
     )
     UI["s"].post(
-        f"http://{host2}:5000/tileserver/commit",
+        f"http://{host2}:{port}/tileserver/commit",
         data={"save_path": save_path},
     )
 
 
 def tap_event_cb(event: DoubleTap) -> None:
     """Callback to handle double tap events to inspect annotations."""
-    resp = UI["s"].get(f"http://{host2}:5000/tileserver/tap_query/{event.x}/{-event.y}")
+    resp = UI["s"].get(
+        f"http://{host2}:{port}/tileserver/tap_query/{event.x}/{-event.y}"
+    )
     data_dict = json.loads(resp.text)
 
     popup_table.source.data = {
@@ -1275,7 +1278,7 @@ def segment_on_box() -> None:
 
     fname = make_safe_name(tmp_save_dir / "hover_out" / "0.dat")
     resp = UI["s"].put(
-        f"http://{host2}:5000/tileserver/annotations",
+        f"http://{host2}:{port}/tileserver/annotations",
         data={"file_path": fname, "model_mpp": json.dumps(UI["vstate"].model_mpp)},
     )
     ann_types = json.loads(resp.text)
@@ -1784,13 +1787,15 @@ def make_window(vstate: ViewerState) -> dict:  # noqa: PLR0915
 
     # Set up a session for communicating with tile server
     s = requests.Session()
+    s.trust_env = False  # bypass system proxies for local tile server requests
+    s.proxies.update({"http": None, "https": None})
     retries = Retry(
         total=5,
         backoff_factor=0.1,
     )
     s.mount("http://", HTTPAdapter(max_retries=retries))
 
-    resp = s.get(f"http://{host2}:5000/tileserver/session_id")
+    resp = s.get(f"http://{host2}:{port}/tileserver/session_id")
     user = resp.cookies.get("session_id")
     if curdoc().session_context:
         curdoc().session_context.request.arguments["user"] = user
@@ -1975,7 +1980,7 @@ first_z = [1]
 # Set hosts and ports
 host = "127.0.0.1"
 host2 = "127.0.0.1"
-port = "5000"
+port = os.environ.get("TIATOOLBOX_TILESERVER_PORT", "5000")
 
 
 def update() -> None:
@@ -2038,7 +2043,7 @@ def setup_config_ui_settings(config: dict) -> None:
             update_renderer(k, config["UI_settings"][k])
         if "default_cprop" in config and config["default_cprop"] is not None:
             UI["s"].put(
-                f"http://{host2}:5000/tileserver/color_prop",
+                f"http://{host2}:{port}/tileserver/color_prop",
                 data={"prop": json.dumps(config["default_cprop"])},
             )
     # Open up initial slide

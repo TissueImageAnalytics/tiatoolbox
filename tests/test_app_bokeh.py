@@ -9,6 +9,7 @@ import multiprocessing
 import re
 import time
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import bokeh.models as bkmodels
@@ -25,7 +26,7 @@ from PIL import Image
 from scipy.ndimage import label
 
 from tiatoolbox.data import _fetch_remote_sample
-from tiatoolbox.visualization.bokeh_app import main
+from tiatoolbox.visualization.bokeh_app import app_hooks, main
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
 
@@ -39,6 +40,13 @@ BOKEH_PATH = importlib_resources.files("tiatoolbox.visualization.bokeh_app")
 FILLED = 0
 MICRON_FORMATTER = 1
 GRIDLINES = 2
+
+
+class _DummySessionContext:
+    """Simple shim matching the subset of Bokeh's SessionContext we use."""
+
+    def __init__(self: _DummySessionContext, user: str) -> None:
+        self.request = SimpleNamespace(arguments={"user": user})
 
 
 # helper functions and fixtures
@@ -77,7 +85,9 @@ def get_renderer_prop(prop: str) -> json:
             The property to get.
 
     """
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/renderer/{prop}")
+    resp = main.UI["s"].get(
+        f"http://{main.host2}:{main.port}/tileserver/renderer/{prop}",
+    )
     return resp.json()
 
 
@@ -156,7 +166,7 @@ def run_app() -> None:
         layers={},
     )
     CORS(app, send_wildcard=True)
-    app.run(host="127.0.0.1", threaded=True)
+    app.run(host="127.0.0.1", port=int(main.port), threaded=True)
 
 
 @pytest.fixture(scope="module")
@@ -393,13 +403,17 @@ def test_type_cmap_select(doc: Document) -> None:
 
     # remove the type cmap
     cmap_select.value = []
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/secondary_cmap")
+    resp = main.UI["s"].get(
+        f"http://{main.host2}:{main.port}/tileserver/secondary_cmap"
+    )
     assert resp.json()["score_prop"] == "None"
 
     # check callback works regardless of order
     cmap_select.value = ["0"]
     cmap_select.value = ["0", "prob"]
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/secondary_cmap")
+    resp = main.UI["s"].get(
+        f"http://{main.host2}:{main.port}/tileserver/secondary_cmap"
+    )
     assert resp.json()["score_prop"] == "prob"
 
 
@@ -770,16 +784,16 @@ def test_cmap_select(doc: Document) -> None:
     main.UI["cprop_input"].value = ["prob"]
     # set to jet
     cmap_select.value = "jet"
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
+    resp = main.UI["s"].get(f"http://{main.host2}:{main.port}/tileserver/cmap")
     assert resp.json() == "jet"
     # set to dict
     cmap_select.value = "dict"
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
+    resp = main.UI["s"].get(f"http://{main.host2}:{main.port}/tileserver/cmap")
     assert isinstance(resp.json(), dict)
 
     main.UI["cprop_input"].value = ["type"]
     # should now be the type mapping
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
+    resp = main.UI["s"].get(f"http://{main.host2}:{main.port}/tileserver/cmap")
     for key in main.UI["vstate"].mapper:
         assert str(key) in resp.json()
         assert np.all(
@@ -787,7 +801,7 @@ def test_cmap_select(doc: Document) -> None:
         )
     # set the cmap to "coolwarm"
     cmap_select.value = "coolwarm"
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
+    resp = main.UI["s"].get(f"http://{main.host2}:{main.port}/tileserver/cmap")
     # as cprop is type (categorical), it should have had no effect
     for key in main.UI["vstate"].mapper:
         assert str(key) in resp.json()
@@ -796,7 +810,7 @@ def test_cmap_select(doc: Document) -> None:
         )
 
     main.UI["cprop_input"].value = ["prob"]
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
+    resp = main.UI["s"].get(f"http://{main.host2}:{main.port}/tileserver/cmap")
     # should be coolwarm as that is the last cmap we set, and prob is continuous
     assert resp.json() == "coolwarm"
 
@@ -842,3 +856,51 @@ def test_clearing_doc(doc: Document) -> None:
     """Test that the doc can be cleared."""
     doc.clear()
     assert len(doc.roots) == 0
+
+
+def test_app_hooks_session_destroyed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hook should call reset endpoint and exit."""
+    recorded: dict[str, object] = {}
+
+    def fake_get(url: str, *, timeout: int) -> None:
+        """Fake requests.get to record parameters."""
+        recorded["url"] = url
+        recorded["timeout"] = timeout
+
+    monkeypatch.setattr(app_hooks, "PORT", "6150")
+    monkeypatch.setattr(app_hooks.requests, "get", fake_get)
+    exited = False
+
+    def fake_exit() -> None:
+        """Fake sys.exit to record call."""
+        nonlocal exited
+        exited = True
+
+    monkeypatch.setattr(app_hooks, "sys", SimpleNamespace(exit=fake_exit))
+    app_hooks.on_session_destroyed(_DummySessionContext("user-1"))
+    assert recorded["url"] == "http://127.0.0.1:6150/tileserver/reset/user-1"
+    assert recorded["timeout"] == 5
+    assert exited
+
+
+def test_app_hooks_session_destroyed_suppresses_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ReadTimeout should be suppressed and exit still called."""
+
+    def fake_get(*_: object, **__: object) -> None:
+        """Fake requests.get to raise ReadTimeout."""
+        raise app_hooks.requests.exceptions.ReadTimeout  # type: ignore[attr-defined]
+
+    monkeypatch.setattr(app_hooks, "PORT", "6160")
+    monkeypatch.setattr(app_hooks.requests, "get", fake_get)
+    exited = False
+
+    def fake_exit() -> None:
+        """Fake sys.exit to record call."""
+        nonlocal exited
+        exited = True
+
+    monkeypatch.setattr(app_hooks, "sys", SimpleNamespace(exit=fake_exit))
+    app_hooks.on_session_destroyed(_DummySessionContext("user-2"))
+    assert exited
