@@ -14,7 +14,6 @@ from tiatoolbox import cli
 from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.models.engine.nucleus_detector import (
     NucleusDetector,
-    # _flatten_predictions_to_dask,
 )
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imwrite
@@ -85,12 +84,12 @@ def test_write_detection_records_to_store_no_class_dict() -> None:
     assert len(dummy_store.values()) == 1
     assert total == 1
     annotation = next(iter(dummy_store.values()))
-    assert annotation.properties["class"] == 0
+    assert annotation.properties["type"] == 0
     dummy_store.close()
 
 
 def test_nucleus_detector_patch_annotation_store_output(
-    remote_sample: Callable, tmp_path: Path
+    remote_sample: Callable, track_tmp_path: Path
 ) -> None:
     """Test for nucleus detection engine in patch mode."""
     mini_wsi_svs = Path(remote_sample("wsi1_2k_2k_svs"))
@@ -106,7 +105,7 @@ def test_nucleus_detector_patch_annotation_store_output(
 
     pretrained_model = "sccnn-conic"
 
-    save_dir = tmp_path
+    save_dir = track_tmp_path
 
     nucleus_detector = NucleusDetector(model=pretrained_model)
     _ = nucleus_detector.run(
@@ -195,7 +194,7 @@ def test_nucleus_detector_patches_dict_output(
 
 
 def test_nucleus_detector_patches_zarr_output(
-    remote_sample: Callable, tmp_path: Path
+    remote_sample: Callable, track_tmp_path: Path
 ) -> None:
     """Test for nucleus detection engine in patch mode."""
     mini_wsi_svs = Path(remote_sample("wsi1_2k_2k_svs"))
@@ -212,7 +211,7 @@ def test_nucleus_detector_patches_zarr_output(
 
     nucleus_detector = NucleusDetector(model=pretrained_model)
 
-    save_dir = tmp_path
+    save_dir = track_tmp_path
 
     output_path = nucleus_detector.run(
         patch_mode=True,
@@ -240,13 +239,13 @@ def test_nucleus_detector_patches_zarr_output(
     _rm_dir(save_dir)
 
 
-def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: Path) -> None:
+def test_nucleus_detector_wsi(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test for nucleus detection engine."""
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     pretrained_model = "sccnn-conic"
 
-    save_dir = tmp_path
+    save_dir = track_tmp_path
 
     nucleus_detector = NucleusDetector(model=pretrained_model)
     nucleus_detector.drop_keys = []
@@ -267,7 +266,7 @@ def test_nucleus_detector_wsi(remote_sample: Callable, tmp_path: Path) -> None:
     store = SQLiteStore.open(save_dir / "wsi4_512_512.db")
     assert 255 <= len(store.values()) <= 265
     annotation = next(iter(store.values()))
-    assert annotation.properties["class"] == "test_nucleus"
+    assert annotation.properties["type"] == "test_nucleus"
     store.close()
 
     nucleus_detector.drop_keys = ["probabilities"]

@@ -45,13 +45,17 @@ Notes:
 """
 
 from __future__ import annotations
+
 import shutil
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 import tempfile
 
 import dask.array as da
 import numpy as np
+from dask import compute
+from dask.diagnostics.progress import ProgressBar
 from shapely.geometry import Point
 import zarr
 
@@ -391,8 +395,10 @@ class NucleusDetector(SemanticSegmentor):
         to extract nuclei centroids across the entire WSI. The prediction map is
         first re-chunked to the model's preferred post-processing tile shape, and
         `dask.map_overlap` with halo padding is used to facilitate centroid
-        extraction on large prediction maps. The resulting centroid maps are then
-        converted into detection arrays (x, y, classes, probabilities).
+        extraction on large prediction maps. The resulting centroid maps are
+        computed and saved to Zarr storage for memory-efficient processing, then
+        converted into detection arrays (x, y, classes, probabilities) through
+        sequential block processing.
 
         Args:
             raw_predictions (da.Array):
@@ -413,6 +419,11 @@ class NucleusDetector(SemanticSegmentor):
                     threshold_rel (float):
                         Relative detection threshold
                         (e.g., with respect to local maxima).
+                    postproc_tile_shape (tuple[int, int]):
+                        Tile shape (height, width) for post-processing rechunking.
+                    cache_dir (str or os.PathLike):
+                        Directory for caching intermediate centroid maps as Zarr.
+                        Defaults to './tmp/'.
 
         Returns:
             dict[str, da.Array]:
@@ -426,6 +437,10 @@ class NucleusDetector(SemanticSegmentor):
             - Halo padding ensures that nuclei crossing tile/chunk boundaries
               are not fragmented or duplicated.
             - If thresholds are not explicitly provided, model defaults are used.
+            - Centroid maps are computed and saved to Zarr storage to avoid
+              out-of-memory errors on large WSIs.
+            - The Zarr-backed centroid maps are then processed block-by-block
+              to extract detections incrementally.
 
         """
         _ = prediction_shape
@@ -455,8 +470,8 @@ class NucleusDetector(SemanticSegmentor):
         )
 
         centroid_maps = da.map_overlap(
-            rechunked_prediction_map,
             self.model.postproc,
+            rechunked_prediction_map,
             min_distance=min_distance,
             threshold_abs=threshold_abs,
             threshold_rel=threshold_rel,
@@ -468,21 +483,18 @@ class NucleusDetector(SemanticSegmentor):
             depth_w=depth_w,
         )
 
-        logger.info("Computing and saving centroid maps to cache as zarr.")
-        save_dir = kwargs.get("cache_dir", './tmp/')
-        save_path = Path(save_dir) / "detection_maps"
-        if save_path.exists():
-            shutil.rmtree(save_path)
-
+        logger.info("Computing and saving centroid maps to temporary zarr file.")
+        temp_zarr_file = tempfile.TemporaryDirectory(
+            prefix="tiatoolbox_nucleus_detector_", suffix=".zarr"
+        )
+        logger.info("Temporary zarr file created at: %s", temp_zarr_file.name)
         task = centroid_maps.to_zarr(
-            url=save_path, compute=False, object_codec=None
+            url=temp_zarr_file.name, compute=False, object_codec=None
         )
         with ProgressBar():
             compute(task)
 
-        centroid_maps = da.from_zarr(
-            save_path
-        )
+        centroid_maps = da.from_zarr(temp_zarr_file.name)
 
         return self._centroid_maps_to_detection_arrays(centroid_maps)
 
@@ -756,10 +768,10 @@ class NucleusDetector(SemanticSegmentor):
         """Convert centroid maps into 1-D detection arrays.
 
         This helper function extracts non-zero centroid predictions from a
-        already computed Dask array of centroid maps and flattens them into 
-        coordinate, class, and probability arrays suitable for saving or 
-        further processing. The function processes the centroid maps block 
-        by block to minimize memory usage, reading each block from disk 
+        already computed Dask array of centroid maps and flattens them into
+        coordinate, class, and probability arrays suitable for saving or
+        further processing. The function processes the centroid maps block
+        by block to minimize memory usage, reading each block from disk
         and extracting detections incrementally.
 
         Args:
@@ -783,7 +795,7 @@ class NucleusDetector(SemanticSegmentor):
                     detection probabilities (``np.float32``).
 
         Notes:
-            - The centroid maps are expected to be pre-computed. 
+            - The centroid maps are expected to be pre-computed.
             - Blocks are processed sequentially to avoid loading the entire
               centroid map into memory at once.
             - Global coordinates are computed by adding block offsets to local
@@ -794,61 +806,59 @@ class NucleusDetector(SemanticSegmentor):
 
         """
         logger.info("Extracting detections from centroid maps block by block...")
-        
+
         # Get chunk information
         num_blocks_h = detection_maps.numblocks[0]
         num_blocks_w = detection_maps.numblocks[1]
-        
+
         # Lists to collect detections from each block
         ys_list = []
         xs_list = []
         classes_list = []
         probs_list = []
-        
+
         tqdm = get_tqdm()
         for i in tqdm(range(num_blocks_h), desc="Processing detection blocks"):
             for j in range(num_blocks_w):
                 # Get block offsets
                 y_offset = sum(detection_maps.chunks[0][:i]) if i > 0 else 0
                 x_offset = sum(detection_maps.chunks[1][:j]) if j > 0 else 0
-                
+
                 # Read this block from Zarr (already computed, so this is just I/O)
                 block = np.array(detection_maps.blocks[i, j])
-                
+
                 # Extract nonzero detections
                 ys, xs, classes = np.nonzero(block)
                 probs = block[ys, xs, classes]
-                
+
                 # Adjust to global coordinates
                 ys = ys + y_offset
                 xs = xs + x_offset
-                
+
                 # Append to lists if we have detections
                 if len(ys) > 0:
                     ys_list.append(ys.astype(np.uint32))
                     xs_list.append(xs.astype(np.uint32))
                     classes_list.append(classes.astype(np.uint32))
                     probs_list.append(probs.astype(np.float32))
-        
+
         # Concatenate all block results
         if ys_list:
             ys = np.concatenate(ys_list)
             xs = np.concatenate(xs_list)
             classes = np.concatenate(classes_list)
             probs = np.concatenate(probs_list)
-            logger.info(f"Found {len(ys)} detections")
         else:
-            logger.info("Found 0 detections")
             ys = np.array([], dtype=np.uint32)
             xs = np.array([], dtype=np.uint32)
             classes = np.array([], dtype=np.uint32)
             probs = np.array([], dtype=np.float32)
-        
+
         return {
-            "y": da.from_array(ys, chunks='auto'),
-            "x": da.from_array(xs, chunks='auto'),
-            "classes": da.from_array(classes, chunks='auto'),
-            "probabilities": da.from_array(probs, chunks='auto')
+            "y": da.from_array(ys, chunks="auto"),
+            "x": da.from_array(xs, chunks="auto"),
+            "classes": da.from_array(classes, chunks="auto"),
+            "probabilities": da.from_array(probs, chunks="auto"),
         }
 
     @staticmethod
@@ -1150,7 +1160,7 @@ class NucleusDetector(SemanticSegmentor):
 
 
         """
-        return super().run(
+        output = super().run(
             images=images,
             masks=masks,
             input_resolutions=input_resolutions,
@@ -1162,3 +1172,21 @@ class NucleusDetector(SemanticSegmentor):
             output_type=output_type,
             **kwargs,
         )
+
+        if not patch_mode:
+            # Clean up temporary zarr directory after WSI processing
+            # It should have been already deleted, but check anyway
+            temp_dir = Path(tempfile.gettempdir())
+            if temp_dir.exists():
+                # find file starting with 'tiatoolbox_nucleus_detector_'
+                # and ending with '.zarr'
+                for item in temp_dir.iterdir():
+                    if item.name.startswith(
+                        "tiatoolbox_nucleus_detector_"
+                    ) and item.name.endswith(".zarr"):
+                        shutil.rmtree(item)
+                        logger.info(
+                            "Temporary zarr directory %s has been removed.", item
+                        )
+
+        return output
