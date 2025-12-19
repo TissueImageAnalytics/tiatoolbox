@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import time
 from contextlib import suppress
 from threading import Thread
@@ -15,6 +16,8 @@ from click.testing import CliRunner
 from tiatoolbox import cli
 from tiatoolbox.cli.visualize import run_bokeh, run_tileserver
 from tiatoolbox.data import _fetch_remote_sample
+
+PORT = os.environ.get("TIATOOLBOX_TILESERVER_PORT", "5000")
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -72,7 +75,10 @@ def bk_session(data_path: dict[str, Path]) -> ClientSession:
     yield session
     session.close()
     with suppress(requests.exceptions.ConnectionError):
-        requests.post("http://localhost:5000/tileserver/shutdown", timeout=2)
+        requests.post(
+            f"http://localhost:{PORT}/tileserver/shutdown",
+            timeout=2,
+        )
 
 
 def test_slides_available(bk_session: ClientSession) -> None:
