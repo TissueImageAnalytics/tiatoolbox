@@ -81,19 +81,6 @@ def cli_output_path(
     )
 
 
-def cli_cache_path(
-    usage_help: str = "Path to cache directory to save the cache.",
-    default: str | None = None,
-) -> Callable:
-    """Enables --cache-path option for cli."""
-    return click.option(
-        "--cache-path",
-        help=add_default_to_usage_help(usage_help, default=default),
-        type=str,
-        default=default,
-    )
-
-
 def cli_output_file(
     usage_help: str = "Filename for saving output (e.g., '.zarr' or '.db').",
     default: str | None = None,

@@ -47,6 +47,7 @@ Notes:
 from __future__ import annotations
 
 import shutil
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -116,8 +117,6 @@ class NucleusDetectorRunParams(SemanticSegmentorRunParams, total=False):
         postproc_tile_shape (tuple[int, int]):
             Tile shape (height, width) used during post-processing
             (in pixels) to control rechunking behavior.
-        cache_dir (str or os.PathLike):
-            Directory for caching intermediate results during WSI processing.
         return_labels (bool):
             Whether to return labels with predictions.
         return_probabilities (bool):
@@ -136,7 +135,6 @@ class NucleusDetectorRunParams(SemanticSegmentorRunParams, total=False):
     threshold_abs: float
     threshold_rel: float
     postproc_tile_shape: IntPair
-    cache_dir: str | os.PathLike
 
 
 class NucleusDetector(SemanticSegmentor):
@@ -478,17 +476,18 @@ class NucleusDetector(SemanticSegmentor):
             depth_w=depth_w,
         )
 
-        logger.info("Computing and saving centroid maps to cache as zarr.")
-        save_dir = kwargs.get("cache_dir", "./tmp/")
-        save_path = Path(save_dir) / "detection_maps"
-        if save_path.exists():
-            shutil.rmtree(save_path)
-
-        task = centroid_maps.to_zarr(url=save_path, compute=False, object_codec=None)
+        logger.info("Computing and saving centroid maps to temporary zarr file.")
+        temp_zarr_file = tempfile.TemporaryDirectory(
+            prefix="tiatoolbox_nucleus_detector_", suffix=".zarr"
+        )
+        logger.info("Temporary zarr file created at: %s", temp_zarr_file.name)
+        task = centroid_maps.to_zarr(
+            url=temp_zarr_file.name, compute=False, object_codec=None
+        )
         with ProgressBar():
             compute(task)
 
-        centroid_maps = da.from_zarr(save_path)
+        centroid_maps = da.from_zarr(temp_zarr_file.name)
 
         return self._centroid_maps_to_detection_arrays(centroid_maps)
 
@@ -1112,7 +1111,7 @@ class NucleusDetector(SemanticSegmentor):
 
 
         """
-        return super().run(
+        output = super().run(
             images=images,
             masks=masks,
             input_resolutions=input_resolutions,
@@ -1124,3 +1123,21 @@ class NucleusDetector(SemanticSegmentor):
             output_type=output_type,
             **kwargs,
         )
+
+        if not patch_mode:
+            # Clean up temporary zarr directory after WSI processing
+            # It should have been already deleted, but check anyway
+            temp_dir = Path(tempfile.gettempdir())
+            if temp_dir.exists():
+                # find file starting with 'tiatoolbox_nucleus_detector_'
+                # and ending with '.zarr'
+                for item in temp_dir.iterdir():
+                    if item.name.startswith(
+                        "tiatoolbox_nucleus_detector_"
+                    ) and item.name.endswith(".zarr"):
+                        shutil.rmtree(item)
+                        logger.info(
+                            "Temporary zarr directory %s has been removed.", item
+                        )
+
+        return output

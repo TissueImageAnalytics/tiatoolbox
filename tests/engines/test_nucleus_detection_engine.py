@@ -256,7 +256,6 @@ def test_nucleus_detector_wsi(remote_sample: Callable, track_tmp_path: Path) -> 
         memory_threshold=50,
         images=[mini_wsi_svs],
         save_dir=save_dir,
-        cache_dir=save_dir,
         overwrite=True,
         batch_size=8,
         class_dict={0: "test_nucleus"},
@@ -278,7 +277,6 @@ def test_nucleus_detector_wsi(remote_sample: Callable, track_tmp_path: Path) -> 
         memory_threshold=50,
         images=[mini_wsi_svs],
         save_dir=save_dir,
-        cache_dir=save_dir,
         overwrite=True,
         batch_size=8,
     )
