@@ -14,7 +14,6 @@ from tiatoolbox import cli
 from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.models.engine.nucleus_detector import (
     NucleusDetector,
-    # _flatten_predictions_to_dask,
 )
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imwrite

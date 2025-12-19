@@ -465,8 +465,8 @@ class NucleusDetector(SemanticSegmentor):
         )
 
         centroid_maps = da.map_overlap(
-            rechunked_prediction_map,
             self.model.postproc,
+            rechunked_prediction_map,
             min_distance=min_distance,
             threshold_abs=threshold_abs,
             threshold_rel=threshold_rel,
