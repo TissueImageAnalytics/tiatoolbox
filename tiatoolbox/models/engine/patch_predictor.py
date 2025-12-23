@@ -387,6 +387,7 @@ class PatchPredictor(EngineABC):
     def post_process_wsi(
         self: PatchPredictor,
         raw_predictions: da.Array,
+        save_path: Path,  # noqa: ARG002
         prediction_shape: tuple[int, ...],
         prediction_dtype: type,
         **kwargs: Unpack[PredictorRunParams],
@@ -401,6 +402,9 @@ class PatchPredictor(EngineABC):
         Args:
             raw_predictions (dask.array.Array):
                 Raw model predictions.
+            save_path (Path):
+                Path to save the intermediate output. The intermediate output is saved
+                in a zarr file.
             prediction_shape (tuple[int, ...]):
                 Expected shape of the prediction output.
             prediction_dtype (type):

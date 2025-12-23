@@ -870,6 +870,7 @@ class EngineABC(ABC):  # noqa: B024
     def post_process_wsi(  # skipcq: PYL-R0201
         self: EngineABC,
         raw_predictions: da.Array,
+        save_path: Path,  # noqa: ARG002
         prediction_shape: tuple[int, ...],  # noqa: ARG002
         prediction_dtype: type,  # noqa: ARG002
         **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
@@ -883,6 +884,9 @@ class EngineABC(ABC):  # noqa: B024
         Args:
             raw_predictions (dask.array.Array):
                 Raw model predictions as a Dask array.
+            save_path (Path):
+                Path to save the intermediate output. The intermediate output is saved
+                in a zarr file.
             prediction_shape (tuple[int, ...]):
                 Shape of the prediction output.
             prediction_dtype (type):
@@ -1540,6 +1544,7 @@ class EngineABC(ABC):  # noqa: B024
 
             raw_predictions["predictions"] = self.post_process_wsi(
                 raw_predictions=raw_predictions["probabilities"],
+                save_path=save_path[get_path(image)],
                 prediction_shape=raw_predictions["probabilities"].shape[:-1],
                 prediction_dtype=raw_predictions["probabilities"].dtype,
                 **kwargs,

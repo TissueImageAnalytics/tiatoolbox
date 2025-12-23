@@ -378,6 +378,7 @@ class NucleusDetector(SemanticSegmentor):
     def post_process_wsi(
         self: NucleusDetector,
         raw_predictions: da.Array,
+        save_path: Path,
         prediction_shape: tuple[int, ...],
         prediction_dtype: type,
         **kwargs: Unpack[NucleusDetectorRunParams],
@@ -397,6 +398,9 @@ class NucleusDetector(SemanticSegmentor):
             raw_predictions (da.Array):
                 WSI prediction map of shape ``(H, W, C)`` containing
                 per-class probabilities or logits.
+            save_path (Path):
+                Path to save the intermediate output. The intermediate output is saved
+                in a zarr file.
             prediction_shape (tuple[int, ...]):
                 Expected prediction shape.
             prediction_dtype (type):
@@ -476,18 +480,19 @@ class NucleusDetector(SemanticSegmentor):
             depth_w=depth_w,
         )
 
-        logger.info("Computing and saving centroid maps to temporary zarr file.")
-        temp_zarr_file = tempfile.TemporaryDirectory(
-            prefix="tiatoolbox_nucleus_detector_", suffix=".zarr"
+        temp_zarr_file = save_path.parent.absolute() / (save_path.stem + "_cache.zarr")
+        logger.info(
+            "Computing and saving centroid maps to temporary zarr file at: %s",
+            temp_zarr_file,
         )
-        logger.info("Temporary zarr file created at: %s", temp_zarr_file.name)
+
         task = centroid_maps.to_zarr(
-            url=temp_zarr_file.name, compute=False, object_codec=None
+            url=temp_zarr_file, compute=False, object_codec=None
         )
         with ProgressBar():
             compute(task)
 
-        centroid_maps = da.from_zarr(temp_zarr_file.name)
+        centroid_maps = da.from_zarr(temp_zarr_file)
 
         return self._centroid_maps_to_detection_arrays(centroid_maps)
 
@@ -600,26 +605,40 @@ class NucleusDetector(SemanticSegmentor):
 
         """
         if output_type.lower() != "annotationstore":
-            return super().save_predictions(
+            out = super().save_predictions(
                 processed_predictions["predictions"],
                 output_type,
                 save_path=save_path,
                 **kwargs,
             )
+        else:
+            # scale_factor set from kwargs
+            scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
+            # class_dict set from kwargs
+            class_dict = kwargs.get("class_dict")
+            if class_dict is None:
+                class_dict = self.model.output_class_dict
 
-        # scale_factor set from kwargs
-        scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
-        # class_dict set from kwargs
-        class_dict = kwargs.get("class_dict")
-        if class_dict is None:
-            class_dict = self.model.output_class_dict
+            out = self._save_predictions_annotation_store(
+                processed_predictions,
+                save_path=save_path,
+                scale_factor=scale_factor,
+                class_dict=class_dict,
+            )
 
-        return self._save_predictions_annotation_store(
-            processed_predictions,
-            save_path=save_path,
-            scale_factor=scale_factor,
-            class_dict=class_dict,
-        )
+        # Remove cached centroid maps if wsi mode
+        if not self.patch_mode:
+            path_to_delete = save_path.parent.absolute() / (
+                save_path.stem + "_cache.zarr"
+            )
+            shutil.rmtree(path_to_delete)
+            logger.info(
+                "Removed temporary zarr directory used for"
+                " caching centroid maps at: %s",
+                path_to_delete,
+            )
+
+        return out
 
     def _save_predictions_annotation_store(
         self: NucleusDetector,

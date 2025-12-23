@@ -268,6 +268,9 @@ def test_nucleus_detector_wsi(remote_sample: Callable, track_tmp_path: Path) -> 
     annotation = next(iter(store.values()))
     assert annotation.properties["type"] == "test_nucleus"
     store.close()
+    # Check temp zarr files are removed
+    temp_zarr_files = save_dir / "wsi4_512_512_cache.zarr"
+    assert not temp_zarr_files.exists()
 
     nucleus_detector.drop_keys = ["probabilities"]
     result_path = nucleus_detector.run(
@@ -283,6 +286,7 @@ def test_nucleus_detector_wsi(remote_sample: Callable, track_tmp_path: Path) -> 
     print("Result path:", result_path)
 
     zarr_path = result_path[mini_wsi_svs]
+    print("Zarr path:", zarr_path)
     zarr_group = zarr.open(zarr_path, mode="r")
     xs = zarr_group["x"][:]
     ys = zarr_group["y"][:]
@@ -292,6 +296,7 @@ def test_nucleus_detector_wsi(remote_sample: Callable, track_tmp_path: Path) -> 
     assert 255 <= len(xs) <= 265
     assert 255 <= len(ys) <= 265
     assert 255 <= len(classes) <= 265
+    assert not temp_zarr_files.exists()
 
     _rm_dir(save_dir)
     mini_wsi_svs.unlink()
