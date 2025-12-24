@@ -625,7 +625,7 @@ class EngineABC(ABC):  # noqa: B024
                 Post-processed predictions as a Dask array.
 
         """
-        return raw_predictions
+        return raw_predictions["probabilities"]
 
     def save_predictions(
         self: EngineABC,
@@ -933,7 +933,7 @@ class EngineABC(ABC):  # noqa: B024
                 Post-processed predictions as a Dask array.
 
         """
-        return raw_predictions
+        return raw_predictions["probabilities"]
 
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
         """Load or validate the IO configuration for the engine.
@@ -1367,7 +1367,7 @@ class EngineABC(ABC):  # noqa: B024
         )
 
         raw_predictions["predictions"] = self.post_process_patches(
-            raw_predictions=raw_predictions["probabilities"],
+            raw_predictions=raw_predictions,
             prediction_shape=raw_predictions["probabilities"].shape[:-1],
             prediction_dtype=raw_predictions["probabilities"].dtype,
             **kwargs,
@@ -1543,7 +1543,7 @@ class EngineABC(ABC):  # noqa: B024
             )
 
             raw_predictions["predictions"] = self.post_process_wsi(
-                raw_predictions=raw_predictions["probabilities"],
+                raw_predictions=raw_predictions,
                 save_path=save_path[get_path(image)],
                 prediction_shape=raw_predictions["probabilities"].shape[:-1],
                 prediction_dtype=raw_predictions["probabilities"].dtype,

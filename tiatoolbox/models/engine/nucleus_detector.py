@@ -356,8 +356,8 @@ class NucleusDetector(SemanticSegmentor):
         probs = []
 
         # Process each patch's predictions
-        for i in range(raw_predictions.shape[0]):
-            probs_prediction_patch = raw_predictions[i].compute()
+        for i in range(raw_predictions["probabilities"].shape[0]):
+            probs_prediction_patch = raw_predictions["probabilities"][i].compute()
             centroids_map_patch = self.model.postproc(
                 probs_prediction_patch,
                 min_distance=min_distance,
@@ -462,13 +462,13 @@ class NucleusDetector(SemanticSegmentor):
         depth = {0: depth_h, 1: depth_w, 2: 0}
 
         # Re-chunk to post-processing tile shape for more efficient processing
-        rechunked_prediction_map = raw_predictions.rechunk(
+        rechunked_probability_map = raw_predictions["probabilities"].rechunk(
             (postproc_tile_shape[0], postproc_tile_shape[1], -1)
         )
 
         centroid_maps = da.map_overlap(
             self.model.postproc,
-            rechunked_prediction_map,
+            rechunked_probability_map,
             min_distance=min_distance,
             threshold_abs=threshold_abs,
             threshold_rel=threshold_rel,

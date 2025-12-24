@@ -8,6 +8,7 @@ import shutil
 from pathlib import Path
 from typing import NoReturn
 
+import dask.array as da
 import numpy as np
 import pytest
 import torch
@@ -353,11 +354,13 @@ def test_engine_run() -> NoReturn:
     assert "probabilities" in out
     assert "labels" in out
 
+    raw_output = np.zeros((3, 3, 3))
     pred = eng.post_process_wsi(
-        raw_predictions=Path("/path/to/raw_predictions.npy"),
+        raw_predictions={"probabilities": da.from_array(raw_output)},
         save_path=Path("/path/to/save_predictions.zarr"),
     )
-    assert str(pred) == "/path/to/raw_predictions.npy"
+    pred = np.array(pred)
+    np.testing.assert_array_equal(pred, raw_output)
 
 
 def test_engine_run_with_verbose() -> NoReturn:

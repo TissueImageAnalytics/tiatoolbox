@@ -381,7 +381,7 @@ class PatchPredictor(EngineABC):
         _ = kwargs.get("return_probabilities")
         _ = prediction_shape
         _ = prediction_dtype
-        raw_predictions = self.model.postproc_func(raw_predictions)
+        raw_predictions = self.model.postproc_func(raw_predictions["probabilities"])
         return cast_to_min_dtype(raw_predictions)
 
     def post_process_wsi(
