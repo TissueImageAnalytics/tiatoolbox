@@ -565,9 +565,7 @@ class EngineABC(ABC):  # noqa: B024
 
     def post_process_patches(  # skipcq: PYL-R0201
         self: EngineABC,
-        raw_predictions: da.Array,
-        prediction_shape: tuple[int, ...],  # noqa: ARG002
-        prediction_dtype: type,  # noqa: ARG002
+        raw_predictions: dict,
         **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
     ) -> dask.array.Array:
         """Post-process raw patch predictions from inference.
@@ -577,12 +575,8 @@ class EngineABC(ABC):  # noqa: B024
         and returns a Dask array for efficient computation.
 
         Args:
-            raw_predictions (dask.array.Array):
-                Raw model predictions as a dask array.
-            prediction_shape (tuple[int, ...]):
-                Shape of the prediction output.
-            prediction_dtype (type):
-                Data type of the prediction output.
+            raw_predictions (dict):
+                Dictionary containing raw model predictions as Dask arrays.
             **kwargs (EngineABCRunParams):
                 Additional runtime parameters to update engine attributes.
 
@@ -869,10 +863,8 @@ class EngineABC(ABC):  # noqa: B024
     # This is not a static model for child classes.
     def post_process_wsi(  # skipcq: PYL-R0201
         self: EngineABC,
-        raw_predictions: da.Array,
+        raw_predictions: dict,
         save_path: Path,  # noqa: ARG002
-        prediction_shape: tuple[int, ...],  # noqa: ARG002
-        prediction_dtype: type,  # noqa: ARG002
         **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
     ) -> dask.array.Array:
         """Post-process predictions from whole slide image (WSI) inference.
@@ -882,15 +874,11 @@ class EngineABC(ABC):  # noqa: B024
         and returns a Dask array for efficient computation.
 
         Args:
-            raw_predictions (dask.array.Array):
-                Raw model predictions as a Dask array.
+            raw_predictions (dict):
+                Dictionary containing raw model predictions as Dask arrays.
             save_path (Path):
                 Path to save the intermediate output. The intermediate output is saved
                 in a zarr file.
-            prediction_shape (tuple[int, ...]):
-                Shape of the prediction output.
-            prediction_dtype (type):
-                Data type of the prediction output.
             **kwargs (EngineABCRunParams):
                 Additional runtime parameters to update engine attributes.
 
@@ -1368,8 +1356,6 @@ class EngineABC(ABC):  # noqa: B024
 
         raw_predictions["predictions"] = self.post_process_patches(
             raw_predictions=raw_predictions,
-            prediction_shape=raw_predictions["probabilities"].shape[:-1],
-            prediction_dtype=raw_predictions["probabilities"].dtype,
             **kwargs,
         )
 
@@ -1545,8 +1531,6 @@ class EngineABC(ABC):  # noqa: B024
             raw_predictions["predictions"] = self.post_process_wsi(
                 raw_predictions=raw_predictions,
                 save_path=save_path[get_path(image)],
-                prediction_shape=raw_predictions["probabilities"].shape[:-1],
-                prediction_dtype=raw_predictions["probabilities"].dtype,
                 **kwargs,
             )
 

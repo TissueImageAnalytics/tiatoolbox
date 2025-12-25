@@ -291,9 +291,7 @@ class NucleusDetector(SemanticSegmentor):
 
     def post_process_patches(
         self: NucleusDetector,
-        raw_predictions: da.Array,
-        prediction_shape: tuple[int, ...],
-        prediction_dtype: type,
+        raw_predictions: dict,
         **kwargs: Unpack[NucleusDetectorRunParams],
     ) -> dict:
         """Post-process patch-level detection outputs.
@@ -303,13 +301,8 @@ class NucleusDetector(SemanticSegmentor):
         arrays suitable for saving or further merging.
 
         Args:
-            raw_predictions (da.Array):
-                Patch predictions of shape ``(B, H, W, C)``, where ``B`` is the number
-                of patches (probabilities/logits).
-            prediction_shape (tuple[int, ...]):
-                Expected prediction shape.
-            prediction_dtype (type):
-                Expected prediction dtype.
+            raw_predictions (dict):
+                Dictionary containing raw model predictions as Dask arrays.
             **kwargs (NucleusDetectorRunParams):
                 Additional runtime parameters to configure segmentation.
 
@@ -341,8 +334,6 @@ class NucleusDetector(SemanticSegmentor):
 
         """
         logger.info("Post processing patch predictions in NucleusDetector")
-        _ = prediction_shape
-        _ = prediction_dtype
 
         # If these are not provided, defaults from model will be used in postproc
         min_distance = kwargs.get("min_distance")
@@ -377,10 +368,8 @@ class NucleusDetector(SemanticSegmentor):
 
     def post_process_wsi(
         self: NucleusDetector,
-        raw_predictions: da.Array,
+        raw_predictions: dict,
         save_path: Path,
-        prediction_shape: tuple[int, ...],
-        prediction_dtype: type,
         **kwargs: Unpack[NucleusDetectorRunParams],
     ) -> dict[str, da.Array]:
         """Post-process WSI-level nucleus detection outputs.
@@ -395,16 +384,11 @@ class NucleusDetector(SemanticSegmentor):
         sequential block processing.
 
         Args:
-            raw_predictions (da.Array):
-                WSI prediction map of shape ``(H, W, C)`` containing
-                per-class probabilities or logits.
+            raw_predictions (dict):
+                Dictionary containing raw model predictions as Dask arrays.
             save_path (Path):
                 Path to save the intermediate output. The intermediate output is saved
                 in a zarr file.
-            prediction_shape (tuple[int, ...]):
-                Expected prediction shape.
-            prediction_dtype (type):
-                Expected prediction dtype.
             **kwargs (NucleusDetectorRunParams):
                 Additional runtime parameters to configure segmentation.
 
@@ -440,8 +424,6 @@ class NucleusDetector(SemanticSegmentor):
               to extract detections incrementally.
 
         """
-        _ = prediction_shape
-
         logger.info("Post processing WSI predictions in NucleusDetector")
 
         # If these are not provided, defaults from model will be used in postproc
@@ -474,7 +456,7 @@ class NucleusDetector(SemanticSegmentor):
             threshold_rel=threshold_rel,
             depth=depth,
             boundary=0,
-            dtype=prediction_dtype,
+            dtype=raw_predictions["probabilities"].dtype,
             block_info=True,
             depth_h=depth_h,
             depth_w=depth_w,
