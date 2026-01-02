@@ -375,8 +375,6 @@ class DeepFeatureExtractor(PatchPredictor):
     def post_process_patches(
         self: DeepFeatureExtractor,
         raw_predictions: da.Array,
-        prediction_shape: tuple[int, ...],
-        prediction_dtype: type,
         **kwargs: Unpack[PredictorRunParams],
     ) -> da.Array:
         """Post-process raw patch predictions from model inference.
@@ -388,10 +386,6 @@ class DeepFeatureExtractor(PatchPredictor):
         Args:
             raw_predictions (dask.array.Array):
                 Raw model predictions as a Dask array.
-            prediction_shape (tuple[int, ...]):
-                Expected shape of the prediction output.
-            prediction_dtype (type):
-                Data type of the prediction output.
             **kwargs (PredictorRunParams):
                 Additional runtime parameters to configure prediction.
 
@@ -434,8 +428,6 @@ class DeepFeatureExtractor(PatchPredictor):
 
         """
         _ = kwargs.get("return_probabilities")
-        _ = prediction_shape
-        _ = prediction_dtype
 
         return raw_predictions
 
