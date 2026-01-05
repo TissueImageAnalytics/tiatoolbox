@@ -315,14 +315,14 @@ class NucleusDetector(SemanticSegmentor):
         Returns:
             dict[str, list[da.Array]]:
                 A dictionary of lists (one list per patch), with keys:
-                - ``"x"`` (list[dask array]):
-                    1-D object dask arrays of x coordinates
-                - ``"y"`` (list[dask array]):
-                    1-D object dask arrays of y coordinates
-                - ``"classes"`` (list[dask array]):
-                    1-D object dask arrays of class IDs
-                - ``"probabilities"`` (list[dask array]):
-                    1-D object dask arrays of detection probabilities
+                    - ``"x"`` (list[dask array]):
+                        1-D object dask arrays of x coordinates
+                    - ``"y"`` (list[dask array]):
+                        1-D object dask arrays of y coordinates
+                    - ``"classes"`` (list[dask array]):
+                        1-D object dask arrays of class IDs
+                    - ``"probabilities"`` (list[dask array]):
+                        1-D object dask arrays of detection probabilities
 
         Notes:
             - If thresholds are not provided via ``kwargs``, model defaults are used.
@@ -404,10 +404,10 @@ class NucleusDetector(SemanticSegmentor):
         Returns:
             dict[str, da.Array]:
                 A dictionary mapping detection fields to 1-D Dask arrays:
-                - ``"x"``: x coordinates of detected nuclei.
-                - ``"y"``: y coordinates of detected nuclei.
-                - ``"classes"``: class IDs.
-                - ``"probabilities"``: detection probabilities.
+                    - ``"x"``: x coordinates of detected nuclei.
+                    - ``"y"``: y coordinates of detected nuclei.
+                    - ``"classes"``: class IDs.
+                    - ``"probabilities"``: detection probabilities.
 
         Notes:
             - Halo padding ensures that nuclei crossing tile/chunk boundaries
