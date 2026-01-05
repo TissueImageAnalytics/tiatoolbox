@@ -38,7 +38,7 @@ Examples:
 Notes:
 -----
 - Outputs can be returned as Python dictionaries, saved as Zarr groups,
- or converted to AnnotationStore (.db).
+  or converted to AnnotationStore (.db).
 - Post-processing uses tile rechunking and halo padding to facilitate
   centroid extraction near chunk boundaries.
 
@@ -47,7 +47,6 @@ Notes:
 from __future__ import annotations
 
 import shutil
-import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -317,13 +316,13 @@ class NucleusDetector(SemanticSegmentor):
             dict[str, list[da.Array]]:
                 A dictionary of lists (one list per patch), with keys:
                 - ``"x"`` (list[dask array]):
-                    1-D object dask arrays of x coordinates (``np.uint32``).
+                    1-D object dask arrays of x coordinates
                 - ``"y"`` (list[dask array]):
-                    1-D object dask arrays of y coordinates (``np.uint32``).
+                    1-D object dask arrays of y coordinates
                 - ``"classes"`` (list[dask array]):
-                    1-D object dask arrays of class IDs (``np.uint32``).
+                    1-D object dask arrays of class IDs
                 - ``"probabilities"`` (list[dask array]):
-                    1-D object dask arrays of detection scores (``np.float32``).
+                    1-D object dask arrays of detection probabilities
 
         Notes:
             - If thresholds are not provided via ``kwargs``, model defaults are used.
@@ -405,10 +404,10 @@ class NucleusDetector(SemanticSegmentor):
         Returns:
             dict[str, da.Array]:
                 A dictionary mapping detection fields to 1-D Dask arrays:
-                - ``"x"``: x coordinates of detected nuclei (``np.uint32``).
-                - ``"y"``: y coordinates of detected nuclei (``np.uint32``).
-                - ``"classes"``: class IDs (``np.uint32``).
-                - ``"probabilities"``: detection scores (``np.float32``).
+                - ``"x"``: x coordinates of detected nuclei.
+                - ``"y"``: y coordinates of detected nuclei.
+                - ``"classes"``: class IDs.
+                - ``"probabilities"``: detection probabilities.
 
         Notes:
             - Halo padding ensures that nuclei crossing tile/chunk boundaries
@@ -458,6 +457,7 @@ class NucleusDetector(SemanticSegmentor):
             depth_w=depth_w,
         )
 
+        # Compute and save centroid maps to zarr to avoid memory issues
         zarr_file = save_path.with_suffix(".zarr")
         logger.info(
             "Computing and caching centroid maps to zarr file at: %s",
@@ -467,10 +467,10 @@ class NucleusDetector(SemanticSegmentor):
         task = centroid_maps.to_zarr(
             url=zarr_file, component="centroid_maps", compute=False, object_codec=None
         )
-        self.drop_keys.append("centroid_maps")
         with ProgressBar():
             compute(task)
 
+        self.drop_keys.append("centroid_maps")
         zarr_group = zarr.open(zarr_file, mode="r+")
         centroid_maps = da.from_zarr(zarr_group["centroid_maps"])
 
@@ -496,24 +496,16 @@ class NucleusDetector(SemanticSegmentor):
                 follows TIAToolbox conventions and may differ slightly between patch
                 and WSI modes:
                 - Patch mode:
-                  - ``"x"`` (list[da.Array]):
-                    per-patch x coordinates (np.uint32).
-                  - ``"y"`` (list[da.Array]):
-                    per-patch y coordinates (np.uint32).
-                  - ``"classes"`` (list[da.Array]):
-                    per-patch class IDs (np.uint32).
+                  - ``"x"`` (list[da.Array]): per-patch x coordinates.
+                  - ``"y"`` (list[da.Array]): per-patch y coordinates.
+                  - ``"classes"`` (list[da.Array]): per-patch class IDs.
                   - ``"probabilities"`` (list[da.Array]):
-                    per-patch detection scores (np.float32).
+                    per-patch detection probabilities.
                 - WSI mode:
-                  - ``"x"`` (da.Array):
-                    x coordinates (np.uint32).
-                  - ``"y"`` (da.Array):
-                    y coordinates (np.uint32).
-                  - ``"classes"`` (da.Array):
-                    class IDs (np.uint32).
-                  - ``"probabilities"`` (da.Array):
-                    detection scores (np.float32).
-
+                  - ``"x"`` (da.Array): x coordinates.
+                  - ``"y"`` (da.Array): y coordinates.
+                  - ``"classes"`` (da.Array): class IDs.
+                  - ``"probabilities"`` (da.Array): detection probabilities.
             output_type (str):
                 Desired output format: ``"dict"``, ``"zarr"``, or ``"annotationstore"``.
 
@@ -1115,7 +1107,7 @@ class NucleusDetector(SemanticSegmentor):
 
 
         """
-        output = super().run(
+        return super().run(
             images=images,
             masks=masks,
             input_resolutions=input_resolutions,
@@ -1127,21 +1119,3 @@ class NucleusDetector(SemanticSegmentor):
             output_type=output_type,
             **kwargs,
         )
-
-        if not patch_mode:
-            # Clean up temporary zarr directory after WSI processing
-            # It should have been already deleted, but check anyway
-            temp_dir = Path(tempfile.gettempdir())
-            if temp_dir.exists():
-                # find file starting with 'tiatoolbox_nucleus_detector_'
-                # and ending with '.zarr'
-                for item in temp_dir.iterdir():
-                    if item.name.startswith(
-                        "tiatoolbox_nucleus_detector_"
-                    ) and item.name.endswith(".zarr"):
-                        shutil.rmtree(item)
-                        logger.info(
-                            "Temporary zarr directory %s has been removed.", item
-                        )
-
-        return output
