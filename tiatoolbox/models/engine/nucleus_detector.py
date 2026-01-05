@@ -397,9 +397,6 @@ class NucleusDetector(SemanticSegmentor):
                         (e.g., with respect to local maxima).
                     postproc_tile_shape (tuple[int, int]):
                         Tile shape (height, width) for post-processing rechunking.
-                    cache_dir (str or os.PathLike):
-                        Directory for caching intermediate centroid maps as Zarr.
-                        Defaults to './tmp/'.
 
         Returns:
             dict[str, da.Array]:
