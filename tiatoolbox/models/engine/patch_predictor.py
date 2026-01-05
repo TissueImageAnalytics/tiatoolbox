@@ -322,7 +322,7 @@ class PatchPredictor(EngineABC):
         self: PatchPredictor,
         raw_predictions: dict,
         **kwargs: Unpack[PredictorRunParams],  # noqa: ARG002
-    ) -> da.Array:
+    ) -> dict[str, da.Array]:
         """Post-process raw patch predictions from model inference.
 
         This method applies the model's post-processing function to the raw predictions
@@ -372,15 +372,16 @@ class PatchPredictor(EngineABC):
             dask.array.Array: Post-processed predictions as a Dask array.
 
         """
-        raw_predictions = self.model.postproc_func(raw_predictions["probabilities"])
-        return cast_to_min_dtype(raw_predictions)
+        predictions = self.model.postproc_func(raw_predictions["probabilities"])
+        raw_predictions["predictions"] = cast_to_min_dtype(predictions)
+        return raw_predictions
 
     def post_process_wsi(
         self: PatchPredictor,
         raw_predictions: dict,
         save_path: Path,  # noqa: ARG002
         **kwargs: Unpack[PredictorRunParams],
-    ) -> da.Array:
+    ) -> dict[str, da.Array]:
         """Post-process predictions from whole slide image (WSI) inference.
 
         This method refines the raw patch-level predictions obtained from WSI inference.

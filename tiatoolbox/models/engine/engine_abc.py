@@ -567,7 +567,7 @@ class EngineABC(ABC):  # noqa: B024
         self: EngineABC,
         raw_predictions: dict,
         **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
-    ) -> dask.array.Array:
+    ) -> dict[str, dask.array.Array]:
         """Post-process raw patch predictions from inference.
 
         This method applies a post-processing function (e.g., smoothing, filtering)
@@ -619,7 +619,7 @@ class EngineABC(ABC):  # noqa: B024
                 Post-processed predictions as a Dask array.
 
         """
-        return raw_predictions["probabilities"]
+        return raw_predictions
 
     def save_predictions(
         self: EngineABC,
@@ -866,7 +866,7 @@ class EngineABC(ABC):  # noqa: B024
         raw_predictions: dict,
         save_path: Path,  # noqa: ARG002
         **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
-    ) -> dask.array.Array:
+    ) -> dict[str, dask.array.Array]:
         """Post-process predictions from whole slide image (WSI) inference.
 
         This method applies a post-processing function (e.g., smoothing, filtering)
@@ -921,7 +921,7 @@ class EngineABC(ABC):  # noqa: B024
                 Post-processed predictions as a Dask array.
 
         """
-        return raw_predictions["probabilities"]
+        return raw_predictions
 
     def _load_ioconfig(self: EngineABC, ioconfig: ModelIOConfigABC) -> ModelIOConfigABC:
         """Load or validate the IO configuration for the engine.
@@ -1354,7 +1354,7 @@ class EngineABC(ABC):  # noqa: B024
             return_coordinates=output_type == "annotationstore",
         )
 
-        raw_predictions["predictions"] = self.post_process_patches(
+        raw_predictions = self.post_process_patches(
             raw_predictions=raw_predictions,
             **kwargs,
         )
@@ -1528,7 +1528,7 @@ class EngineABC(ABC):  # noqa: B024
                 **kwargs,
             )
 
-            raw_predictions["predictions"] = self.post_process_wsi(
+            raw_predictions = self.post_process_wsi(
                 raw_predictions=raw_predictions,
                 save_path=save_path[get_path(image)],
                 **kwargs,

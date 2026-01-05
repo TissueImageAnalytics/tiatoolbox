@@ -374,9 +374,9 @@ class DeepFeatureExtractor(PatchPredictor):
 
     def post_process_patches(
         self: DeepFeatureExtractor,
-        raw_predictions: da.Array,
+        raw_predictions: dict[str, da.Array],
         **kwargs: Unpack[PredictorRunParams],
-    ) -> da.Array:
+    ) -> dict[str, da.Array]:
         """Post-process raw patch predictions from model inference.
 
         This method overrides the base implementation to return raw feature maps

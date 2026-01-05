@@ -256,25 +256,20 @@ class NucleusDetector(SemanticSegmentor):
                 A PyTorch model instance or the name of a pretrained TIAToolbox
                 model. If a string is provided, default pretrained weights are
                 loaded unless ``weights`` is supplied to override them.
-
             batch_size (int):
                 Number of image patches processed per forward pass.
                 Default is ``8``.
-
             num_workers (int):
                 Number of workers used for ``torch.utils.data.DataLoader``.
                 Default is ``0``.
-
             weights (str or Path or None):
                 Path to model weights. If ``None`` and ``model`` is a string,
                 the default pretrained weights for that model will be used.
                 If ``model`` is a ``nn.Module``, weights are loaded only when
                 specified here.
-
             device (str):
                 Device on which the model will run (e.g., ``"cpu"``, ``"cuda"``).
                 Default is ``"cpu"``.
-
             verbose (bool):
                 Whether to enable verbose logging during initialization and
                 inference. Default is ``True``.
@@ -333,7 +328,7 @@ class NucleusDetector(SemanticSegmentor):
             - If thresholds are not provided via ``kwargs``, model defaults are used.
 
         """
-        logger.info("Post processing patch predictions in NucleusDetector")
+        logger.info("Post processing patch predictions in NucleusDetector.")
 
         # If these are not provided, defaults from model will be used in postproc
         min_distance = kwargs.get("min_distance")
@@ -471,6 +466,7 @@ class NucleusDetector(SemanticSegmentor):
         task = centroid_maps.to_zarr(
             url=temp_zarr_file, compute=False, object_codec=None
         )
+        self.drop_keys.append("centroid_maps")
         with ProgressBar():
             compute(task)
 
@@ -607,6 +603,7 @@ class NucleusDetector(SemanticSegmentor):
                 scale_factor=scale_factor,
                 class_dict=class_dict,
             )
+            save_path.with_suffix(".zarr").unlink(missing_ok=True)
 
         # Remove cached centroid maps if wsi mode
         if not self.patch_mode:

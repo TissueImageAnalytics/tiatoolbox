@@ -716,6 +716,8 @@ class SemanticSegmentor(PatchPredictor):
                 f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
             )
             logger.info(msg)
+        else:
+            save_path.with_suffix(".zarr").unlink(missing_ok=True)
 
         return save_paths
 

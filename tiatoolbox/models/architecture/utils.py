@@ -268,9 +268,9 @@ def peak_detection_map_overlap(
     Builds a processed mask per input channel. Runs peak_local_max then
     writes 1.0 at peak pixels.
 
-    Can be called from Dask.da.map_overlap on a padded NumPy block
+    Can be called from dask.da.map_overlap on a padded NumPy block
     (h_pad, w_pad, C) to process large prediction maps in chunks with overlap.
-    Keeps only centroids whose (row,col) lie in the interior window:
+    Keeps only centroids whose (row, col) lie in the interior window:
     rows [depth_h : depth_h + core_h), cols [depth_w : depth_w + core_w)
 
     Returns same spatial shape as the input block
