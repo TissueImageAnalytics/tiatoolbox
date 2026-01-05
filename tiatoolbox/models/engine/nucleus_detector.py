@@ -492,25 +492,30 @@ class NucleusDetector(SemanticSegmentor):
                 a ``"predictions"`` key with detection arrays. The internal structure
                 follows TIAToolbox conventions and may differ slightly between patch
                 and WSI modes:
-                - Patch mode:
-                  - ``"x"`` (list[da.Array]): per-patch x coordinates.
-                  - ``"y"`` (list[da.Array]): per-patch y coordinates.
-                  - ``"classes"`` (list[da.Array]): per-patch class IDs.
-                  - ``"probabilities"`` (list[da.Array]):
-                    per-patch detection probabilities.
-                - WSI mode:
-                  - ``"x"`` (da.Array): x coordinates.
-                  - ``"y"`` (da.Array): y coordinates.
-                  - ``"classes"`` (da.Array): class IDs.
-                  - ``"probabilities"`` (da.Array): detection probabilities.
+                    - Patch mode:
+                        - ``"x"`` (list[da.Array]):
+                            per-patch x coordinates.
+                        - ``"y"`` (list[da.Array]):
+                            per-patch y coordinates.
+                        - ``"classes"`` (list[da.Array]):
+                            per-patch class IDs.
+                        - ``"probabilities"`` (list[da.Array]):
+                            per-patch detection probabilities.
+                    - WSI mode:
+                        - ``"x"`` (da.Array):
+                            x coordinates.
+                        - ``"y"`` (da.Array):
+                            y coordinates.
+                        - ``"classes"`` (da.Array):
+                            class IDs.
+                        - ``"probabilities"`` (da.Array):
+                            detection probabilities.
             output_type (str):
                 Desired output format: ``"dict"``, ``"zarr"``, or ``"annotationstore"``.
-
             save_path (Path | None):
                 Path at which to save the output file(s). Required for file outputs
                 (e.g., Zarr or SQLite .db). If ``None`` and ``output_type="dict"``,
                 results are returned in memory.
-
             **kwargs (NucleusDetectorRunParams):
                 Additional runtime parameters to configure segmentation.
 
@@ -642,17 +647,14 @@ class NucleusDetector(SemanticSegmentor):
                         list of per-patch dask arrays of class IDs
                     - ``"probabilities"`` (list[da.Array]):
                         list of per-patch dask arrays of detection probabilities
-
             save_path (Path or None):
                 Output path for saving the AnnotationStore. If ``None``, an in-memory
                 store is returned. When patch mode is active, this path serves as the
                 directory for producing one `.db` file per patch input.
-
             scale_factor (tuple[float, float], optional):
                 Scaling factors applied to x and y coordinates prior to writing.
                 Typically corresponds to ``model_mpp / slide_mpp``.
                 Defaults to ``(1.0, 1.0)``.
-
             class_dict (dict or None):
                 Optional mapping from original class IDs to class names or remapped IDs.
                 If ``None``, an identity mapping based on present classes is used.
@@ -916,23 +918,19 @@ class NucleusDetector(SemanticSegmentor):
                 - ``"y"``: dask array of y coordinates (``np.uint32``).
                 - ``"classes"``: dask array of class IDs (``np.uint32``).
                 - ``"probabilities"``: dask array of detection scores (``np.float32``).
-
             scale_factor (tuple[float, float], optional):
                 Multiplicative factors applied to the x and y coordinates before
                 saving. The scaled coordinates are rounded to integer pixel
                 locations. Defaults to ``(1.0, 1.0)``.
-
             class_dict (dict or None):
                 Optional mapping of class IDs to class names or remapped IDs.
                 If ``None``, an identity mapping is used based on the detected
                 class IDs.
-
             save_path (Path or None):
                 Destination path for saving the `.db` file. If ``None``, the
                 resulting SQLiteStore is returned in memory. If provided, the
                 parent directory is created if needed, and the final store is
                 written as ``save_path.with_suffix(".db")``.
-
             batch_size (int):
                 Number of detection records to write per batch. Defaults to ``5000``.
 
