@@ -53,6 +53,7 @@ from typing import TYPE_CHECKING
 
 import dask.array as da
 import numpy as np
+import zarr
 from dask import compute
 from dask.diagnostics.progress import ProgressBar
 from shapely.geometry import Point
@@ -457,20 +458,21 @@ class NucleusDetector(SemanticSegmentor):
             depth_w=depth_w,
         )
 
-        temp_zarr_file = save_path.parent.absolute() / (save_path.stem + "_cache.zarr")
+        zarr_file = save_path.with_suffix(".zarr")
         logger.info(
-            "Computing and saving centroid maps to temporary zarr file at: %s",
-            temp_zarr_file,
+            "Computing and caching centroid maps to zarr file at: %s",
+            zarr_file,
         )
 
         task = centroid_maps.to_zarr(
-            url=temp_zarr_file, compute=False, object_codec=None
+            url=zarr_file, component="centroid_maps", compute=False, object_codec=None
         )
         self.drop_keys.append("centroid_maps")
         with ProgressBar():
             compute(task)
 
-        centroid_maps = da.from_zarr(temp_zarr_file)
+        zarr_group = zarr.open(zarr_file, mode="r+")
+        centroid_maps = da.from_zarr(zarr_group["centroid_maps"])
 
         return self._centroid_maps_to_detection_arrays(centroid_maps)
 
@@ -584,7 +586,7 @@ class NucleusDetector(SemanticSegmentor):
         """
         if output_type.lower() != "annotationstore":
             out = super().save_predictions(
-                processed_predictions["predictions"],
+                processed_predictions,
                 output_type,
                 save_path=save_path,
                 **kwargs,
@@ -603,19 +605,14 @@ class NucleusDetector(SemanticSegmentor):
                 scale_factor=scale_factor,
                 class_dict=class_dict,
             )
-            save_path.with_suffix(".zarr").unlink(missing_ok=True)
 
-        # Remove cached centroid maps if wsi mode
-        if not self.patch_mode:
-            path_to_delete = save_path.parent.absolute() / (
-                save_path.stem + "_cache.zarr"
-            )
-            shutil.rmtree(path_to_delete)
-            logger.info(
-                "Removed temporary zarr directory used for"
-                " caching centroid maps at: %s",
-                path_to_delete,
-            )
+            # Remove cached centroid maps if wsi mode
+            if not self.patch_mode:
+                shutil.rmtree(save_path.with_suffix(".zarr"))
+                logger.info(
+                    "Removed cached centroid maps at: %s",
+                    save_path.with_suffix(".zarr"),
+                )
 
         return out
 
@@ -636,16 +633,26 @@ class NucleusDetector(SemanticSegmentor):
 
         Args:
             processed_predictions (dict):
-                Dictionary containing the computed detection outputs. Expected to
-                include a top-level key ``"predictions"`` with fields:
-                - ``"x"`` (da.Array):
-                    dask array of x coordinates (``np.uint32``)
-                - ``"y"`` (da.Array):
-                    dask array of y coordinates (``np.uint32``)
-                - ``"classes"`` (da.Array):
-                    dask array of class IDs (``np.uint32``)
-                - ``"probabilities"`` (da.Array):
-                    dask array of detection scores (``np.float32``)
+                Dictionary containing the computed detection outputs.
+                Expected keys:
+                - For wsi mode:
+                    - ``"x"`` (da.Array):
+                        dask array of x coordinates
+                    - ``"y"`` (da.Array):
+                        dask array of y coordinates
+                    - ``"classes"`` (da.Array):
+                        dask array of class IDs
+                    - ``"probabilities"`` (da.Array):
+                        dask array of detection probabilities
+                - For patch mode:
+                    - ``"x"`` (list[da.Array]):
+                        list of per-patch dask arrays of x coordinates
+                    - ``"y"`` (list[da.Array]):
+                        list of per-patch dask arrays of y coordinates
+                    - ``"classes"`` (list[da.Array]):
+                        list of per-patch dask arrays of class IDs
+                    - ``"probabilities"`` (list[da.Array]):
+                        list of per-patch dask arrays of detection probabilities
 
             save_path (Path or None):
                 Output path for saving the AnnotationStore. If ``None``, an in-memory
@@ -677,9 +684,8 @@ class NucleusDetector(SemanticSegmentor):
         logger.info("Saving predictions as AnnotationStore.")
         if self.patch_mode:
             save_paths = []
-            detections = processed_predictions["predictions"]
 
-            num_patches = len(detections["x"])
+            num_patches = len(processed_predictions["x"])
             for i in range(num_patches):
                 if isinstance(self.images[i], Path):
                     output_path = save_path.parent / (self.images[i].stem + ".db")
@@ -687,10 +693,10 @@ class NucleusDetector(SemanticSegmentor):
                     output_path = save_path.parent / (str(i) + ".db")
 
                 detection_arrays = {
-                    "x": detections["x"][i],
-                    "y": detections["y"][i],
-                    "classes": detections["classes"][i],
-                    "probabilities": detections["probabilities"][i],
+                    "x": processed_predictions["x"][i],
+                    "y": processed_predictions["y"][i],
+                    "classes": processed_predictions["classes"][i],
+                    "probabilities": processed_predictions["probabilities"][i],
                 }
 
                 out_file = self.save_detection_arrays_to_store(
@@ -702,9 +708,9 @@ class NucleusDetector(SemanticSegmentor):
 
                 save_paths.append(out_file)
             return save_paths
-        predictions = processed_predictions["predictions"]
+
         return self.save_detection_arrays_to_store(
-            detection_arrays=predictions,
+            detection_arrays=processed_predictions,
             scale_factor=scale_factor,
             save_path=save_path,
             class_dict=class_dict,

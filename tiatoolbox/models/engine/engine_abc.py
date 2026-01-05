@@ -1354,7 +1354,7 @@ class EngineABC(ABC):  # noqa: B024
             return_coordinates=output_type == "annotationstore",
         )
 
-        raw_predictions = self.post_process_patches(
+        processed_predictions = self.post_process_patches(
             raw_predictions=raw_predictions,
             **kwargs,
         )
@@ -1362,7 +1362,7 @@ class EngineABC(ABC):  # noqa: B024
         logger.removeFilter(duplicate_filter)
 
         out = self.save_predictions(
-            processed_predictions=raw_predictions,
+            processed_predictions=processed_predictions,
             output_type=output_type,
             save_path=save_path,
             **kwargs,
@@ -1528,7 +1528,7 @@ class EngineABC(ABC):  # noqa: B024
                 **kwargs,
             )
 
-            raw_predictions = self.post_process_wsi(
+            processed_predictions = self.post_process_wsi(
                 raw_predictions=raw_predictions,
                 save_path=save_path[get_path(image)],
                 **kwargs,
@@ -1537,7 +1537,7 @@ class EngineABC(ABC):  # noqa: B024
             kwargs["output_file"] = out[get_path(image)]
             kwargs["scale_factor"] = scale_factor
             out[get_path(image)] = self.save_predictions(
-                processed_predictions=raw_predictions,
+                processed_predictions=processed_predictions,
                 output_type=output_type,
                 save_path=save_path[get_path(image)],
                 **kwargs,
