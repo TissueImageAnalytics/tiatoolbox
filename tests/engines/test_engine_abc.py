@@ -72,8 +72,6 @@ class TestEngineABC(EngineABC):
         return super().post_process_wsi(
             raw_predictions=raw_predictions,
             save_path=save_path,
-            prediction_shape=(self.batch_size, 1),
-            prediction_dtype=int,
             **kwargs,
         )
 
@@ -355,11 +353,11 @@ def test_engine_run() -> NoReturn:
     assert "labels" in out
 
     raw_output = np.zeros((3, 3, 3))
-    pred = eng.post_process_wsi(
+    predictions = eng.post_process_wsi(
         raw_predictions={"probabilities": da.from_array(raw_output)},
         save_path=Path("/path/to/save_predictions.zarr"),
     )
-    pred = np.array(pred)
+    pred = np.array(predictions["probabilities"])
     np.testing.assert_array_equal(pred, raw_output)
 
 

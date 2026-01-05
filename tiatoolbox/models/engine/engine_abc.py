@@ -565,9 +565,9 @@ class EngineABC(ABC):  # noqa: B024
 
     def post_process_patches(  # skipcq: PYL-R0201
         self: EngineABC,
-        raw_predictions: dict,
+        raw_predictions: dict[str, da.Array],
         **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
-    ) -> dict[str, dask.array.Array]:
+    ) -> dict[str, da.Array]:
         """Post-process raw patch predictions from inference.
 
         This method applies a post-processing function (e.g., smoothing, filtering)
@@ -575,7 +575,7 @@ class EngineABC(ABC):  # noqa: B024
         and returns a Dask array for efficient computation.
 
         Args:
-            raw_predictions (dict):
+            raw_predictions (dict[str, da.Array]):
                 Dictionary containing raw model predictions as Dask arrays.
             **kwargs (EngineABCRunParams):
                 Additional runtime parameters to update engine attributes.
@@ -615,8 +615,8 @@ class EngineABC(ABC):  # noqa: B024
                         Whether to enable verbose logging.
 
         Returns:
-            dask.array.Array:
-                Post-processed predictions as a Dask array.
+            dict[str, da.Array]:
+                Post-processed predictions as a dictionary of Dask arrays.
 
         """
         return raw_predictions
@@ -863,10 +863,10 @@ class EngineABC(ABC):  # noqa: B024
     # This is not a static model for child classes.
     def post_process_wsi(  # skipcq: PYL-R0201
         self: EngineABC,
-        raw_predictions: dict,
+        raw_predictions: dict[str, da.Array],
         save_path: Path,  # noqa: ARG002
         **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
-    ) -> dict[str, dask.array.Array]:
+    ) -> dict[str, da.Array]:
         """Post-process predictions from whole slide image (WSI) inference.
 
         This method applies a post-processing function (e.g., smoothing, filtering)
@@ -874,7 +874,7 @@ class EngineABC(ABC):  # noqa: B024
         and returns a Dask array for efficient computation.
 
         Args:
-            raw_predictions (dict):
+            raw_predictions (dict[str, da.Array]):
                 Dictionary containing raw model predictions as Dask arrays.
             save_path (Path):
                 Path to save the intermediate output. The intermediate output is saved
@@ -917,8 +917,8 @@ class EngineABC(ABC):  # noqa: B024
                         Whether to enable verbose logging.
 
         Returns:
-            dask.array.Array:
-                Post-processed predictions as a Dask array.
+            dict[str, da.Array]:
+                Post-processed predictions as a dictionary of Dask arrays.
 
         """
         return raw_predictions

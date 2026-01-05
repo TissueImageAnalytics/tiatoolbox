@@ -286,9 +286,9 @@ class NucleusDetector(SemanticSegmentor):
 
     def post_process_patches(
         self: NucleusDetector,
-        raw_predictions: dict,
+        raw_predictions: dict[str, da.Array],
         **kwargs: Unpack[NucleusDetectorRunParams],
-    ) -> dict:
+    ) -> dict[str, list[da.Array]]:
         """Post-process patch-level detection outputs.
 
         Applies the model's post-processing function (e.g., centroid extraction and
@@ -296,7 +296,7 @@ class NucleusDetector(SemanticSegmentor):
         arrays suitable for saving or further merging.
 
         Args:
-            raw_predictions (dict):
+            raw_predictions (dict[str, da.Array]):
                 Dictionary containing raw model predictions as Dask arrays.
             **kwargs (NucleusDetectorRunParams):
                 Additional runtime parameters to configure segmentation.
@@ -363,7 +363,7 @@ class NucleusDetector(SemanticSegmentor):
 
     def post_process_wsi(
         self: NucleusDetector,
-        raw_predictions: dict,
+        raw_predictions: dict[str, da.Array],
         save_path: Path,
         **kwargs: Unpack[NucleusDetectorRunParams],
     ) -> dict[str, da.Array]:
@@ -379,7 +379,7 @@ class NucleusDetector(SemanticSegmentor):
         sequential block processing.
 
         Args:
-            raw_predictions (dict):
+            raw_predictions (dict[str, da.Array]):
                 Dictionary containing raw model predictions as Dask arrays.
             save_path (Path):
                 Path to save the intermediate output. The intermediate output is saved
