@@ -492,7 +492,7 @@ class NucleusDetector(SemanticSegmentor):
                 a ``"predictions"`` key with detection arrays. The internal structure
                 follows TIAToolbox conventions and may differ slightly between patch
                 and WSI modes:
-                    - Patch mode:
+                    - Patch mode (patch_mode=True):
                         - ``"x"`` (list[da.Array]):
                             per-patch x coordinates.
                         - ``"y"`` (list[da.Array]):
@@ -501,7 +501,7 @@ class NucleusDetector(SemanticSegmentor):
                             per-patch class IDs.
                         - ``"probabilities"`` (list[da.Array]):
                             per-patch detection probabilities.
-                    - WSI mode:
+                    - WSI mode (patch_mode=False):
                         - ``"x"`` (da.Array):
                             x coordinates.
                         - ``"y"`` (da.Array):
