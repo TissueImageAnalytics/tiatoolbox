@@ -19,6 +19,7 @@ from .engine.io_config import (
     ModelIOConfigABC,
 )
 from .engine.multi_task_segmentor import MultiTaskSegmentor
+from .engine.nucleus_detector import NucleusDetector
 from .engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from .engine.patch_predictor import PatchPredictor
 from .engine.semantic_segmentor import SemanticSegmentor
