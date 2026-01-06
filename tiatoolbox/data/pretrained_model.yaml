@@ -814,6 +814,10 @@ mapde-crchisto:
             min_distance: 4
             threshold_abs: 250
             num_classes: 1
+            postproc_tile_shape: [ 2048, 2048 ]
+            class_dict: {
+                0: "nucleus"
+            }
     ioconfig:
         class: io_config.IOSegmentorConfig
         kwargs:
@@ -821,7 +825,6 @@ mapde-crchisto:
                 - { "units": "mpp", "resolution": 0.5 }
             output_resolutions:
                 - { "units": "mpp", "resolution": 0.5 }
-            tile_shape: [ 2048, 2048 ]
             patch_input_shape: [ 252, 252 ]
             patch_output_shape: [ 252, 252 ]
             stride_shape: [ 150, 150 ]
@@ -836,6 +839,10 @@ mapde-conic:
             min_distance: 3
             threshold_abs: 205
             num_classes: 1
+            postproc_tile_shape: [ 2048, 2048 ]
+            class_dict: {
+                0: "nucleus"
+            }
     ioconfig:
         class: io_config.IOSegmentorConfig
         kwargs:
@@ -843,7 +850,6 @@ mapde-conic:
                 - { "units": "mpp", "resolution": 0.5 }
             output_resolutions:
                 - { "units": "mpp", "resolution": 0.5 }
-            tile_shape: [ 2048, 2048 ]
             patch_input_shape: [ 252, 252 ]
             patch_output_shape: [ 252, 252 ]
             stride_shape: [ 150, 150 ]
@@ -859,6 +865,10 @@ sccnn-crchisto:
             min_distance: 6
             threshold_abs: 0.20
             patch_output_shape: [ 13, 13 ]
+            postproc_tile_shape: [ 2048, 2048 ]
+            class_dict: {
+                0: "nucleus"
+            }
     ioconfig:
         class: io_config.IOSegmentorConfig
         kwargs:
@@ -866,7 +876,6 @@ sccnn-crchisto:
                 - { "units": "mpp", "resolution": 0.25 }
             output_resolutions:
                 - { "units": "mpp", "resolution": 0.25 }
-            tile_shape: [ 2048, 2048 ]
             patch_input_shape: [ 31, 31 ]
             patch_output_shape: [ 13, 13 ]
             stride_shape: [ 8, 8 ]
@@ -882,6 +891,10 @@ sccnn-conic:
             min_distance: 5
             threshold_abs: 0.05
             patch_output_shape: [ 13, 13 ]
+            postproc_tile_shape: [ 2048, 2048 ]
+            class_dict: {
+                0: "nucleus"
+            }
     ioconfig:
         class: io_config.IOSegmentorConfig
         kwargs:
@@ -889,7 +902,6 @@ sccnn-conic:
                 - { "units": "mpp", "resolution": 0.25 }
             output_resolutions:
                 - { "units": "mpp", "resolution": 0.25 }
-            tile_shape: [ 2048, 2048 ]
             patch_input_shape: [ 31, 31 ]
             patch_output_shape: [ 13, 13 ]
             stride_shape: [ 8, 8 ]
