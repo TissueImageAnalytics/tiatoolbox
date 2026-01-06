@@ -779,7 +779,7 @@ class EngineABC(ABC):  # noqa: B024
                         url=save_path,
                         component=f"{key}/{i}",
                         compute=False,
-                        object_codec=object_codec,
+                        zarr_array_kwargs={"object_codec": object_codec},
                     )
                     write_tasks.append(task)
 
