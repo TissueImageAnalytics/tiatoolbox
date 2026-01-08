@@ -142,6 +142,44 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         return raw_predictions
 
+    def post_process_patches(  # skipcq: PYL-R0201
+        self: MultiTaskSegmentor,
+        raw_predictions: dict,
+        **kwargs: Unpack[SemanticSegmentorRunParams],  # noqa: ARG002
+    ) -> dict:
+        """Post-process raw patch predictions from inference.
+
+        This method applies a post-processing function (e.g., smoothing, filtering)
+        to the raw model predictions. It supports delayed execution using Dask
+        and returns a Dask array for efficient computation.
+
+        Args:
+            raw_predictions (dask.array.Array):
+                Raw model predictions as a dask array.
+            prediction_shape (tuple[int, ...]):
+                Shape of the prediction output.
+            prediction_dtype (type):
+                Data type of the prediction output.
+            **kwargs (EngineABCRunParams):
+                Additional runtime parameters used for post-processing.
+
+        Returns:
+            dask.array.Array:
+                Post-processed predictions as a Dask array.
+
+        """
+        probabilities = raw_predictions["probabilities"]
+        predictions = [[] for _ in range(probabilities[0].shape[0])]
+        inst_dict = [[{}] for _ in range(probabilities[0].shape[0])]
+        for idx, probs_for_idx in enumerate(zip(*probabilities, strict=False)):
+            predictions[idx] = self.model.postproc_func(list(probs_for_idx))
+
+        raw_predictions["predictions"] = da.stack(predictions, axis=0)
+        for key in inst_dict[0]:
+            raw_predictions[key] = [d[key] for d in inst_dict]
+
+        return raw_predictions
+
     def run(
         self: MultiTaskSegmentor,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
