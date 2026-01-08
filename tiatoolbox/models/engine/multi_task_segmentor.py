@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import dask.array as da
+import numpy as np
+import torch
 from typing_extensions import Unpack
+
+from tiatoolbox.utils.misc import get_tqdm
 
 from .semantic_segmentor import SemanticSegmentor, SemanticSegmentorRunParams
 
@@ -12,7 +17,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import os
     from pathlib import Path
 
-    import numpy as np
+    from torch.utils.data import DataLoader
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.models_abc import ModelABC
@@ -44,6 +49,98 @@ class MultiTaskSegmentor(SemanticSegmentor):
             device=device,
             verbose=verbose,
         )
+
+    def infer_patches(
+        self: MultiTaskSegmentor,
+        dataloader: DataLoader,
+        *,
+        return_coordinates: bool = False,
+    ) -> dict[str, list[da.Array]]:
+        """Run model inference on image patches and return predictions.
+
+        This method performs batched inference using a PyTorch DataLoader,
+        and accumulates predictions in Dask arrays. It supports optional inclusion
+        of coordinates and labels in the output.
+
+        Args:
+            dataloader (DataLoader):
+                PyTorch DataLoader containing image patches for inference.
+            return_coordinates (bool):
+                Whether to include coordinates in the output. Required when
+                called by `infer_wsi` and `patch_mode` is False.
+
+        Returns:
+            dict[str, dask.array.Array]:
+                Dictionary containing prediction results as Dask arrays.
+                Keys include:
+                    - "probabilities": Model output probabilities.
+                    - "labels": Ground truth labels (if `return_labels` is True).
+                    - "coordinates": Patch coordinates (if `return_coordinates` is
+                      True).
+
+        """
+        keys = ["probabilities"]
+        labels, coordinates = [], []
+
+        # Expected number of outputs from the model
+        batch_output = self.model.infer_batch(
+            self.model,
+            torch.Tensor(dataloader.dataset[0]["image"][np.newaxis, ...]),
+            device=self.device,
+        )
+
+        num_expected_output = len(batch_output)
+        probabilities = [[] for _ in range(num_expected_output)]
+
+        if return_coordinates:
+            keys.append("coordinates")
+            coordinates = []
+
+        # Main output dictionary
+        raw_predictions = {key: [] for key in keys}
+        raw_predictions["probabilities"] = [[] for _ in range(num_expected_output)]
+
+        # Inference loop
+        tqdm = get_tqdm()
+        tqdm_loop = (
+            tqdm(dataloader, leave=False, desc="Inferring patches")
+            if self.verbose
+            else self.dataloader
+        )
+
+        for batch_data in tqdm_loop:
+            batch_output = self.model.infer_batch(
+                self.model,
+                batch_data["image"],
+                device=self.device,
+            )
+
+            for i in range(num_expected_output):
+                probabilities[i].append(
+                    da.from_array(
+                        batch_output[i],  # probabilities
+                    )
+                )
+
+            if return_coordinates:
+                coordinates.append(
+                    da.from_array(
+                        self._get_coordinates(batch_data),
+                    )
+                )
+
+            if self.return_labels:
+                labels.append(da.from_array(np.array(batch_data["label"])))
+
+        for i in range(num_expected_output):
+            raw_predictions["probabilities"][i] = da.concatenate(
+                probabilities[i], axis=0
+            )
+
+        if return_coordinates:
+            raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
+
+        return raw_predictions
 
     def run(
         self: MultiTaskSegmentor,

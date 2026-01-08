@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import OrderedDict
 
 import cv2
+import dask
 import numpy as np
 import torch
 import torch.nn.functional as F  # noqa: N812
@@ -311,6 +312,11 @@ class HoVerNetPlus(HoVerNet):
 
         """
         np_map, hv_map, tp_map, ls_map = raw_maps
+
+        np_map = np_map.compute() if isinstance(np_map, dask.array.Array) else np_map
+        hv_map = hv_map.compute() if isinstance(hv_map, dask.array.Array) else hv_map
+        tp_map = tp_map.compute() if isinstance(tp_map, dask.array.Array) else tp_map
+        ls_map = ls_map.compute() if isinstance(ls_map, dask.array.Array) else ls_map
 
         pred_inst = HoVerNetPlus._proc_np_hv(np_map, hv_map, scale_factor=0.5)
         # fx=0.5 as nuclear processing is at 0.5 mpp instead of 0.25 mpp

@@ -1285,7 +1285,7 @@ class EngineABC(ABC):  # noqa: B024
         self: EngineABC,
         output_type: str,
         save_dir: Path,
-        **kwargs: EngineABCRunParams,
+        **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | AnnotationStore | Path:
         """Run the engine in patch mode.
 
