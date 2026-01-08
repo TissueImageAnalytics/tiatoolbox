@@ -626,6 +626,61 @@ def cli_yaml_config_path(
     )
 
 
+def cli_min_distance(
+    usage_help: str = "Minimum distance separating two nuclei (in pixels).",
+    default: int | None = None,
+) -> Callable:
+    """Enables --min_distance option for cli."""
+    return click.option(
+        "--min_distance",
+        type=int,
+        help=add_default_to_usage_help(usage_help, default=default),
+        default=default,
+    )
+
+
+def cli_threshold_abs(
+    usage_help: str = "Absolute detection threshold applied to model outputs.",
+    default: float | None = None,
+) -> Callable:
+    """Enables --threshold_abs option for cli."""
+    return click.option(
+        "--threshold_abs",
+        type=float,
+        help=add_default_to_usage_help(usage_help, default=default),
+        default=default,
+    )
+
+
+def cli_threshold_rel(
+    usage_help: str = "Relative detection threshold"
+    " (e.g., with respect to local maxima).",
+    default: float | None = None,
+) -> Callable:
+    """Enables --threshold_rel option for cli."""
+    return click.option(
+        "--threshold_rel",
+        type=float,
+        help=add_default_to_usage_help(usage_help, default=default),
+        default=default,
+    )
+
+
+def cli_postproc_tile_shape(
+    usage_help: str = " Tile shape (height, width) used during post-processing "
+    "(in pixels) to control rechunking behavior.",
+    default: IntPair | None = None,
+) -> Callable:
+    """Enables --postproc_tile_shape option for cli."""
+    return click.option(
+        "--postproc_tile_shape",
+        type=int,
+        default=default,
+        nargs=2,
+        help=usage_help,
+    )
+
+
 def cli_num_workers(
     usage_help: str = "Number of workers to load the data. Please note that they will "
     "also perform preprocessing.",

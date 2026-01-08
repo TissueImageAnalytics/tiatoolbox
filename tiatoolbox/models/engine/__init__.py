@@ -3,6 +3,7 @@
 from . import (
     deep_feature_extractor,
     engine_abc,
+    nucleus_detector,
     nucleus_instance_segmentor,
     patch_predictor,
     semantic_segmentor,
@@ -11,6 +12,7 @@ from . import (
 __all__ = [
     "deep_feature_extractor",
     "engine_abc",
+    "nucleus_detector",
     "nucleus_instance_segmentor",
     "patch_predictor",
     "semantic_segmentor",

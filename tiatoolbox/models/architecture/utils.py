@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import torch
+from skimage.feature import peak_local_max
 from torch import nn
 
 from tiatoolbox import logger
@@ -251,3 +252,75 @@ def argmax_last_axis(image: np.ndarray) -> np.ndarray:
 
     """
     return image.argmax(axis=-1)
+
+
+def peak_detection_map_overlap(
+    block: np.ndarray,
+    min_distance: int,
+    threshold_abs: float | None = None,
+    threshold_rel: float | None = None,
+    block_info: dict | None = None,
+    depth_h: int = 0,
+    depth_w: int = 0,
+) -> np.ndarray:
+    """Post-processing function for peak detection.
+
+    Builds a processed mask per input channel. Runs peak_local_max then
+    writes 1.0 at peak pixels.
+
+    Can be called from dask.da.map_overlap on a padded NumPy block
+    (h_pad, w_pad, C) to process large prediction maps in chunks with overlap.
+    Keeps only centroids whose (row, col) lie in the interior window:
+    rows [depth_h : depth_h + core_h), cols [depth_w : depth_w + core_w)
+
+    Returns same spatial shape as the input block
+
+    Args:
+        block: NumPy array (H, W, C).
+        min_distance: Minimum number of pixels separating peaks.
+        threshold_abs: Minimum intensity of peaks. By default, None.
+        threshold_rel: Minimum relative intensity of peaks. By default, None.
+        block_info: Dask block info dict.
+            Only used when called from dask.array.map_overlap.
+        depth_h: Halo size in pixels for height (rows).
+            Only used when called from dask.array.map_overlap.
+        depth_w: Halo size in pixels for width (cols).
+            Only used when it's called from dask.array.map_overlap.
+
+    Returns:
+        out: NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere.
+
+    """
+    block_height, block_width, block_channels = block.shape
+
+    # --- derive core (pre-overlap) size for THIS block ---
+    if block_info is None:
+        core_h = block_height - 2 * depth_h
+        core_w = block_width - 2 * depth_w
+    else:
+        info = block_info[0]
+        locs = info["array-location"]  # a list of (start, stop) coordinates per axis
+        core_h = int(locs[0][1] - locs[0][0])  # r1 - r0
+        core_w = int(locs[1][1] - locs[1][0])
+
+    rmin, rmax = depth_h, depth_h + core_h
+    cmin, cmax = depth_w, depth_w + core_w
+
+    out = np.zeros((block_height, block_width, block_channels), dtype=np.float32)
+
+    for ch in range(block_channels):
+        img = np.asarray(block[..., ch])  # NumPy 2D view
+
+        coords = peak_local_max(
+            img,
+            min_distance=min_distance,
+            threshold_abs=threshold_abs,
+            threshold_rel=threshold_rel,
+            exclude_border=False,
+        )
+
+        for r, c in coords:
+            if (rmin <= r < rmax) and (cmin <= c < cmax):
+                out[r, c, ch] = 1.0
+
+    return out
