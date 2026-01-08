@@ -45,7 +45,8 @@ import numpy as np
 import torch
 import zarr
 from dask import compute
-from dask.diagnostics import ProgressBar
+from dask.diagnostics.progress import ProgressBar
+from numcodecs import Pickle
 from torch import nn
 from typing_extensions import Unpack
 
@@ -574,11 +575,9 @@ class EngineABC(ABC):  # noqa: B024
 
     def post_process_patches(  # skipcq: PYL-R0201
         self: EngineABC,
-        raw_predictions: da.Array,
-        prediction_shape: tuple[int, ...],  # noqa: ARG002
-        prediction_dtype: type,  # noqa: ARG002
+        raw_predictions: dict[str, da.Array],
         **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
-    ) -> dask.array.Array:
+    ) -> dict[str, da.Array]:
         """Post-process raw patch predictions from inference.
 
         This method applies a post-processing function (e.g., smoothing, filtering)
@@ -586,12 +585,8 @@ class EngineABC(ABC):  # noqa: B024
         and returns a Dask array for efficient computation.
 
         Args:
-            raw_predictions (dask.array.Array):
-                Raw model predictions as a dask array.
-            prediction_shape (tuple[int, ...]):
-                Shape of the prediction output.
-            prediction_dtype (type):
-                Data type of the prediction output.
+            raw_predictions (dict[str, da.Array]):
+                Dictionary containing raw model predictions as Dask arrays.
             **kwargs (EngineABCRunParams):
                 Additional runtime parameters to update engine attributes.
 
@@ -630,8 +625,8 @@ class EngineABC(ABC):  # noqa: B024
                         Whether to enable verbose logging.
 
         Returns:
-            dask.array.Array:
-                Post-processed predictions as a Dask array.
+            dict[str, da.Array]:
+                Post-processed predictions as a dictionary of Dask arrays.
 
         """
         return raw_predictions
@@ -709,29 +704,11 @@ class EngineABC(ABC):  # noqa: B024
         keys_to_compute = [k for k in processed_predictions if k not in self.drop_keys]
 
         if output_type.lower() == "zarr":
-            if is_zarr(save_path):
-                zarr_group = zarr.open(save_path, mode="r")
-                keys_to_compute = [k for k in keys_to_compute if k not in zarr_group]
-            write_tasks = []
-            for key in keys_to_compute:
-                dask_array = processed_predictions[key].rechunk("auto")
-                task = dask_array.to_zarr(
-                    url=save_path,
-                    component=key,
-                    compute=False,
-                )
-                write_tasks.append(task)
-            msg = f"Saving output to {save_path}."
-            logger.info(msg=msg)
-            with ProgressBar():
-                compute(*write_tasks)
-
-            zarr_group = zarr.open(save_path, mode="r+")
-            for key in self.drop_keys:
-                if key in zarr_group:
-                    del zarr_group[key]
-
-            return save_path
+            return self.save_predictions_as_zarr(
+                processed_predictions=processed_predictions,
+                save_path=save_path,
+                keys_to_compute=keys_to_compute,
+            )
 
         values_to_compute = [processed_predictions[k] for k in keys_to_compute]
 
@@ -763,6 +740,68 @@ class EngineABC(ABC):  # noqa: B024
 
         msg = f"Unsupported output type: {output_type}"
         raise TypeError(msg)
+
+    def save_predictions_as_zarr(
+        self: EngineABC,
+        processed_predictions: dict,
+        save_path: Path,
+        keys_to_compute: list,
+    ) -> Path:
+        """Save model predictions as a zarr file.
+
+        This method saves the processed predictions to a zarr file at the specified
+        path.
+
+        Args:
+            processed_predictions (dict):
+                Dictionary containing processed model predictions.
+            save_path (Path):
+                Path to save the zarr file.
+            keys_to_compute (list):
+                List of keys in processed_predictions to save.
+
+        Returns:
+            save_path (Path):
+                Path to the saved zarr file.
+
+        """
+        if is_zarr(save_path):
+            zarr_group = zarr.open(save_path, mode="r")
+            keys_to_compute = [k for k in keys_to_compute if k not in zarr_group]
+        write_tasks = []
+        for key in keys_to_compute:
+            dask_output = processed_predictions[key]
+            if isinstance(dask_output, da.Array):
+                dask_output = dask_output.rechunk("auto")
+                task = dask_output.to_zarr(
+                    url=save_path, component=key, compute=False, object_codec=None
+                )
+                write_tasks.append(task)
+
+            if isinstance(dask_output, list) and all(
+                isinstance(dask_array, da.Array) for dask_array in dask_output
+            ):
+                for i, dask_array in enumerate(dask_output):
+                    object_codec = Pickle() if dask_array.dtype == "object" else None
+                    task = dask_array.to_zarr(
+                        url=save_path,
+                        component=f"{key}/{i}",
+                        compute=False,
+                        object_codec=object_codec,
+                    )
+                    write_tasks.append(task)
+
+        msg = f"Saving output to {save_path}."
+        logger.info(msg=msg)
+        with ProgressBar():
+            compute(*write_tasks)
+
+        zarr_group = zarr.open(save_path, mode="r+")
+        for key in self.drop_keys:
+            if key in zarr_group:
+                del zarr_group[key]
+
+        return save_path
 
     def infer_wsi(
         self: EngineABC,
@@ -834,11 +873,10 @@ class EngineABC(ABC):  # noqa: B024
     # This is not a static model for child classes.
     def post_process_wsi(  # skipcq: PYL-R0201
         self: EngineABC,
-        raw_predictions: da.Array,
-        prediction_shape: tuple[int, ...],  # noqa: ARG002
-        prediction_dtype: type,  # noqa: ARG002
+        raw_predictions: dict[str, da.Array],
+        save_path: Path,  # noqa: ARG002
         **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
-    ) -> dask.array.Array:
+    ) -> dict[str, da.Array]:
         """Post-process predictions from whole slide image (WSI) inference.
 
         This method applies a post-processing function (e.g., smoothing, filtering)
@@ -846,12 +884,11 @@ class EngineABC(ABC):  # noqa: B024
         and returns a Dask array for efficient computation.
 
         Args:
-            raw_predictions (dask.array.Array):
-                Raw model predictions as a Dask array.
-            prediction_shape (tuple[int, ...]):
-                Shape of the prediction output.
-            prediction_dtype (type):
-                Data type of the prediction output.
+            raw_predictions (dict[str, da.Array]):
+                Dictionary containing raw model predictions as Dask arrays.
+            save_path (Path):
+                Path to save the intermediate output. The intermediate output is saved
+                in a zarr file.
             **kwargs (EngineABCRunParams):
                 Additional runtime parameters to update engine attributes.
 
@@ -890,8 +927,8 @@ class EngineABC(ABC):  # noqa: B024
                         Whether to enable verbose logging.
 
         Returns:
-            dask.array.Array:
-                Post-processed predictions as a Dask array.
+            dict[str, da.Array]:
+                Post-processed predictions as a dictionary of Dask arrays.
 
         """
         return raw_predictions
@@ -1327,17 +1364,15 @@ class EngineABC(ABC):  # noqa: B024
             return_coordinates=output_type == "annotationstore",
         )
 
-        raw_predictions["predictions"] = self.post_process_patches(
-            raw_predictions=raw_predictions["probabilities"],
-            prediction_shape=raw_predictions["probabilities"].shape[:-1],
-            prediction_dtype=raw_predictions["probabilities"].dtype,
+        processed_predictions = self.post_process_patches(
+            raw_predictions=raw_predictions,
             **kwargs,
         )
 
         logger.removeFilter(duplicate_filter)
 
         out = self.save_predictions(
-            processed_predictions=raw_predictions,
+            processed_predictions=processed_predictions,
             output_type=output_type,
             save_path=save_path,
             **kwargs,
@@ -1503,17 +1538,16 @@ class EngineABC(ABC):  # noqa: B024
                 **kwargs,
             )
 
-            raw_predictions["predictions"] = self.post_process_wsi(
-                raw_predictions=raw_predictions["probabilities"],
-                prediction_shape=raw_predictions["probabilities"].shape[:-1],
-                prediction_dtype=raw_predictions["probabilities"].dtype,
+            processed_predictions = self.post_process_wsi(
+                raw_predictions=raw_predictions,
+                save_path=save_path[get_path(image)],
                 **kwargs,
             )
 
             kwargs["output_file"] = out[get_path(image)]
             kwargs["scale_factor"] = scale_factor
             out[get_path(image)] = self.save_predictions(
-                processed_predictions=raw_predictions,
+                processed_predictions=processed_predictions,
                 output_type=output_type,
                 save_path=save_path[get_path(image)],
                 **kwargs,

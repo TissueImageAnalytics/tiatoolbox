@@ -8,6 +8,7 @@ import shutil
 from pathlib import Path
 from typing import NoReturn
 
+import dask.array as da
 import numpy as np
 import pytest
 import torch
@@ -64,13 +65,13 @@ class TestEngineABC(EngineABC):
     def post_process_wsi(
         self: EngineABC,
         raw_predictions: dict | Path,
+        save_path: Path,
         **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | Path:
         """Post process WSI output."""
         return super().post_process_wsi(
             raw_predictions=raw_predictions,
-            prediction_shape=(self.batch_size, 1),
-            prediction_dtype=int,
+            save_path=save_path,
             **kwargs,
         )
 
@@ -351,10 +352,13 @@ def test_engine_run() -> NoReturn:
     assert "probabilities" in out
     assert "labels" in out
 
-    pred = eng.post_process_wsi(
-        raw_predictions=Path("/path/to/raw_predictions.npy"),
+    raw_output = np.zeros((3, 3, 3))
+    predictions = eng.post_process_wsi(
+        raw_predictions={"probabilities": da.from_array(raw_output)},
+        save_path=Path("/path/to/save_predictions.zarr"),
     )
-    assert str(pred) == "/path/to/raw_predictions.npy"
+    pred = np.array(predictions["probabilities"])
+    np.testing.assert_array_equal(pred, raw_output)
 
 
 def test_engine_run_with_verbose() -> NoReturn:

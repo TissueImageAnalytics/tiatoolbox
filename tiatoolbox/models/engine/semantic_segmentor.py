@@ -717,6 +717,8 @@ class SemanticSegmentor(PatchPredictor):
                 f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
             )
             logger.info(msg)
+        else:
+            save_path.with_suffix(".zarr").unlink(missing_ok=True)
 
         return save_paths
 
@@ -1370,7 +1372,7 @@ def prepare_full_batch(
     full_output_dict = {tuple(row): i for i, row in enumerate(full_output_locs)}
     matches = [full_output_dict[tuple(row)] for row in batch_locs]
 
-    total_size = np.max(matches).astype(np.uint16) + 1
+    total_size = np.max(matches).astype(np.uint32) + 1
 
     # Initialize full output array
     full_batch_output = np.zeros(
