@@ -45,7 +45,7 @@ import numpy as np
 import torch
 import zarr
 from dask import compute
-from dask.diagnostics.progress import ProgressBar
+from dask.diagnostics import ProgressBar
 from numcodecs import Pickle
 from torch import nn
 from typing_extensions import Unpack
@@ -71,6 +71,8 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import IntPair, Resolution, Units
+
+dask.config.set({"dataframe.convert-string": False})
 
 
 class EngineABCRunParams(TypedDict, total=False):
@@ -519,7 +521,7 @@ class EngineABC(ABC):  # noqa: B024
             coordinates = []
 
         # Main output dictionary
-        raw_predictions = dict(zip(keys, [[]] * len(keys), strict=False))
+        raw_predictions = {key: [] for key in keys}
 
         # Inference loop
         tqdm = get_tqdm()
@@ -777,7 +779,7 @@ class EngineABC(ABC):  # noqa: B024
                         url=save_path,
                         component=f"{key}/{i}",
                         compute=False,
-                        object_codec=object_codec,
+                        zarr_array_kwargs={"object_codec": object_codec},
                     )
                     write_tasks.append(task)
 
@@ -1211,6 +1213,9 @@ class EngineABC(ABC):  # noqa: B024
                 If an unsupported output_type is provided.
             ValueError:
                 If required configuration or input parameters are missing.
+            ValueError:
+                If save_dir is not provided and output_type is "zarr"
+                or "annotationstore".
 
         """
         for key in kwargs:
@@ -1250,6 +1255,10 @@ class EngineABC(ABC):  # noqa: B024
                 f"Remove `save_dir` input to return the output as a `dict`."
             )
             logger.info(msg)
+
+        if save_dir is None and output_type.lower() in ["zarr", "annotationstore"]:
+            msg = f"Please provide save_dir for output_type={output_type}"
+            raise ValueError(msg)
 
         self.images = self._validate_images_masks(images=images)
 

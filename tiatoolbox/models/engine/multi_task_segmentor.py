@@ -1,31 +1,10 @@
-# ***** BEGIN GPL LICENSE BLOCK *****
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
-#
-# The Original Code is Copyright (C) 2021, TIA Centre, University of Warwick
-# All rights reserved.
-# ***** END GPL LICENSE BLOCK *****
-
-"""This module enables multi-task segmentors."""
+"""This module enables multi-task segmentor."""
 
 from __future__ import annotations
 
 import shutil
 from typing import TYPE_CHECKING
 
-# replace with the sql database once the PR in place
 import joblib
 import numpy as np
 from shapely.geometry import box as shapely_box
@@ -33,9 +12,10 @@ from shapely.strtree import STRtree
 
 from tiatoolbox.models.dataset.dataset_abc import WSIStreamDataset
 from tiatoolbox.models.engine.nucleus_instance_segmentor import (
-    NucleusInstanceSegmentor,
     _process_instance_predictions,
 )
+
+from .semantic_segmentor import SemanticSegmentor
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable
@@ -180,7 +160,7 @@ def _process_tile_predictions(  # skipcq: PY-R1000
     return new_inst_dicts, remove_insts_in_origs, sem_maps, tile_bounds
 
 
-class MultiTaskSegmentor(NucleusInstanceSegmentor):
+class MultiTaskSegmentor(SemanticSegmentor):
     """An engine specifically designed to handle tiles or WSIs inference.
 
     Note, if `model` is supplied in the arguments, it will ignore the
