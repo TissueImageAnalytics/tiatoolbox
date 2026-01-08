@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-import shutil
 from typing import TYPE_CHECKING, Unpack
 
-import joblib
 import numpy as np
-from shapely.geometry import box as shapely_box
-from shapely.strtree import STRtree
 
 from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     _process_instance_predictions,
@@ -26,7 +22,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.type_hints import IntBounds, IntPair, Resolution, Units
     from tiatoolbox.wsicore import WSIReader
 
-    from .io_config import IOInstanceSegmentorConfig, IOSegmentorConfig
+    from .io_config import IOSegmentorConfig
 
 
 # Python is yet to be able to natively pickle Object method/static method.
@@ -245,181 +241,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
             device=device,
             verbose=verbose,
         )
-
-    def _predict_one_wsi(
-        self: MultiTaskSegmentor,
-        wsi_idx: int,
-        ioconfig: IOInstanceSegmentorConfig,
-        save_path: str,
-        mode: str,
-    ) -> None:
-        """Make a prediction on tile/wsi.
-
-        Args:
-            wsi_idx (int):
-                Index of the tile/wsi to be processed within `self`.
-            ioconfig (IOInstanceSegmentorConfig):
-                Object which defines I/O placement
-                during inference and when assembling back to full tile/wsi.
-            save_path (str):
-                Location to save output prediction as well as possible
-                intermediate results.
-            mode (str):
-                `tile` or `wsi` to indicate run mode.
-
-        """
-        cache_dir = f"{self._cache_dir}/"
-        wsi_path = self.imgs[wsi_idx]
-        mask_path = None if self.masks is None else self.masks[wsi_idx]
-        wsi_reader, mask_reader = self.get_reader(
-            wsi_path,
-            mask_path,
-            mode,
-            auto_get_mask=self.auto_generate_mask,
-        )
-
-        # assume ioconfig has already been converted to `baseline` for `tile` mode
-        resolution = ioconfig.highest_input_resolution
-        wsi_proc_shape = wsi_reader.slide_dimensions(**resolution)
-
-        # * retrieve patch placement
-        # this is in XY
-        (patch_inputs, patch_outputs) = self.get_coordinates(wsi_proc_shape, ioconfig)
-        if mask_reader is not None:
-            sel = self.filter_coordinates(mask_reader, patch_outputs, **resolution)
-            patch_outputs = patch_outputs[sel]
-            patch_inputs = patch_inputs[sel]
-
-        # assume to be in [top_left_x, top_left_y, bot_right_x, bot_right_y]
-        geometries = [shapely_box(*bounds) for bounds in patch_outputs]
-        spatial_indexer = STRtree(geometries)
-
-        # * retrieve tile placement and tile info flag
-        # tile shape will always be corrected to be multiple of output
-        tile_info_sets = self._get_tile_info(wsi_proc_shape, ioconfig)
-
-        # ! running order of each set matters !
-        self._futures = []
-
-        indices_sem = [i for i, x in enumerate(self.output_types) if x == "semantic"]
-
-        for s_id in range(len(indices_sem)):
-            shape = tuple(map(int, np.fliplr([wsi_proc_shape])[0]))
-            self.wsi_layers.append(
-                np.lib.format.open_memmap(
-                    f"{cache_dir}/{s_id}.npy",
-                    mode="w+",
-                    shape=shape,
-                    dtype=np.uint8,
-                ),
-            )
-            self.wsi_layers[s_id][:] = 0
-
-        indices_inst = [i for i, x in enumerate(self.output_types) if x == "instance"]
-
-        if not self._wsi_inst_info:  # pragma: no cover
-            self._wsi_inst_info = []
-        self._wsi_inst_info.extend({} for _ in indices_inst)
-
-        for set_idx, (set_bounds, set_flags) in enumerate(tile_info_sets):
-            for tile_idx, tile_bounds in enumerate(set_bounds):
-                tile_flag = set_flags[tile_idx]
-
-                # select any patches that have their output
-                # within the current tile
-                sel_box = shapely_box(*tile_bounds)
-                sel_indices = list(spatial_indexer.query(sel_box))
-
-                tile_patch_inputs = patch_inputs[sel_indices]
-                tile_patch_outputs = patch_outputs[sel_indices]
-                self._to_shared_space(wsi_idx, tile_patch_inputs, tile_patch_outputs)
-
-                tile_infer_output = self._infer_once()
-
-                self._process_tile_predictions(
-                    ioconfig,
-                    tile_bounds,
-                    tile_flag,
-                    set_idx,
-                    tile_infer_output,
-                )
-            self._merge_post_process_results()
-
-        # Maybe change to store semantic annotations as contours in .dat file...
-        for i_id, inst_idx in enumerate(indices_inst):
-            joblib.dump(self._wsi_inst_info[i_id], f"{save_path}.{inst_idx}.dat")
-        self._wsi_inst_info = []  # clean up
-
-        for s_id, sem_idx in enumerate(indices_sem):
-            shutil.copyfile(f"{cache_dir}/{s_id}.npy", f"{save_path}.{sem_idx}.npy")
-            # may need to chain it with parents
-
-    def _process_tile_predictions(
-        self: MultiTaskSegmentor,
-        ioconfig: IOSegmentorConfig,
-        tile_bounds: IntBounds,
-        tile_flag: list,
-        tile_mode: int,
-        tile_output: list,
-    ) -> None:
-        """Function to dispatch parallel post processing."""
-        args = [
-            ioconfig,
-            tile_bounds,
-            tile_flag,
-            tile_mode,
-            tile_output,
-            self._wsi_inst_info,
-            self.model.postproc_func,
-            self.merge_prediction,
-            self.pretrained_model,
-        ]
-        if self._postproc_workers is not None:
-            future = self._postproc_workers.submit(_process_tile_predictions, *args)
-        else:
-            future = _process_tile_predictions(*args)
-        self._futures.append(future)
-
-    def _merge_post_process_results(self: MultiTaskSegmentor) -> None:
-        """Helper to aggregate results from parallel workers."""
-
-        def callback(
-            new_inst_dicts: dict,
-            remove_uuid_lists: list,
-            tiles: dict,
-            bounds: IntBounds,
-        ) -> None:
-            """Helper to aggregate worker's results."""
-            # ! DEPRECATION:
-            # !     will be deprecated upon finalization of SQL annotation store
-            for inst_id, new_inst_dict in enumerate(new_inst_dicts):
-                self._wsi_inst_info[inst_id].update(new_inst_dict)
-                for inst_uuid in remove_uuid_lists[inst_id]:
-                    self._wsi_inst_info[inst_id].pop(inst_uuid, None)
-
-            x_start, y_start, x_end, y_end = bounds
-            for sem_id, tile in enumerate(tiles):
-                max_h, max_w = self.wsi_layers[sem_id].shape
-                x_end, y_end = min(x_end, max_w), min(y_end, max_h)
-                tile_ = tile[0 : y_end - y_start, 0 : x_end - x_start]
-                self.wsi_layers[sem_id][y_start:y_end, x_start:x_end] = tile_
-            # !
-
-        for future in self._futures:
-            #  not actually future but the results
-            if self._postproc_workers is None:
-                callback(*future)
-                continue
-            # some errors happen, log it and propagate exception
-            # ! this will lead to discard a whole bunch of
-            # ! inferred tiles within this current WSI
-            if future.exception() is not None:
-                raise future.exception()
-
-            # aggregate the result via callback
-            # manually call the callback rather than
-            # attaching it when receiving/creating the future
-            callback(*future.result())
 
     def run(
         self: MultiTaskSegmentor,
