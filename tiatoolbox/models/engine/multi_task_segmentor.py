@@ -4,158 +4,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Unpack
 
-import numpy as np
-
-from tiatoolbox.models.engine.nucleus_instance_segmentor import (
-    _process_instance_predictions,
-)
-
 from .semantic_segmentor import SemanticSegmentor, SemanticSegmentorRunParams
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
-    from collections.abc import Callable
     from pathlib import Path
+
+    import numpy as np
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.models_abc import ModelABC
-    from tiatoolbox.type_hints import IntBounds, IntPair, Resolution, Units
+    from tiatoolbox.type_hints import IntPair, Resolution, Units
     from tiatoolbox.wsicore import WSIReader
 
     from .io_config import IOSegmentorConfig
-
-
-# Python is yet to be able to natively pickle Object method/static method.
-# Only top-level function is passable to multi-processing as caller.
-# May need 3rd party libraries to use method/static method otherwise.
-def _process_tile_predictions(  # skipcq: PY-R1000
-    ioconfig: IOSegmentorConfig,
-    tile_bounds: IntBounds,
-    tile_flag: list,
-    tile_mode: int,
-    tile_output: list,
-    # this would be replaced by annotation store
-    # in the future
-    ref_inst_dict: dict,
-    postproc: Callable,
-    merge_predictions: Callable,
-    model_name: str,
-) -> tuple:
-    """Process Tile Predictions.
-
-    Function to merge new tile prediction with existing prediction,
-    using the output from each task.
-
-    Args:
-        ioconfig (:class:`IOSegmentorConfig`): Object defines information
-            about input and output placement of patches.
-        tile_bounds (:class:`numpy.array`): Boundary of the current tile, defined as
-            (top_left_x, top_left_y, bottom_x, bottom_y).
-        tile_flag (list): A list of flag to indicate if instances within
-            an area extended from each side (by `ioconfig.margin`) of
-            the tile should be replaced by those within the same spatial
-            region in the accumulated output this run. The format is
-            [top, bottom, left, right], 1 indicates removal while 0 is not.
-            For example, [1, 1, 0, 0] denotes replacing top and bottom instances
-            within `ref_inst_dict` with new ones after this processing.
-        tile_mode (int): A flag to indicate the type of this tile. There
-            are 4 flags:
-            - 0: A tile from tile grid without any overlapping, it is not
-                an overlapping tile from tile generation. The predicted
-                instances are immediately added to accumulated output.
-            - 1: Vertical tile strip that stands between two normal tiles
-                (flag 0). It has the the same height as normal tile but
-                less width (hence vertical strip).
-            - 2: Horizontal tile strip that stands between two normal tiles
-                (flag 0). It has the the same width as normal tile but
-                less height (hence horizontal strip).
-            - 3: tile strip stands at the cross section of four normal tiles
-                (flag 0).
-        tile_output (list): A list of patch predictions, that lie within this
-            tile, to be merged and processed.
-        ref_inst_dict (dict): Dictionary contains accumulated output. The
-            expected format is {instance_id: {type: int,
-            contour: List[List[int]], centroid:List[float], box:List[int]}.
-        postproc (callable): Function to post-process the raw assembled tile.
-        merge_predictions (callable): Function to merge the `tile_output` into
-            raw tile prediction.
-        model_name (string): Name of the existing models support by tiatoolbox
-          for processing the data. Refer to [URL] for details.
-
-    Returns:
-        new_inst_dict (dict): A dictionary contain new instances to be accumulated.
-            The expected format is {instance_id: {type: int,
-            contour: List[List[int]], centroid:List[float], box:List[int]}.
-        remove_insts_in_orig (list): List of instance id within `ref_inst_dict`
-            to be removed to prevent overlapping predictions. These instances
-            are those get cutoff at the boundary due to the tiling process.
-        sem_maps (list): List of semantic segmentation maps.
-        tile_bounds (:class:`numpy.array`): Boundary of the current tile, defined as
-            (top_left_x, top_left_y, bottom_x, bottom_y).
-
-    """
-    locations, predictions = list(zip(*tile_output, strict=False))
-
-    # convert from WSI space to tile space
-    tile_tl = tile_bounds[:2]
-    tile_br = tile_bounds[2:]
-    locations = [np.reshape(loc, (2, -1)) for loc in locations]
-    locations_in_tile = [loc - tile_tl[None] for loc in locations]
-    locations_in_tile = [loc.flatten() for loc in locations_in_tile]
-    locations_in_tile = np.array(locations_in_tile)
-
-    tile_shape = tile_br - tile_tl  # in width height
-
-    # as the placement output is calculated wrt highest possible resolution
-    # within input, the output will need to re-calibrate if it is at different
-    # resolution than the input
-    ioconfig = ioconfig.to_baseline()
-    fx_list = [v["resolution"] for v in ioconfig.output_resolutions]
-
-    head_raws = []
-    for idx, fx in enumerate(fx_list):
-        head_tile_shape = np.ceil(tile_shape * fx).astype(np.int32)
-        head_locations = np.ceil(locations_in_tile * fx).astype(np.int32)
-        head_predictions = [v[idx][0] for v in predictions]
-        head_raw = merge_predictions(
-            head_tile_shape[::-1],
-            head_predictions,
-            head_locations,
-        )
-        head_raws.append(head_raw)
-
-    if "hovernetplus" in model_name:
-        _, inst_dict, layer_map, _ = postproc(head_raws)
-        out_dicts = [inst_dict, layer_map]
-    elif "hovernet" in model_name:
-        _, inst_dict = postproc(head_raws)
-        out_dicts = [inst_dict]
-    else:
-        out_dicts = postproc(head_raws)
-
-    inst_dicts = [out for out in out_dicts if isinstance(out, dict)]
-    sem_maps = [out for out in out_dicts if isinstance(out, np.ndarray)]
-    # Some output maps may not be aggregated into a single map - combine these
-    sem_maps = [
-        np.argmax(s, axis=-1) if s.ndim == 3 else s  # noqa: PLR2004
-        for s in sem_maps
-    ]
-
-    new_inst_dicts, remove_insts_in_origs = [], []
-    for inst_id, inst_dict in enumerate(inst_dicts):
-        new_inst_dict, remove_insts_in_orig = _process_instance_predictions(
-            inst_dict,
-            ioconfig,
-            tile_shape,
-            tile_flag,
-            tile_mode,
-            tile_tl,
-            ref_inst_dict[inst_id],
-        )
-        new_inst_dicts.append(new_inst_dict)
-        remove_insts_in_origs.append(remove_insts_in_orig)
-
-    return new_inst_dicts, remove_insts_in_origs, sem_maps, tile_bounds
 
 
 class MultiTaskSegmentor(SemanticSegmentor):
