@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Unpack
+from typing import TYPE_CHECKING
+
+from typing_extensions import Unpack
 
 from .semantic_segmentor import SemanticSegmentor, SemanticSegmentorRunParams
 
@@ -21,68 +23,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class MultiTaskSegmentor(SemanticSegmentor):
-    """An engine specifically designed to handle tiles or WSIs inference.
-
-    Note, if `model` is supplied in the arguments, it will ignore the
-    `pretrained_model` and `pretrained_weights` arguments. Each WSI's instance
-    predictions (e.g. nuclear instances) will be store under a `.dat` file and
-    the semantic segmentation predictions will be stored in a `.npy` file. The
-    `.dat` files contains a dictionary of form:
-
-    .. code-block:: yaml
-
-        inst_uid:
-            # top left and bottom right of bounding box
-            box: (start_x, start_y, end_x, end_y)
-            # centroid coordinates
-            centroid: (x, y)
-            # array/list of points
-            contour: [(x1, y1), (x2, y2), ...]
-            # the type of nuclei
-            type: int
-            # the probabilities of being this nuclei type
-            prob: float
-
-    Args:
-        model (nn.Module): Use externally defined PyTorch model for prediction with.
-          weights already loaded. Default is `None`. If provided,
-          `pretrained_model` argument is ignored.
-        pretrained_model (str): Name of the existing models support by tiatoolbox
-          for processing the data. Refer to [URL] for details.
-          By default, the corresponding pretrained weights will also be
-          downloaded. However, you can override with your own set of weights
-          via the `pretrained_weights` argument. Argument is case insensitive.
-        pretrained_weights (str): Path to the weight of the corresponding
-          `pretrained_model`.
-        batch_size (int) : Number of images fed into the model each time.
-        num_loader_workers (int) : Number of workers to load the data.
-          Take note that they will also perform preprocessing.
-        num_postproc_workers (int) : Number of workers to post-process
-          predictions.
-        verbose (bool): Whether to output logging information.
-        dataset_class (obj): Dataset class to be used instead of default.
-        auto_generate_mask (bool): To automatically generate tile/WSI tissue mask
-          if is not provided.
-        output_types (list): Ordered list describing what sort of segmentation the
-            output from the model postproc gives for a two-task model this may be:
-            ['instance', 'semantic']
-
-    Examples:
-        >>> # Sample output of a network
-        >>> wsis = ['A/wsi.svs', 'B/wsi.svs']
-        >>> predictor = MultiTaskSegmentor(
-        ...     model='hovernetplus-oed',
-        ...     output_type=['instance', 'semantic'],
-        ... )
-        >>> output = predictor.predict(wsis, mode='wsi')
-        >>> list(output.keys())
-        [('A/wsi.svs', 'output/0') , ('B/wsi.svs', 'output/1')]
-        >>> # Each output of 'A/wsi.svs'
-        >>> # will be respectively stored in 'output/0.0.dat', 'output/0.1.npy'
-        >>> # Here, the second integer represents the task number
-        >>> # e.g. between 0 or 1 for a two task model
-
-    """
+    """A multitask segmentation engine for models like hovernet and hovernetplus."""
 
     def __init__(
         self: MultiTaskSegmentor,
