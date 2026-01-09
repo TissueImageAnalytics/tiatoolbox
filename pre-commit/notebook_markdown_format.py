@@ -50,7 +50,8 @@ def main(files: list[Path]) -> None:
 
     """
     for path in files:
-        notebook = json.loads(path.read_text())
+        with Path.open(path, encoding="utf-8", errors="ignore") as f:
+            notebook = json.load(f)
         formatted_notebook = format_notebook(copy.deepcopy(notebook))
         changed = any(
             cell != formatted_cell

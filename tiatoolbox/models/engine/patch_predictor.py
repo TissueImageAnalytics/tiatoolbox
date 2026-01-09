@@ -372,7 +372,8 @@ class PatchPredictor(EngineABC):
             dict[str, da.Array]: Post-processed predictions as a Dask array.
 
         """
-        predictions = self.model.postproc_func(raw_predictions["probabilities"])
+        postproc_func = self._get_model_attr("postproc_func")
+        predictions = postproc_func(raw_predictions["probabilities"])
         raw_predictions["predictions"] = cast_to_min_dtype(predictions)
         return raw_predictions
 
