@@ -780,7 +780,18 @@ class HoVerNet(ModelABC):
         pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
         nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
 
-        return pred_inst, nuc_inst_info_dict
+        nuc_task ={
+            "pred_inst": pred_inst,
+            "nuc_inst_info_dict": nuc_inst_info_dict,
+        }
+
+        task_types = ["nuc_task"]
+
+        return [
+            {'task_type':"nuc_task", 'pred_inst':..., 'nuc_inst_info_dict', ..,},
+        ]
+
+        # return task_types, nuc_task
 
     @staticmethod
     def infer_batch(  # skipcq: PYL-W0221

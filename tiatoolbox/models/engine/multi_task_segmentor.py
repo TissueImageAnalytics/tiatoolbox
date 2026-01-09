@@ -174,7 +174,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         for idx, probs_for_idx in enumerate(zip(*probabilities, strict=False)):
             predictions[idx] = self.model.postproc_func(list(probs_for_idx))
 
-        raw_predictions["predictions"] = da.stack(predictions, axis=0)
+        raw_predictions[curr_task_type] = da.stack(predictions, axis=0)
         for key in inst_dict[0]:
             raw_predictions[key] = [d[key] for d in inst_dict]
 
