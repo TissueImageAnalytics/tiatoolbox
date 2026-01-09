@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import os
 import shutil
+import socket
 import time
+from contextlib import closing
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -15,6 +17,13 @@ import tiatoolbox
 from tiatoolbox import logger
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.utils.env_detection import has_gpu, running_on_ci
+
+# Reserve a free port for tileserver tests
+_TILES_ENV = "TIATOOLBOX_TILESERVER_PORT"
+if _TILES_ENV not in os.environ:
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+        sock.bind(("127.0.0.1", 0))
+        os.environ[_TILES_ENV] = str(sock.getsockname()[1])
 
 if TYPE_CHECKING:
     from collections.abc import Callable
