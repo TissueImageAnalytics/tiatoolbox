@@ -997,3 +997,30 @@ KongNet_CoNIC_1:
             stride_shape: [248, 248]
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
 
+KongNet_Det_MIDOG_1:
+    hf_repo_id: TIACentre/KongNet_pretrained_weights
+    architecture:
+        class: kongnet.KongNet
+        kwargs:
+            num_heads: 1
+            num_channels_per_head: [1]
+            target_channels: [0]
+            wide_decoder: False
+            min_distance: 21
+            threshold_abs: 0.99
+            class_dict: {
+                0: "Mitotic_Figure"
+            }
+            postproc_tile_shape: [2048, 2048]
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 0.5}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 0.5}
+            patch_input_shape: [512, 512]
+            patch_output_shape: [512, 512]
+            stride_shape: [492, 492]
+            save_resolution: {'units': 'baseline', 'resolution': 1.0}
+

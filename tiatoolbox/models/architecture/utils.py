@@ -10,10 +10,7 @@ import scipy.ndimage as ndimage
 
 import torch
 from skimage.feature import peak_local_max
-<<<<<<< HEAD
 from skimage.measure import label, regionprops
-=======
->>>>>>> origin/dev-define-engines-abc
 from torch import nn
 
 from tiatoolbox import logger
@@ -367,25 +364,16 @@ def peak_detection_map_overlap(
     block_info: dict | None = None,
     depth_h: int = 0,
     depth_w: int = 0,
-<<<<<<< HEAD
     return_probability: bool = False,
-=======
->>>>>>> origin/dev-define-engines-abc
 ) -> np.ndarray:
     """Post-processing function for peak detection.
 
     Builds a processed mask per input channel. Runs peak_local_max then
     writes 1.0 at peak pixels.
 
-<<<<<<< HEAD
-    Can be called from Dask.da.map_overlap on a padded NumPy block
-    (h_pad, w_pad, C) to process large prediction maps in chunks with overlap.
-    Keeps only centroids whose (row,col) lie in the interior window:
-=======
     Can be called from dask.da.map_overlap on a padded NumPy block
     (h_pad, w_pad, C) to process large prediction maps in chunks with overlap.
     Keeps only centroids whose (row, col) lie in the interior window:
->>>>>>> origin/dev-define-engines-abc
     rows [depth_h : depth_h + core_h), cols [depth_w : depth_w + core_w)
 
     Returns same spatial shape as the input block
@@ -422,10 +410,7 @@ def peak_detection_map_overlap(
     cmin, cmax = depth_w, depth_w + core_w
 
     out = np.zeros((block_height, block_width, block_channels), dtype=np.float32)
-<<<<<<< HEAD
     out_probs = np.zeros((block_height, block_width, block_channels), dtype=np.float32)
-=======
->>>>>>> origin/dev-define-engines-abc
 
     for ch in range(block_channels):
         img = np.asarray(block[..., ch])  # NumPy 2D view
@@ -442,7 +427,6 @@ def peak_detection_map_overlap(
             if (rmin <= r < rmax) and (cmin <= c < cmax):
                 out[r, c, ch] = 1.0
 
-<<<<<<< HEAD
         if return_probability:
             labeled_peaks = label(out[..., ch])
             peak_stats = regionprops(labeled_peaks, intensity_image=img)
@@ -502,6 +486,3 @@ def nms_on_detection_maps(
 
     # Apply mask
     return np.where(keep_mask, detection_maps, 0)
-=======
-    return out
->>>>>>> origin/dev-define-engines-abc

@@ -3,10 +3,10 @@ import pathlib
 from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
 
 
-detector = NucleusDetector(model='KongNet_CoNIC_1')
+detector = NucleusDetector(model='KongNet_Det_MIDOG_1')
 
-# wsi_path = "/media/u1910100/data/slides/TCGA-AO-A0J2-01Z-00-DX1.7C9FEC7B-6040-4C58-9563-D10C0D7AC72E.svs"
-wsi_path = "/media/u1910100/data/slides/CMU-1-Small-Region.svs"
+wsi_path = "/media/u1910100/data/slides/TUM1.svs"
+# wsi_path = "/media/u1910100/data/slides/CMU-1-Small-Region.svs"
 
 out = detector.run(
     images=[pathlib.Path(wsi_path)],
@@ -16,9 +16,8 @@ out = detector.run(
     overwrite=True,
     output_type="annotationstore",
     auto_get_mask=True,
-    memory_threshold=30,
+    memory_threshold=50,
     num_workers=1,
     batch_size=8,
-    cache_dir=pathlib.Path("/media/u1910100/data/cache")
 )
 
