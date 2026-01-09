@@ -156,10 +156,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
         Args:
             raw_predictions (dask.array.Array):
                 Raw model predictions as a dask array.
-            prediction_shape (tuple[int, ...]):
-                Shape of the prediction output.
-            prediction_dtype (type):
-                Data type of the prediction output.
             **kwargs (EngineABCRunParams):
                 Additional runtime parameters used for post-processing.
 
@@ -169,14 +165,18 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         """
         probabilities = raw_predictions["probabilities"]
-        predictions = [[] for _ in range(probabilities[0].shape[0])]
-        inst_dict = [[{}] for _ in range(probabilities[0].shape[0])]
-        for idx, probs_for_idx in enumerate(zip(*probabilities, strict=False)):
-            predictions[idx] = self.model.postproc_func(list(probs_for_idx))
+        post_process_predictions = [
+            self.model.postproc_func(list(probs_for_idx))
+            for probs_for_idx in zip(*probabilities, strict=False)
+        ]
 
-        raw_predictions[curr_task_type] = da.stack(predictions, axis=0)
-        for key in inst_dict[0]:
-            raw_predictions[key] = [d[key] for d in inst_dict]
+        raw_predictions = build_post_process_raw_predictions(
+            post_process_predictions=post_process_predictions,
+            raw_predictions=raw_predictions,
+        )
+
+        # Need to update info_dict
+        _ = raw_predictions
 
         return raw_predictions
 
@@ -306,3 +306,64 @@ class MultiTaskSegmentor(SemanticSegmentor):
             output_type=output_type,
             **kwargs,
         )
+
+
+def build_post_process_raw_predictions(
+    post_process_predictions: list[tuple], raw_predictions: dict
+) -> dict:
+    """Merge per-image outputs into a task-organized prediction structure.
+
+    This function takes a list of outputs, where each element corresponds to one
+    image and contains one or more segmentation dictionaries. Each segmentation
+    dictionary must include a ``"task_type"`` key along with any number of
+    additional fields (e.g., ``"predictions"``, ``"info_dict"``, or others).
+
+    The function reorganizes these outputs into ``raw_predictions`` by grouping
+    entries under their respective task types. For each task, all keys except
+    ``"task_type"`` are stored in dictionaries indexed by ``img_id``. Existing
+    content in ``raw_predictions`` is preserved and extended as needed.
+
+    Args:
+        post_process_predictions (list[tuple]):
+            A list where each element represents one image. Each element is an
+            iterable of segmentation dictionaries. Each segmentation dictionary
+            must contain a ``"task_type"`` field and may contain any number of
+            additional fields.
+        raw_predictions (dict):
+            A dictionary that will be updated in-place. It may already contain
+            task entries or other unrelated keys. New tasks and new fields are
+            added dynamically as they appear in ``outputs``.
+
+    Returns:
+        dict:
+            The updated ``raw_predictions`` dictionary, containing all tasks and
+            their associated per-image fields.
+
+    """
+    tasks = set()
+    for seg_list in post_process_predictions:
+        for seg in seg_list:
+            task = seg["task_type"]
+            tasks.add(task)
+
+            # Initialize task entry if needed
+            if task not in raw_predictions:
+                raw_predictions[task] = {}
+
+            # For every key except task_type, store values by img_id
+            for key, value in seg.items():
+                if key == "task_type":
+                    continue
+
+                # Initialize list for this key
+                if key not in raw_predictions[task]:
+                    raw_predictions[task][key] = []
+
+                raw_predictions[task][key].append(value)
+
+    for task in tasks:
+        for key, values in raw_predictions[task].items():
+            if all(isinstance(v, (np.ndarray, da.Array)) for v in values):
+                raw_predictions[task][key] = da.stack(values, axis=0)
+
+    return raw_predictions

@@ -713,7 +713,7 @@ class HoVerNet(ModelABC):
 
     @staticmethod
     # skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(raw_maps: list[np.ndarray]) -> tuple[np.ndarray, dict]:
+    def postproc(raw_maps: list[np.ndarray]) -> tuple[dict, ...]:
         """Post-processing script for image tiles.
 
         Args:
@@ -780,18 +780,13 @@ class HoVerNet(ModelABC):
         pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
         nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
 
-        nuc_task ={
-            "pred_inst": pred_inst,
-            "nuc_inst_info_dict": nuc_inst_info_dict,
+        nuclei_seg = {
+            "task_type": "nuclei_segmentation",
+            "predictions": pred_inst,
+            "info_dict": nuc_inst_info_dict,
         }
 
-        task_types = ["nuc_task"]
-
-        return [
-            {'task_type':"nuc_task", 'pred_inst':..., 'nuc_inst_info_dict', ..,},
-        ]
-
-        # return task_types, nuc_task
+        return (nuclei_seg,)  # Ensure return type is tuple.
 
     @staticmethod
     def infer_batch(  # skipcq: PYL-W0221

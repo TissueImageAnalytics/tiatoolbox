@@ -29,7 +29,7 @@ def test_mtsegmentor_init() -> None:
 
 def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Tests MultiTaskSegmentor on image patches."""
-    segmentor = MultiTaskSegmentor(
+    mtsegmentor = MultiTaskSegmentor(
         model="hovernetplus-oed", batch_size=32, verbose=False, device=device
     )
 
@@ -48,9 +48,9 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
     patch3 = np.zeros_like(patch1)
     patches = np.stack([patch1, patch2, patch3], axis=0)
 
-    assert not segmentor.patch_mode
+    assert not mtsegmentor.patch_mode
 
-    _ = segmentor.run(
+    _ = mtsegmentor.run(
         images=patches,
         return_probabilities=True,
         return_labels=False,

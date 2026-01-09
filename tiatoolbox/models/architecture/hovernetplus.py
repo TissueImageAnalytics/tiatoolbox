@@ -236,7 +236,7 @@ class HoVerNetPlus(HoVerNet):
 
     @staticmethod
     # skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(raw_maps: list[np.ndarray]) -> tuple:
+    def postproc(raw_maps: list[np.ndarray]) -> tuple[dict, ...]:
         """Post-processing script for image tiles.
 
         Args:
@@ -327,28 +327,19 @@ class HoVerNetPlus(HoVerNet):
         nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
         layer_info_dict = HoVerNetPlus._get_layer_info(pred_layer)
 
-        layer_task = {
-            "pred_layer": pred_layer,
-            "layer_info_dict": layer_info_dict,
+        nuclei_seg = {
+            "task_type": "nuclei_segmentation",
+            "predictions": pred_inst,
+            "info_dict": nuc_inst_info_dict,
         }
 
-        nuc_task ={
-            "pred_inst": pred_inst,
-            "nuc_inst_info_dict": nuc_inst_info_dict,
+        layer_seg = {
+            "task_type": "layer_segmentation",
+            "predictions": pred_layer,
+            "info_dict": layer_info_dict,
         }
 
-        tissue_mask = {
-            "inst": mask
-        }
-
-        task_types = ["layer_task", "nuc_task"]
-
-        return [
-            {'task_type':"nuc_task", 'pred_inst':..., 'nuc_inst_info_dict'...,},
-            {'task_type':"nuc_task", 'pred_inst':..., 'nuc_inst_info_dict'...,},
-        ]
-
-        return task_types, layer_task, nuc_task
+        return nuclei_seg, layer_seg
 
     @staticmethod
     def infer_batch(model: nn.Module, batch_data: np.ndarray, *, device: str) -> tuple:
