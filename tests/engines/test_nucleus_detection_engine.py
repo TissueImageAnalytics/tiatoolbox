@@ -269,6 +269,10 @@ def test_nucleus_detector_wsi(remote_sample: Callable, track_tmp_path: Path) -> 
     assert annotation.properties["type"] == "test_nucleus"
     store.close()
 
+    # Check cached centroid maps are removed
+    temp_zarr_files = save_dir / "wsi4_512_512.zarr"
+    assert not temp_zarr_files.exists()
+
     nucleus_detector.drop_keys = ["probabilities"]
     result_path = nucleus_detector.run(
         patch_mode=False,
@@ -283,7 +287,12 @@ def test_nucleus_detector_wsi(remote_sample: Callable, track_tmp_path: Path) -> 
     print("Result path:", result_path)
 
     zarr_path = result_path[mini_wsi_svs]
+    print("Zarr path:", zarr_path)
     zarr_group = zarr.open(zarr_path, mode="r")
+
+    # Check cached centroid maps are removed
+    assert "centroid_maps" not in zarr_group
+
     xs = zarr_group["x"][:]
     ys = zarr_group["y"][:]
     classes = zarr_group["classes"][:]

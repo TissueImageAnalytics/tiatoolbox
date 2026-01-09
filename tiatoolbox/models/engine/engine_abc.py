@@ -65,6 +65,7 @@ from .io_config import ModelIOConfigABC
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
+    from collections.abc import Callable
 
     from torch.utils.data import DataLoader
 
@@ -375,6 +376,14 @@ class EngineABC(ABC):  # noqa: B024
 
         return model, None
 
+    def _get_model_attr(self: EngineABC, attr_name: str) -> Callable:
+        """Return a model attribute, unwrapping DataParallel if required."""
+        try:
+            return getattr(self.model, attr_name)
+        except AttributeError:
+            module = getattr(self.model, "module", None)
+            return getattr(module, attr_name)
+
     def get_dataloader(
         self: EngineABC,
         images: str | Path | list[str | Path] | np.ndarray,
@@ -428,7 +437,7 @@ class EngineABC(ABC):  # noqa: B024
                 auto_get_mask=auto_get_mask,
             )
 
-            dataset.preproc_func = self.model.preproc_func
+            dataset.preproc_func = self._get_model_attr("preproc_func")
 
             # preprocessing must be defined with the dataset
             return torch.utils.data.DataLoader(
@@ -444,7 +453,7 @@ class EngineABC(ABC):  # noqa: B024
             inputs=images, labels=labels, patch_input_shape=ioconfig.patch_input_shape
         )
 
-        dataset.preproc_func = self.model.preproc_func
+        dataset.preproc_func = self._get_model_attr("preproc_func")
 
         # preprocessing must be defined with the dataset
         return torch.utils.data.DataLoader(
@@ -529,8 +538,9 @@ class EngineABC(ABC):  # noqa: B024
             else self.dataloader
         )
 
+        infer_batch = self._get_model_attr("infer_batch")
         for batch_data in tqdm_loop:
-            batch_output = self.model.infer_batch(
+            batch_output = infer_batch(
                 self.model,
                 batch_data["image"],
                 device=self.device,
@@ -565,11 +575,9 @@ class EngineABC(ABC):  # noqa: B024
 
     def post_process_patches(  # skipcq: PYL-R0201
         self: EngineABC,
-        raw_predictions: da.Array,
-        prediction_shape: tuple[int, ...],  # noqa: ARG002
-        prediction_dtype: type,  # noqa: ARG002
+        raw_predictions: dict[str, da.Array],
         **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
-    ) -> dask.array.Array:
+    ) -> dict[str, da.Array]:
         """Post-process raw patch predictions from inference.
 
         This method applies a post-processing function (e.g., smoothing, filtering)
@@ -577,12 +585,8 @@ class EngineABC(ABC):  # noqa: B024
         and returns a Dask array for efficient computation.
 
         Args:
-            raw_predictions (dask.array.Array):
-                Raw model predictions as a dask array.
-            prediction_shape (tuple[int, ...]):
-                Shape of the prediction output.
-            prediction_dtype (type):
-                Data type of the prediction output.
+            raw_predictions (dict[str, da.Array]):
+                Dictionary containing raw model predictions as Dask arrays.
             **kwargs (EngineABCRunParams):
                 Additional runtime parameters to update engine attributes.
 
@@ -621,8 +625,8 @@ class EngineABC(ABC):  # noqa: B024
                         Whether to enable verbose logging.
 
         Returns:
-            dask.array.Array:
-                Post-processed predictions as a Dask array.
+            dict[str, da.Array]:
+                Post-processed predictions as a dictionary of Dask arrays.
 
         """
         return raw_predictions
@@ -869,11 +873,10 @@ class EngineABC(ABC):  # noqa: B024
     # This is not a static model for child classes.
     def post_process_wsi(  # skipcq: PYL-R0201
         self: EngineABC,
-        raw_predictions: da.Array,
-        prediction_shape: tuple[int, ...],  # noqa: ARG002
-        prediction_dtype: type,  # noqa: ARG002
+        raw_predictions: dict[str, da.Array],
+        save_path: Path,  # noqa: ARG002
         **kwargs: Unpack[EngineABCRunParams],  # noqa: ARG002
-    ) -> dask.array.Array:
+    ) -> dict[str, da.Array]:
         """Post-process predictions from whole slide image (WSI) inference.
 
         This method applies a post-processing function (e.g., smoothing, filtering)
@@ -881,12 +884,11 @@ class EngineABC(ABC):  # noqa: B024
         and returns a Dask array for efficient computation.
 
         Args:
-            raw_predictions (dask.array.Array):
-                Raw model predictions as a Dask array.
-            prediction_shape (tuple[int, ...]):
-                Shape of the prediction output.
-            prediction_dtype (type):
-                Data type of the prediction output.
+            raw_predictions (dict[str, da.Array]):
+                Dictionary containing raw model predictions as Dask arrays.
+            save_path (Path):
+                Path to save the intermediate output. The intermediate output is saved
+                in a zarr file.
             **kwargs (EngineABCRunParams):
                 Additional runtime parameters to update engine attributes.
 
@@ -925,8 +927,8 @@ class EngineABC(ABC):  # noqa: B024
                         Whether to enable verbose logging.
 
         Returns:
-            dask.array.Array:
-                Post-processed predictions as a Dask array.
+            dict[str, da.Array]:
+                Post-processed predictions as a dictionary of Dask arrays.
 
         """
         return raw_predictions
@@ -1362,17 +1364,15 @@ class EngineABC(ABC):  # noqa: B024
             return_coordinates=output_type == "annotationstore",
         )
 
-        raw_predictions["predictions"] = self.post_process_patches(
-            raw_predictions=raw_predictions["probabilities"],
-            prediction_shape=raw_predictions["probabilities"].shape[:-1],
-            prediction_dtype=raw_predictions["probabilities"].dtype,
+        processed_predictions = self.post_process_patches(
+            raw_predictions=raw_predictions,
             **kwargs,
         )
 
         logger.removeFilter(duplicate_filter)
 
         out = self.save_predictions(
-            processed_predictions=raw_predictions,
+            processed_predictions=processed_predictions,
             output_type=output_type,
             save_path=save_path,
             **kwargs,
@@ -1538,17 +1538,16 @@ class EngineABC(ABC):  # noqa: B024
                 **kwargs,
             )
 
-            raw_predictions["predictions"] = self.post_process_wsi(
-                raw_predictions=raw_predictions["probabilities"],
-                prediction_shape=raw_predictions["probabilities"].shape[:-1],
-                prediction_dtype=raw_predictions["probabilities"].dtype,
+            processed_predictions = self.post_process_wsi(
+                raw_predictions=raw_predictions,
+                save_path=save_path[get_path(image)],
                 **kwargs,
             )
 
             kwargs["output_file"] = out[get_path(image)]
             kwargs["scale_factor"] = scale_factor
             out[get_path(image)] = self.save_predictions(
-                processed_predictions=raw_predictions,
+                processed_predictions=processed_predictions,
                 output_type=output_type,
                 save_path=save_path[get_path(image)],
                 **kwargs,

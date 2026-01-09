@@ -302,8 +302,9 @@ class DeepFeatureExtractor(PatchPredictor):
         probabilities_zarr, coordinates_zarr = None, None
 
         probabilities_used_percent = 0
+        infer_batch = self._get_model_attr("infer_batch")
         for batch_data in tqdm_loop:
-            batch_output = self.model.infer_batch(
+            batch_output = infer_batch(
                 self.model,
                 batch_data["image"],
                 device=self.device,
@@ -374,11 +375,9 @@ class DeepFeatureExtractor(PatchPredictor):
 
     def post_process_patches(
         self: DeepFeatureExtractor,
-        raw_predictions: da.Array,
-        prediction_shape: tuple[int, ...],
-        prediction_dtype: type,
+        raw_predictions: dict[str, da.Array],
         **kwargs: Unpack[PredictorRunParams],
-    ) -> da.Array:
+    ) -> dict[str, da.Array]:
         """Post-process raw patch predictions from model inference.
 
         This method overrides the base implementation to return raw feature maps
@@ -388,10 +387,6 @@ class DeepFeatureExtractor(PatchPredictor):
         Args:
             raw_predictions (dask.array.Array):
                 Raw model predictions as a Dask array.
-            prediction_shape (tuple[int, ...]):
-                Expected shape of the prediction output.
-            prediction_dtype (type):
-                Data type of the prediction output.
             **kwargs (PredictorRunParams):
                 Additional runtime parameters to configure prediction.
 
@@ -434,8 +429,6 @@ class DeepFeatureExtractor(PatchPredictor):
 
         """
         _ = kwargs.get("return_probabilities")
-        _ = prediction_shape
-        _ = prediction_dtype
 
         return raw_predictions
 

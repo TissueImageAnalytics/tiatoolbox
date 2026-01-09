@@ -320,11 +320,9 @@ class PatchPredictor(EngineABC):
 
     def post_process_patches(
         self: PatchPredictor,
-        raw_predictions: da.Array,
-        prediction_shape: tuple[int, ...],
-        prediction_dtype: type,
-        **kwargs: Unpack[PredictorRunParams],
-    ) -> da.Array:
+        raw_predictions: dict[str, da.Array],
+        **kwargs: Unpack[PredictorRunParams],  # noqa: ARG002
+    ) -> dict[str, da.Array]:
         """Post-process raw patch predictions from model inference.
 
         This method applies the model's post-processing function to the raw predictions
@@ -332,12 +330,8 @@ class PatchPredictor(EngineABC):
         efficient computation and memory handling.
 
         Args:
-            raw_predictions (da.Array | np.ndarray):
-                Raw model predictions.
-            prediction_shape (tuple[int, ...]):
-                Expected shape of the prediction output.
-            prediction_dtype (type):
-                Data type of the prediction output.
+            raw_predictions (dict[str, da.Array]):
+                Dictionary containing raw model predictions as Dask arrays.
             **kwargs (PredictorRunParams):
                 Additional runtime parameters to configure prediction.
 
@@ -375,22 +369,20 @@ class PatchPredictor(EngineABC):
                         Whether to enable verbose logging.
 
         Returns:
-            dask.array.Array: Post-processed predictions as a Dask array.
+            dict[str, da.Array]: Post-processed predictions as a Dask array.
 
         """
-        _ = kwargs.get("return_probabilities")
-        _ = prediction_shape
-        _ = prediction_dtype
-        raw_predictions = self.model.postproc_func(raw_predictions)
-        return cast_to_min_dtype(raw_predictions)
+        postproc_func = self._get_model_attr("postproc_func")
+        predictions = postproc_func(raw_predictions["probabilities"])
+        raw_predictions["predictions"] = cast_to_min_dtype(predictions)
+        return raw_predictions
 
     def post_process_wsi(
         self: PatchPredictor,
-        raw_predictions: da.Array,
-        prediction_shape: tuple[int, ...],
-        prediction_dtype: type,
+        raw_predictions: dict[str, da.Array],
+        save_path: Path,  # noqa: ARG002
         **kwargs: Unpack[PredictorRunParams],
-    ) -> da.Array:
+    ) -> dict[str, da.Array]:
         """Post-process predictions from whole slide image (WSI) inference.
 
         This method refines the raw patch-level predictions obtained from WSI inference.
@@ -399,12 +391,11 @@ class PatchPredictor(EngineABC):
         `post_process_patches()`.
 
         Args:
-            raw_predictions (dask.array.Array):
-                Raw model predictions.
-            prediction_shape (tuple[int, ...]):
-                Expected shape of the prediction output.
-            prediction_dtype (type):
-                Data type of the prediction output.
+            raw_predictions (dict[str, da.Array]):
+                Dictionary containing raw model predictions as Dask arrays.
+            save_path (Path):
+                Path to save the intermediate output. The intermediate output is saved
+                in a zarr file.
             **kwargs (PredictorRunParams):
                 Additional runtime parameters to configure prediction.
 
@@ -447,8 +438,6 @@ class PatchPredictor(EngineABC):
         """
         return self.post_process_patches(
             raw_predictions=raw_predictions,
-            prediction_shape=prediction_shape,
-            prediction_dtype=prediction_dtype,
             **kwargs,
         )
 

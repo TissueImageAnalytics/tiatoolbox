@@ -38,7 +38,7 @@ Examples:
 Notes:
 -----
 - Outputs can be returned as Python dictionaries, saved as Zarr groups,
- or converted to AnnotationStore (.db).
+  or converted to AnnotationStore (.db).
 - Post-processing uses tile rechunking and halo padding to facilitate
   centroid extraction near chunk boundaries.
 
@@ -47,12 +47,12 @@ Notes:
 from __future__ import annotations
 
 import shutil
-import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import dask.array as da
 import numpy as np
+import zarr
 from dask import compute
 from dask.diagnostics.progress import ProgressBar
 from shapely.geometry import Point
@@ -256,25 +256,20 @@ class NucleusDetector(SemanticSegmentor):
                 A PyTorch model instance or the name of a pretrained TIAToolbox
                 model. If a string is provided, default pretrained weights are
                 loaded unless ``weights`` is supplied to override them.
-
             batch_size (int):
                 Number of image patches processed per forward pass.
                 Default is ``8``.
-
             num_workers (int):
                 Number of workers used for ``torch.utils.data.DataLoader``.
                 Default is ``0``.
-
             weights (str or Path or None):
                 Path to model weights. If ``None`` and ``model`` is a string,
                 the default pretrained weights for that model will be used.
                 If ``model`` is a ``nn.Module``, weights are loaded only when
                 specified here.
-
             device (str):
                 Device on which the model will run (e.g., ``"cpu"``, ``"cuda"``).
                 Default is ``"cpu"``.
-
             verbose (bool):
                 Whether to enable verbose logging during initialization and
                 inference. Default is ``True``.
@@ -291,11 +286,9 @@ class NucleusDetector(SemanticSegmentor):
 
     def post_process_patches(
         self: NucleusDetector,
-        raw_predictions: da.Array,
-        prediction_shape: tuple[int, ...],
-        prediction_dtype: type,
+        raw_predictions: dict[str, da.Array],
         **kwargs: Unpack[NucleusDetectorRunParams],
-    ) -> dict:
+    ) -> dict[str, list[da.Array]]:
         """Post-process patch-level detection outputs.
 
         Applies the model's post-processing function (e.g., centroid extraction and
@@ -303,13 +296,8 @@ class NucleusDetector(SemanticSegmentor):
         arrays suitable for saving or further merging.
 
         Args:
-            raw_predictions (da.Array):
-                Patch predictions of shape ``(B, H, W, C)``, where ``B`` is the number
-                of patches (probabilities/logits).
-            prediction_shape (tuple[int, ...]):
-                Expected prediction shape.
-            prediction_dtype (type):
-                Expected prediction dtype.
+            raw_predictions (dict[str, da.Array]):
+                Dictionary containing raw model predictions as Dask arrays.
             **kwargs (NucleusDetectorRunParams):
                 Additional runtime parameters to configure segmentation.
 
@@ -327,22 +315,20 @@ class NucleusDetector(SemanticSegmentor):
         Returns:
             dict[str, list[da.Array]]:
                 A dictionary of lists (one list per patch), with keys:
-                - ``"x"`` (list[dask array]):
-                    1-D object dask arrays of x coordinates (``np.uint32``).
-                - ``"y"`` (list[dask array]):
-                    1-D object dask arrays of y coordinates (``np.uint32``).
-                - ``"classes"`` (list[dask array]):
-                    1-D object dask arrays of class IDs (``np.uint32``).
-                - ``"probabilities"`` (list[dask array]):
-                    1-D object dask arrays of detection scores (``np.float32``).
+                    - ``"x"`` (list[dask array]):
+                        1-D object dask arrays of x coordinates
+                    - ``"y"`` (list[dask array]):
+                        1-D object dask arrays of y coordinates
+                    - ``"classes"`` (list[dask array]):
+                        1-D object dask arrays of class IDs
+                    - ``"probabilities"`` (list[dask array]):
+                        1-D object dask arrays of detection probabilities
 
         Notes:
             - If thresholds are not provided via ``kwargs``, model defaults are used.
 
         """
-        logger.info("Post processing patch predictions in NucleusDetector")
-        _ = prediction_shape
-        _ = prediction_dtype
+        logger.info("Post processing patch predictions in NucleusDetector.")
 
         # If these are not provided, defaults from model will be used in postproc
         min_distance = kwargs.get("min_distance")
@@ -356,8 +342,8 @@ class NucleusDetector(SemanticSegmentor):
         probs = []
 
         # Process each patch's predictions
-        for i in range(raw_predictions.shape[0]):
-            probs_prediction_patch = raw_predictions[i].compute()
+        for i in range(raw_predictions["probabilities"].shape[0]):
+            probs_prediction_patch = raw_predictions["probabilities"][i].compute()
             centroids_map_patch = self.model.postproc(
                 probs_prediction_patch,
                 min_distance=min_distance,
@@ -377,9 +363,8 @@ class NucleusDetector(SemanticSegmentor):
 
     def post_process_wsi(
         self: NucleusDetector,
-        raw_predictions: da.Array,
-        prediction_shape: tuple[int, ...],
-        prediction_dtype: type,
+        raw_predictions: dict[str, da.Array],
+        save_path: Path,
         **kwargs: Unpack[NucleusDetectorRunParams],
     ) -> dict[str, da.Array]:
         """Post-process WSI-level nucleus detection outputs.
@@ -394,13 +379,11 @@ class NucleusDetector(SemanticSegmentor):
         sequential block processing.
 
         Args:
-            raw_predictions (da.Array):
-                WSI prediction map of shape ``(H, W, C)`` containing
-                per-class probabilities or logits.
-            prediction_shape (tuple[int, ...]):
-                Expected prediction shape.
-            prediction_dtype (type):
-                Expected prediction dtype.
+            raw_predictions (dict[str, da.Array]):
+                Dictionary containing raw model predictions as Dask arrays.
+            save_path (Path):
+                Path to save the intermediate output. The intermediate output is saved
+                in a zarr file.
             **kwargs (NucleusDetectorRunParams):
                 Additional runtime parameters to configure segmentation.
 
@@ -414,17 +397,14 @@ class NucleusDetector(SemanticSegmentor):
                         (e.g., with respect to local maxima).
                     postproc_tile_shape (tuple[int, int]):
                         Tile shape (height, width) for post-processing rechunking.
-                    cache_dir (str or os.PathLike):
-                        Directory for caching intermediate centroid maps as Zarr.
-                        Defaults to './tmp/'.
 
         Returns:
             dict[str, da.Array]:
                 A dictionary mapping detection fields to 1-D Dask arrays:
-                - ``"x"``: x coordinates of detected nuclei (``np.uint32``).
-                - ``"y"``: y coordinates of detected nuclei (``np.uint32``).
-                - ``"classes"``: class IDs (``np.uint32``).
-                - ``"probabilities"``: detection scores (``np.float32``).
+                    - ``"x"``: x coordinates of detected nuclei.
+                    - ``"y"``: y coordinates of detected nuclei.
+                    - ``"classes"``: class IDs.
+                    - ``"probabilities"``: detection probabilities.
 
         Notes:
             - Halo padding ensures that nuclei crossing tile/chunk boundaries
@@ -436,8 +416,6 @@ class NucleusDetector(SemanticSegmentor):
               to extract detections incrementally.
 
         """
-        _ = prediction_shape
-
         logger.info("Post processing WSI predictions in NucleusDetector")
 
         # If these are not provided, defaults from model will be used in postproc
@@ -458,36 +436,40 @@ class NucleusDetector(SemanticSegmentor):
         depth = {0: depth_h, 1: depth_w, 2: 0}
 
         # Re-chunk to post-processing tile shape for more efficient processing
-        rechunked_prediction_map = raw_predictions.rechunk(
+        rechunked_probability_map = raw_predictions["probabilities"].rechunk(
             (postproc_tile_shape[0], postproc_tile_shape[1], -1)
         )
 
         centroid_maps = da.map_overlap(
             self.model.postproc,
-            rechunked_prediction_map,
+            rechunked_probability_map,
             min_distance=min_distance,
             threshold_abs=threshold_abs,
             threshold_rel=threshold_rel,
             depth=depth,
             boundary=0,
-            dtype=prediction_dtype,
+            dtype=raw_predictions["probabilities"].dtype,
             block_info=True,
             depth_h=depth_h,
             depth_w=depth_w,
         )
 
-        logger.info("Computing and saving centroid maps to temporary zarr file.")
-        temp_zarr_file = tempfile.TemporaryDirectory(
-            prefix="tiatoolbox_nucleus_detector_", suffix=".zarr"
+        # Compute and save centroid maps to zarr to avoid memory issues
+        zarr_file = save_path.with_suffix(".zarr")
+        logger.info(
+            "Computing and caching centroid maps to zarr file at: %s",
+            zarr_file,
         )
-        logger.info("Temporary zarr file created at: %s", temp_zarr_file.name)
+
         task = centroid_maps.to_zarr(
-            url=temp_zarr_file.name, compute=False, object_codec=None
+            url=zarr_file, component="centroid_maps", compute=False, object_codec=None
         )
         with ProgressBar():
             compute(task)
 
-        centroid_maps = da.from_zarr(temp_zarr_file.name)
+        self.drop_keys.append("centroid_maps")
+        zarr_group = zarr.open(zarr_file, mode="r+")
+        centroid_maps = da.from_zarr(zarr_group["centroid_maps"])
 
         return self._centroid_maps_to_detection_arrays(centroid_maps)
 
@@ -510,33 +492,30 @@ class NucleusDetector(SemanticSegmentor):
                 a ``"predictions"`` key with detection arrays. The internal structure
                 follows TIAToolbox conventions and may differ slightly between patch
                 and WSI modes:
-                - Patch mode:
-                  - ``"x"`` (list[da.Array]):
-                    per-patch x coordinates (np.uint32).
-                  - ``"y"`` (list[da.Array]):
-                    per-patch y coordinates (np.uint32).
-                  - ``"classes"`` (list[da.Array]):
-                    per-patch class IDs (np.uint32).
-                  - ``"probabilities"`` (list[da.Array]):
-                    per-patch detection scores (np.float32).
-                - WSI mode:
-                  - ``"x"`` (da.Array):
-                    x coordinates (np.uint32).
-                  - ``"y"`` (da.Array):
-                    y coordinates (np.uint32).
-                  - ``"classes"`` (da.Array):
-                    class IDs (np.uint32).
-                  - ``"probabilities"`` (da.Array):
-                    detection scores (np.float32).
-
+                    - Patch mode (patch_mode=True):
+                        - ``"x"`` (list[da.Array]):
+                            per-patch x coordinates.
+                        - ``"y"`` (list[da.Array]):
+                            per-patch y coordinates.
+                        - ``"classes"`` (list[da.Array]):
+                            per-patch class IDs.
+                        - ``"probabilities"`` (list[da.Array]):
+                            per-patch detection probabilities.
+                    - WSI mode (patch_mode=False):
+                        - ``"x"`` (da.Array):
+                            x coordinates.
+                        - ``"y"`` (da.Array):
+                            y coordinates.
+                        - ``"classes"`` (da.Array):
+                            class IDs.
+                        - ``"probabilities"`` (da.Array):
+                            detection probabilities.
             output_type (str):
                 Desired output format: ``"dict"``, ``"zarr"``, or ``"annotationstore"``.
-
             save_path (Path | None):
                 Path at which to save the output file(s). Required for file outputs
                 (e.g., Zarr or SQLite .db). If ``None`` and ``output_type="dict"``,
                 results are returned in memory.
-
             **kwargs (NucleusDetectorRunParams):
                 Additional runtime parameters to configure segmentation.
 
@@ -600,26 +579,36 @@ class NucleusDetector(SemanticSegmentor):
 
         """
         if output_type.lower() != "annotationstore":
-            return super().save_predictions(
-                processed_predictions["predictions"],
+            out = super().save_predictions(
+                processed_predictions,
                 output_type,
                 save_path=save_path,
                 **kwargs,
             )
+        else:
+            # scale_factor set from kwargs
+            scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
+            # class_dict set from kwargs
+            class_dict = kwargs.get("class_dict")
+            if class_dict is None:
+                class_dict = self.model.output_class_dict
 
-        # scale_factor set from kwargs
-        scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
-        # class_dict set from kwargs
-        class_dict = kwargs.get("class_dict")
-        if class_dict is None:
-            class_dict = self.model.output_class_dict
+            out = self._save_predictions_annotation_store(
+                processed_predictions,
+                save_path=save_path,
+                scale_factor=scale_factor,
+                class_dict=class_dict,
+            )
 
-        return self._save_predictions_annotation_store(
-            processed_predictions,
-            save_path=save_path,
-            scale_factor=scale_factor,
-            class_dict=class_dict,
-        )
+            # Remove cached centroid maps if wsi mode
+            if not self.patch_mode:
+                shutil.rmtree(save_path.with_suffix(".zarr"))
+                logger.info(
+                    "Removed cached centroid maps at: %s",
+                    save_path.with_suffix(".zarr"),
+                )
+
+        return out
 
     def _save_predictions_annotation_store(
         self: NucleusDetector,
@@ -638,27 +627,34 @@ class NucleusDetector(SemanticSegmentor):
 
         Args:
             processed_predictions (dict):
-                Dictionary containing the computed detection outputs. Expected to
-                include a top-level key ``"predictions"`` with fields:
-                - ``"x"`` (da.Array):
-                    dask array of x coordinates (``np.uint32``)
-                - ``"y"`` (da.Array):
-                    dask array of y coordinates (``np.uint32``)
-                - ``"classes"`` (da.Array):
-                    dask array of class IDs (``np.uint32``)
-                - ``"probabilities"`` (da.Array):
-                    dask array of detection scores (``np.float32``)
-
+                Dictionary containing the computed detection outputs.
+                Expected keys:
+                - For wsi mode:
+                    - ``"x"`` (da.Array):
+                        dask array of x coordinates
+                    - ``"y"`` (da.Array):
+                        dask array of y coordinates
+                    - ``"classes"`` (da.Array):
+                        dask array of class IDs
+                    - ``"probabilities"`` (da.Array):
+                        dask array of detection probabilities
+                - For patch mode:
+                    - ``"x"`` (list[da.Array]):
+                        list of per-patch dask arrays of x coordinates
+                    - ``"y"`` (list[da.Array]):
+                        list of per-patch dask arrays of y coordinates
+                    - ``"classes"`` (list[da.Array]):
+                        list of per-patch dask arrays of class IDs
+                    - ``"probabilities"`` (list[da.Array]):
+                        list of per-patch dask arrays of detection probabilities
             save_path (Path or None):
                 Output path for saving the AnnotationStore. If ``None``, an in-memory
                 store is returned. When patch mode is active, this path serves as the
                 directory for producing one `.db` file per patch input.
-
             scale_factor (tuple[float, float], optional):
                 Scaling factors applied to x and y coordinates prior to writing.
                 Typically corresponds to ``model_mpp / slide_mpp``.
                 Defaults to ``(1.0, 1.0)``.
-
             class_dict (dict or None):
                 Optional mapping from original class IDs to class names or remapped IDs.
                 If ``None``, an identity mapping based on present classes is used.
@@ -679,9 +675,8 @@ class NucleusDetector(SemanticSegmentor):
         logger.info("Saving predictions as AnnotationStore.")
         if self.patch_mode:
             save_paths = []
-            detections = processed_predictions["predictions"]
 
-            num_patches = len(detections["x"])
+            num_patches = len(processed_predictions["x"])
             for i in range(num_patches):
                 if isinstance(self.images[i], Path):
                     output_path = save_path.parent / (self.images[i].stem + ".db")
@@ -689,10 +684,10 @@ class NucleusDetector(SemanticSegmentor):
                     output_path = save_path.parent / (str(i) + ".db")
 
                 detection_arrays = {
-                    "x": detections["x"][i],
-                    "y": detections["y"][i],
-                    "classes": detections["classes"][i],
-                    "probabilities": detections["probabilities"][i],
+                    "x": processed_predictions["x"][i],
+                    "y": processed_predictions["y"][i],
+                    "classes": processed_predictions["classes"][i],
+                    "probabilities": processed_predictions["probabilities"][i],
                 }
 
                 out_file = self.save_detection_arrays_to_store(
@@ -704,9 +699,9 @@ class NucleusDetector(SemanticSegmentor):
 
                 save_paths.append(out_file)
             return save_paths
-        predictions = processed_predictions["predictions"]
+
         return self.save_detection_arrays_to_store(
-            detection_arrays=predictions,
+            detection_arrays=processed_predictions,
             scale_factor=scale_factor,
             save_path=save_path,
             class_dict=class_dict,
@@ -923,23 +918,19 @@ class NucleusDetector(SemanticSegmentor):
                 - ``"y"``: dask array of y coordinates (``np.uint32``).
                 - ``"classes"``: dask array of class IDs (``np.uint32``).
                 - ``"probabilities"``: dask array of detection scores (``np.float32``).
-
             scale_factor (tuple[float, float], optional):
                 Multiplicative factors applied to the x and y coordinates before
                 saving. The scaled coordinates are rounded to integer pixel
                 locations. Defaults to ``(1.0, 1.0)``.
-
             class_dict (dict or None):
                 Optional mapping of class IDs to class names or remapped IDs.
                 If ``None``, an identity mapping is used based on the detected
                 class IDs.
-
             save_path (Path or None):
                 Destination path for saving the `.db` file. If ``None``, the
                 resulting SQLiteStore is returned in memory. If provided, the
                 parent directory is created if needed, and the final store is
                 written as ``save_path.with_suffix(".db")``.
-
             batch_size (int):
                 Number of detection records to write per batch. Defaults to ``5000``.
 
@@ -1111,7 +1102,7 @@ class NucleusDetector(SemanticSegmentor):
 
 
         """
-        output = super().run(
+        return super().run(
             images=images,
             masks=masks,
             input_resolutions=input_resolutions,
@@ -1123,21 +1114,3 @@ class NucleusDetector(SemanticSegmentor):
             output_type=output_type,
             **kwargs,
         )
-
-        if not patch_mode:
-            # Clean up temporary zarr directory after WSI processing
-            # It should have been already deleted, but check anyway
-            temp_dir = Path(tempfile.gettempdir())
-            if temp_dir.exists():
-                # find file starting with 'tiatoolbox_nucleus_detector_'
-                # and ending with '.zarr'
-                for item in temp_dir.iterdir():
-                    if item.name.startswith(
-                        "tiatoolbox_nucleus_detector_"
-                    ) and item.name.endswith(".zarr"):
-                        shutil.rmtree(item)
-                        logger.info(
-                            "Temporary zarr directory %s has been removed.", item
-                        )
-
-        return output

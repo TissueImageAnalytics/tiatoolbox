@@ -11,7 +11,10 @@ from tiatoolbox.models.architecture.utils import (
     centre_crop,
     centre_crop_to_shape,
     peak_detection_map_overlap,
+<<<<<<< HEAD
     nms_on_detection_maps,
+=======
+>>>>>>> origin/dev-define-engines-abc
 )
 
 
@@ -162,6 +165,7 @@ def test_peak_detection_map_overlap() -> None:
     assert peak_map[0, 0, 0] == 1.0
     assert peak_map[3, 3, 0] == 1.0
     assert np.sum(peak_map) == 2.0
+<<<<<<< HEAD
 
 
 def test_nms_on_detection_maps() -> None:
@@ -199,3 +203,5 @@ def test_attention_module() -> None:
     with pytest.raises(ValueError, match=r"Attention random_name is not implemented"):
         attention = Attention(name="random_name", in_channels=16)
 
+=======
+>>>>>>> origin/dev-define-engines-abc
