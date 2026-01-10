@@ -273,6 +273,13 @@ def test_engine_initalization() -> NoReturn:
     eng = TestEngineABC(model=model, weights=weights_path)
     assert isinstance(eng, EngineABC)
 
+    with pytest.raises(AttributeError):
+        _ = eng._get_model_attr("test_attr")
+
+    model.test_attr = True
+    eng = TestEngineABC(model=model, weights=weights_path)
+    assert eng._get_model_attr("test_attr") is True
+
 
 def test_engine_run() -> NoReturn:
     """Test engine run."""
