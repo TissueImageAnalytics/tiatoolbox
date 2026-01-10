@@ -35,7 +35,7 @@ def version_msg() -> str:
     help="Show the tiatoolbox version",
     message=version_msg(),
 )
-def main() -> click.BaseCommand:
+def main() -> int:
     """Computational pathology toolbox by TIA Centre."""
     return 0
 
