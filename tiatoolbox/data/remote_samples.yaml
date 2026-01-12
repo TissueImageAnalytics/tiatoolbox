@@ -1,17 +1,8 @@
-aliases:
-  tia: &tia "https://tiatoolbox.dcs.warwick.ac.uk"
-  wsis: &wsis "https://tiatoolbox.dcs.warwick.ac.uk/sample_wsis"
-  stainnorm: &stainnorm "https://tiatoolbox.dcs.warwick.ac.uk/testdata/stainnorm"
-  patchextraction: &patchextraction "https://tiatoolbox.dcs.warwick.ac.uk/testdata/patchextraction"
-  testdata: &testdata "https://tiatoolbox.dcs.warwick.ac.uk/testdata"
-  models: &models "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models"
-
 files:
   ndpi-1:
     hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
     subfolder: "sample_wsis"
     filename: "CMU-1.ndpi"
-
   ndpi-2:
     hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
     subfolder: "sample_wsis"

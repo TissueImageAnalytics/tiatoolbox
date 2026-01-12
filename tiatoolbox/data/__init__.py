@@ -31,21 +31,43 @@ def _fetch_remote_sample(
 ) -> Path:
     """Get the path to a sample file, after downloading from remote if required.
 
-    Loads remote resources by name. This is done by looking up files in
-    `tiatoolbox/data/remote_samples.yaml`.
+    Loads remote resources by name from Hugging Face datasets. This is done 
+    by looking up files in `tiatoolbox/data/remote_samples.yaml`. 
+    
+    Note: Downloaded files are stored in subdirectories matching the Hugging 
+    Face repository structure (e.g., `subfolder/filename`). This is the 
+    standard behavior of the Hugging Face Hub API and preserves the 
+    repository's organization. For example, a file in the "sample_wsis" 
+    subfolder will be downloaded to `tmp_path/sample_wsis/filename`.
 
     Args:
         key (str):
-            The name of the resource to fetch.
+            The name of the resource to fetch (as defined in 
+            remote_samples.yaml).
         tmp_path (str or Path):
             The directory to use for local caching. Defaults to the OS
             tmp path, see `tempfile.gettempdir` for more information.
             During testing, `tmp_path` should be set to a temporary test
-            location using `tmp_path_factory.mktemp()`.
+            location using `tmp_path_factory.mktemp()`. Note that files
+            will be placed in subdirectories within this path according to
+            their repository structure.
 
     Returns:
         Path:
-            The local path to the cached sample file after downloading.
+            The local path to the cached sample file after downloading,
+            including the subfolder structure (e.g., 
+            `tmp_path/subfolder/filename`).
+
+    Examples:
+        >>> from pathlib import Path
+        >>> from tiatoolbox.data import _fetch_remote_sample
+        >>> # Download a sample whole slide image
+        >>> sample_path = _fetch_remote_sample("svs-1-small")
+        >>> # The file will be at: tmp_dir/sample_wsis/CMU-1-Small-Region.svs
+        >>> # Download to a specific directory
+        >>> target_dir = Path("/path/to/data")
+        >>> sample_path = _fetch_remote_sample("svs-1-small", target_dir)
+        >>> # File will be at: /path/to/data/sample_wsis/CMU-1-Small-Region.svs
 
     """
     tmp_path = Path(tmp_path) if tmp_path else Path(tempfile.gettempdir())
