@@ -4,16 +4,14 @@
 from __future__ import annotations
 
 import importlib.resources as importlib_resources
-import sys
 import tempfile
-import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 from huggingface_hub import hf_hub_download
 
-from tiatoolbox import logger, read_registry_files
+from tiatoolbox import read_registry_files
 from tiatoolbox.utils import imread
 
 if TYPE_CHECKING:  # pragma: no cover

@@ -12,6 +12,7 @@ import numpy as np
 import pytest
 import torch
 from click.testing import CliRunner
+from huggingface_hub import hf_hub_download
 
 from tests.conftest import timed
 from tiatoolbox import cli, logger, rcParam
@@ -23,8 +24,8 @@ from tiatoolbox.models.dataset import (
     WSIPatchDataset,
     predefined_preproc_func,
 )
-from tiatoolbox.utils import download_data, imread, imwrite
 from tiatoolbox.utils import env_detection as toolbox_env
+from tiatoolbox.utils import imread, imwrite
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.wsicore.wsireader import WSIReader
 
@@ -699,18 +700,15 @@ def test_patch_predictor_api(
     assert not Path.is_dir(Path("special_dir_not_exist"))
 
     # test loading user weight
-    pretrained_weights_url = (
-        "https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet18-kather100k.pth"
-    )
-
     # remove prev generated data
     shutil.rmtree(save_dir_path, ignore_errors=True)
     save_dir_path.mkdir(parents=True)
-    pretrained_weights = (
-        save_dir_path / "tmp_pretrained_weigths" / "resnet18-kather100k.pth"
-    )
 
-    download_data(pretrained_weights_url, pretrained_weights)
+    pretrained_weights = hf_hub_download(
+        repo_id="TIACentre/TIAToolbox_pretrained_weights",
+        filename="resnet18-kather100k.pth",
+        local_dir=str(save_dir_path / "tmp_pretrained_weigths"),
+    )
 
     _ = PatchPredictor(
         pretrained_model="resnet18-kather100k",
