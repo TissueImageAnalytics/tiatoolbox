@@ -11,8 +11,8 @@ from huggingface_hub import hf_hub_download
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.dataset import DatasetInfoABC, KatherPatchDataset, PatchDataset
-from tiatoolbox.utils import download_data, unzip_data
 from tiatoolbox.utils import env_detection as toolbox_env
+from tiatoolbox.utils import unzip_data
 
 
 class Proto1(DatasetInfoABC):
@@ -95,7 +95,7 @@ def test_kather_dataset(track_tmp_path: Path) -> None:
     # remove previously generated data
     if Path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
-    
+
     _ = hf_hub_download(
         repo_id="TIACentre/TIAToolBox_Remote_Samples",
         filename="kather100k-train-nonorm-subset-90.zip",
