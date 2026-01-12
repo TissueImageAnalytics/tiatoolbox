@@ -1,153 +1,292 @@
-%YAML 1.2
----
 aliases:
   tia: &tia "https://tiatoolbox.dcs.warwick.ac.uk"
   wsis: &wsis "https://tiatoolbox.dcs.warwick.ac.uk/sample_wsis"
-  modelroot: &modelroot "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models"
   stainnorm: &stainnorm "https://tiatoolbox.dcs.warwick.ac.uk/testdata/stainnorm"
   patchextraction: &patchextraction "https://tiatoolbox.dcs.warwick.ac.uk/testdata/patchextraction"
   testdata: &testdata "https://tiatoolbox.dcs.warwick.ac.uk/testdata"
   models: &models "https://tiatoolbox.dcs.warwick.ac.uk/testdata/models"
+
 files:
   ndpi-1:
-    url: [*wsis, "CMU-1.ndpi"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "CMU-1.ndpi"
+
   ndpi-2:
-      url: [*wsis, "bioformatspull2759.ndpi" ]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "bioformatspull2759.ndpi"
   dicom-1:
-    url: [*wsis, "CMU-1.dicom.zip"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "CMU-1.dicom.zip"
     extract: True
   ngff-1:
-    url: [*wsis, "CMU-1-Small-Region.zarr.zip"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "CMU-1-Small-Region.zarr.zip"
     extract: True
   svs-1-small:
-    url: [*wsis, "CMU-1-Small-Region.svs"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "CMU-1-Small-Region.svs"
   tiled-tiff-1-small-jpeg:
-    url: [*wsis, "CMU-1-Small-Region.jpeg.tiff"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "CMU-1-Small-Region.jpeg.tiff"
   tiled-tiff-1-small-jp2k:
-    url: [*wsis, "CMU-1-Small-Region.jp2k.tiff"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "CMU-1-Small-Region.jp2k.tiff"
   ome-brightfield-small-level-0:
-    url: [*wsis, "CMU-1-Small-Region-Level-0.ome.tiff"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "CMU-1-Small-Region-Level-0.ome.tiff"
   ome-brightfield-small-pyramid:
-    url: [*wsis, "CMU-1-Small-Region-Pyramid.ome.tif"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "CMU-1-Small-Region-Pyramid.ome.tif"
   two-tiled-pages:
-    url: [*wsis, "two-tiled-pages.tiff"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "two-tiled-pages.tiff"
   ventana-tif:
-    url: [*wsis, "ventana-sample.tif"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "ventana-sample.tif"
   regular-tif:
-    url: [*wsis, "sample-regular.tif"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "sample-regular.tif"
   jp2-omnyx-small:
-    url: [*wsis, "CMU-1-Small-Region.omnyx.jp2"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "CMU-1-Small-Region.omnyx.jp2"
   jp2-omnyx-1:
-    url: [*wsis, "test1.jp2"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "test1.jp2"
   stainnorm-source:
-    url: [*testdata, "common/source_image.png"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/common"
+    filename: "source_image.png"
   stainnorm-target-macenko:
-    url: [*stainnorm, "norm_macenko.png"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/stainnorm"
+    filename: "norm_macenko.png"
   stainnorm-target-reinhard:
-    url: [*stainnorm, "norm_reinhard.png"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/stainnorm"
+    filename: "norm_reinhard.png"
   stainnorm-target-ruifrok:
-    url: [*stainnorm, "norm_ruifrok.png"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/stainnorm"
+    filename: "norm_ruifrok.png"
   stainnorm-target-vahadane:
-    url: [*stainnorm, "norm_vahadane.png"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/stainnorm"
+    filename: "norm_vahadane.png"
   patch-extraction-vf:
-    url: [*patchextraction, "TCGA-HE-7130-01Z-00-DX1.png"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/patchextraction"
+    filename: "TCGA-HE-7130-01Z-00-DX1.png"
   patch-extraction-csv:
-    url: [*patchextraction, "sample_patch_extraction.csv"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/patchextraction"
+    filename: "sample_patch_extraction.csv"
   patch-extraction-json:
-    url: [*patchextraction, "sample_patch_extraction.json"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/patchextraction"
+    filename: "sample_patch_extraction.json"
   patch-extraction-npy:
-    url: [*patchextraction, "sample_patch_extraction.npy"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/patchextraction"
+    filename: "sample_patch_extraction.npy"
   patch-extraction-csv-noheader:
-    url: [*patchextraction, "sample_patch_extraction-noheader.csv"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/patchextraction"
+    filename: "sample_patch_extraction-noheader.csv"
   patch-extraction-2col-json:
-    url: [*patchextraction, "sample_patch_extraction_2col.json"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/patchextraction"
+    filename: "sample_patch_extraction_2col.json"
   patch-extraction-2col-npy:
-    url: [*patchextraction, "sample_patch_extraction_2col.npy"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/patchextraction"
+    filename: "sample_patch_extraction_2col.npy"
   patch-extraction-jp2-csv:
-    url: [*patchextraction, "sample_patch_extraction_jp2.csv"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/patchextraction"
+    filename: "sample_patch_extraction_jp2.csv"
   patch-extraction-jp2-read-npy:
-    url: [*patchextraction, "sample_patch_extraction_jp2read.npy"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/patchextraction"
+    filename: "sample_patch_extraction_jp2read.npy"
   patch-extraction-read-npy:
-    url: [*patchextraction, "sample_patch_extraction_read.npy"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/patchextraction"
+    filename: "sample_patch_extraction_read.npy"
   patch-extraction-svs-csv:
-    url: [*patchextraction, "sample_patch_extraction_svs.csv"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/patchextraction"
+    filename: "sample_patch_extraction_svs.csv"
   patch-extraction-svs-header-csv:
-    url: [*patchextraction, "sample_patch_extraction_svs_header.csv"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/patchextraction"
+    filename: "sample_patch_extraction_svs_header.csv"
   patch-extraction-svs-read-npy:
-    url: [*patchextraction, "sample_patch_extraction_svsread.npy"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/patchextraction"
+    filename: "sample_patch_extraction_svsread.npy"
   sample-patch-1:
-    url: [*modelroot, "samples/kather_patch1.tif"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "kather_patch1.tif"
   sample-patch-2:
-    url: [*modelroot, "samples/kather_patch2.tif"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "kather_patch2.tif"
   sample-patch-3:
-    url: [*modelroot, "samples/pcam_patch1.png"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "pcam_patch1.png"
   sample-patch-4:
-    url: [*modelroot, "samples/pcam_patch2.png"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "pcam_patch2.png"
   wsi1_2k_2k_svs:
-    url: [*modelroot, "samples/wsi1_2k_2k.svs"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "wsi1_2k_2k.svs"
   wsi1_8k_8k_svs:
-    url: [*modelroot, "samples/wsi1_8k_8k.svs"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "wsi1_8k_8k.svs"
   wsi1_8k_8k_jp2:
-    url: [*modelroot, "samples/wsi1_8k_8k.jp2"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "wsi1_8k_8k.jp2"
   wsi1_8k_8k_jpg:
-    url: [*modelroot, "samples/wsi1_8k_8k.jpg"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "wsi1_8k_8k.jpg"
   wsi2_4k_4k_svs:
-    url: [*modelroot, "samples/wsi2_4k_4k.svs"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "wsi2_4k_4k.svs"
   wsi2_4k_4k_jp2:
-    url: [*modelroot, "samples/wsi2_4k_4k.jp2"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "wsi2_4k_4k.jp2"
   wsi2_4k_4k_jpg:
-    url: [*modelroot, "samples/wsi2_4k_4k.jpg"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "wsi2_4k_4k.jpg"
   wsi2_4k_4k_msk:
-    url: [*modelroot, "samples/wsi2_4k_4k.mask.png"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "wsi2_4k_4k.mask.png"
   wsi2_4k_4k_pred:
-    url: [*modelroot, "samples/wsi2_4k_4k.pred.dat"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "wsi2_4k_4k.pred.dat"
   wsi3_20k_20k_svs:
-    url: [*modelroot, "samples/wsi3_20k_20k.svs"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "wsi3_20k_20k.svs"
   wsi4_512_512_svs:
-    url: [*modelroot, "samples/wsi4_512_512.svs"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "wsi4_512_512.svs"
   wsi4_1k_1k_svs:
-    url: [*modelroot, "samples/wsi4_1k_1k.svs"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "wsi4_1k_1k.svs"
   wsi4_4k_4k_svs:
-    url: [*modelroot, "samples/wsi4_4k_4k.svs"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/samples"
+    filename: "wsi4_4k_4k.svs"
   wsi3_20k_20k_pred:
-    url: [*modelroot, "predictions/tissue_mask/wsi3_20k_20k.mask.png"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/predictions/tissue_mask"
+    filename: "wsi3_20k_20k.mask.png"
   wsi4_4k_4k_pred:
-    url: [*modelroot, "predictions/bcss/wsi4_4k_4k.mask.npy"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/predictions/bcss"
+    filename: "wsi4_4k_4k.mask.npy"
   small_svs_tissue_mask:
-    url: [*modelroot, "predictions/tissue_mask/small_svs_tissue_mask.npy"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/predictions/tissue_mask"
+    filename: "small_svs_tissue_mask.npy"
   micronet-output:
-    url: [*modelroot, "predictions/nuclei_mask/micronet-output.npy"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/predictions/nuclei_mask"
+    filename: "micronet-output.npy"
   fixed_image:
-    url: [*testdata, "registration/HE_1_level8_gray.jpeg"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/registration"
+    filename: "HE_1_level8_gray.jpeg"
   moving_image:
-    url: [*testdata, "registration/HE_2_level8_gray.jpeg"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/registration"
+    filename: "HE_2_level8_gray.jpeg"
   dfbr_features:
-    url: [*testdata, "registration/dfbr_features.npy"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/registration"
+    filename: "dfbr_features.npy"
   fixed_mask:
-    url: [*testdata, "registration/HE_1_level8_mask.png"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/registration"
+    filename: "HE_1_level8_mask.png"
   moving_mask:
-    url: [*testdata, "registration/HE_2_level8_mask.png"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/registration"
+    filename: "HE_2_level8_mask.png"
   annotation_store_svs_1:
-    url: [*testdata, "annotation/CMU-1-Small-Region_detections.db"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/annotation"
+    filename: "CMU-1-Small-Region_detections.db"
   annotation_dat_svs_1:
-    url: [*testdata, "annotation/CMU-1-Small-Region_anns.dat"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/annotation"
+    filename: "CMU-1-Small-Region_anns.dat"
   svs_1_rendered_annotations_jpg:
-    url: [*testdata, "annotation/CMU-1-Small-Region_rendered_annotations.jpg"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/annotation"
+    filename: "CMU-1-Small-Region_rendered_annotations.jpg"
   graph_svs_1:
-    url: [*testdata, "annotation/CMU-1-Small-Region_detections_gr.json"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/annotation"
+    filename: "CMU-1-Small-Region_detections_gr.json"
   graph_svs_1_feats:
-    url: [*testdata, "annotation/CMU-1-Small-Region_gr_feats.json"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/annotation"
+    filename: "CMU-1-Small-Region_gr_feats.json"
   geojson_cmu_1:
-    url: [*testdata, "annotation/CMU-1.geojson"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/annotation"
+    filename: "CMU-1.geojson"
   config_1:
-    url: [*testdata, "annotation/test1_config.json"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/annotation"
+    filename: "test1_config.json"
   config_2:
-    url: [*testdata, "annotation/test2_config.json"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/annotation"
+    filename: "test2_config.json"
   patch_annotations:
-    url: [*testdata, "annotation/sample_wsi_patch_preds.db"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/annotation"
+    filename: "sample_wsi_patch_preds.db"
   nuclick-output:
-    url: [*modelroot, "predictions/nuclei_mask/nuclick-output.npy"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/predictions/nuclei_mask"
+    filename: "nuclick-output.npy"
   reg_disp_mha_example:
-    url: [*testdata, "registration/sample_transf.mha"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/registration"
+    filename: "sample_transf.mha"
   reg_affine_npy_example:
-    url: [*testdata, "registration/sample_transf.npy"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/registration"
+    filename: "sample_transf.npy"

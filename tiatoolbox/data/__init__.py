@@ -10,6 +10,7 @@ import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
+from huggingface_hub import hf_hub_download
 
 from tiatoolbox import logger, read_registry_files
 from tiatoolbox.utils import imread
@@ -48,18 +49,19 @@ def _fetch_remote_sample(
             The local path to the cached sample file after downloading.
 
     """
-    tmp_path = Path(tmp_path) if tmp_path else Path(tempfile.gettempdir())
-    if not tmp_path.is_dir():
+    tmp_path = Path(tmp_path) if tmp_path else None
+    if tmp_path is not None and not tmp_path.is_dir():
         msg = "tmp_path must be a directory."
         raise ValueError(msg)
-    sample = SAMPLE_FILES[key]
-    url = "/".join(sample["url"])
-    url_filename = Path(urlparse(url).path).name
-    # Get the filename from SAMPLE_FILES, else use the URL filename
-    filename = SAMPLE_FILES[key].get("filename", url_filename)
-    file_path = tmp_path / filename
-    # Download the file if it doesn't exist
-    return download_data(url, save_path=file_path, unzip=sample.get("extract", False))
+
+    file_path = hf_hub_download(
+        repo_id=SAMPLE_FILES[key]["hf_repo_id"],
+        filename=SAMPLE_FILES[key]["filename"],
+        subfolder=SAMPLE_FILES[key]["subfolder"],
+        local_dir=tmp_path,
+        repo_type="dataset",
+    )
+    return Path(file_path)
 
 
 def _local_sample_path(path: str | Path) -> Path:

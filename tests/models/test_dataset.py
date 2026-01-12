@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from huggingface_hub import hf_hub_download
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.dataset import DatasetInfoABC, KatherPatchDataset, PatchDataset
@@ -66,7 +67,7 @@ def test_dataset_abc() -> None:
 def test_kather_dataset_default() -> None:
     """Test for kather patch dataset with default parameters."""
     # test Kather with default init
-    dataset_path = rcParam["TIATOOLBOX_HOME"] / "dataset" / "kather100k-validation"
+    dataset_path = rcParam["TIATOOLBOX_HOME"] / "dataset"
     shutil.rmtree(dataset_path, ignore_errors=True)
 
     _ = KatherPatchDataset()
@@ -94,14 +95,18 @@ def test_kather_dataset(track_tmp_path: Path) -> None:
     # remove previously generated data
     if Path.exists(save_dir_path):
         shutil.rmtree(save_dir_path, ignore_errors=True)
-    url = (
-        "https://tiatoolbox.dcs.warwick.ac.uk/datasets"
-        "/kather100k-train-nonorm-subset-90.zip"
+    
+    _ = hf_hub_download(
+        repo_id="TIACentre/TIAToolBox_Remote_Samples",
+        filename="kather100k-train-nonorm-subset-90.zip",
+        subfolder="datasets",
+        repo_type="dataset",
+        local_dir=save_dir_path,
     )
-    save_zip_path = save_dir_path / "Kather.zip"
-    download_data(url, save_path=save_zip_path)
+    save_zip_path = save_dir_path / "datasets" / "kather100k-train-nonorm-subset-90.zip"
     unzip_data(save_zip_path, save_dir_path)
     extracted_dir = save_dir_path / "NCT-CRC-HE-100K-NONORM/"
+
     dataset = KatherPatchDataset(save_dir_path=extracted_dir)
     assert dataset.inputs is not None
     assert dataset.labels is not None
