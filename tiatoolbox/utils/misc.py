@@ -714,7 +714,7 @@ def download_data(
     lock_path = save_path.with_suffix(".lock")
 
     with FileLock(lock_path):
-        if not overwrite and save_path.exists(): 
+        if not overwrite and save_path.exists():
             pass  # pragma: no cover - file was downloaded by another process
         else:
             # Start the connection with a 5-second timeout
