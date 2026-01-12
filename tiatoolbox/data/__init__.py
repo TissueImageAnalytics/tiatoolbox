@@ -7,7 +7,6 @@ import importlib.resources as importlib_resources
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
-from urllib.parse import urlparse
 
 from huggingface_hub import hf_hub_download
 
@@ -17,7 +16,7 @@ from tiatoolbox.utils import imread
 if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
 
-from tiatoolbox.utils import download_data, unzip_data
+from tiatoolbox.utils import unzip_data
 
 # Load a dictionary of sample files data (names and urls)
 SAMPLE_FILES = read_registry_files("data/remote_samples.yaml")["files"]
@@ -44,7 +43,7 @@ def _fetch_remote_sample(
         key (str):
             The name of the resource to fetch (as defined in
             remote_samples.yaml).
-        tmp_path (str or Path):
+        tmp_path (str | Path | None):
             The directory to use for local caching. Defaults to the OS
             tmp path, see `tempfile.gettempdir` for more information.
             During testing, `tmp_path` should be set to a temporary test
@@ -71,7 +70,7 @@ def _fetch_remote_sample(
 
     """
     tmp_path = Path(tmp_path) if tmp_path else Path(tempfile.gettempdir())
-    if tmp_path is not None and not tmp_path.is_dir():
+    if not tmp_path.is_dir():
         msg = "tmp_path must be a directory."
         raise ValueError(msg)
 

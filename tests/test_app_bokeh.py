@@ -45,7 +45,11 @@ GRIDLINES = 2
 
 # Helper function
 def fetch_sample_to_dir(key: str, target_dir: Path) -> Path:
-    """Fetch a remote sample and move it to the exact target directory.
+    """Fetch a remote sample and and ensure it resides directly in ``target_dir``.
+
+     The sample is downloaded and, if it is not already located directly in
+    ``target_dir``, it is moved there. If it is already in ``target_dir``,
+    it is left in place and its path is returned.
 
     Args:
         key (str): The name of the resource to fetch.

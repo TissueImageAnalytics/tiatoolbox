@@ -707,7 +707,7 @@ def test_patch_predictor_api(
     pretrained_weights = hf_hub_download(
         repo_id="TIACentre/TIAToolbox_pretrained_weights",
         filename="resnet18-kather100k.pth",
-        local_dir=str(save_dir_path / "tmp_pretrained_weigths"),
+        local_dir=str(save_dir_path / "tmp_pretrained_weights"),
     )
 
     _ = PatchPredictor(
