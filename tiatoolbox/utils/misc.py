@@ -1245,7 +1245,7 @@ def process_contours(
     contours: list[np.ndarray],
     hierarchy: np.ndarray,
     scale_factor: tuple[float, float] = (1, 1),
-    properties: dict | None = None,
+    properties: dict[str, object] | None = None,
 ) -> list[Annotation]:
     """Process contours and hierarchy to create annotations.
 
@@ -1265,7 +1265,7 @@ def process_contours(
     annotations_list: list[Annotation] = []
     outer_contours: dict[int, np.ndarray] = {}
     holes_dict: dict[int, list[np.ndarray]] = {}
-    base_props = {"type": "mask"}
+    base_props: dict[str, object] = {"type": "mask"}
     if properties:
         base_props.update(properties)
 
@@ -1380,7 +1380,6 @@ def dict_to_store_semantic_segmentor(
 
     store = SQLiteStore()
 
-    # _ = class_dict  # use it once overlay is working
     if class_dict is None:
         class_dict = {int(i): int(i) for i in layer_list.tolist()}
 
