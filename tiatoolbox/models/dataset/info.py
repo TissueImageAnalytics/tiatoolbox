@@ -5,10 +5,11 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from tiatoolbox import rcParam
-from tiatoolbox.utils import download_data, unzip_data
-from tiatoolbox.utils.misc import grab_files_from_dir
 from huggingface_hub import hf_hub_download
+
+from tiatoolbox import rcParam
+from tiatoolbox.utils import unzip_data
+from tiatoolbox.utils.misc import grab_files_from_dir
 
 
 class DatasetInfoABC(ABC):
@@ -52,10 +53,10 @@ class KatherPatchDataset(DatasetInfoABC):
 
     Args:
         save_dir_path (str, Path, or None):
-            Path to the directory containing the Kather dataset with 
+            Path to the directory containing the Kather dataset with
             label subdirectories (e.g., 'BACK/', 'NORM/', 'TUM/', etc.).
             If `None`, the dataset will be automatically downloaded from
-            HuggingFace Hub and extracted to 
+            HuggingFace Hub and extracted to
             '~/.tiatoolbox/dataset/kather100k-validation/'. The directory
             structure should contain subdirectories for each tissue class,
             with .tif image files inside each subdirectory.
