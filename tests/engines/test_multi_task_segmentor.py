@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
 import torch
+import zarr
 
 from tiatoolbox.models.engine.multi_task_segmentor import MultiTaskSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
@@ -19,10 +20,11 @@ OutputType = dict[str, Any] | Any
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
 
-def assert_output_lengths(output: OutputType, expected_counts: Sequence[int]) -> None:
+def assert_output_lengths(
+    output: OutputType, expected_counts: Sequence[int], fields: list[str]
+) -> None:
     """Assert lengths of output dict fields against expected counts."""
-    output = output["info_dict"]
-    for field in output:
+    for field in fields:
         for i, expected in enumerate(expected_counts):
             assert len(output[field][i]) == expected, f"{field}[{i}] mismatch"
 
@@ -80,15 +82,42 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
         patch_mode=True,
     )
 
-    expected_counts = [50, 17, 0]
-    assert_output_lengths(output_dict["nuclei_segmentation"], expected_counts)
-    assert_predictions_and_boxes(
-        output_dict["nuclei_segmentation"], expected_counts, is_zarr=False
+    expected_counts_nuclei = [50, 17, 0]
+    assert_output_lengths(
+        output_dict["nuclei_segmentation"],
+        expected_counts_nuclei,
+        fields=["box", "centroid", "contours", "prob", "type"],
     )
-    expected_counts = [1, 1, 0]
-    assert_output_lengths(output_dict["layer_segmentation"], expected_counts)
     assert_predictions_and_boxes(
-        output_dict["layer_segmentation"], expected_counts, is_zarr=False
+        output_dict["nuclei_segmentation"], expected_counts_nuclei, is_zarr=False
+    )
+    expected_counts_layer = [1, 1, 0]
+    assert_output_lengths(
+        output_dict["layer_segmentation"],
+        expected_counts_layer,
+        fields=["contours", "type"],
+    )
+    assert_predictions_and_boxes(
+        output_dict["layer_segmentation"], expected_counts_layer, is_zarr=False
     )
 
-    _ = track_tmp_path
+    # Zarr output comparison
+    output_zarr = mtsegmentor.run(
+        images=patches,
+        patch_mode=True,
+        device=device,
+        output_type="zarr",
+        save_dir=track_tmp_path / "patch_output_zarr",
+    )
+    output_zarr = zarr.open(output_zarr, mode="r")
+
+    assert_output_lengths(
+        output_zarr["nuclei_segmentation"],
+        expected_counts_nuclei,
+        fields=["box", "centroid", "contours", "prob", "type"],
+    )
+    assert_output_lengths(
+        output_zarr["layer_segmentation"],
+        expected_counts_layer,
+        fields=["contours", "type"],
+    )

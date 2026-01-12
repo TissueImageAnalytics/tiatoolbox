@@ -376,7 +376,9 @@ class HoVerNetPlus(HoVerNet):
         return nuclei_seg, layer_seg
 
     @staticmethod
-    def infer_batch(model: nn.Module, batch_data: np.ndarray, *, device: str) -> tuple:
+    def infer_batch(  # skipcq: PYL-W0221
+        model: nn.Module, batch_data: np.ndarray, *, device: str
+    ) -> tuple:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch i/o

@@ -748,6 +748,7 @@ class EngineABC(ABC):  # noqa: B024
         processed_predictions: dict,
         save_path: Path,
         keys_to_compute: list,
+        task_name: str | None = None,
     ) -> Path:
         """Save model predictions as a zarr file.
 
@@ -761,6 +762,8 @@ class EngineABC(ABC):  # noqa: B024
                 Path to save the zarr file.
             keys_to_compute (list):
                 List of keys in processed_predictions to save.
+            task_name (str):
+                Task Name for Multitask outputs.
 
         Returns:
             save_path (Path):
@@ -770,13 +773,20 @@ class EngineABC(ABC):  # noqa: B024
         if is_zarr(save_path):
             zarr_group = zarr.open(save_path, mode="r")
             keys_to_compute = [k for k in keys_to_compute if k not in zarr_group]
+
+            # If the task group already exists, only compute missing keys
+            if task_name in zarr_group:
+                task_group = zarr_group[task_name]
+                keys_to_compute = [k for k in keys_to_compute if k not in task_group]
+
         write_tasks = []
         for key in keys_to_compute:
             dask_output = processed_predictions[key]
             if isinstance(dask_output, da.Array):
                 dask_output = dask_output.rechunk("auto")
+                component = key if task_name is None else f"{task_name}/{key}"
                 task = dask_output.to_zarr(
-                    url=save_path, component=key, compute=False, object_codec=None
+                    url=save_path, component=component, compute=False, object_codec=None
                 )
                 write_tasks.append(task)
 
@@ -785,9 +795,12 @@ class EngineABC(ABC):  # noqa: B024
             ):
                 for i, dask_array in enumerate(dask_output):
                     object_codec = Pickle() if dask_array.dtype == "object" else None
+                    component = (
+                        f"{key}/{i}" if task_name is None else f"{task_name}/{key}/{i}"
+                    )
                     task = dask_array.to_zarr(
                         url=save_path,
-                        component=f"{key}/{i}",
+                        component=component,
                         compute=False,
                         zarr_array_kwargs={"object_codec": object_codec},
                     )
@@ -1386,6 +1399,9 @@ class EngineABC(ABC):  # noqa: B024
             save_path=save_path,
             **kwargs,
         )
+
+        if isinstance(out, dict):
+            return out
 
         msg = f"Output file saved at {out}."
         logger.info(msg=msg)

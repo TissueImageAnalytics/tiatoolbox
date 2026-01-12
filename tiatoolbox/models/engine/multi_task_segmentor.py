@@ -41,6 +41,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         verbose: bool = True,
     ) -> None:
         """Initialize :class:`NucleusInstanceSegmentor`."""
+        self.tasks = set()
         super().__init__(
             model=model,
             batch_size=batch_size,
@@ -170,7 +171,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             for probs_for_idx in zip(*probabilities, strict=False)
         ]
 
-        raw_predictions = build_post_process_raw_predictions(
+        raw_predictions = self.build_post_process_raw_predictions(
             post_process_predictions=post_process_predictions,
             raw_predictions=raw_predictions,
         )
@@ -179,6 +180,174 @@ class MultiTaskSegmentor(SemanticSegmentor):
         _ = raw_predictions
 
         return raw_predictions
+
+    def build_post_process_raw_predictions(
+        self: MultiTaskSegmentor,
+        post_process_predictions: list[tuple],
+        raw_predictions: dict,
+    ) -> dict:
+        """Merge per-image outputs into a task-organized prediction structure.
+
+        This function takes a list of outputs, where each element corresponds to one
+        image and contains one or more segmentation dictionaries. Each segmentation
+        dictionary must include a ``"task_type"`` key along with any number of
+        additional fields (e.g., ``"predictions"``, ``"info_dict"``, or others).
+
+        The function reorganizes these outputs into ``raw_predictions`` by grouping
+        entries under their respective task types. For each task, all keys except
+        ``"task_type"`` are stored in dictionaries indexed by ``img_id``. Existing
+        content in ``raw_predictions`` is preserved and extended as needed.
+
+        Args:
+            post_process_predictions (list[tuple]):
+                A list where each element represents one image. Each element is an
+                iterable of segmentation dictionaries. Each segmentation dictionary
+                must contain a ``"task_type"`` field and may contain any number of
+                additional fields.
+            raw_predictions (dict):
+                A dictionary that will be updated in-place. It may already contain
+                task entries or other unrelated keys. New tasks and new fields are
+                added dynamically as they appear in ``outputs``.
+
+        Returns:
+            dict:
+                The updated ``raw_predictions`` dictionary, containing all tasks and
+                their associated per-image fields.
+
+        """
+        tasks = set()
+        for seg_list in post_process_predictions:
+            for seg in seg_list:
+                task = seg["task_type"]
+                tasks.add(task)
+
+                # Initialize task entry if needed
+                if task not in raw_predictions:
+                    raw_predictions[task] = {}
+
+                # For every key except task_type, store values by img_id
+                for key, value in seg.items():
+                    if key == "task_type":
+                        continue
+
+                    # Initialize list for this key
+                    if key not in raw_predictions[task]:
+                        raw_predictions[task][key] = []
+
+                    raw_predictions[task][key].append(value)
+
+        for task in tasks:
+            task_dict = raw_predictions[task]
+            for key in list(task_dict.keys()):
+                values = task_dict[key]
+                if all(isinstance(v, (np.ndarray, da.Array)) for v in values):
+                    raw_predictions[task][key] = da.stack(values, axis=0)
+                    continue
+
+                if all(isinstance(v, dict) for v in values):
+                    first = values[0]
+
+                    # Add new keys safely
+                    for subkey in first:
+                        raw_predictions[task][subkey] = [d[subkey] for d in values]
+
+                    del raw_predictions[task][key]
+
+        self.tasks = tasks
+        return raw_predictions
+
+    def save_predictions(
+        self: MultiTaskSegmentor,
+        processed_predictions: dict,
+        output_type: str,
+        save_path: Path | None = None,
+        **kwargs: Unpack[SemanticSegmentorRunParams],
+    ) -> dict | AnnotationStore | Path | list[Path]:
+        """Save model predictions to disk or return them in memory.
+
+        Depending on the output type, this method saves predictions as a zarr group,
+        an AnnotationStore (SQLite database), or returns them as a dictionary.
+
+        Args:
+            processed_predictions (dict):
+                Dictionary containing processed model predictions.
+            output_type (str):
+                Desired output format.
+                Supported values are "dict", "zarr", and "annotationstore".
+            save_path (Path | None):
+                Path to save the output file.
+                Required for "zarr" and "annotationstore" formats.
+            **kwargs (EngineABCRunParams):
+                Additional runtime parameters to update engine attributes.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                        See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
+                        for more details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., "zarr" or "annotationstore").
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates from non-baseline to baseline
+                        resolution.
+                    stride_shape (IntPair):
+                        Stride used during WSI processing, at requested read resolution.
+                        Must be positive. Defaults to `patch_input_shape` if not
+                        provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
+
+        Returns:
+            dict | AnnotationStore | Path | list [Path]:
+                - If output_type is "dict": returns predictions as a dictionary.
+                - If output_type is "zarr": returns path to saved zarr file.
+                - If output_type is "annotationstore": returns an AnnotationStore
+                  or path to .db file.
+
+        Raises:
+            TypeError:
+                If an unsupported output_type is provided.
+
+        """
+        if output_type.lower() == "dict":
+            return super().save_predictions(
+                processed_predictions, output_type, save_path=save_path, **kwargs
+            )
+
+        if output_type.lower() == "zarr":
+            for task_name in self.tasks:
+                keys_to_compute = [
+                    k
+                    for k in processed_predictions[task_name]
+                    if k not in self.drop_keys
+                ]
+                _ = self.save_predictions_as_zarr(
+                    processed_predictions=processed_predictions[task_name],
+                    save_path=save_path,
+                    keys_to_compute=keys_to_compute,
+                    task_name=task_name,
+                )
+            return save_path
+
+        # Need to update for AnnotationStore
+        return save_path
 
     def run(
         self: MultiTaskSegmentor,
@@ -306,71 +475,3 @@ class MultiTaskSegmentor(SemanticSegmentor):
             output_type=output_type,
             **kwargs,
         )
-
-
-def build_post_process_raw_predictions(
-    post_process_predictions: list[tuple], raw_predictions: dict
-) -> dict:
-    """Merge per-image outputs into a task-organized prediction structure.
-
-    This function takes a list of outputs, where each element corresponds to one
-    image and contains one or more segmentation dictionaries. Each segmentation
-    dictionary must include a ``"task_type"`` key along with any number of
-    additional fields (e.g., ``"predictions"``, ``"info_dict"``, or others).
-
-    The function reorganizes these outputs into ``raw_predictions`` by grouping
-    entries under their respective task types. For each task, all keys except
-    ``"task_type"`` are stored in dictionaries indexed by ``img_id``. Existing
-    content in ``raw_predictions`` is preserved and extended as needed.
-
-    Args:
-        post_process_predictions (list[tuple]):
-            A list where each element represents one image. Each element is an
-            iterable of segmentation dictionaries. Each segmentation dictionary
-            must contain a ``"task_type"`` field and may contain any number of
-            additional fields.
-        raw_predictions (dict):
-            A dictionary that will be updated in-place. It may already contain
-            task entries or other unrelated keys. New tasks and new fields are
-            added dynamically as they appear in ``outputs``.
-
-    Returns:
-        dict:
-            The updated ``raw_predictions`` dictionary, containing all tasks and
-            their associated per-image fields.
-
-    """
-    tasks = set()
-    for seg_list in post_process_predictions:
-        for seg in seg_list:
-            task = seg["task_type"]
-            tasks.add(task)
-
-            # Initialize task entry if needed
-            if task not in raw_predictions:
-                raw_predictions[task] = {}
-
-            # For every key except task_type, store values by img_id
-            for key, value in seg.items():
-                if key == "task_type":
-                    continue
-
-                # Initialize list for this key
-                if key not in raw_predictions[task]:
-                    raw_predictions[task][key] = []
-
-                raw_predictions[task][key].append(value)
-
-    for task in tasks:
-        for key, values in raw_predictions[task].items():
-            if all(isinstance(v, (np.ndarray, da.Array)) for v in values):
-                raw_predictions[task][key] = da.stack(values, axis=0)
-
-            if all(isinstance(v, dict) for v in values):
-                first = values[0]
-                # Expand each subkey into a list
-                expanded = {subkey: [d[subkey] for d in values] for subkey in first}
-
-                raw_predictions[task][key] = expanded
-
-    return raw_predictions
