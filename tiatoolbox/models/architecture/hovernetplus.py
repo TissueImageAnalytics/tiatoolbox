@@ -5,8 +5,9 @@ from __future__ import annotations
 from collections import OrderedDict
 
 import cv2
-import dask
+import dask.array as da
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn.functional as F  # noqa: N812
 from skimage import morphology
@@ -313,10 +314,10 @@ class HoVerNetPlus(HoVerNet):
         """
         np_map, hv_map, tp_map, ls_map = raw_maps
 
-        np_map = np_map.compute() if isinstance(np_map, dask.array.Array) else np_map
-        hv_map = hv_map.compute() if isinstance(hv_map, dask.array.Array) else hv_map
-        tp_map = tp_map.compute() if isinstance(tp_map, dask.array.Array) else tp_map
-        ls_map = ls_map.compute() if isinstance(ls_map, dask.array.Array) else ls_map
+        np_map = np_map.compute() if isinstance(np_map, da.Array) else np_map
+        hv_map = hv_map.compute() if isinstance(hv_map, da.Array) else hv_map
+        tp_map = tp_map.compute() if isinstance(tp_map, da.Array) else tp_map
+        ls_map = ls_map.compute() if isinstance(ls_map, da.Array) else ls_map
 
         pred_inst = HoVerNetPlus._proc_np_hv(np_map, hv_map, scale_factor=0.5)
         # fx=0.5 as nuclear processing is at 0.5 mpp instead of 0.25 mpp
@@ -327,16 +328,48 @@ class HoVerNetPlus(HoVerNet):
         nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
         layer_info_dict = HoVerNetPlus._get_layer_info(pred_layer)
 
+        nuc_inst_info_dict_ = {}
+        if not nuc_inst_info_dict:
+            nuc_inst_info_dict_ = {  # inst_id should start at 1
+                "box": da.empty(shape=0),
+                "centroid": da.empty(shape=0),
+                "contour": da.empty(shape=0),
+                "prob": da.empty(shape=0),
+                "type": da.empty(shape=0),
+            }
+        else:
+            # dask dataframe does not support transpose
+            nuc_inst_info_df = pd.DataFrame(nuc_inst_info_dict).transpose()
+            for key, col in nuc_inst_info_df.items():
+                nuc_inst_info_dict_[key] = da.from_array(
+                    col.to_numpy(),
+                    chunks=(len(col),),  # one chunk, avoids auto-rechunking
+                )
+
         nuclei_seg = {
             "task_type": "nuclei_segmentation",
             "predictions": pred_inst,
-            "info_dict": nuc_inst_info_dict,
+            "info_dict": nuc_inst_info_dict_,
         }
+
+        layer_info_dict_ = {}
+        if not nuc_inst_info_dict:
+            layer_info_dict_ = {  # inst_id should start at 1
+                "contour": da.empty(shape=0),
+            }
+        else:
+            # dask dataframe does not support transpose
+            layer_info_df = pd.DataFrame(layer_info_dict).transpose()
+            for key, col in layer_info_df.items():
+                layer_info_dict_[key] = da.from_array(
+                    col.to_numpy(),
+                    chunks=(len(col),),  # one chunk, avoids auto-rechunking
+                )
 
         layer_seg = {
             "task_type": "layer_segmentation",
             "predictions": pred_layer,
-            "info_dict": layer_info_dict,
+            "info_dict": layer_info_dict_,
         }
 
         return nuclei_seg, layer_seg

@@ -366,4 +366,11 @@ def build_post_process_raw_predictions(
             if all(isinstance(v, (np.ndarray, da.Array)) for v in values):
                 raw_predictions[task][key] = da.stack(values, axis=0)
 
+            if all(isinstance(v, dict) for v in values):
+                first = values[0]
+                # Expand each subkey into a list
+                expanded = {subkey: [d[subkey] for d in values] for subkey in first}
+
+                raw_predictions[task][key] = expanded
+
     return raw_predictions
