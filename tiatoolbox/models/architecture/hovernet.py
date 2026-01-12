@@ -6,7 +6,9 @@ import math
 from collections import OrderedDict
 
 import cv2
+import dask.array as da
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn.functional as F  # noqa: N812
 from scipy import ndimage
@@ -678,7 +680,7 @@ class HoVerNet(ModelABC):
             inst_info_dict[inst_id] = {  # inst_id should start at 1
                 "box": inst_box,
                 "centroid": inst_centroid,
-                "contour": inst_contour,
+                "contours": inst_contour,
                 "prob": None,
                 "type": None,
             }
@@ -780,10 +782,28 @@ class HoVerNet(ModelABC):
         pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
         nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
 
+        nuc_inst_info_dict_ = {}
+        if not nuc_inst_info_dict:
+            nuc_inst_info_dict_ = {  # inst_id should start at 1
+                "box": da.empty(shape=0),
+                "centroid": da.empty(shape=0),
+                "contours": da.empty(shape=0),
+                "prob": da.empty(shape=0),
+                "type": da.empty(shape=0),
+            }
+        else:
+            # dask dataframe does not support transpose
+            nuc_inst_info_df = pd.DataFrame(nuc_inst_info_dict).transpose()
+            for key, col in nuc_inst_info_df.items():
+                nuc_inst_info_dict_[key] = da.from_array(
+                    col.to_numpy(),
+                    chunks=(len(col),),  # one chunk, avoids auto-rechunking
+                )
+
         nuclei_seg = {
             "task_type": "nuclei_segmentation",
             "predictions": pred_inst,
-            "info_dict": nuc_inst_info_dict,
+            "info_dict": nuc_inst_info_dict_,
         }
 
         return (nuclei_seg,)  # Ensure return type is tuple.

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
 import torch
@@ -13,10 +13,32 @@ from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
-
+OutputType = dict[str, Any] | Any
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
+
+
+def assert_output_lengths(output: OutputType, expected_counts: Sequence[int]) -> None:
+    """Assert lengths of output dict fields against expected counts."""
+    output = output["info_dict"]
+    for field in output:
+        for i, expected in enumerate(expected_counts):
+            assert len(output[field][i]) == expected, f"{field}[{i}] mismatch"
+
+
+def assert_predictions_and_boxes(
+    output: OutputType, expected_counts: Sequence[int], *, is_zarr: bool = False
+) -> None:
+    """Assert predictions maxima and box lengths against expected counts."""
+    # predictions maxima
+    for idx, expected in enumerate(expected_counts):
+        if is_zarr and idx == 2:
+            # zarr output doesn't store predictions for patch 2
+            continue
+        assert np.max(output["predictions"][idx][:]) == expected, (
+            f"predictions[{idx}] mismatch"
+        )
 
 
 def test_mtsegmentor_init() -> None:
@@ -50,12 +72,23 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
 
     assert not mtsegmentor.patch_mode
 
-    _ = mtsegmentor.run(
+    output_dict = mtsegmentor.run(
         images=patches,
         return_probabilities=True,
         return_labels=False,
         device=device,
         patch_mode=True,
+    )
+
+    expected_counts = [50, 17, 0]
+    assert_output_lengths(output_dict["nuclei_segmentation"], expected_counts)
+    assert_predictions_and_boxes(
+        output_dict["nuclei_segmentation"], expected_counts, is_zarr=False
+    )
+    expected_counts = [1, 1, 0]
+    assert_output_lengths(output_dict["layer_segmentation"], expected_counts)
+    assert_predictions_and_boxes(
+        output_dict["layer_segmentation"], expected_counts, is_zarr=False
     )
 
     _ = track_tmp_path

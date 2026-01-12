@@ -333,7 +333,7 @@ class HoVerNetPlus(HoVerNet):
             nuc_inst_info_dict_ = {  # inst_id should start at 1
                 "box": da.empty(shape=0),
                 "centroid": da.empty(shape=0),
-                "contour": da.empty(shape=0),
+                "contours": da.empty(shape=0),
                 "prob": da.empty(shape=0),
                 "type": da.empty(shape=0),
             }
@@ -355,7 +355,8 @@ class HoVerNetPlus(HoVerNet):
         layer_info_dict_ = {}
         if not nuc_inst_info_dict:
             layer_info_dict_ = {  # inst_id should start at 1
-                "contour": da.empty(shape=0),
+                "contours": da.empty(shape=0),
+                "type": da.empty(shape=0),
             }
         else:
             # dask dataframe does not support transpose
