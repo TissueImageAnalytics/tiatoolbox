@@ -18,7 +18,7 @@ from tiatoolbox.utils import imread
 if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
 
-from tiatoolbox.utils import download_data
+from tiatoolbox.utils import download_data, unzip_data
 
 # Load a dictionary of sample files data (names and urls)
 SAMPLE_FILES = read_registry_files("data/remote_samples.yaml")["files"]
@@ -49,7 +49,7 @@ def _fetch_remote_sample(
             The local path to the cached sample file after downloading.
 
     """
-    tmp_path = Path(tmp_path) if tmp_path else None
+    tmp_path = Path(tmp_path) if tmp_path else Path(tempfile.gettempdir())
     if tmp_path is not None and not tmp_path.is_dir():
         msg = "tmp_path must be a directory."
         raise ValueError(msg)
@@ -61,6 +61,13 @@ def _fetch_remote_sample(
         local_dir=tmp_path,
         repo_type="dataset",
     )
+
+    extract = SAMPLE_FILES[key].get("extract", False)
+    if extract:
+        unzip_path = Path(file_path).parent / Path(file_path).stem
+        unzip_data(Path(file_path), unzip_path, del_zip=False)
+        return unzip_path
+
     return Path(file_path)
 
 
