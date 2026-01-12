@@ -279,7 +279,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 Required for "zarr" and "annotationstore" formats.
             **kwargs (EngineABCRunParams):
                 Additional runtime parameters to update engine attributes.
-
                 Optional Keys:
                     auto_get_mask (bool):
                         Automatically generate segmentation masks using
@@ -290,8 +289,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         Mapping of classification outputs to class names.
                     device (str):
                         Device to run the model on (e.g., "cpu", "cuda").
-                        See https://pytorch.org/docs/stable/tensor_attributes.html#torch.device
-                        for more details.
+                        See :class:`torch.device` for more details.
                     labels (list):
                         Optional labels for input images. Only a single label per image
                         is supported.

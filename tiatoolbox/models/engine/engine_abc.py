@@ -743,6 +743,41 @@ class EngineABC(ABC):  # noqa: B024
         msg = f"Unsupported output type: {output_type}"
         raise TypeError(msg)
 
+    @staticmethod
+    def _get_tasks_for_saving_zarr(
+        dask_output: da.Array | list,
+        key: str,
+        task_name: str | None,
+        save_path: Path,
+        write_tasks: list,
+    ) -> list:
+        """Helper function to get dask tasks for saving zarr output."""
+        if isinstance(dask_output, da.Array):
+            dask_output = dask_output.rechunk("auto")
+            component = key if task_name is None else f"{task_name}/{key}"
+            task = dask_output.to_zarr(
+                url=save_path, component=component, compute=False, object_codec=None
+            )
+            write_tasks.append(task)
+
+        if isinstance(dask_output, list) and all(
+            isinstance(dask_array, da.Array) for dask_array in dask_output
+        ):
+            for i, dask_array in enumerate(dask_output):
+                object_codec = Pickle() if dask_array.dtype == "object" else None
+                component = (
+                    f"{key}/{i}" if task_name is None else f"{task_name}/{key}/{i}"
+                )
+                task = dask_array.to_zarr(
+                    url=save_path,
+                    component=component,
+                    compute=False,
+                    zarr_array_kwargs={"object_codec": object_codec},
+                )
+                write_tasks.append(task)
+
+        return write_tasks
+
     def save_predictions_as_zarr(
         self: EngineABC,
         processed_predictions: dict,
@@ -782,29 +817,13 @@ class EngineABC(ABC):  # noqa: B024
         write_tasks = []
         for key in keys_to_compute:
             dask_output = processed_predictions[key]
-            if isinstance(dask_output, da.Array):
-                dask_output = dask_output.rechunk("auto")
-                component = key if task_name is None else f"{task_name}/{key}"
-                task = dask_output.to_zarr(
-                    url=save_path, component=component, compute=False, object_codec=None
-                )
-                write_tasks.append(task)
-
-            if isinstance(dask_output, list) and all(
-                isinstance(dask_array, da.Array) for dask_array in dask_output
-            ):
-                for i, dask_array in enumerate(dask_output):
-                    object_codec = Pickle() if dask_array.dtype == "object" else None
-                    component = (
-                        f"{key}/{i}" if task_name is None else f"{task_name}/{key}/{i}"
-                    )
-                    task = dask_array.to_zarr(
-                        url=save_path,
-                        component=component,
-                        compute=False,
-                        zarr_array_kwargs={"object_codec": object_codec},
-                    )
-                    write_tasks.append(task)
+            write_tasks = self._get_tasks_for_saving_zarr(
+                dask_output=dask_output,
+                key=key,
+                task_name=task_name,
+                save_path=save_path,
+                write_tasks=write_tasks,
+            )
 
         msg = f"Saving output to {save_path}."
         logger.info(msg=msg)
