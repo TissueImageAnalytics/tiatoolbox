@@ -75,13 +75,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 Dictionary containing prediction results as Dask arrays.
                 Keys include:
                     - "probabilities": Model output probabilities.
-                    - "labels": Ground truth labels (if `return_labels` is True).
                     - "coordinates": Patch coordinates (if `return_coordinates` is
                       True).
 
         """
         keys = ["probabilities"]
-        labels, coordinates = [], []
+        coordinates = []
 
         # Expected number of outputs from the model
         batch_output = self.model.infer_batch(
@@ -129,9 +128,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         self._get_coordinates(batch_data),
                     )
                 )
-
-            if self.return_labels:
-                labels.append(da.from_array(np.array(batch_data["label"])))
 
         for i in range(num_expected_output):
             raw_predictions["probabilities"][i] = da.concatenate(
@@ -290,17 +286,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     device (str):
                         Device to run the model on (e.g., "cpu", "cuda").
                         See :class:`torch.device` for more details.
-                    labels (list):
-                        Optional labels for input images. Only a single label per image
-                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
                         Number of workers for DataLoader and post-processing.
                     output_file (str):
                         Filename for saving output (e.g., "zarr" or "annotationstore").
-                    return_labels (bool):
-                        Whether to return labels with predictions.
                     scale_factor (tuple[float, float]):
                         Scale factor for annotations (model_mpp / slide_mpp).
                         Used to convert coordinates from non-baseline to baseline
@@ -411,9 +402,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         Mapping of classification outputs to class names.
                     device (str):
                         Device to run the model on (e.g., "cpu", "cuda").
-                    labels (list):
-                        Optional labels for input images. Only a single label per image
-                        is supported.
+
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -425,7 +414,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     patch_output_shape (tuple[int, int]):
                         Shape of output patches (height, width).
                     return_labels (bool):
-                        Whether to return labels with predictions.
+                        Whether to return labels with predictions. Should be False.
                     return_probabilities (bool):
                         Whether to return per-class probabilities.
                     scale_factor (tuple[float, float]):
@@ -466,6 +455,15 @@ class MultiTaskSegmentor(SemanticSegmentor):
             ... "/path/to/wsi1.db"
 
         """
+        return_labels = kwargs.get("return_labels")
+
+        # Passing multitask labels causes unnecessary memory overheads
+        if return_labels:
+            msg = "`return_labels` is not supported for MultiTaskSegmentor."
+            raise ValueError(msg)
+
+        kwargs["return_labels"] = False
+
         return super().run(
             images=images,
             masks=masks,

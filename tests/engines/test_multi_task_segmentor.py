@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
+import pytest
 import torch
 import zarr
 
@@ -61,11 +62,34 @@ def assert_output_equal(
 
 
 def test_mtsegmentor_init() -> None:
-    """Tests SemanticSegmentor initialization."""
+    """Tests MultiTaskSegmentor initialization."""
     segmentor = MultiTaskSegmentor(model="hovernetplus-oed", device=device)
 
     assert isinstance(segmentor, MultiTaskSegmentor)
     assert isinstance(segmentor.model, torch.nn.Module)
+
+
+def test_raise_value_error_return_labels_wsi(
+    sample_svs: Path,
+    track_tmp_path: Path,
+) -> None:
+    """Tests MultiTaskSegmentor return_labels error."""
+    mtsegmentor = MultiTaskSegmentor(model="hovernetplus-oed", device=device)
+
+    with pytest.raises(
+        ValueError,
+        match=r".*return_labels` is not supported for MultiTaskSegmentor.",
+    ):
+        _ = mtsegmentor.run(
+            images=[sample_svs],
+            return_probabilities=False,
+            return_labels=True,
+            device=device,
+            patch_mode=False,
+            save_dir=track_tmp_path / "wsi_out_check",
+            batch_size=2,
+            output_type="zarr",
+        )
 
 
 def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> None:
