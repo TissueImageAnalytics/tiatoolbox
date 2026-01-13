@@ -244,7 +244,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 values = task_dict[key]
                 if all(isinstance(v, (np.ndarray, da.Array)) for v in values):
                     raw_predictions[task][key] = da.stack(values, axis=0)
-                    continue
 
                 if all(isinstance(v, dict) for v in values):
                     first = values[0]

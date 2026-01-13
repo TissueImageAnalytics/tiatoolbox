@@ -62,6 +62,75 @@ def assert_output_equal(
             ), f"{field}[{i_a}] vs {field}[{i_b}] mismatch"
 
 
+def assert_annotation_store_patch_output(
+    output_ann: list[Path],
+    task_name: str | None,
+    track_tmp_path: Path,
+    expected_counts: Sequence[int],
+    output_dict: OutputType,
+    fields: list[str],
+) -> None:
+    """Helper function to test AnnotationStore output."""
+    for patch_idx, db_path in enumerate(output_ann):
+        store_file_name = (
+            f"{patch_idx}.db" if task_name is None else f"{patch_idx}_{task_name}.db"
+        )
+        assert (
+            db_path == track_tmp_path / "patch_output_annotationstore" / store_file_name
+        )
+        store_ = SQLiteStore.open(db_path)
+        annotations_ = store_.values()
+        annotations_geometry_type = [
+            str(annotation_.geometry_type) for annotation_ in annotations_
+        ]
+        annotations_list = list(annotations_)
+        if expected_counts[patch_idx] > 0:
+            assert "Polygon" in annotations_geometry_type
+
+            # Build result dict from annotation properties
+            result = {}
+            for ann in annotations_list:
+                for key, value in ann.properties.items():
+                    result.setdefault(key, []).append(value)
+            result["contours"] = [
+                list(poly.exterior.coords)
+                for poly in (a.geometry for a in annotations_list)
+            ]
+
+            # wrap it to make it compatible to assert_output_lengths
+            result_ = {field: [result[field]] for field in fields}
+
+            # Lengths and equality checks for this patch
+            assert_output_lengths(
+                result_,
+                expected_counts=[expected_counts[patch_idx]],
+                fields=fields,
+            )
+            fields_ = fields.copy()
+            fields_.remove("contours")
+            assert_output_equal(
+                result_,
+                output_dict,
+                fields=fields_,
+                indices_a=[0],
+                indices_b=[patch_idx],
+            )
+
+            # Contour check (discard last point)
+            matches = [
+                np.array_equal(np.array(a[:-1], dtype=int), np.array(b, dtype=int))
+                for a, b in zip(
+                    result["contours"], output_dict["contours"][patch_idx], strict=False
+                )
+            ]
+            # Due to make valid poly there might be translation in a few points
+            # in AnnotationStore
+            assert sum(matches) / len(matches) >= 0.95
+        else:
+            assert annotations_geometry_type == []
+            assert annotations_list == []
+
+
 def test_mtsegmentor_init() -> None:
     """Tests MultiTaskSegmentor initialization."""
     segmentor = MultiTaskSegmentor(model="hovernetplus-oed", device=device)
@@ -188,7 +257,26 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
         save_dir=track_tmp_path / "patch_output_annotationstore",
     )
 
-    _ = output_ann
+    assert len(output_ann) == 6
+
+    for task_name in mtsegmentor.tasks:
+        fields_nuclei = ["box", "centroid", "contours", "prob", "type"]
+        fields_layer = ["contours", "type"]
+        fields = fields_nuclei if task_name == "nuclei_segmentation" else fields_layer
+        output_ann_ = [p for p in output_ann if p.name.endswith(f"{task_name}.db")]
+        expected_counts = (
+            expected_counts_nuclei
+            if task_name == "nuclei_segmentation"
+            else expected_counts_layer
+        )
+        assert_annotation_store_patch_output(
+            output_ann=output_ann_,
+            output_dict=output_dict[task_name],
+            track_tmp_path=track_tmp_path,
+            fields=fields,
+            expected_counts=expected_counts,
+            task_name=task_name,
+        )
 
 
 def test_single_output_mtsegmentor(
@@ -265,59 +353,12 @@ def test_single_output_mtsegmentor(
     )
 
     assert len(output_ann) == 3
-    assert output_ann[0] == track_tmp_path / "patch_output_annotationstore" / "0.db"
 
-    for patch_idx, db_path in enumerate(output_ann):
-        assert (
-            db_path
-            == track_tmp_path / "patch_output_annotationstore" / f"{patch_idx}.db"
-        )
-        store_ = SQLiteStore.open(db_path)
-        annotations_ = store_.values()
-        annotations_geometry_type = [
-            str(annotation_.geometry_type) for annotation_ in annotations_
-        ]
-        annotations_list = list(annotations_)
-        if expected_counts_nuclei[patch_idx] > 0:
-            assert "Polygon" in annotations_geometry_type
-
-            # Build result dict from annotation properties
-            result = {}
-            for ann in annotations_list:
-                for key, value in ann.properties.items():
-                    result.setdefault(key, []).append(value)
-            result["contours"] = [
-                list(poly.exterior.coords)
-                for poly in (a.geometry for a in annotations_list)
-            ]
-
-            # wrap it to make it compatible to assert_output_lengths
-            result_ = {
-                field: [result[field]]
-                for field in ["box", "centroid", "contours", "prob", "type"]
-            }
-
-            # Lengths and equality checks for this patch
-            assert_output_lengths(
-                result_,
-                expected_counts=[expected_counts_nuclei[patch_idx]],
-                fields=["box", "centroid", "contours", "prob", "type"],
-            )
-            assert_output_equal(
-                result_,
-                output_dict,
-                fields=["box", "centroid", "prob", "type"],
-                indices_a=[0],
-                indices_b=[patch_idx],
-            )
-
-            # Contour check (discard last point)
-            assert all(
-                np.array_equal(np.array(a[:-1], dtype=int), np.array(b, dtype=int))
-                for a, b in zip(
-                    result["contours"], output_dict["contours"][patch_idx], strict=False
-                )
-            )
-        else:
-            assert annotations_geometry_type == []
-            assert annotations_list == []
+    assert_annotation_store_patch_output(
+        output_ann=output_ann,
+        output_dict=output_dict,
+        track_tmp_path=track_tmp_path,
+        fields=["box", "centroid", "contours", "prob", "type"],
+        expected_counts=expected_counts_nuclei,
+        task_name=None,
+    )
