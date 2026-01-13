@@ -31,12 +31,12 @@ from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.env_detection import is_notebook
 from tiatoolbox.utils.exceptions import FileNotSupportedError
-from tiatoolbox.type_hints import JSON
+
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
     from os import PathLike
-
+    from tiatoolbox.type_hints import JSON
     from shapely import geometry
 
 
@@ -1246,7 +1246,7 @@ def process_contours(
     contours: list[np.ndarray],
     hierarchy: np.ndarray,
     scale_factor: tuple[float, float] = (1, 1),
-    properties: dict[str, JSON] | None = None,
+    properties: dict[str, "JSON"] | None = None,
 ) -> list[Annotation]:
     """Process contours and hierarchy to create annotations.
 
@@ -1257,6 +1257,8 @@ def process_contours(
             A list of hierarchy.
         scale_factor (tuple[float, float]):
             The scale factor to use when loading the annotations.
+        properties (dict | None):
+            Optional properties to include with each annotation type.
 
     Returns:
         list:
@@ -1266,7 +1268,7 @@ def process_contours(
     annotations_list: list[Annotation] = []
     outer_contours: dict[int, np.ndarray] = {}
     holes_dict: dict[int, list[np.ndarray]] = {}
-    base_props: dict[str, JSON] = {"type": "mask"}
+    base_props: dict[str, "JSON"] = {"type": "mask"}
     if properties:
         base_props.update(properties)
 
