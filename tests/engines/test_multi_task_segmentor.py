@@ -171,7 +171,7 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
     mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
     mini_wsi = WSIReader.open(mini_wsi_svs)
     size = (256, 256)
-    resolution = 0.25
+    resolution = 0.50
     units: Final = "mpp"
 
     patch1 = mini_wsi.read_rect(
@@ -193,7 +193,7 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
         patch_mode=True,
     )
 
-    expected_counts_nuclei = [50, 17, 0]
+    expected_counts_nuclei = [95, 33, 0]
     assert_output_lengths(
         output_dict["nuclei_segmentation"],
         expected_counts_nuclei,
@@ -350,6 +350,7 @@ def test_single_output_mtsegmentor(
         device=device,
         output_type="annotationstore",
         save_dir=track_tmp_path / "patch_output_annotationstore",
+        return_probabilities=True,
     )
 
     assert len(output_ann) == 3
