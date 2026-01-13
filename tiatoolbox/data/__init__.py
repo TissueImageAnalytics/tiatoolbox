@@ -4,20 +4,19 @@
 from __future__ import annotations
 
 import importlib.resources as importlib_resources
-import sys
 import tempfile
-import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
-from urllib.parse import urlparse
 
-from tiatoolbox import logger, read_registry_files
+from huggingface_hub import hf_hub_download
+
+from tiatoolbox import read_registry_files
 from tiatoolbox.utils import imread
 
 if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
 
-from tiatoolbox.utils import download_data
+from tiatoolbox.utils import unzip_data
 
 # Load a dictionary of sample files data (names and urls)
 SAMPLE_FILES = read_registry_files("data/remote_samples.yaml")["files"]
@@ -31,35 +30,65 @@ def _fetch_remote_sample(
 ) -> Path:
     """Get the path to a sample file, after downloading from remote if required.
 
-    Loads remote resources by name. This is done by looking up files in
-    `tiatoolbox/data/remote_samples.yaml`.
+    Loads remote resources by name from Hugging Face datasets. This is done
+    by looking up files in `tiatoolbox/data/remote_samples.yaml`.
+
+    Note: Downloaded files are stored in subdirectories matching the Hugging
+    Face repository structure (e.g., `subfolder/filename`). This is the
+    standard behavior of the Hugging Face Hub API and preserves the
+    repository's organization. For example, a file in the "sample_wsis"
+    subfolder will be downloaded to `tmp_path/sample_wsis/filename`.
 
     Args:
         key (str):
-            The name of the resource to fetch.
-        tmp_path (str or Path):
+            The name of the resource to fetch (as defined in
+            remote_samples.yaml).
+        tmp_path (str | Path | None):
             The directory to use for local caching. Defaults to the OS
             tmp path, see `tempfile.gettempdir` for more information.
             During testing, `tmp_path` should be set to a temporary test
-            location using `tmp_path_factory.mktemp()`.
+            location using `tmp_path_factory.mktemp()`. Note that files
+            will be placed in subdirectories within this path according to
+            their repository structure.
 
     Returns:
         Path:
-            The local path to the cached sample file after downloading.
+            The local path to the cached sample file after downloading,
+            including the subfolder structure (e.g.,
+            `tmp_path/subfolder/filename`).
+
+    Examples:
+        >>> from pathlib import Path
+        >>> from tiatoolbox.data import _fetch_remote_sample
+        >>> # Download a sample whole slide image
+        >>> sample_path = _fetch_remote_sample("svs-1-small")
+        >>> # The file will be at: tmp_dir/sample_wsis/CMU-1-Small-Region.svs
+        >>> # Download to a specific directory
+        >>> target_dir = Path("/path/to/data")
+        >>> sample_path = _fetch_remote_sample("svs-1-small", target_dir)
+        >>> # File will be at: /path/to/data/sample_wsis/CMU-1-Small-Region.svs
 
     """
     tmp_path = Path(tmp_path) if tmp_path else Path(tempfile.gettempdir())
     if not tmp_path.is_dir():
         msg = "tmp_path must be a directory."
         raise ValueError(msg)
-    sample = SAMPLE_FILES[key]
-    url = "/".join(sample["url"])
-    url_filename = Path(urlparse(url).path).name
-    # Get the filename from SAMPLE_FILES, else use the URL filename
-    filename = SAMPLE_FILES[key].get("filename", url_filename)
-    file_path = tmp_path / filename
-    # Download the file if it doesn't exist
-    return download_data(url, save_path=file_path, unzip=sample.get("extract", False))
+
+    file_path = hf_hub_download(
+        repo_id=SAMPLE_FILES[key]["hf_repo_id"],
+        filename=SAMPLE_FILES[key]["filename"],
+        subfolder=SAMPLE_FILES[key]["subfolder"],
+        local_dir=tmp_path,
+        repo_type="dataset",
+    )
+
+    extract = SAMPLE_FILES[key].get("extract", False)
+    if extract:
+        unzip_path = Path(file_path).parent / Path(file_path).stem
+        unzip_data(Path(file_path), unzip_path, del_zip=False)
+        return unzip_path
+
+    return Path(file_path)
 
 
 def _local_sample_path(path: str | Path) -> Path:
