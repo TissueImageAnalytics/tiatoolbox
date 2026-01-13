@@ -280,7 +280,9 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
 
 
 def test_single_output_mtsegmentor(
-    remote_sample: Callable, track_tmp_path: Path
+    remote_sample: Callable,
+    track_tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Tests MultiTaskSegmentor on single task output."""
     mtsegmentor = MultiTaskSegmentor(
@@ -381,3 +383,5 @@ def test_single_output_mtsegmentor(
     fields = ["box", "centroid", "contours", "prob", "type", "predictions"]
     for field in fields:
         assert field not in zarr_group
+
+    assert "Probability maps cannot be saved as AnnotationStore" in caplog.text
