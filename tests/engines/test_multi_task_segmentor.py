@@ -10,6 +10,7 @@ import pytest
 import torch
 import zarr
 
+from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models.engine.multi_task_segmentor import MultiTaskSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore import WSIReader
@@ -242,3 +243,70 @@ def test_single_output_mtsegmentor(
         indices_a=[0, 1, 2],
         indices_b=[0, 1, 2],
     )
+
+    # AnnotationStore output comparison
+    output_ann = mtsegmentor.run(
+        images=patches,
+        patch_mode=True,
+        device=device,
+        output_type="annotationstore",
+        save_dir=track_tmp_path / "patch_output_annotationstore",
+    )
+
+    assert len(output_ann) == 3
+    assert output_ann[0] == track_tmp_path / "patch_output_annotationstore" / "0.db"
+
+    for patch_idx, db_path in enumerate(output_ann):
+        assert (
+            db_path
+            == track_tmp_path / "patch_output_annotationstore" / f"{patch_idx}.db"
+        )
+        store_ = SQLiteStore.open(db_path)
+        annotations_ = store_.values()
+        annotations_geometry_type = [
+            str(annotation_.geometry_type) for annotation_ in annotations_
+        ]
+        annotations_list = list(annotations_)
+        if expected_counts_nuclei[patch_idx] > 0:
+            assert "Polygon" in annotations_geometry_type
+
+            # Build result dict from annotation properties
+            result = {}
+            for ann in annotations_list:
+                for key, value in ann.properties.items():
+                    result.setdefault(key, []).append(value)
+            result["contours"] = [
+                list(poly.exterior.coords)
+                for poly in (a.geometry for a in annotations_list)
+            ]
+
+            # wrap it to make it compatible to assert_output_lengths
+            result_ = {
+                field: [result[field]]
+                for field in ["box", "centroid", "contours", "prob", "type"]
+            }
+
+            # Lengths and equality checks for this patch
+            assert_output_lengths(
+                result_,
+                expected_counts=[expected_counts_nuclei[patch_idx]],
+                fields=["box", "centroid", "contours", "prob", "type"],
+            )
+            assert_output_equal(
+                result_,
+                output_dict,
+                fields=["box", "centroid", "prob", "type"],
+                indices_a=[0],
+                indices_b=[patch_idx],
+            )
+
+            # Contour check (discard last point)
+            assert all(
+                np.array_equal(np.array(a[:-1], dtype=int), np.array(b, dtype=int))
+                for a, b in zip(
+                    result["contours"], output_dict["contours"][patch_idx], strict=False
+                )
+            )
+        else:
+            assert annotations_geometry_type == []
+            assert annotations_list == []

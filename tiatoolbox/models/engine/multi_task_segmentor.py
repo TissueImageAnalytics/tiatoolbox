@@ -2,20 +2,26 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import dask.array as da
 import numpy as np
 import torch
+import zarr
+from shapely.geometry import shape as feature2geometry
 from typing_extensions import Unpack
 
-from tiatoolbox.utils.misc import get_tqdm
+from tiatoolbox import logger
+from tiatoolbox.annotation import SQLiteStore
+from tiatoolbox.annotation.storage import Annotation
+from tiatoolbox.utils.misc import get_tqdm, make_valid_poly
+from tiatoolbox.wsicore.wsireader import is_zarr
 
 from .semantic_segmentor import SemanticSegmentor, SemanticSegmentorRunParams
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
-    from pathlib import Path
 
     from torch.utils.data import DataLoader
 
@@ -252,6 +258,39 @@ class MultiTaskSegmentor(SemanticSegmentor):
         self.tasks = tasks
         return raw_predictions
 
+    def _save_predictions_as_dict_zarr(
+        self: MultiTaskSegmentor,
+        processed_predictions: dict,
+        output_type: str,
+        save_path: Path | None = None,
+        **kwargs: Unpack[SemanticSegmentorRunParams],
+    ) -> dict | AnnotationStore | Path | list[Path]:
+        """Helper function to save predictions as dictionary or zarr."""
+        if output_type.lower() == "dict":
+            # If there is a single task simplify the output.
+            if len(self.tasks) == 1:
+                task_output = processed_predictions.pop(next(iter(self.tasks)))
+                processed_predictions.update(task_output)
+            return super().save_predictions(
+                processed_predictions, output_type, save_path=save_path, **kwargs
+            )
+
+        # Save to zarr
+        for task_name in self.tasks:
+            processed_predictions_ = processed_predictions.pop(task_name)
+            # If there is a single task simplify the output.
+            task_name_ = None if len(self.tasks) == 1 else task_name
+            keys_to_compute = [
+                k for k in processed_predictions_ if k not in self.drop_keys
+            ]
+            _ = self.save_predictions_as_zarr(
+                processed_predictions=processed_predictions_,
+                save_path=save_path,
+                keys_to_compute=keys_to_compute,
+                task_name=task_name_,
+            )
+        return save_path
+
     def save_predictions(
         self: MultiTaskSegmentor,
         processed_predictions: dict,
@@ -315,33 +354,83 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 If an unsupported output_type is provided.
 
         """
-        if output_type.lower() == "dict":
-            # If there is a single task simplify the output.
-            if len(self.tasks) == 1:
-                task_output = processed_predictions.pop(next(iter(self.tasks)))
-                processed_predictions.update(task_output)
-            return super().save_predictions(
-                processed_predictions, output_type, save_path=save_path, **kwargs
+        if output_type in ["dict", "zarr"]:
+            return self._save_predictions_as_dict_zarr(
+                processed_predictions=processed_predictions,
+                output_type=output_type,
+                save_path=save_path,
+                **kwargs,
             )
 
-        if output_type.lower() == "zarr":
-            for task_name in self.tasks:
-                processed_predictions_ = processed_predictions.pop(task_name)
-                # If there is a single task simplify the output.
-                task_name_ = None if len(self.tasks) == 1 else task_name
-                keys_to_compute = [
-                    k for k in processed_predictions_ if k not in self.drop_keys
-                ]
-                _ = self.save_predictions_as_zarr(
-                    processed_predictions=processed_predictions_,
-                    save_path=save_path,
-                    keys_to_compute=keys_to_compute,
-                    task_name=task_name_,
-                )
-            return save_path
+        # Save to AnnotationStore
+        return_probabilities = kwargs.get("return_probabilities", False)
+        output_type_ = (
+            "zarr"
+            if is_zarr(save_path.with_suffix(".zarr")) or return_probabilities
+            else "dict"
+        )
 
-        # Need to update for AnnotationStore
-        return save_path
+        # This runs dask.compute and returns numpy arrays
+        # for saving annotationstore output.
+        processed_predictions = self._save_predictions_as_dict_zarr(
+            processed_predictions,
+            output_type=output_type_,
+            save_path=save_path.with_suffix(".zarr"),
+            **kwargs,
+        )
+
+        if isinstance(processed_predictions, Path):
+            processed_predictions = zarr.open(str(processed_predictions), mode="r")
+
+        # scale_factor set from kwargs
+        scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
+        # class_dict set from kwargs
+        class_dict = kwargs.get("class_dict")
+        # Need to add support for zarr conversion.
+        save_paths = []
+
+        logger.info("Saving predictions as AnnotationStore.")
+
+        # Not required for annotationstore
+        processed_predictions.pop("predictions")
+
+        if self.patch_mode:
+            for i, predictions in enumerate(
+                zip(*processed_predictions.values(), strict=False)
+            ):
+                predictions_ = dict(
+                    zip(processed_predictions.keys(), predictions, strict=False)
+                )
+                if isinstance(self.images[i], Path):
+                    output_path = save_path.parent / (self.images[i].stem + ".db")
+                else:
+                    output_path = save_path.parent / (str(i) + ".db")
+
+                origin = predictions_.pop("coordinates")[:2]
+                store = SQLiteStore()
+                store = dict_to_store(
+                    store=store,
+                    processed_predictions=predictions_,
+                    class_dict=class_dict,
+                    scale_factor=scale_factor,
+                    origin=origin,
+                )
+
+                store.commit()
+                store.dump(output_path)
+
+                save_paths.append(output_path)
+
+        if return_probabilities:
+            msg = (
+                f"Probability maps cannot be saved as AnnotationStore. "
+                f"To visualise heatmaps in TIAToolbox Visualization tool,"
+                f"convert heatmaps in {save_path} to ome.tiff using"
+                f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
+            )
+            logger.info(msg)
+
+        return save_paths
 
     def run(
         self: MultiTaskSegmentor,
@@ -476,3 +565,44 @@ class MultiTaskSegmentor(SemanticSegmentor):
             output_type=output_type,
             **kwargs,
         )
+
+
+def dict_to_store(
+    store: SQLiteStore,
+    processed_predictions: dict,
+    class_dict: dict | None = None,
+    origin: tuple[float, float] = (0, 0),
+    scale_factor: tuple[float, float] = (1, 1),
+) -> AnnotationStore:
+    """Helper function to convert dict to store."""
+    contour = processed_predictions.pop("contours")
+
+    ann = []
+    for i, contour_ in enumerate(contour):
+        ann_ = Annotation(
+            make_valid_poly(
+                feature2geometry(
+                    {
+                        "type": processed_predictions.get("geom_type", "Polygon"),
+                        "coordinates": scale_factor * np.array([contour_]),
+                    },
+                ),
+                tuple(origin),
+            ),
+            {
+                prop: (
+                    class_dict[processed_predictions[prop][i]]
+                    if prop == "type" and class_dict is not None
+                    # Intention is convert arrays to list
+                    # There might be int or float values which need to be
+                    # converted to arrays first and then apply tolist().
+                    else np.array(processed_predictions[prop][i]).tolist()
+                )
+                for prop in processed_predictions
+            },
+        )
+        ann.append(ann_)
+    logger.info("Added %d annotations.", len(ann))
+    store.append_many(ann)
+
+    return store
