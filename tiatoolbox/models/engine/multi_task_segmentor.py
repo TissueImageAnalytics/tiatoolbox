@@ -325,22 +325,27 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         """
         if output_type.lower() == "dict":
+            # If there is a single task simplify the output.
+            if len(self.tasks) == 1:
+                task_output = processed_predictions.pop(next(iter(self.tasks)))
+                processed_predictions.update(task_output)
             return super().save_predictions(
                 processed_predictions, output_type, save_path=save_path, **kwargs
             )
 
         if output_type.lower() == "zarr":
             for task_name in self.tasks:
+                processed_predictions_ = processed_predictions.pop(task_name)
+                # If there is a single task simplify the output.
+                task_name_ = None if len(self.tasks) == 1 else task_name
                 keys_to_compute = [
-                    k
-                    for k in processed_predictions[task_name]
-                    if k not in self.drop_keys
+                    k for k in processed_predictions_ if k not in self.drop_keys
                 ]
                 _ = self.save_predictions_as_zarr(
-                    processed_predictions=processed_predictions[task_name],
+                    processed_predictions=processed_predictions_,
                     save_path=save_path,
                     keys_to_compute=keys_to_compute,
-                    task_name=task_name,
+                    task_name=task_name_,
                 )
             return save_path
 

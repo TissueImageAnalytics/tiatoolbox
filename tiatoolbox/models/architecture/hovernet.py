@@ -778,7 +778,10 @@ class HoVerNet(ModelABC):
             tp_map = None
             np_map, hv_map = raw_maps
 
-        pred_type = tp_map
+        np_map = np_map.compute() if isinstance(np_map, da.Array) else np_map
+        hv_map = hv_map.compute() if isinstance(hv_map, da.Array) else hv_map
+        pred_type = tp_map.compute() if isinstance(tp_map, da.Array) else tp_map
+
         pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
         nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
 

@@ -43,6 +43,23 @@ def assert_predictions_and_boxes(
         )
 
 
+def assert_output_equal(
+    output_a: OutputType,
+    output_b: OutputType,
+    fields: Sequence[str],
+    indices_a: Sequence[int],
+    indices_b: Sequence[int],
+) -> None:
+    """Assert equality of arrays across outputs for given fields/indices."""
+    for field in fields:
+        for i_a, i_b in zip(indices_a, indices_b, strict=False):
+            left = output_a[field][i_a]
+            right = output_b[field][i_b]
+            assert all(
+                np.array_equal(a, b) for a, b in zip(left, right, strict=False)
+            ), f"{field}[{i_a}] vs {field}[{i_b}] mismatch"
+
+
 def test_mtsegmentor_init() -> None:
     """Tests SemanticSegmentor initialization."""
     segmentor = MultiTaskSegmentor(model="hovernetplus-oed", device=device)
@@ -120,4 +137,84 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
         output_zarr["layer_segmentation"],
         expected_counts_layer,
         fields=["contours", "type"],
+    )
+
+    assert_output_equal(
+        output_zarr["nuclei_segmentation"],
+        output_dict["nuclei_segmentation"],
+        fields=["box", "centroid", "contours", "prob", "type"],
+        indices_a=[0, 1, 2],
+        indices_b=[0, 1, 2],
+    )
+    assert_output_equal(
+        output_zarr["layer_segmentation"],
+        output_dict["layer_segmentation"],
+        fields=["contours", "type"],
+        indices_a=[0, 1, 2],
+        indices_b=[0, 1, 2],
+    )
+
+
+def test_single_output_mtsegmentor(
+    remote_sample: Callable, track_tmp_path: Path
+) -> None:
+    """Tests MultiTaskSegmentor on single task output."""
+    mtsegmentor = MultiTaskSegmentor(
+        model="hovernet_fast-pannuke", batch_size=32, verbose=False, device=device
+    )
+    mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
+    mini_wsi = WSIReader.open(mini_wsi_svs)
+    size = (256, 256)
+    resolution = 0.25
+    units: Final = "mpp"
+
+    patch1 = mini_wsi.read_rect(
+        location=(0, 0), size=size, resolution=resolution, units=units
+    )
+    patch2 = mini_wsi.read_rect(
+        location=(512, 512), size=size, resolution=resolution, units=units
+    )
+    patch3 = np.zeros_like(patch1)
+    patches = np.stack([patch1, patch2, patch3], axis=0)
+
+    assert not mtsegmentor.patch_mode
+
+    output_dict = mtsegmentor.run(
+        images=patches,
+        return_probabilities=True,
+        return_labels=False,
+        device=device,
+        patch_mode=True,
+    )
+
+    expected_counts_nuclei = [41, 17, 0]
+    assert_output_lengths(
+        output_dict,
+        expected_counts_nuclei,
+        fields=["box", "centroid", "contours", "prob", "type"],
+    )
+    assert_predictions_and_boxes(output_dict, expected_counts_nuclei, is_zarr=False)
+
+    # Zarr output comparison
+    output_zarr = mtsegmentor.run(
+        images=patches,
+        patch_mode=True,
+        device=device,
+        output_type="zarr",
+        save_dir=track_tmp_path / "patch_output_zarr",
+    )
+    output_zarr = zarr.open(output_zarr, mode="r")
+
+    assert_output_lengths(
+        output_zarr,
+        expected_counts_nuclei,
+        fields=["box", "centroid", "contours", "prob", "type"],
+    )
+
+    assert_output_equal(
+        output_zarr,
+        output_dict,
+        fields=["box", "centroid", "contours", "prob", "type"],
+        indices_a=[0, 1, 2],
+        indices_b=[0, 1, 2],
     )
