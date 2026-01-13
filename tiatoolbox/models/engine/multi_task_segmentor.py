@@ -282,6 +282,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
             keys_to_compute = [
                 k for k in processed_predictions_ if k not in self.drop_keys
             ]
+
+            if "coordinates" in processed_predictions:
+                processed_predictions_.update(
+                    {"coordinates": processed_predictions["coordinates"]}
+                )
+                keys_to_compute.extend(["coordinates"])
             _ = self.save_predictions_as_zarr(
                 processed_predictions=processed_predictions_,
                 save_path=save_path,
@@ -445,7 +451,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         )
 
         if isinstance(processed_predictions, Path):
-            processed_predictions = zarr.open(str(processed_predictions), mode="r")
+            processed_predictions = zarr.open(str(processed_predictions), mode="r+")
 
         save_paths = []
         if self.tasks & processed_predictions.keys():
