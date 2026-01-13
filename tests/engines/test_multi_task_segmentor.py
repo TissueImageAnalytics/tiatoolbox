@@ -344,6 +344,9 @@ def test_single_output_mtsegmentor(
     )
 
     # AnnotationStore output comparison
+
+    # Reinitialize to check for probabilities in output.
+    mtsegmentor.drop_keys = []
     output_ann = mtsegmentor.run(
         images=patches,
         patch_mode=True,
@@ -363,3 +366,18 @@ def test_single_output_mtsegmentor(
         expected_counts=expected_counts_nuclei,
         task_name=None,
     )
+
+    zarr_file = track_tmp_path / "patch_output_annotationstore" / "output.zarr"
+
+    assert zarr_file.exists()
+
+    zarr_group = zarr.open(
+        str(zarr_file),
+        mode="r",
+    )
+
+    assert "probabilities" in zarr_group
+
+    fields = ["box", "centroid", "contours", "prob", "type", "predictions"]
+    for field in fields:
+        assert field not in zarr_group

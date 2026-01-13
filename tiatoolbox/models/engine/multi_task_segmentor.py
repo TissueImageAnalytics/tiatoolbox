@@ -288,6 +288,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     {"coordinates": processed_predictions["coordinates"]}
                 )
                 keys_to_compute.extend(["coordinates"])
+            if kwargs.get("return_probabilities", False):
+                processed_predictions_.update(
+                    {"probabilities": processed_predictions["probabilities"]}
+                )
+                keys_to_compute.extend(["probabilities"])
             _ = self.save_predictions_as_zarr(
                 processed_predictions=processed_predictions_,
                 save_path=save_path,
@@ -313,16 +318,17 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         logger.info("Saving predictions as AnnotationStore.")
 
-        # Not required for annotationstore
+        # predictions are not required when saving to AnnotationStore.
         processed_predictions.pop("predictions")
 
+        keys_to_compute = list(processed_predictions.keys())
+        if "probabilities" in keys_to_compute:
+            keys_to_compute.remove("probabilities")
+
         if self.patch_mode:
-            for i, predictions in enumerate(
-                zip(*processed_predictions.values(), strict=False)
-            ):
-                predictions_ = dict(
-                    zip(processed_predictions.keys(), predictions, strict=False)
-                )
+            for i in range(len(self.images)):
+                values = [processed_predictions[key][i] for key in keys_to_compute]
+                predictions_ = dict(zip(keys_to_compute, values, strict=False))
                 if isinstance(self.images[i], Path):
                     store_file_name = (
                         f"{self.images[i].stem}.db"
@@ -350,6 +356,10 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 store.dump(output_path)
 
                 save_paths.append(output_path)
+
+        for key in keys_to_compute:
+            del processed_predictions[key]
+
         return_probabilities = kwargs.get("return_probabilities", False)
         if return_probabilities:
             msg = (
