@@ -291,6 +291,72 @@ class MultiTaskSegmentor(SemanticSegmentor):
             )
         return save_path
 
+    def _save_predictions_as_annotationstore(
+        self: MultiTaskSegmentor,
+        processed_predictions: dict,
+        task_name: str | None = None,
+        save_path: Path | None = None,
+        **kwargs: Unpack[SemanticSegmentorRunParams],
+    ) -> dict | AnnotationStore | Path | list[Path]:
+        """Helper function to save predictions as annotationstore."""
+        # scale_factor set from kwargs
+        scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
+        # class_dict set from kwargs
+        class_dict = kwargs.get("class_dict")
+        # Need to add support for zarr conversion.
+        save_paths = []
+
+        logger.info("Saving predictions as AnnotationStore.")
+
+        # Not required for annotationstore
+        processed_predictions.pop("predictions")
+
+        if self.patch_mode:
+            for i, predictions in enumerate(
+                zip(*processed_predictions.values(), strict=False)
+            ):
+                predictions_ = dict(
+                    zip(processed_predictions.keys(), predictions, strict=False)
+                )
+                if isinstance(self.images[i], Path):
+                    store_file_name = (
+                        f"{self.images[i].stem}.db"
+                        if task_name is None
+                        else f"{self.images[i].stem}_{task_name}.db"
+                    )
+                    output_path = save_path.parent / store_file_name
+                else:
+                    store_file_name = (
+                        f"{i}.db" if task_name is None else f"{i}_{task_name}.db"
+                    )
+                    output_path = save_path.parent / store_file_name
+
+                origin = predictions_.pop("coordinates")[:2]
+                store = SQLiteStore()
+                store = dict_to_store(
+                    store=store,
+                    processed_predictions=predictions_,
+                    class_dict=class_dict,
+                    scale_factor=scale_factor,
+                    origin=origin,
+                )
+
+                store.commit()
+                store.dump(output_path)
+
+                save_paths.append(output_path)
+        return_probabilities = kwargs.get("return_probabilities", False)
+        if return_probabilities:
+            msg = (
+                f"Probability maps cannot be saved as AnnotationStore. "
+                f"To visualise heatmaps in TIAToolbox Visualization tool,"
+                f"convert heatmaps in {save_path} to ome.tiff using"
+                f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
+            )
+            logger.info(msg)
+
+        return save_paths
+
     def save_predictions(
         self: MultiTaskSegmentor,
         processed_predictions: dict,
@@ -382,55 +448,29 @@ class MultiTaskSegmentor(SemanticSegmentor):
         if isinstance(processed_predictions, Path):
             processed_predictions = zarr.open(str(processed_predictions), mode="r")
 
-        # scale_factor set from kwargs
-        scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
-        # class_dict set from kwargs
-        class_dict = kwargs.get("class_dict")
-        # Need to add support for zarr conversion.
         save_paths = []
-
-        logger.info("Saving predictions as AnnotationStore.")
-
-        # Not required for annotationstore
-        processed_predictions.pop("predictions")
-
-        if self.patch_mode:
-            for i, predictions in enumerate(
-                zip(*processed_predictions.values(), strict=False)
-            ):
-                predictions_ = dict(
-                    zip(processed_predictions.keys(), predictions, strict=False)
+        if self.tasks & processed_predictions.keys():
+            for task_name in self.tasks:
+                dict_for_store = {
+                    **processed_predictions[task_name],
+                    "coordinates": processed_predictions["coordinates"],
+                }
+                out_path = self._save_predictions_as_annotationstore(
+                    processed_predictions=dict_for_store,
+                    task_name=task_name,
+                    save_path=save_path,
+                    **kwargs,
                 )
-                if isinstance(self.images[i], Path):
-                    output_path = save_path.parent / (self.images[i].stem + ".db")
-                else:
-                    output_path = save_path.parent / (str(i) + ".db")
+                save_paths += out_path
 
-                origin = predictions_.pop("coordinates")[:2]
-                store = SQLiteStore()
-                store = dict_to_store(
-                    store=store,
-                    processed_predictions=predictions_,
-                    class_dict=class_dict,
-                    scale_factor=scale_factor,
-                    origin=origin,
-                )
+            return save_paths
 
-                store.commit()
-                store.dump(output_path)
-
-                save_paths.append(output_path)
-
-        if return_probabilities:
-            msg = (
-                f"Probability maps cannot be saved as AnnotationStore. "
-                f"To visualise heatmaps in TIAToolbox Visualization tool,"
-                f"convert heatmaps in {save_path} to ome.tiff using"
-                f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
-            )
-            logger.info(msg)
-
-        return save_paths
+        return self._save_predictions_as_annotationstore(
+            processed_predictions=processed_predictions,
+            task_name=None,
+            save_path=save_path,
+            **kwargs,
+        )
 
     def run(
         self: MultiTaskSegmentor,

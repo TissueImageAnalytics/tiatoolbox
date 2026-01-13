@@ -179,6 +179,17 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
         indices_b=[0, 1, 2],
     )
 
+    # AnnotationStore output comparison
+    output_ann = mtsegmentor.run(
+        images=patches,
+        patch_mode=True,
+        device=device,
+        output_type="annotationstore",
+        save_dir=track_tmp_path / "patch_output_annotationstore",
+    )
+
+    _ = output_ann
+
 
 def test_single_output_mtsegmentor(
     remote_sample: Callable, track_tmp_path: Path
