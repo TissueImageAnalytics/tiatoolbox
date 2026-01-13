@@ -1245,7 +1245,7 @@ def process_contours(
     contours: list[np.ndarray],
     hierarchy: np.ndarray,
     scale_factor: tuple[float, float] = (1, 1),
-    properties: dict[str, object] | None = None,
+    properties: dict[str, JSON] | None = None,
 ) -> list[Annotation]:
     """Process contours and hierarchy to create annotations.
 
@@ -1265,7 +1265,7 @@ def process_contours(
     annotations_list: list[Annotation] = []
     outer_contours: dict[int, np.ndarray] = {}
     holes_dict: dict[int, list[np.ndarray]] = {}
-    base_props: dict[str, object] = {"type": "mask"}
+    base_props: dict[str, JSON] = {"type": "mask"}
     if properties:
         base_props.update(properties)
 
