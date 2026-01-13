@@ -32,12 +32,13 @@ from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteSto
 from tiatoolbox.utils.env_detection import is_notebook
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
-
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
     from os import PathLike
-    from tiatoolbox.type_hints import JSON
+
     from shapely import geometry
+
+    from tiatoolbox.type_hints import JSON
 
 
 def split_path_name_ext(
@@ -1246,7 +1247,7 @@ def process_contours(
     contours: list[np.ndarray],
     hierarchy: np.ndarray,
     scale_factor: tuple[float, float] = (1, 1),
-    properties: dict[str, "JSON"] | None = None,
+    properties: dict[str, JSON] | None = None,
 ) -> list[Annotation]:
     """Process contours and hierarchy to create annotations.
 
@@ -1268,7 +1269,7 @@ def process_contours(
     annotations_list: list[Annotation] = []
     outer_contours: dict[int, np.ndarray] = {}
     holes_dict: dict[int, list[np.ndarray]] = {}
-    base_props: dict[str, "JSON"] = {"type": "mask"}
+    base_props: dict[str, JSON] = {"type": "mask"}
     if properties:
         base_props.update(properties)
 
