@@ -56,7 +56,10 @@ def bk_session(data_path: dict[str, Path]) -> ClientSession:
     time.sleep(1)  # allow time for server to start
 
     args = [
-        [str(data_path["base_path"].parent)],
+        [
+            str(data_path["base_path"] / "slides" / "sample_wsis"),
+            str(data_path["base_path"] / "overlays" / "testdata" / "annotation"),
+        ],
         5006,
     ]
     kwargs = {"noshow": True}
