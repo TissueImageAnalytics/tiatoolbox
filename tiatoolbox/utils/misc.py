@@ -31,6 +31,7 @@ from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.env_detection import is_notebook
 from tiatoolbox.utils.exceptions import FileNotSupportedError
+from tiatoolbox.type_hints import JSON
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterator
