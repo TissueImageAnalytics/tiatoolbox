@@ -326,19 +326,19 @@ class MultiTaskSegmentor(SemanticSegmentor):
             keys_to_compute.remove("probabilities")
 
         if self.patch_mode:
-            for i in range(len(self.images)):
-                values = [processed_predictions[key][i] for key in keys_to_compute]
+            for idx, curr_image in enumerate(self.images):
+                values = [processed_predictions[key][idx] for key in keys_to_compute]
                 predictions_ = dict(zip(keys_to_compute, values, strict=False))
-                if isinstance(self.images[i], Path):
+                if isinstance(curr_image, Path):
                     store_file_name = (
-                        f"{self.images[i].stem}.db"
+                        f"{curr_image.stem}.db"
                         if task_name is None
-                        else f"{self.images[i].stem}_{task_name}.db"
+                        else f"{curr_image.stem}_{task_name}.db"
                     )
                     output_path = save_path.parent / store_file_name
                 else:
                     store_file_name = (
-                        f"{i}.db" if task_name is None else f"{i}_{task_name}.db"
+                        f"{idx}.db" if task_name is None else f"{idx}_{task_name}.db"
                     )
                     output_path = save_path.parent / store_file_name
 
