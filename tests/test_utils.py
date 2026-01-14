@@ -1139,7 +1139,7 @@ def test_download_data(track_tmp_path: Path) -> None:
     save_path = save_dir_path / "temp"
     with pytest.raises(HTTPError):
         misc.download_data(
-            "https://tiatoolbox.dcs.warwick.ac.uk/invalid-url",
+            "https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/invalid_url",
             save_path,
         )
 
