@@ -64,6 +64,7 @@ def assert_output_equal(
 
 
 def assert_annotation_store_patch_output(
+    inputs: list | np.ndarray,
     output_ann: list[Path],
     task_name: str | None,
     track_tmp_path: Path,
@@ -73,9 +74,19 @@ def assert_annotation_store_patch_output(
 ) -> None:
     """Helper function to test AnnotationStore output."""
     for patch_idx, db_path in enumerate(output_ann):
-        store_file_name = (
-            f"{patch_idx}.db" if task_name is None else f"{patch_idx}_{task_name}.db"
-        )
+        if isinstance(inputs[patch_idx], Path):
+            store_file_name = (
+                f"{inputs[patch_idx].stem}.db"
+                if task_name is None
+                else f"{inputs[patch_idx].stem}_{task_name}.db"
+            )
+        else:
+            store_file_name = (
+                f"{patch_idx}.db"
+                if task_name is None
+                else f"{patch_idx}_{task_name}.db"
+            )
+
         assert (
             db_path == track_tmp_path / "patch_output_annotationstore" / store_file_name
         )
@@ -271,6 +282,7 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
             else expected_counts_layer
         )
         assert_annotation_store_patch_output(
+            inputs=patches,
             output_ann=output_ann_,
             output_dict=output_dict[task_name],
             track_tmp_path=track_tmp_path,
@@ -311,8 +323,7 @@ def test_single_output_mtsegmentor(
     imwrite(patch2_path, patch2)
     imwrite(patch3_path, patch3)
 
-    inputs = [Path(patch1_path), str(patch2_path), str(patch3_path)]
-    patches = np.stack([patch1, patch2, patch3], axis=0)
+    inputs = [Path(patch1_path), Path(patch2_path), Path(patch3_path)]
 
     assert not mtsegmentor.patch_mode
 
@@ -334,7 +345,7 @@ def test_single_output_mtsegmentor(
 
     # Zarr output comparison
     output_zarr = mtsegmentor.run(
-        images=patches,
+        images=inputs,
         patch_mode=True,
         device=device,
         output_type="zarr",
@@ -361,7 +372,7 @@ def test_single_output_mtsegmentor(
     # Reinitialize to check for probabilities in output.
     mtsegmentor.drop_keys = []
     output_ann = mtsegmentor.run(
-        images=patches,
+        images=inputs,
         patch_mode=True,
         device=device,
         output_type="annotationstore",
@@ -372,6 +383,7 @@ def test_single_output_mtsegmentor(
     assert len(output_ann) == 3
 
     assert_annotation_store_patch_output(
+        inputs=inputs,
         output_ann=output_ann,
         output_dict=output_dict,
         track_tmp_path=track_tmp_path,
