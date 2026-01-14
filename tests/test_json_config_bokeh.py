@@ -51,11 +51,12 @@ def bk_session(data_path: dict[str, Path]) -> ClientSession:
 
     args = [
         [
-            str(data_path["base_path"] / "slides"),
-            str(data_path["base_path"] / "overlays"),
+            str(data_path["base_path"] / "slides" / "sample_wsis"),
+            str(data_path["base_path"] / "overlays" / "testdata" / "annotation"),
         ],
         5006,
     ]
+
     kwargs = {"noshow": True}
     proc = Thread(target=run_bokeh, daemon=True, args=args, kwargs=kwargs)
     proc.start()
