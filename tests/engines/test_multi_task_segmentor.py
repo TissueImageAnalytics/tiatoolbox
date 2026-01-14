@@ -13,6 +13,7 @@ import zarr
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models.engine.multi_task_segmentor import MultiTaskSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
+from tiatoolbox.utils import imwrite
 from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
@@ -301,12 +302,22 @@ def test_single_output_mtsegmentor(
         location=(512, 512), size=size, resolution=resolution, units=units
     )
     patch3 = np.zeros_like(patch1)
+
+    patch1_path = track_tmp_path / "patch1.png"
+    patch2_path = track_tmp_path / "patch2.png"
+    patch3_path = track_tmp_path / "patch3.png"
+
+    imwrite(patch1_path, patch1)
+    imwrite(patch2_path, patch2)
+    imwrite(patch3_path, patch3)
+
+    inputs = [Path(patch1_path), str(patch2_path), str(patch3_path)]
     patches = np.stack([patch1, patch2, patch3], axis=0)
 
     assert not mtsegmentor.patch_mode
 
     output_dict = mtsegmentor.run(
-        images=patches,
+        images=inputs,
         return_probabilities=True,
         return_labels=False,
         device=device,
