@@ -272,7 +272,7 @@ def fsspec_wsi(sample_svs: Path, track_tmp_path: Path) -> FsspecJsonWSIReader:
 
     since loading the whole image using HTTP range requests from:
 
-    https://tiatoolbox.dcs.warwick.ac.uk/sample_wsis/CMU-1-Small-Region.svs
+    https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/sample_wsis/CMU-1-Small-Region.svs
 
     takes about 20 seconds.
 
@@ -289,9 +289,7 @@ def fsspec_wsi(sample_svs: Path, track_tmp_path: Path) -> FsspecJsonWSIReader:
     )
     svs_file_path = str(files_all[0])
     json_file_path = str(track_tmp_path / "fsspec.json")
-    final_url = (
-        "https://tiatoolbox.dcs.warwick.ac.uk/sample_wsis/CMU-1-Small-Region.svs"
-    )
+    final_url = "https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/sample_wsis/CMU-1-Small-Region.svs"
     tiff_to_fsspec.main(svs_file_path, json_file_path, final_url)
 
     _FSSPEC_WSI_CACHE[cache_key] = wsireader.FsspecJsonWSIReader(json_file_path)
@@ -1879,7 +1877,7 @@ def test_command_line_read_bounds(sample_ndpi: Path, track_tmp_path: Path) -> No
     assert Path(track_tmp_path).joinpath("im_region2.jpg").is_file()
 
 
-def test_command_line_jp2_read_bounds(sample_jp2: Path, track_tmp_path: Path) -> None:
+def test_command_line_jp2_read_bounds(sample_jp2: Path) -> None:
     """Test JP2 read_bounds."""
     runner = CliRunner()
     read_bounds_result = runner.invoke(
@@ -1898,7 +1896,8 @@ def test_command_line_jp2_read_bounds(sample_jp2: Path, track_tmp_path: Path) ->
     )
 
     assert read_bounds_result.exit_code == 0
-    assert Path(track_tmp_path).joinpath("../im_region.jpg").is_file()
+    result_path = sample_jp2.parent.parent.joinpath("im_region.jpg")
+    assert result_path.is_file()
 
 
 @pytest.mark.skipif(
@@ -2978,7 +2977,7 @@ def test_fsspec_wsireader_info_read(sample_svs: Path, track_tmp_path: Path) -> N
 
     Generate fsspec json file and load image from:
 
-    https://tiatoolbox.dcs.warwick.ac.uk/sample_wsis/CMU-1-Small-Region.svs
+    https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/sample_wsis/CMU-1-Small-Region.svs
 
     """
     wsi = fsspec_wsi(sample_svs, track_tmp_path)

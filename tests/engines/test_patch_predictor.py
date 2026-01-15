@@ -210,9 +210,7 @@ def test_patch_predictor_api(
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
     # test loading user weight
-    pretrained_weights_url = (
-        "https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet18-kather100k.pth"
-    )
+    pretrained_weights_url = "https://huggingface.co/TIACentre/TIAToolbox_pretrained_weights/resolve/main/resnet18-kather100k.pth"
 
     # remove prev generated data
     shutil.rmtree(save_dir_path, ignore_errors=True)
