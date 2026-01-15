@@ -364,16 +364,12 @@ class WSIStreamDataset(torch_data.Dataset):
 
     def _get_reader(self: WSIStreamDataset, img_path: str | Path) -> WSIReader:
         """Get appropriate reader for input path."""
-        if isinstance(img_path, np.ndarray):
-            # if img_path is a numpy array, it is already an image
-            img = img_path
-        else:
-            img_path = Path(img_path)
-            if self.mode == "wsi":
-                return WSIReader.open(img_path)
-            img = imread(img_path)
-            # initialise metadata for VirtualWSIReader.
-            # here, we simulate a whole-slide image, but with a single level.
+        img_path = Path(img_path)
+        if self.mode == "wsi":
+            return WSIReader.open(img_path)
+        img = imread(img_path)
+        # initialise metadata for VirtualWSIReader.
+        # here, we simulate a whole-slide image, but with a single level.
         metadata = WSIMeta(
             mpp=np.array([1.0, 1.0]),
             objective_power=10,
@@ -725,8 +721,7 @@ class SemanticSegmentor:
         auto_get_mask: bool,
     ) -> tuple[WSIReader, WSIReader]:
         """Define how to get reader for mask and source image."""
-        if not isinstance(img_path, np.ndarray):
-            img_path = Path(img_path)
+        img_path = Path(img_path)
         reader = WSIReader.open(img_path)
 
         mask_reader = None

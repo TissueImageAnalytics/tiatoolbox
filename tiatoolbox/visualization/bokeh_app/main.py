@@ -1286,11 +1286,25 @@ def sam_segment() -> None:
     by the point in pt_source.
 
     """
+    prompt_segmentor = PromptSegmentor()
+    x_start = max(0, UI["p"].x_range.start)
+    y_start = max(0, -UI["p"].y_range.end)
+    x_end = min(UI["p"].x_range.end, UI["vstate"].dims[0])
+    y_end = min(-UI["p"].y_range.start, UI["vstate"].dims[1])
+    offset = np.array([x_start, y_start])
+
+    height = y_end - y_start
+    width = x_end - x_start
+    res, scale_factor = prompt_segmentor.calc_mpp(
+        (width, height), UI["vstate"].mpp[0], 1500
+    )
+
     # Get point coordinates
     x = np.round(UI["pt_source"].data["x"])
     y = np.round(UI["pt_source"].data["y"])
     point_coords = (
-        np.array([[[x[i], -y[i]] for i in range(len(x))]], np.uint32)
+        (np.array([[[x[i], -y[i]] for i in range(len(x))]], np.uint32) - offset)
+        / scale_factor
         if len(x) > 0
         else None
     )
@@ -1311,46 +1325,33 @@ def sam_segment() -> None:
     width = [round(UI["box_source"].data["width"][i]) for i in range(len(x))]
     height = [round(UI["box_source"].data["height"][0]) for i in range(len(x))]
     box_coords = (
-        np.array(
-            [[[x[i], y[i], x[i] + width[i], height[i] + y[i]] for i in range(len(x))]],
-            np.uint32,
+        (
+            np.array(
+                [
+                    [
+                        [x[i], y[i], x[i] + width[i], height[i] + y[i]]
+                        for i in range(len(x))
+                    ]
+                ],
+                np.uint32,
+            )
+            - np.array(
+                [[x_start, y_start, x_start, y_start]],
+            )
         )
+        / scale_factor
         if len(x) > 0
         else None
     )
 
-    prompt_segmentor = PromptSegmentor()
     tmp_save_dir = Path(tempfile.mkdtemp(suffix="bokeh_temp"))
 
-    x_start = max(0, UI["p"].x_range.start)
-    y_start = max(0, -UI["p"].y_range.end)
-    x_end = min(UI["p"].x_range.end, UI["vstate"].dims[0])
-    y_end = min(-UI["p"].y_range.start, UI["vstate"].dims[1])
-
-    height = y_end - y_start
-    width = x_end - x_start
-    res, scale_factor = prompt_segmentor.calc_mpp(
-        (width, height), UI["vstate"].mpp[0], 1500
-    )
-
     # read the region of interest from the slide
-    if UI["vstate"].wsi is None:
-        msg = "No slide loaded, cannot run SAM"
-        raise ValueError(msg)
     roi = UI["vstate"].wsi.read_bounds(
         (int(x_start), int(y_start), int(x_end), int(y_end)),
         resolution=res,
         units="mpp",
     )
-
-    # transform point_coords and box_coords to the roi coordinate system
-    if point_coords is not None:
-        point_coords = (point_coords - np.array([[x_start, y_start]])) / scale_factor
-    if box_coords is not None:
-        box_coords = (
-            box_coords - np.array([[x_start, y_start, x_start, y_start]])
-        ) / scale_factor
-    prompt_segmentor.offset = np.array([x_start, y_start])
 
     # Run SAM on the point
     prediction = prompt_segmentor.predict(
