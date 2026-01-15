@@ -1333,7 +1333,8 @@ def sam_segment() -> None:
 
     # read the region of interest from the slide
     if UI["vstate"].wsi is None:
-        raise ValueError("No slide loaded, cannot run SAM")
+        msg = "No slide loaded, cannot run SAM"
+        raise ValueError(msg)
     roi = UI["vstate"].wsi.read_bounds(
         (int(x_start), int(y_start), int(x_end), int(y_end)),
         resolution=res,
@@ -1359,13 +1360,6 @@ def sam_segment() -> None:
     )
 
     ann_loc = str(prediction)
-
-    # slide_filename = UI["vstate"].slide_path.stem + ".db"
-    # destination = doc_config["overlay_folder"] / slide_filename
-
-    # Move the database file
-    # ! Need to check if this is necessary
-    # move(ann_loc, destination)
 
     fname = make_safe_name(ann_loc)
     resp = UI["s"].put(
