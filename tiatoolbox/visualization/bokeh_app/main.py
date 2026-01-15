@@ -67,7 +67,9 @@ from requests.adapters import HTTPAdapter, Retry
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from tiatoolbox import logger
 from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
-from tiatoolbox.models.engine.prompt_segmentor import PromptSegmentor
+from tiatoolbox.models.engine.prompt_segmentor import (
+    PromptSegmentor,  # skipcq: FLK-E402
+)
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.utils.misc import select_device
 from tiatoolbox.utils.visualization import random_colors
