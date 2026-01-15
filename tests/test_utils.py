@@ -2265,3 +2265,42 @@ def test_cast_to_min_dtype_numpy_large_value() -> None:
     result = cast_to_min_dtype(large_value)
     assert result == large_value
     assert result.dtype == object
+
+
+def test_process_contours_without_properties() -> None:
+    """Test process_contours when properties parameter is None."""
+    # Create a simple square contour
+    contours = [np.array([[10, 10], [10, 20], [20, 20], [20, 10]])]
+    hierarchy = np.array([[[1, -1, -1, -1]]])  # Single outer contour
+
+    annotations = misc.process_contours(
+        contours=contours,
+        hierarchy=hierarchy,
+        scale_factor=(1.0, 1.0),
+        properties=None,
+    )
+
+    assert len(annotations) == 1
+    # When properties is None, base_props should only have "type": "mask"
+    assert annotations[0].properties == {"type": "mask"}
+
+
+def test_process_contours_with_properties() -> None:
+    """Test process_contours when custom properties are provided."""
+    # Create a simple square contour
+    contours = [np.array([[10, 10], [10, 20], [20, 20], [20, 10]])]
+    hierarchy = np.array([[[1, -1, -1, -1]]])  # Single outer contour
+
+    custom_props = {"label": "test_label", "confidence": 0.95}
+
+    annotations = misc.process_contours(
+        contours=contours,
+        hierarchy=hierarchy,
+        scale_factor=(1.0, 1.0),
+        properties=custom_props,
+    )
+
+    assert len(annotations) == 1
+    # When properties are provided, base_props should be updated with custom properties
+    expected_props = {"type": "mask", "label": "test_label", "confidence": 0.95}
+    assert annotations[0].properties == expected_props
