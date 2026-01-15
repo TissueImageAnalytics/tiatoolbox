@@ -586,7 +586,9 @@ def test_sam_segment(doc: Document, data_path: pytest.TempPathFactory) -> None:
     click = ButtonClick(save_button)
     save_button._trigger_event(click)
     saved_path = (
-        data_path["base_path"] / "overlays" / (data_path["slide1"].stem + ".db")
+        data_path["base_path"]
+        / "overlays"
+        / (data_path["slide1"].stem + "_saved_anns.db")
     )
     assert saved_path.exists()
 

@@ -1320,7 +1320,7 @@ def sam_segment() -> None:
     )
 
     prompt_segmentor = PromptSegmentor()
-    tmp_save_dir = Path(tempfile.mkdtemp())
+    tmp_save_dir = Path(tempfile.mkdtemp(suffix="bokeh_temp"))
 
     x_start = max(0, UI["p"].x_range.start)
     y_start = max(0, -UI["p"].y_range.end)

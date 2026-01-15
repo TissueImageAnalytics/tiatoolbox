@@ -718,6 +718,7 @@ class TileServer(Flask):
                 if (
                     layer.store.path.suffix == ".db"
                     and layer.store.path.name != f"temp_{session_id}.db"
+                    and not str(layer.store.path.parent.name).endswith("bokeh_temp")
                 ):
                     logger.info("%s*.db committed.", layer.store.path.stem)
                     layer.store.commit()

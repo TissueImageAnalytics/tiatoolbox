@@ -72,7 +72,7 @@ class PromptSegmentor:
         """
         # use external for testing
         self.model = model_to(model=self.model, device=device)
-        sample_outputs = self.model.infer_batch(
+        sample_outputs = self.model.module.infer_batch(
             self.model,
             torch.tensor(imgs[0]).unsqueeze(0),
             point_coords=point_coords,
