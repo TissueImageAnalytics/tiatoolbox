@@ -31,8 +31,8 @@ def test_functional_sam(
     # create image patch and prompts
     patch = img[63:191, 750:878, :]
 
-    points = [[[64, 64]]]
-    boxes = [[[64, 64, 128, 128]]]
+    points = np.array([[[64, 64]]])
+    boxes = np.array([[[64, 64, 128, 128]]])
 
     # test preproc
     tensor = torch.from_numpy(img)
