@@ -15,6 +15,7 @@ import pytest
 import torch
 import zarr
 from click.testing import CliRunner
+from huggingface_hub import hf_hub_download
 
 from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
@@ -24,7 +25,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     merge_vertical_chunkwise,
 )
 from tiatoolbox.utils import env_detection as toolbox_env
-from tiatoolbox.utils.misc import download_data, imread
+from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
@@ -157,11 +158,14 @@ def test_semantic_segmentor_tiles(track_tmp_path: Path) -> None:
         model="fcn-tissue_mask", batch_size=32, verbose=False, device=device
     )
 
-    sample_image = track_tmp_path / "breast_tissue.jpg"
-
-    download_data(
-        "https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/sample_imgs/breast_tissue.jpg",
-        sample_image,
+    sample_image = Path(
+        hf_hub_download(
+            repo_id="TIACentre/TIAToolBox_Remote_Samples",
+            subfolder="sample_imgs",
+            filename="breast_tissue.jpg",
+            repo_type="dataset",
+            local_dir=track_tmp_path,
+        )
     )
 
     inputs = [sample_image]
@@ -175,7 +179,7 @@ def test_semantic_segmentor_tiles(track_tmp_path: Path) -> None:
         input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         patch_input_shape=(1024, 1024),
     )
-
+    print(output)
     output = zarr.open(output[sample_image], mode="r")
 
     assert output["predictions"].shape == (2048, 3584)
