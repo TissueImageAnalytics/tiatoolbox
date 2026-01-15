@@ -183,8 +183,6 @@ class SAM(ModelABC):
         if isinstance(batch_data, torch.Tensor):
             batch_data = batch_data.cpu().numpy()
 
-        print("inputs are:")
-        print(point_coords, box_coords)
         with torch.inference_mode():
             masks, scores = model(batch_data, point_coords, box_coords)
 

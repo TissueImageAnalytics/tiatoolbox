@@ -49,16 +49,33 @@ class PromptSegmentor:
         box_coords: list[list[IntBounds]] | None = None,
         save_dir: str | Path | None = None,
         device: str = "cpu",
-    ) -> list[tuple[Path, Path]]:
+    ) -> Path:
+        """Run inference on image patches with prompts.
+
+        Args:
+            imgs (list):
+                List of image patches to run inference on.
+            point_coords (list):
+                List of lists of point coordinates for each image patch.
+            box_coords (list):
+                List of lists of bounding box coordinates for each image patch.
+            save_dir (str or Path):
+                Directory to save the output databases.
+            device (str):
+                Device to run inference on.
+
+        Returns:
+            Path:
+                Path to the saved output database.
+        """
         # use external for testing
-        self._device = device
-        self._model = model_to(model=self.model, device=device)
+        self.model = model_to(model=self.model, device=device)
         sample_outputs = self.model.infer_batch(
             self.model,
             torch.tensor(imgs[0]).unsqueeze(0),
             point_coords=point_coords,
             box_coords=box_coords,
-            device=self._device,
+            device=device,
         )
         save_path = save_dir / f"{0}"
         mask = np.any(sample_outputs[0][0][0], axis=0, keepdims=False)
@@ -88,5 +105,4 @@ class PromptSegmentor:
                 Microns per pixel required to scale the area to a fixed size.
         """
         scale = max(area_dims) / fixed_size if max(area_dims) > fixed_size else 1.0
-        self.scale = scale
         return base_mpp * scale, scale
