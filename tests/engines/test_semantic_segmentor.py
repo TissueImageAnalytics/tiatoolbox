@@ -137,15 +137,16 @@ def _test_store_output_patch(output: Path) -> None:
     cur = con.cursor()
     annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
 
-    out = []
+    annotation_types = set()
 
     for item in annotations_properties:
         for json_str in item:
             probs = json.loads(json_str)
             if "type" in probs:
-                out.append(probs.pop("type"))
-
-    assert "mask" in out
+                annotation_types.add(probs.pop("type"))
+    # When class_dict is none, types are assigned as 0, 1, ...
+    assert 0 in annotation_types
+    assert 1 in annotation_types
 
     assert annotations_properties is not None
 
@@ -159,7 +160,7 @@ def test_semantic_segmentor_tiles(track_tmp_path: Path) -> None:
     sample_image = track_tmp_path / "breast_tissue.jpg"
 
     download_data(
-        "https://tiatoolbox.dcs.warwick.ac.uk/sample_imgs/breast_tissue.jpg",
+        "https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/sample_imgs/breast_tissue.jpg",
         sample_image,
     )
 
