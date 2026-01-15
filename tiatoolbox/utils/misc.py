@@ -1403,7 +1403,7 @@ def dict_to_store_semantic_segmentor(
         contours = cast("list[np.ndarray]", contours)
 
         annotations_list_ = process_contours(
-            contours, hierarchy, scale_factor, {"label": class_label, "class": class_id}
+            contours, hierarchy, scale_factor, {"type": class_label, "class": class_id}
         )
         annotations_list.extend(annotations_list_)
 
