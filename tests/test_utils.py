@@ -1886,7 +1886,9 @@ def test_dict_to_store_semantic_segment() -> None:
         class_dict=None,
         save_path=None,
     )
-    assert not store_.values()
+    assert len(store_) == 1
+    for annotation in store_.values():
+        assert annotation.properties["type"] == 0
 
     # single point
     patch_output["predictions"][100, 100] = 1
@@ -1897,7 +1899,7 @@ def test_dict_to_store_semantic_segment() -> None:
         class_dict=None,
         save_path=None,
     )
-    assert len(store_) == 1
+    assert len(store_) == 2
 
     annotations_ = store_.values()
 
@@ -1906,7 +1908,7 @@ def test_dict_to_store_semantic_segment() -> None:
     ]
 
     assert "Point" in annotations_geometry_type
-    assert "Polygon" not in annotations_geometry_type
+    assert "Polygon" in annotations_geometry_type
 
     patch_output["predictions"][110:155, 110:115] = 1
 
@@ -1916,7 +1918,7 @@ def test_dict_to_store_semantic_segment() -> None:
         class_dict=None,
         save_path=None,
     )
-    assert len(store_) == 2
+    assert len(store_) == 3
 
     annotations_ = store_.values()
 
@@ -1936,7 +1938,7 @@ def test_dict_to_store_semantic_segment() -> None:
         class_dict=None,
         save_path=None,
     )
-    assert len(store_) == 3
+    assert len(store_) == 4
     annotations_ = store_.values()
 
     annotations_geometry_type = [
@@ -1969,7 +1971,7 @@ def test_dict_to_store_semantic_segment_holes(track_tmp_path: Path) -> None:
     _ = misc.dict_to_store_semantic_segmentor(
         patch_output=patch_output,
         scale_factor=(1.0, 1.0),
-        class_dict=None,
+        class_dict={0: "background", 1: "object"},
         save_path=save_dir_path,
     )
 
@@ -1978,12 +1980,18 @@ def test_dict_to_store_semantic_segment_holes(track_tmp_path: Path) -> None:
     store_ = misc.dict_to_store_semantic_segmentor(
         patch_output=patch_output,
         scale_factor=(1.0, 1.0),
-        class_dict=None,
+        class_dict={0: "background", 1: "object"},
         save_path=None,
     )
 
     # outer contour and inner contour/hole are now within the same geometry
-    assert len(store_) == 1, "There should be one geometry"
+    object_count = 0
+    object_annotation = None
+    for annotation in store_.values():
+        if annotation.properties["type"] == "object":
+            object_count += 1
+            object_annotation = annotation
+    assert object_count == 1, "There should be one geometry"
 
     annotations_ = list(store_.values())
     annotations_geometry_type = [
@@ -1992,11 +2000,10 @@ def test_dict_to_store_semantic_segment_holes(track_tmp_path: Path) -> None:
     assert "Polygon" in annotations_geometry_type
     assert "Point" not in annotations_geometry_type
 
-    annotation = annotations_[0]
-    assert isinstance(annotation.geometry_type, GeometryType)
+    assert isinstance(object_annotation.geometry_type, GeometryType)
 
     # Check number of holes
-    polygon = annotation.geometry
+    polygon = object_annotation.geometry
     assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
         "The annotation should be a Polygon"
     )
@@ -2023,12 +2030,18 @@ def test_dict_to_store_semantic_segment_multiple_holes() -> None:
     store_ = misc.dict_to_store_semantic_segmentor(
         patch_output=patch_output,
         scale_factor=(1.0, 1.0),
-        class_dict=None,
+        class_dict={0: "background", 1: "object"},
         save_path=None,
     )
 
     # outer contour and inner contour/hole are now within the same geometry
-    assert len(store_) == 1, "There should be one geometry"
+    object_count = 0
+    object_annotation = None
+    for annotation in store_.values():
+        if annotation.properties["type"] == "object":
+            object_count += 1
+            object_annotation = annotation
+    assert object_count == 1, "There should be one geometry"
 
     annotations_ = list(store_.values())
     annotations_geometry_type = [
@@ -2037,11 +2050,10 @@ def test_dict_to_store_semantic_segment_multiple_holes() -> None:
     assert "Polygon" in annotations_geometry_type
     assert "Point" not in annotations_geometry_type
 
-    annotation = annotations_[0]
-    assert isinstance(annotation.geometry_type, GeometryType)
+    assert isinstance(object_annotation.geometry_type, GeometryType)
 
     # Check number of holes
-    polygon = annotation.geometry
+    polygon = object_annotation.geometry
     assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
         "The annotation should be a Polygon"
     )
@@ -2066,12 +2078,18 @@ def test_dict_to_store_semantic_segment_no_holes() -> None:
     store_ = misc.dict_to_store_semantic_segmentor(
         patch_output=patch_output,
         scale_factor=(1.0, 1.0),
-        class_dict=None,
+        class_dict={0: "background", 1: "object"},
         save_path=None,
     )
 
     # outer contour and inner contour/hole are now within the same geometry
-    assert len(store_) == 1, "There should be one geometry"
+    object_count = 0
+    object_annotation = None
+    for annotation in store_.values():
+        if annotation.properties["type"] == "object":
+            object_count += 1
+            object_annotation = annotation
+    assert object_count == 1, "There should be one geometry"
 
     annotations_ = list(store_.values())
     annotations_geometry_type = [
@@ -2080,11 +2098,10 @@ def test_dict_to_store_semantic_segment_no_holes() -> None:
     assert "Polygon" in annotations_geometry_type
     assert "Point" not in annotations_geometry_type
 
-    annotation = annotations_[0]
-    assert isinstance(annotation.geometry_type, GeometryType)
+    assert isinstance(object_annotation.geometry_type, GeometryType)
 
     # Check number of holes
-    polygon = annotation.geometry
+    polygon = object_annotation.geometry
     assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
         "The annotation should be a Polygon"
     )
