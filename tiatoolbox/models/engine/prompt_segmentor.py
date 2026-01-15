@@ -9,11 +9,10 @@ import numpy as np
 import torch
 
 from tiatoolbox.models.architecture.sam import SAM
-from tiatoolbox.models.models_abc import model_to
 from tiatoolbox.utils.misc import dict_to_store_semantic_segmentor
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.type_hints import IntBounds, IntPair
+    from tiatoolbox.type_hints import IntPair
 
 
 class PromptSegmentor:
@@ -47,8 +46,8 @@ class PromptSegmentor:
     def predict(  # skipcq: PYL-W0221
         self,
         imgs: list,
-        point_coords: list[list[IntPair]] | None = None,
-        box_coords: list[list[IntBounds]] | None = None,
+        point_coords: np.ndarray | None = None,
+        box_coords: np.ndarray | None = None,
         save_dir: str | Path | None = None,
         device: str = "cpu",
     ) -> Path:
@@ -57,10 +56,11 @@ class PromptSegmentor:
         Args:
             imgs (list):
                 List of image patches to run inference on.
-            point_coords (list):
-                List of lists of point coordinates for each image patch.
-            box_coords (list):
-                List of lists of bounding box coordinates for each image patch.
+            point_coords (np.ndarray):
+                N_im x N_points x 2 array of point coordinates for each image patch.
+            box_coords (np.ndarray):
+                N_im x N_boxes x 4 array of bounding box coordinates for each
+                image patch.
             save_dir (str or Path):
                 Directory to save the output databases.
             device (str):
@@ -71,8 +71,8 @@ class PromptSegmentor:
                 Path to the saved output database.
         """
         # use external for testing
-        self.model = model_to(model=self.model, device=device)
-        sample_outputs = self.model.module.infer_batch(
+        self.model.to(device)
+        sample_outputs = self.model.infer_batch(
             self.model,
             torch.tensor(imgs[0]).unsqueeze(0),
             point_coords=point_coords,
