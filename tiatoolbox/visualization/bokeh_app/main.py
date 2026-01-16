@@ -1358,8 +1358,8 @@ def sam_segment() -> None:
     )
 
     # Run SAM on the point
-    prediction = prompt_segmentor.predict(
-        imgs=[roi],
+    prediction = prompt_segmentor.run(
+        images=[roi],
         device=select_device(on_gpu=torch.cuda.is_available()),
         save_dir=tmp_save_dir / "sam_out",
         point_coords=point_coords,

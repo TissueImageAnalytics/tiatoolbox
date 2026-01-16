@@ -27,8 +27,8 @@ def test_prompt_segmentor(track_tmp_path: Path) -> None:
     prompt_segmentor = PromptSegmentor(model=sam_model)
 
     # run prediction
-    output_paths = prompt_segmentor.predict(
-        imgs=[img],
+    output_paths = prompt_segmentor.run(
+        images=[img],
         point_coords=points,
         box_coords=boxes,
         save_dir=track_tmp_path / "sam_test_output",

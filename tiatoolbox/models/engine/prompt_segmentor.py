@@ -21,10 +21,9 @@ class PromptSegmentor:
 
     This class is designed to work with the SAM model architecture.
     It allows for interactive segmentation by providing point and bounding box
-    coordinates as prompts. The model can be used in both tile and WSI modes,
-    where tile mode processes individual image patches and WSI mode processes
-    whole-slide images. The class also supports multi-prompt segmentation,
-    where multiple point and bounding box coordinates can be provided for
+    coordinates as prompts. The model is intended to be used with image tiles
+    selected interactively in some way and provided as np.arrays. At least
+    one of either point_coords or box_coords must be provided to guide
     segmentation.
 
     Args:
@@ -44,9 +43,9 @@ class PromptSegmentor:
         self.scale = 1.0
         self.offset = (0, 0)
 
-    def predict(  # skipcq: PYL-W0221
+    def run(  # skipcq: PYL-W0221
         self,
-        imgs: list,
+        images: list,
         point_coords: np.ndarray | None = None,
         box_coords: np.ndarray | None = None,
         save_dir: str | Path | None = None,
@@ -55,7 +54,7 @@ class PromptSegmentor:
         """Run inference on image patches with prompts.
 
         Args:
-            imgs (list):
+            images (list):
                 List of image patch arrays to run inference on.
             point_coords (np.ndarray):
                 N_im x N_points x 2 array of point coordinates for each image patch.
@@ -75,7 +74,7 @@ class PromptSegmentor:
         paths = []
         masks, _ = self.model.infer_batch(
             self.model,
-            imgs,
+            images,
             point_coords=point_coords,
             box_coords=box_coords,
             device=device,

@@ -4,6 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
+import pytest
 import torch
 
 from tiatoolbox.models.architecture.sam import SAM
@@ -16,9 +17,7 @@ ON_GPU = toolbox_env.has_gpu()
 # Test pretrained Model =============================
 
 
-def test_functional_sam(
-    remote_sample: Callable,
-) -> None:
+def test_functional_sam(remote_sample: Callable) -> None:
     """Test for SAM."""
     # convert to pathlib Path to prevent wsireader complaint
     tile_path = Path(remote_sample("patch-extraction-vf"))
@@ -56,10 +55,9 @@ def test_functional_sam(
     assert len(mask_output) > 0, "Output should have at least one element"
     assert len(score_output) > 0, "Output should have at least one element"
 
-    mask_output, score_output = model.infer_batch(
-        model, patch, device=select_device(on_gpu=ON_GPU)
-    )
-
-    assert mask_output is not None, "Output should not be None"
-    assert len(mask_output) > 0, "Output should have at least one element"
-    assert len(score_output) > 0, "Output should have at least one element"
+    # test error when no prompts provided
+    with pytest.raises(
+        ValueError,
+        match=r"At least one of point_coords or box_coords must be provided.",
+    ):
+        _ = model.infer_batch(model, patch, device=select_device(on_gpu=ON_GPU))
