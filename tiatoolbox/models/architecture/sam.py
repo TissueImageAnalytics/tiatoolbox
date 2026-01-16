@@ -118,8 +118,7 @@ class SAM(ModelABC):
 
         """
         masks, scores = [], []
-        if point_coords is None and box_coords is None:
-            return masks, scores
+
         for i, img in enumerate(imgs):
             image = [Image.fromarray(img)]
             embeddings, orig_sizes, reshaped_sizes = self._encode_image(image)
