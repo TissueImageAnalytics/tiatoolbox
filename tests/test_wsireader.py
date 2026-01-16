@@ -1885,7 +1885,7 @@ def test_command_line_read_bounds(sample_ndpi: Path, track_tmp_path: Path) -> No
     assert Path(track_tmp_path).joinpath("im_region2.jpg").is_file()
 
 
-def test_command_line_jp2_read_bounds(sample_jp2: Path, track_tmp_path: Path) -> None:
+def test_command_line_jp2_read_bounds(sample_jp2: Path) -> None:
     """Test JP2 read_bounds."""
     runner = CliRunner()
     read_bounds_result = runner.invoke(
@@ -1904,7 +1904,8 @@ def test_command_line_jp2_read_bounds(sample_jp2: Path, track_tmp_path: Path) ->
     )
 
     assert read_bounds_result.exit_code == 0
-    assert Path(track_tmp_path).joinpath("../im_region.jpg").is_file()
+    result_path = sample_jp2.parent.parent.joinpath("im_region.jpg")
+    assert result_path.is_file()
 
 
 @pytest.mark.skipif(
