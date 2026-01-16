@@ -161,9 +161,6 @@ class SAM(ModelABC):
         """
         model.eval().to(device)
 
-        if isinstance(batch_data, torch.Tensor):
-            batch_data = batch_data.cpu().numpy()
-
         with torch.inference_mode():
             masks, scores = model(batch_data, point_coords, box_coords)
 
