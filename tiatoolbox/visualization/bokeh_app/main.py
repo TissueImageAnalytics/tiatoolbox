@@ -1362,7 +1362,7 @@ def sam_segment() -> None:
         box_coords=box_coords,
     )
 
-    ann_loc = str(prediction)
+    ann_loc = str(prediction[0])
 
     fname = make_safe_name(ann_loc)
     resp = UI["s"].put(

@@ -6,12 +6,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-import torch
 
 from tiatoolbox.models.architecture.sam import SAM
 from tiatoolbox.utils.misc import dict_to_store_semantic_segmentor
 
 if TYPE_CHECKING:  # pragma: no cover
+    import torch
+
     from tiatoolbox.type_hints import IntPair
 
 
@@ -50,12 +51,12 @@ class PromptSegmentor:
         box_coords: np.ndarray | None = None,
         save_dir: str | Path | None = None,
         device: str = "cpu",
-    ) -> Path:
+    ) -> list[Path]:
         """Run inference on image patches with prompts.
 
         Args:
             imgs (list):
-                List of image patches to run inference on.
+                List of image patch arrays to run inference on.
             point_coords (np.ndarray):
                 N_im x N_points x 2 array of point coordinates for each image patch.
             box_coords (np.ndarray):
@@ -67,27 +68,30 @@ class PromptSegmentor:
                 Device to run inference on.
 
         Returns:
-            Path:
-                Path to the saved output database.
+            list[Path]:
+                Paths to the saved output databases.
         """
-        # use external for testing
         self.model.to(device)
-        sample_outputs = self.model.infer_batch(
+        paths = []
+        masks, _ = self.model.infer_batch(
             self.model,
-            torch.tensor(imgs[0]).unsqueeze(0),
+            imgs,
             point_coords=point_coords,
             box_coords=box_coords,
             device=device,
         )
-        save_path = save_dir / f"{0}"
-        mask = np.any(sample_outputs[0][0][0], axis=0, keepdims=False)
-        dict_to_store_semantic_segmentor(
-            patch_output={"predictions": mask[0]},
-            scale_factor=self.scale,
-            offset=self.offset,
-            save_path=Path(f"{save_path}.{0}.db"),
-        )
-        return Path(f"{save_path}.{0}.db")
+        save_dir = Path(save_dir)
+        for i in range(len(masks)):
+            save_path = save_dir / f"{i}"
+            mask = np.any(masks[i][0], axis=0, keepdims=False)
+            dict_to_store_semantic_segmentor(
+                patch_output={"predictions": mask[0]},
+                scale_factor=self.scale,
+                offset=self.offset,
+                save_path=Path(f"{save_path}.{i}.db"),
+            )
+            paths.append(Path(f"{save_path}.{i}.db"))
+        return paths
 
     def calc_mpp(
         self, area_dims: IntPair, base_mpp: float, fixed_size: int = 1500

@@ -87,15 +87,13 @@ class SAM(ModelABC):
             if point_coords is not None:
                 points = point_coords[i]
                 # Convert point coordinates to list
-                if points is not None:
-                    point_labels = np.ones((1, len(points), 1), dtype=int).tolist()
-                    points = [points[:, None, :].tolist()]
+                point_labels = np.ones((1, len(points), 1), dtype=int).tolist()
+                points = [points[:, None, :].tolist()]
 
             if box_coords is not None:
                 boxes = box_coords[i]
                 # Convert box coordinates to list
-                if boxes is not None:
-                    boxes = [boxes[:, None, :].tolist()]
+                boxes = [boxes[:, None, :].tolist()]
             inputs = self.processor(
                 image,
                 input_points=points,
