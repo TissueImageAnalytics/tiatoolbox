@@ -292,7 +292,7 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
         )
 
 
-def test_single_output_mtsegmentor(
+def test_single_task_mtsegmentor(
     remote_sample: Callable,
     track_tmp_path: Path,
     caplog: pytest.LogCaptureFixture,
@@ -408,3 +408,39 @@ def test_single_output_mtsegmentor(
         assert field not in zarr_group
 
     assert "Probability maps cannot be saved as AnnotationStore" in caplog.text
+
+
+def test_wsi_mtsegmentor_zarr(
+    sample_svs: Path,
+    track_tmp_path: Path,
+) -> None:
+    """Test MultiTaskSegmentor for WSIs with zarr output."""
+    mtsegmentor = MultiTaskSegmentor(
+        model="hovernetplus-oed",
+        batch_size=64,
+        verbose=False,
+        num_workers=1,
+    )
+    # Return Probabilities is False
+    output = mtsegmentor.run(
+        images=[sample_svs],
+        return_probabilities=False,
+        return_labels=False,
+        device=device,
+        patch_mode=False,
+        save_dir=track_tmp_path / "wsi_out_check",
+        batch_size=2,
+        output_type="zarr",
+        memory_threshold=1,
+        stride_shape=(160, 160),
+    )
+
+    output_ = zarr.open(output[sample_svs], mode="r")
+    assert 18 < np.mean(output_["nuclei_segmentation"]["predictions"][:]) < 22
+    assert 0.43 < np.mean(output_["layer_segmentation"]["predictions"][:]) < 0.45
+    assert "probabilities" not in output_["nuclei_segmentation"]
+    assert "canvas" not in output_["nuclei_segmentation"]
+    assert "count" not in output_["nuclei_segmentation"]
+    assert "probabilities" not in output_["layer_segmentation"]
+    assert "canvas" not in output_["layer_segmentation"]
+    assert "count" not in output_["layer_segmentation"]

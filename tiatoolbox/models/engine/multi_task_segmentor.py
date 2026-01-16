@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import gc
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import dask.array as da
 import numpy as np
+import psutil
 import torch
 import zarr
+from dask import compute
 from shapely.geometry import shape as feature2geometry
 from typing_extensions import Unpack
 
@@ -18,12 +21,19 @@ from tiatoolbox.annotation.storage import Annotation
 from tiatoolbox.utils.misc import get_tqdm, make_valid_poly
 from tiatoolbox.wsicore.wsireader import is_zarr
 
-from .semantic_segmentor import SemanticSegmentor, SemanticSegmentorRunParams
+from .semantic_segmentor import (
+    SemanticSegmentor,
+    SemanticSegmentorRunParams,
+    concatenate_none,
+    merge_batch_to_canvas,
+    store_probabilities,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
 
     from torch.utils.data import DataLoader
+    from tqdm import tqdm, tqdm_notebook
 
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.models_abc import ModelABC
@@ -107,9 +117,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
         raw_predictions["probabilities"] = [[] for _ in range(num_expected_output)]
 
         # Inference loop
-        tqdm = get_tqdm()
+        tqdm_ = get_tqdm()
         tqdm_loop = (
-            tqdm(dataloader, leave=False, desc="Inferring patches")
+            tqdm_(dataloader, leave=False, desc="Inferring patches")
             if self.verbose
             else self.dataloader
         )
@@ -142,6 +152,172 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         if return_coordinates:
             raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
+
+        return raw_predictions
+
+    def infer_wsi(
+        self: SemanticSegmentor,
+        dataloader: DataLoader,
+        save_path: Path,
+        **kwargs: Unpack[SemanticSegmentorRunParams],
+    ) -> dict[str, da.Array]:
+        """Perform model inference on a whole slide image (WSI)."""
+        # Default Memory threshold percentage is 80.
+        memory_threshold = kwargs.get("memory_threshold", 80)
+        vm = psutil.virtual_memory()
+
+        keys = ["probabilities", "coordinates"]
+        coordinates = []
+
+        # Main output dictionary
+        raw_predictions = dict(
+            zip(keys, [da.empty(shape=(0, 0))] * len(keys), strict=False)
+        )
+
+        # Inference loop
+        tqdm_ = get_tqdm()
+        tqdm_loop = (
+            tqdm_(dataloader, leave=False, desc="Inferring patches")
+            if self.verbose
+            else dataloader
+        )
+
+        # Expected number of outputs from the model
+        batch_output = self.model.infer_batch(
+            self.model,
+            torch.Tensor(dataloader.dataset[0]["image"][np.newaxis, ...]),
+            device=self.device,
+        )
+
+        num_expected_output = len(batch_output)
+        canvas_np = [None for _ in range(num_expected_output)]
+        canvas = [None for _ in range(num_expected_output)]
+        count = [None for _ in range(num_expected_output)]
+        canvas_zarr = [None for _ in range(num_expected_output)]
+        count_zarr = [None for _ in range(num_expected_output)]
+
+        output_locs_y_, output_locs = None, None
+
+        full_output_locs = (
+            dataloader.dataset.full_outputs
+            if hasattr(dataloader.dataset, "full_outputs")
+            else dataloader.dataset.outputs
+        )
+
+        infer_batch = self._get_model_attr("infer_batch")
+        for batch_idx, batch_data in enumerate(tqdm_loop):
+            batch_output = infer_batch(
+                self.model,
+                batch_data["image"],
+                device=self.device,
+            )
+
+            batch_locs = batch_data["output_locs"].numpy()
+
+            # Interpolate outputs for masked regions
+            full_batch_output, full_output_locs, output_locs = (
+                prepare_multitask_full_batch(
+                    batch_output,
+                    batch_locs,
+                    full_output_locs,
+                    output_locs,
+                    is_last=(batch_idx == (len(dataloader) - 1)),
+                )
+            )
+
+            for idx, full_batch_output_ in enumerate(full_batch_output):
+                canvas_np[idx] = concatenate_none(
+                    old_arr=canvas_np[idx], new_arr=full_batch_output_
+                )
+
+            # Determine if dataloader is moved to next row of patches
+            change_indices = np.where(np.diff(output_locs[:, 1]) != 0)[0] + 1
+
+            # If a row of patches has been processed.
+            if change_indices.size > 0:
+                canvas, count, canvas_np, output_locs, output_locs_y_ = (
+                    merge_multitask_horizontal(
+                        canvas,
+                        count,
+                        output_locs_y_,
+                        canvas_np,
+                        output_locs,
+                        change_indices,
+                    )
+                )
+
+                used_percent = vm.percent
+                total_bytes = sum(arr.nbytes for arr in canvas) if canvas else 0
+                canvas_used_percent = (total_bytes / vm.free) * 100
+
+                if (
+                    used_percent > memory_threshold
+                    or canvas_used_percent > memory_threshold
+                ):
+                    tqdm_loop.desc = "Spill intermediate data to disk"
+                    used_percent = (
+                        canvas_used_percent
+                        if (canvas_used_percent > memory_threshold)
+                        else used_percent
+                    )
+                    msg = (
+                        f"Current Memory usage: {used_percent} %  "
+                        f"exceeds specified threshold: {memory_threshold}. "
+                        f"Saving intermediate results to disk."
+                    )
+                    tqdm_.write(msg)
+                    # Flush data in Memory and clear dask graph
+                    canvas_zarr, count_zarr = save_multitask_to_cache(
+                        canvas,
+                        count,
+                        canvas_zarr,
+                        count_zarr,
+                        save_path=save_path,
+                    )
+                    canvas = [None for _ in range(num_expected_output)]
+                    count = [None for _ in range(num_expected_output)]
+                    gc.collect()
+                    tqdm_loop.desc = "Inferring patches"
+
+            coordinates.append(
+                da.from_array(
+                    self._get_coordinates(batch_data),
+                )
+            )
+
+        canvas, count, _, _, output_locs_y_ = merge_multitask_horizontal(
+            canvas,
+            count,
+            output_locs_y_,
+            canvas_np,
+            output_locs,
+            change_indices=[len(output_locs)],
+        )
+
+        zarr_group = None
+        if canvas_zarr is not None:
+            canvas_zarr, count_zarr = save_multitask_to_cache(
+                canvas, count, canvas_zarr, count_zarr
+            )
+            # Wrap zarr in dask array
+            for idx, canvas_zarr_ in enumerate(canvas_zarr):
+                canvas[idx] = da.from_zarr(canvas_zarr_, chunks=canvas_zarr_.chunks)
+                count[idx] = da.from_zarr(
+                    count_zarr[idx], chunks=count_zarr[idx].chunks
+                )
+
+            zarr_group = zarr.open(canvas_zarr[0].store.path, mode="a")
+
+        # Final vertical merge
+        raw_predictions["probabilities"] = merge_multitask_vertical_chunkwise(
+            canvas,
+            count,
+            output_locs_y_,
+            zarr_group,
+            save_path,
+            memory_threshold,
+        )
+        raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
 
         return raw_predictions
 
@@ -180,6 +356,36 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         # Need to update info_dict
         _ = raw_predictions
+
+        return raw_predictions
+
+    def post_process_wsi(  # skipcq: PYL-R0201
+        self: MultiTaskSegmentor,
+        raw_predictions: dict,
+        save_path: Path,  # noqa: ARG002
+        **kwargs: Unpack[SemanticSegmentorRunParams],  # noqa: ARG002
+    ) -> dict:
+        """Post-process raw patch predictions from inference."""
+        probabilities = raw_predictions["probabilities"]
+        post_process_predictions = self.model.postproc_func(probabilities)
+
+        tasks = set()
+        for seg in post_process_predictions:
+            task_name = seg["task_type"]
+            tasks.add(task_name)
+            raw_predictions[task_name] = {}
+
+            for key, value in seg.items():
+                if key == "task_type":
+                    continue
+                if isinstance(value, (np.ndarray, da.Array)):
+                    raw_predictions[task_name][key] = da.array(value)
+
+                if isinstance(value, dict):
+                    for k, v in value.items():
+                        raw_predictions[task_name][k] = v
+
+        self.tasks = tasks
 
         return raw_predictions
 
@@ -661,3 +867,308 @@ def dict_to_store(
     store.append_many(ann)
 
     return store
+
+
+def prepare_multitask_full_batch(
+    batch_output: tuple[np.ndarray],
+    batch_locs: np.ndarray,
+    full_output_locs: np.ndarray,
+    output_locs: np.ndarray,
+    *,
+    is_last: bool,
+) -> tuple[list[np.ndarray], np.ndarray, np.ndarray]:
+    """Prepare full-sized output and count arrays for a batch of patch predictions.
+
+    This function aligns patch-level predictions with global output locations when
+    a mask (e.g., auto_get_mask) is applied. It initializes full-sized arrays and
+    fills them using matched indices. If the batch is the last in the sequence,
+    it pads the arrays to cover remaining locations.
+
+    Args:
+        batch_output (np.ndarray):
+            Patch-level model predictions of shape (N, H, W, C).
+        batch_locs (np.ndarray):
+            Output locations corresponding to `batch_output`.
+        full_output_locs (np.ndarray):
+            Remaining global output locations to be matched.
+        output_locs (np.ndarray):
+            Accumulated output location array across batches.
+        is_last (bool):
+            Flag indicating whether this is the final batch.
+
+    Returns:
+        tuple[list[np.ndarray], np.ndarray, np.ndarray]:
+            - full_batch_output: Full-sized output array with predictions placed.
+            - full_output_locs: Updated remaining global output locations.
+            - output_locs: Updated accumulated output locations.
+
+    """
+    # Use np.intersect1d once numpy version is upgraded to 2.0
+    full_output_dict = {tuple(row): i for i, row in enumerate(full_output_locs)}
+    matches = [full_output_dict[tuple(row)] for row in batch_locs]
+
+    total_size = np.max(matches).astype(np.uint32) + 1
+
+    full_batch_output = [np.empty(0) for _ in range(len(batch_output))]
+
+    for idx, batch_output_ in enumerate(batch_output):
+        # Initialize full output array
+        full_batch_output[idx] = np.zeros(
+            shape=(total_size, *batch_output_.shape[1:]),
+            dtype=batch_output_.dtype,
+        )
+
+        # Place matching outputs using matching indices
+        full_batch_output[idx][matches] = batch_output_
+
+    output_locs = concatenate_none(
+        old_arr=output_locs, new_arr=full_output_locs[:total_size]
+    )
+    full_output_locs = full_output_locs[total_size:]
+
+    if is_last:
+        output_locs = concatenate_none(old_arr=output_locs, new_arr=full_output_locs)
+        for idx, batch_output_ in enumerate(batch_output):
+            full_batch_output[idx] = concatenate_none(
+                old_arr=full_batch_output[idx],
+                new_arr=np.zeros(
+                    shape=(len(full_output_locs), *batch_output_.shape[1:]),
+                    dtype=np.uint8,
+                ),
+            )
+
+    return full_batch_output, full_output_locs, output_locs
+
+
+def merge_multitask_horizontal(
+    canvas: list[None] | list[da.Array],
+    count: list[None] | list[da.Array],
+    output_locs_y_: np.ndarray,
+    canvas_np: list[np.ndarray],
+    output_locs: np.ndarray,
+    change_indices: np.ndarray | list[int],
+) -> tuple[list[da.Array], list[da.Array], list[np.ndarray], np.ndarray, np.ndarray]:
+    """Merge horizontal patches incrementally for each row of patches."""
+    start_idx = 0
+    for c_idx in change_indices:
+        output_locs_ = output_locs[: c_idx - start_idx]
+
+        batch_xs = np.min(output_locs[:, 0], axis=0)
+        batch_xe = np.max(output_locs[:, 2], axis=0)
+
+        for idx, canvas_np_ in enumerate(canvas_np):
+            canvas_np__ = canvas_np_[: c_idx - start_idx]
+            merged_shape = (
+                canvas_np__.shape[1],
+                batch_xe - batch_xs,
+                canvas_np__.shape[3],
+            )
+            canvas_merge, count_merge = merge_batch_to_canvas(
+                blocks=canvas_np__,
+                output_locations=output_locs_,
+                merged_shape=merged_shape,
+            )
+            canvas_merge = da.from_array(canvas_merge, chunks=canvas_merge.shape)
+            count_merge = da.from_array(count_merge, chunks=count_merge.shape)
+            canvas[idx] = concatenate_none(old_arr=canvas[idx], new_arr=canvas_merge)
+            count[idx] = concatenate_none(old_arr=count[idx], new_arr=count_merge)
+            canvas_np[idx] = canvas_np[idx][c_idx - start_idx :]
+
+        output_locs_y_ = concatenate_none(
+            old_arr=output_locs_y_, new_arr=output_locs[:, (1, 3)]
+        )
+
+        output_locs = output_locs[c_idx - start_idx :]
+        start_idx = c_idx
+
+    return canvas, count, canvas_np, output_locs, output_locs_y_
+
+
+def save_multitask_to_cache(
+    canvas: list[da.Array],
+    count: list[da.Array],
+    canvas_zarr: list[zarr.Array | None],
+    count_zarr: list[zarr.Array | None],
+    save_path: str | Path = "temp.zarr",
+) -> tuple[list[zarr.Array], list[zarr.Array]]:
+    """Save computed canvas and count list of arrays to Zarr cache."""
+    zarr_group = None
+    for idx, canvas_ in enumerate(canvas):
+        computed_values = compute(*[canvas_, count[idx]])
+        canvas_computed, count_computed = computed_values
+
+        chunk_shape = tuple(chunk[0] for chunk in canvas_.chunks)
+        if canvas_zarr[idx] is None:
+            # Only open zarr for first canvas.
+            zarr_group = zarr.open(str(save_path), mode="w") if idx == 0 else zarr_group
+
+            canvas_zarr[idx] = zarr_group.create_dataset(
+                name=f"canvas/{idx}",
+                shape=(0, *canvas_computed.shape[1:]),
+                chunks=(chunk_shape[0], *canvas_computed.shape[1:]),
+                dtype=canvas_computed.dtype,
+                overwrite=True,
+            )
+
+            count_zarr[idx] = zarr_group.create_dataset(
+                name=f"count/{idx}",
+                shape=(0, *count_computed.shape[1:]),
+                dtype=count_computed.dtype,
+                chunks=(chunk_shape[0], *count_computed.shape[1:]),
+                overwrite=True,
+            )
+
+        canvas_zarr[idx].resize(
+            (
+                canvas_zarr[idx].shape[0] + canvas_computed.shape[0],
+                *canvas_zarr[idx].shape[1:],
+            )
+        )
+        canvas_zarr[idx][-canvas_computed.shape[0] :] = canvas_computed
+
+        count_zarr[idx].resize(
+            (
+                count_zarr[idx].shape[0] + count_computed.shape[0],
+                *count_zarr[idx].shape[1:],
+            )
+        )
+        count_zarr[idx][-count_computed.shape[0] :] = count_computed
+
+    return canvas_zarr, count_zarr
+
+
+def merge_multitask_vertical_chunkwise(
+    canvas: list[da.Array],
+    count: list[da.Array],
+    output_locs_y_: np.ndarray,
+    zarr_group: zarr.Group,
+    save_path: Path,
+    memory_threshold: int = 80,
+) -> list[da.Array]:
+    """Merge vertically chunked arrays into a single probability map."""
+    y0s, y1s = np.unique(output_locs_y_[:, 0]), np.unique(output_locs_y_[:, 1])
+    overlaps = np.append(y1s[:-1] - y0s[1:], 0)
+
+    probabilities_zarr = [None for _ in range(len(canvas))]
+    probabilities_da = [None for _ in range(len(canvas))]
+
+    for idx, canvas_ in enumerate(canvas):
+        num_chunks = canvas_.numblocks[0]
+        chunk_shape = tuple(chunk[0] for chunk in canvas_.chunks)
+
+        tqdm_ = get_tqdm()
+        tqdm_loop = tqdm_(overlaps, leave=False, desc="Merging rows")
+
+        curr_chunk = canvas_.blocks[0, 0].compute()
+        curr_count = count[idx].blocks[0, 0].compute()
+        next_chunk = canvas_.blocks[1, 0].compute() if num_chunks > 1 else None
+        next_count = count[idx].blocks[1, 0].compute() if num_chunks > 1 else None
+
+        for i, overlap in enumerate(tqdm_loop):
+            if next_chunk is not None and overlap > 0:
+                curr_chunk[-overlap:] += next_chunk[:overlap]
+                curr_count[-overlap:] += next_count[:overlap]
+
+            # Normalize
+            curr_count = np.where(curr_count == 0, 1, curr_count)
+            probabilities = curr_chunk / curr_count.astype(np.float32)
+
+            probabilities_zarr[idx], probabilities_da[idx] = store_probabilities(
+                probabilities=probabilities,
+                chunk_shape=chunk_shape,
+                probabilities_zarr=probabilities_zarr[idx],
+                probabilities_da=probabilities_da[idx],
+                zarr_group=zarr_group,
+                name=f"probabilities/{idx}",
+            )
+
+            probabilities_zarr, probabilities_da = _save_multitask_vertical_to_cache(
+                probabilities_zarr=probabilities_zarr,
+                probabilities_da=probabilities_da,
+                probabilities=probabilities,
+                idx=idx,
+                tqdm_=tqdm_,
+                save_path=save_path,
+                chunk_shape=chunk_shape,
+                memory_threshold=memory_threshold,
+            )
+
+            if next_chunk is not None:
+                curr_chunk, curr_count = next_chunk[overlap:], next_count[overlap:]
+
+            if i + 2 < num_chunks:
+                next_chunk = canvas_.blocks[i + 2, 0].compute()
+                next_count = count[idx].blocks[i + 2, 0].compute()
+            else:
+                next_chunk, next_count = None, None
+
+        probabilities_da[idx] = _clear_zarr(
+            probabilities_zarr=probabilities_zarr[idx],
+            probabilities_da=probabilities_da[idx],
+            zarr_group=zarr_group,
+            idx=idx,
+            chunk_shape=chunk_shape,
+            probabilities_shape=curr_chunk.shape[1:],
+        )
+
+    return probabilities_da
+
+
+def _save_multitask_vertical_to_cache(
+    probabilities_zarr: list[zarr.Array],
+    probabilities_da: list[da.Array] | None,
+    probabilities: np.ndarray,
+    idx: int,
+    tqdm_: type[tqdm_notebook | tqdm],
+    save_path: Path,
+    chunk_shape: tuple,
+    memory_threshold: int = 80,
+) -> tuple[list[zarr.Array], list[da.Array] | None]:
+    """Helper function to save to zarr if vertical merge is out of memory."""
+    used_percent = 0
+    if probabilities_da[idx] is not None:
+        vm = psutil.virtual_memory()
+        total_bytes = (
+            sum(arr.nbytes for arr in probabilities_da) if probabilities_da else 0
+        )
+        used_percent = (total_bytes / vm.free) * 100
+    if probabilities_zarr[idx] is None and used_percent > memory_threshold:
+        msg = (
+            f"Current Memory usage: {used_percent} %  "
+            f"exceeds specified threshold: {memory_threshold}. "
+            f"Saving intermediate results to disk."
+        )
+        tqdm_.write(msg)
+        zarr_group = zarr.open(str(save_path), mode="a")
+        probabilities_zarr = zarr_group.create_dataset(
+            name=f"probabilities/{idx}",
+            shape=probabilities_da.shape,
+            chunks=(chunk_shape[0], *probabilities.shape[1:]),
+            dtype=probabilities.dtype,
+            overwrite=True,
+        )
+        probabilities_zarr[idx][:] = probabilities_da.compute()
+
+        probabilities_da = None
+
+    return probabilities_zarr, probabilities_da
+
+
+def _clear_zarr(
+    probabilities_zarr: zarr.Array,
+    probabilities_da: da.Array | None,
+    zarr_group: zarr.Group,
+    idx: int,
+    chunk_shape: tuple,
+    probabilities_shape: tuple,
+) -> da.Array | None:
+    """Helper function to clear all zarr contents and return dask array."""
+    if probabilities_zarr:
+        if "canvas" in zarr_group:
+            del zarr_group["canvas"][idx]
+        if "count" in zarr_group:
+            del zarr_group["count"][idx]
+        return da.from_zarr(
+            probabilities_zarr, chunks=(chunk_shape[0], *probabilities_shape)
+        )
+    return probabilities_da

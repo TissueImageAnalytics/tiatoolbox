@@ -961,7 +961,7 @@ class SemanticSegmentor(PatchPredictor):
 
 
 def concatenate_none(
-    old_arr: np.ndarray | da.Array,
+    old_arr: np.ndarray | da.Array | None,
     new_arr: np.ndarray | da.Array,
 ) -> np.ndarray | da.Array:
     """Concatenate arrays, handling None values gracefully.
@@ -971,7 +971,7 @@ def concatenate_none(
     arrays.
 
     Args:
-        old_arr (np.ndarray | da.Array):
+        old_arr (np.ndarray | da.Array | None):
             Existing array to append to. Can be None.
         new_arr (np.ndarray | da.Array):
             New array to append.
@@ -1034,7 +1034,7 @@ def merge_horizontal(
     output_locs_y_: np.ndarray,
     canvas_np: np.ndarray,
     output_locs: np.ndarray,
-    change_indices: np.ndarray | list[np.ndarray],
+    change_indices: np.ndarray | list[int],
 ) -> tuple[da.Array, da.Array, np.ndarray, np.ndarray, np.ndarray]:
     """Merge horizontal patches incrementally for each row of patches.
 
@@ -1283,6 +1283,7 @@ def store_probabilities(
     probabilities_zarr: zarr.Array | None,
     probabilities_da: da.Array | None,
     zarr_group: zarr.Group | None,
+    name: str = "probabilities",
 ) -> tuple[zarr.Array | None, da.Array | None]:
     """Store computed probability data into a Zarr dataset or accumulate in memory.
 
@@ -1301,6 +1302,8 @@ def store_probabilities(
             Existing Dask array for in-memory accumulation.
         zarr_group (zarr.Group | None):
             Zarr group used to create or access the dataset.
+        name (str):
+            Name to create Zarr dataset.
 
     Returns:
         tuple[zarr.Array | None, da.Array | None]:
@@ -1310,7 +1313,7 @@ def store_probabilities(
     if zarr_group is not None:
         if probabilities_zarr is None:
             probabilities_zarr = zarr_group.create_dataset(
-                name="probabilities",
+                name=name,
                 shape=(0, *probabilities.shape[1:]),
                 chunks=(chunk_shape[0], *probabilities.shape[1:]),
                 dtype=probabilities.dtype,
