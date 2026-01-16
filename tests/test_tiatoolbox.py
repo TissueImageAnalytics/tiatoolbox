@@ -16,7 +16,8 @@ def test_command_line_help_interface() -> None:
     """Test the CLI help."""
     runner = CliRunner()
     result = runner.invoke(cli.main)
-    assert result.exit_code == 0
+    assert result.exit_code == 2
+    assert "Usage" in result.output
     help_result = runner.invoke(cli.main, ["--help"])
     assert help_result.exit_code == 0
     assert "Computational pathology toolbox by TIA Centre." in help_result.output

@@ -7,6 +7,7 @@ import io
 import json
 import multiprocessing
 import re
+import shutil
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -40,6 +41,37 @@ BOKEH_PATH = importlib_resources.files("tiatoolbox.visualization.bokeh_app")
 FILLED = 0
 MICRON_FORMATTER = 1
 GRIDLINES = 2
+
+
+# Helper function
+def fetch_sample_to_dir(key: str, target_dir: Path) -> Path:
+    """Fetch a remote sample and and ensure it resides directly in ``target_dir``.
+
+     The sample is downloaded and, if it is not already located directly in
+    ``target_dir``, it is moved there. If it is already in ``target_dir``,
+    it is left in place and its path is returned.
+
+    Args:
+        key (str): The name of the resource to fetch.
+        target_dir (Path): The directory where the file should be placed.
+
+    Returns:
+        Path: The path to the file in the target directory.
+    """
+    # Download to a temp location
+    downloaded_path = _fetch_remote_sample(key, target_dir)
+
+    # If the file is already in target_dir directly, return it
+    if downloaded_path.parent == target_dir:
+        return downloaded_path
+
+    # Otherwise, move it to target_dir
+    target_path = target_dir / downloaded_path.name
+    if not target_path.exists():
+        target_dir.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(downloaded_path), str(target_path))
+
+    return target_path
 
 
 class _DummySessionContext:
@@ -99,43 +131,43 @@ def annotation_path(data_path: dict[str, Path]) -> dict[str, object]:
     that can be grabbed as a fixture to refer to during tests.
 
     """
-    data_path["slide1"] = _fetch_remote_sample(
+    data_path["slide1"] = fetch_sample_to_dir(
         "svs-1-small",
         data_path["base_path"] / "slides",
     )
-    data_path["slide2"] = _fetch_remote_sample(
+    data_path["slide2"] = fetch_sample_to_dir(
         "ndpi-1",
         data_path["base_path"] / "slides",
     )
-    data_path["slide3"] = _fetch_remote_sample(
+    data_path["slide3"] = fetch_sample_to_dir(
         "patch-extraction-vf",
         data_path["base_path"] / "slides",
     )
-    data_path["meta"] = _fetch_remote_sample(
+    data_path["meta"] = fetch_sample_to_dir(
         "test_meta",
         data_path["base_path"] / "slides",
     )
-    data_path["annotations"] = _fetch_remote_sample(
+    data_path["annotations"] = fetch_sample_to_dir(
         "annotation_store_svs_1",
         data_path["base_path"] / "overlays",
     )
-    data_path["graph"] = _fetch_remote_sample(
+    data_path["graph"] = fetch_sample_to_dir(
         "graph_svs_1",
         data_path["base_path"] / "overlays",
     )
-    data_path["graph_feats"] = _fetch_remote_sample(
+    data_path["graph_feats"] = fetch_sample_to_dir(
         "graph_svs_1_feats",
         data_path["base_path"] / "overlays",
     )
-    data_path["img_overlay"] = _fetch_remote_sample(
+    data_path["img_overlay"] = fetch_sample_to_dir(
         "svs_1_rendered_annotations_jpg",
         data_path["base_path"] / "overlays",
     )
-    data_path["geojson_anns"] = _fetch_remote_sample(
+    data_path["geojson_anns"] = fetch_sample_to_dir(
         "geojson_cmu_1",
         data_path["base_path"] / "overlays",
     )
-    data_path["dat_anns"] = _fetch_remote_sample(
+    data_path["dat_anns"] = fetch_sample_to_dir(
         "annotation_dat_svs_1",
         data_path["base_path"] / "overlays",
     )
@@ -144,7 +176,7 @@ def annotation_path(data_path: dict[str, Path]) -> dict[str, object]:
     )
     # save eye as test identity transform
     np.save(data_path["affine_trans"], np.eye(3))
-    data_path["config"] = _fetch_remote_sample(
+    data_path["config"] = fetch_sample_to_dir(
         "config_2",
         data_path["base_path"] / "overlays",
     )
