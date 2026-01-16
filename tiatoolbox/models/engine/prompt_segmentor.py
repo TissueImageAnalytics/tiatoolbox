@@ -81,9 +81,9 @@ class PromptSegmentor:
             device=device,
         )
         save_dir = Path(save_dir)
-        for i in range(len(masks)):
+        for i, _mask in enumerate(masks):
             save_path = save_dir / f"{i}"
-            mask = np.any(masks[i][0], axis=0, keepdims=False)
+            mask = np.any(_mask[0], axis=0, keepdims=False)
             dict_to_store_semantic_segmentor(
                 patch_output={"predictions": mask[0]},
                 scale_factor=self.scale,
