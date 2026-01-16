@@ -270,11 +270,17 @@ files:
     subfolder: "testdata/annotation"
     filename: "sample_wsi_patch_preds.db"
   nuclick-output:
-    url: [*modelroot, "predictions/nuclei_mask/nuclick-output.npy"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/models/predictions/nuclei_mask"
+    filename: "nuclick-output.npy"
   qptiff_sample:
-    url: [*wsis, "multiplex_example.qptiff"]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "multiplex_example.qptiff"
   qptiff_sample_small:
-    url: [ *wsis, "multiplex_example_small.qptiff" ]
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "multiplex_example_small.qptiff"
   reg_disp_mha_example:
     hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
     subfolder: "testdata/registration"
