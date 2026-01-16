@@ -1292,6 +1292,7 @@ def sam_segment() -> None:
     x_end = min(UI["p"].x_range.end, UI["vstate"].dims[0])
     y_end = min(-UI["p"].y_range.start, UI["vstate"].dims[1])
     offset = np.array([x_start, y_start])
+    prompt_segmentor.offset = offset
 
     height = y_end - y_start
     width = x_end - x_start
@@ -1303,7 +1304,10 @@ def sam_segment() -> None:
     x = np.round(UI["pt_source"].data["x"])
     y = np.round(UI["pt_source"].data["y"])
     point_coords = (
-        (np.array([[[x[i], -y[i]] for i in range(len(x))]], np.uint32) - offset)
+        (
+            np.array([[[x[i], -y[i]] for i in range(len(x))]], np.uint32)
+            - np.array([[x_start, y_start]])
+        )
         / scale_factor
         if len(x) > 0
         else None
