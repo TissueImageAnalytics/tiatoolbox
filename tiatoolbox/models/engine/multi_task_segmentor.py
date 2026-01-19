@@ -448,6 +448,16 @@ class MultiTaskSegmentor(SemanticSegmentor):
             )
 
         # Save to zarr
+        if kwargs.get("return_probabilities", False):
+            _ = self.save_predictions_as_zarr(
+                processed_predictions={
+                    "probabilities": processed_predictions.pop("probabilities")
+                },
+                save_path=save_path,
+                keys_to_compute=["probabilities"],
+                task_name=None,
+            )
+
         for task_name in self.tasks:
             processed_predictions_ = processed_predictions.pop(task_name)
             # If there is a single task simplify the output.
@@ -461,11 +471,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     {"coordinates": processed_predictions["coordinates"]}
                 )
                 keys_to_compute.extend(["coordinates"])
-            if kwargs.get("return_probabilities", False):
-                processed_predictions_.update(
-                    {"probabilities": processed_predictions["probabilities"]}
-                )
-                keys_to_compute.extend(["probabilities"])
             _ = self.save_predictions_as_zarr(
                 processed_predictions=processed_predictions_,
                 save_path=save_path,

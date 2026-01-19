@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
@@ -411,10 +412,12 @@ def test_single_task_mtsegmentor(
 
 
 def test_wsi_mtsegmentor_zarr(
+    remote_sample: Callable,
     sample_svs: Path,
     track_tmp_path: Path,
 ) -> None:
     """Test MultiTaskSegmentor for WSIs with zarr output."""
+    wsi1_2k_2k_svs = Path(remote_sample("wsi1_2k_2k_svs"))
     mtsegmentor = MultiTaskSegmentor(
         model="hovernetplus-oed",
         batch_size=64,
@@ -438,9 +441,51 @@ def test_wsi_mtsegmentor_zarr(
     output_ = zarr.open(output[sample_svs], mode="r")
     assert 18 < np.mean(output_["nuclei_segmentation"]["predictions"][:]) < 22
     assert 0.43 < np.mean(output_["layer_segmentation"]["predictions"][:]) < 0.45
-    assert "probabilities" not in output_["nuclei_segmentation"]
+    assert "probabilities" not in output_
     assert "canvas" not in output_["nuclei_segmentation"]
     assert "count" not in output_["nuclei_segmentation"]
-    assert "probabilities" not in output_["layer_segmentation"]
     assert "canvas" not in output_["layer_segmentation"]
     assert "count" not in output_["layer_segmentation"]
+    shutil.rmtree(output[sample_svs])
+
+    mtsegmentor = MultiTaskSegmentor(
+        model="hovernetplus-oed",
+        batch_size=64,
+        verbose=False,
+        num_workers=1,
+    )
+    # Return Probabilities is True
+    # Add multi-input test
+    output = mtsegmentor.run(
+        images=[sample_svs, wsi1_2k_2k_svs],
+        return_probabilities=True,
+        return_labels=False,
+        device=device,
+        patch_mode=False,
+        save_dir=track_tmp_path / "return_probabilities_check",
+        batch_size=2,
+        output_type="zarr",
+        stride_shape=(160, 160),
+        verbose=True,
+    )
+
+    output_ = zarr.open(output[sample_svs], mode="r")
+    assert 18 < np.mean(output_["nuclei_segmentation"]["predictions"][:]) < 22
+    assert 0.43 < np.mean(output_["layer_segmentation"]["predictions"][:]) < 0.45
+    assert "probabilities" in output_
+    assert "canvas" not in output_["nuclei_segmentation"]
+    assert "count" not in output_["nuclei_segmentation"]
+    assert "canvas" not in output_["layer_segmentation"]
+    assert "count" not in output_["layer_segmentation"]
+
+    output_ = zarr.open(output[wsi1_2k_2k_svs], mode="r")
+    assert 69 < np.mean(output_["nuclei_segmentation"]["predictions"][:]) < 73
+    assert 0.8 < np.mean(output_["layer_segmentation"]["predictions"][:]) < 1.2
+    assert "probabilities" in output_
+    assert "canvas" not in output_["nuclei_segmentation"]
+    assert "count" not in output_["nuclei_segmentation"]
+    assert "canvas" not in output_["layer_segmentation"]
+    assert "count" not in output_["layer_segmentation"]
+
+    shutil.rmtree(output[sample_svs])
+    shutil.rmtree(output[wsi1_2k_2k_svs])
