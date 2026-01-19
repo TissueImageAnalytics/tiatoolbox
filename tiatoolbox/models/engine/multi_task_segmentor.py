@@ -490,6 +490,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
         # class_dict set from kwargs
         class_dict = kwargs.get("class_dict")
+
         # Need to add support for zarr conversion.
         save_paths = []
 
@@ -501,7 +502,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
         keys_to_compute = list(processed_predictions.keys())
         if "probabilities" in keys_to_compute:
             keys_to_compute.remove("probabilities")
-
         if self.patch_mode:
             for idx, curr_image in enumerate(self.images):
                 values = [processed_predictions[key][idx] for key in keys_to_compute]
@@ -628,6 +628,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         # This runs dask.compute and returns numpy arrays
         # for saving annotationstore output.
+        class_dict = kwargs.get("class_dict", self.model.class_dict)
+        if len(self.tasks) == 1:
+            kwargs["class_dict"] = class_dict[next(iter(self.tasks))]
+        else:
+            kwargs["class_dict"] = class_dict
+
         processed_predictions = self._save_predictions_as_dict_zarr(
             processed_predictions,
             output_type=output_type_,
@@ -641,9 +647,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 save_paths.append(processed_predictions)
             processed_predictions = zarr.open(str(processed_predictions), mode="r+")
 
+        # For single tasks there should be no overlap
         if self.tasks & processed_predictions.keys():
             for task_name in self.tasks:
                 dict_for_store = processed_predictions[task_name]
+                kwargs["class_dict"] = class_dict[task_name]
                 if "coordinates" in processed_predictions:
                     dict_for_store = {
                         **processed_predictions[task_name],
@@ -1262,7 +1270,7 @@ def _save_annotation_store(
         if len(predictions_["coordinates"].shape) > 1
         else predictions_.pop("coordinates")[:2]
     )
-    origin = tuple(max(0, x) for x in origin)
+    origin = tuple(max(0.0, float(x)) for x in origin)
     store = SQLiteStore()
     store = dict_to_store(
         store=store,

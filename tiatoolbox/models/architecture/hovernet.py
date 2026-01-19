@@ -337,6 +337,11 @@ class HoVerNet(ModelABC):
         self.mode = mode
         self.num_types = num_types
         self.nuc_type_dict = nuc_type_dict
+        self.tasks = []
+        self.tasks.append("nuclei_segmentation")
+        self.class_dict = {
+            self.tasks[0]: nuc_type_dict,
+        }
 
         if mode not in ["original", "fast"]:
             msg = (
@@ -713,9 +718,8 @@ class HoVerNet(ModelABC):
 
         return inst_info_dict
 
-    @staticmethod
     # skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(raw_maps: list[np.ndarray]) -> tuple[dict, ...]:
+    def postproc(self: HoVerNet, raw_maps: list[np.ndarray]) -> tuple[dict, ...]:
         """Post-processing script for image tiles.
 
         Args:
@@ -804,7 +808,7 @@ class HoVerNet(ModelABC):
                 )
 
         nuclei_seg = {
-            "task_type": "nuclei_segmentation",
+            "task_type": self.tasks[0],
             "predictions": pred_inst,
             "info_dict": nuc_inst_info_dict_,
         }

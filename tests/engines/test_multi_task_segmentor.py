@@ -189,15 +189,11 @@ def test_clear_zarr() -> None:
     root = zarr.group(store=store)
 
     # Create a dummy zarr array for probabilities_zarr
-    probabilities_zarr = root.create_dataset("probs", data=np.zeros((5, 3, 3)))
+    probabilities_zarr = root.create_dataset("probabilities", data=np.zeros((5, 3, 3)))
 
     idx = 2
     chunk_shape = (1,)
     probabilities_shape = (3, 3)
-
-    # Add canvas and count arrays with multiple entries
-    root.create_dataset(f"canvas/{idx}", data=np.arange(10))
-    root.create_dataset(f"count/{idx}", data=np.arange(10))
 
     result = _clear_zarr(
         probabilities_zarr=probabilities_zarr,
@@ -209,11 +205,20 @@ def test_clear_zarr() -> None:
     )
 
     # Ensure the keys still exist but the specific index was removed
-    assert "canvas" in root
-    assert "count" in root
-    assert 2 not in root["canvas"]
-    assert 2 not in root["count"]
+    assert "canvas" not in root
+    assert "count" not in root
     assert isinstance(result, da.Array)
+
+    result_ = _clear_zarr(
+        probabilities_zarr=None,
+        probabilities_da=result,
+        zarr_group=root,
+        idx=idx,
+        chunk_shape=chunk_shape,
+        probabilities_shape=probabilities_shape,
+    )
+
+    assert np.all(result_.compute() == result.compute())
 
 
 def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> None:
@@ -490,13 +495,14 @@ def test_wsi_mtsegmentor_zarr(
     shutil.rmtree(output[sample_svs])
 
     mtsegmentor = MultiTaskSegmentor(
-        model="hovernetplus-oed",
+        model="hovernet_fast-pannuke",
         batch_size=64,
         verbose=False,
         num_workers=1,
     )
     # Return Probabilities is True
     # Add multi-input test
+    # Use single task output from hovernet
     output = mtsegmentor.run(
         images=[sample_svs, wsi1_2k_2k_svs],
         return_probabilities=True,
@@ -511,22 +517,16 @@ def test_wsi_mtsegmentor_zarr(
     )
 
     output_ = zarr.open(output[sample_svs], mode="r")
-    assert 18 < np.mean(output_["nuclei_segmentation"]["predictions"][:]) < 22
-    assert 0.43 < np.mean(output_["layer_segmentation"]["predictions"][:]) < 0.45
+    assert 34 < np.mean(output_["predictions"][:]) < 38
     assert "probabilities" in output_
-    assert "canvas" not in output_["nuclei_segmentation"]
-    assert "count" not in output_["nuclei_segmentation"]
-    assert "canvas" not in output_["layer_segmentation"]
-    assert "count" not in output_["layer_segmentation"]
+    assert "canvas" not in output_
+    assert "count" not in output_
 
     output_ = zarr.open(output[wsi1_2k_2k_svs], mode="r")
-    assert 69 < np.mean(output_["nuclei_segmentation"]["predictions"][:]) < 73
-    assert 0.8 < np.mean(output_["layer_segmentation"]["predictions"][:]) < 1.2
+    assert 136 < np.mean(output_["predictions"][:]) < 140
     assert "probabilities" in output_
-    assert "canvas" not in output_["nuclei_segmentation"]
-    assert "count" not in output_["nuclei_segmentation"]
-    assert "canvas" not in output_["layer_segmentation"]
-    assert "count" not in output_["layer_segmentation"]
+    assert "canvas" not in output_
+    assert "count" not in output_
 
     shutil.rmtree(output[sample_svs])
     shutil.rmtree(output[wsi1_2k_2k_svs])
@@ -537,10 +537,13 @@ def test_wsi_segmentor_annotationstore(
 ) -> None:
     """Test MultiTaskSegmentor for WSIs with AnnotationStore output."""
     mtsegmentor = MultiTaskSegmentor(
-        model="hovernetplus-oed",
+        model="hovernet_fast-pannuke",
         batch_size=32,
         verbose=False,
     )
+
+    class_dict = mtsegmentor.model.class_dict
+
     # Return Probabilities is False
     output = mtsegmentor.run(
         images=[sample_svs],
@@ -550,16 +553,16 @@ def test_wsi_segmentor_annotationstore(
         save_dir=track_tmp_path / "wsi_out_check",
         verbose=True,
         output_type="annotationstore",
+        class_dict=class_dict,
     )
 
     for output_ in output[sample_svs]:
         assert output_.suffix != ".zarr"
 
-    for task_name in mtsegmentor.tasks:
-        store_file_name = f"{sample_svs.stem}_{task_name}.db"
-        store_file_path = track_tmp_path / "wsi_out_check" / store_file_name
-        assert store_file_path.exists()
-        assert store_file_path in output[sample_svs]
+    store_file_name = f"{sample_svs.stem}.db"
+    store_file_path = track_tmp_path / "wsi_out_check" / store_file_name
+    assert store_file_path.exists()
+    assert store_file_path == output[sample_svs][0]
 
     # Return Probabilities is True
     mtsegmentor = MultiTaskSegmentor(

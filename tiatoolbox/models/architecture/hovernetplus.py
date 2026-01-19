@@ -96,6 +96,13 @@ class HoVerNetPlus(HoVerNet):
         self.num_layers = num_layers
         self.nuc_type_dict = nuc_type_dict
         self.layer_type_dict = layer_type_dict
+        self.tasks = []
+        self.tasks.append("nuclei_segmentation")
+        self.tasks.append("layer_segmentation")
+        self.class_dict = {
+            self.tasks[0]: nuc_type_dict,
+            self.tasks[1]: layer_type_dict,
+        }
         ksize = 3
 
         self.decoder = nn.ModuleDict(
@@ -247,9 +254,8 @@ class HoVerNetPlus(HoVerNet):
 
         return layer_info_dict
 
-    @staticmethod
     # skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(raw_maps: list[np.ndarray]) -> tuple[dict, ...]:
+    def postproc(self: HoVerNetPlus, raw_maps: list[np.ndarray]) -> tuple[dict, ...]:
         """Post-processing script for image tiles.
 
         Args:
@@ -359,7 +365,7 @@ class HoVerNetPlus(HoVerNet):
                 )
 
         nuclei_seg = {
-            "task_type": "nuclei_segmentation",
+            "task_type": self.tasks[0],
             "predictions": pred_inst,
             "info_dict": nuc_inst_info_dict_,
         }
@@ -380,7 +386,7 @@ class HoVerNetPlus(HoVerNet):
                 )
 
         layer_seg = {
-            "task_type": "layer_segmentation",
+            "task_type": self.tasks[1],
             "predictions": pred_layer,
             "info_dict": layer_info_dict_,
         }
