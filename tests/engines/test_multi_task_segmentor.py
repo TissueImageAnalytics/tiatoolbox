@@ -275,10 +275,11 @@ def test_single_task_mtsegmentor(
 
 
 def test_wsi_mtsegmentor_zarr(
-    sample_svs: Path,
+    remote_sample: Callable,
     track_tmp_path: Path,
 ) -> None:
     """Test MultiTaskSegmentor for WSIs with zarr output."""
+    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
     mtsegmentor = MultiTaskSegmentor(
         model="hovernetplus-oed",
         batch_size=64,
@@ -287,7 +288,7 @@ def test_wsi_mtsegmentor_zarr(
     )
     # Return Probabilities is False
     output = mtsegmentor.run(
-        images=[sample_svs],
+        images=[wsi4_512_512_svs],
         return_probabilities=False,
         return_labels=False,
         device=device,
@@ -299,9 +300,9 @@ def test_wsi_mtsegmentor_zarr(
         stride_shape=(160, 160),
     )
 
-    output_ = zarr.open(output[sample_svs], mode="r")
-    assert 18 < np.mean(output_["nuclei_segmentation"]["predictions"][:]) < 22
-    assert 0.43 < np.mean(output_["layer_segmentation"]["predictions"][:]) < 0.45
+    output_ = zarr.open(output[wsi4_512_512_svs], mode="r")
+    assert 0.8 < np.mean(output_["nuclei_segmentation"]["predictions"][:]) < 1.0
+    assert 0.57 < np.mean(output_["layer_segmentation"]["predictions"][:]) < 0.61
     assert "probabilities" not in output_
     assert "canvas" not in output_["nuclei_segmentation"]
     assert "count" not in output_["nuclei_segmentation"]
@@ -311,11 +312,17 @@ def test_wsi_mtsegmentor_zarr(
 
 def test_multi_input_wsi_mtsegmentor_zarr(
     remote_sample: Callable,
-    sample_svs: Path,
     track_tmp_path: Path,
 ) -> None:
     """Test MultiTaskSegmentor for multiple WSIs with zarr output."""
-    wsi1_2k_2k_svs = Path(remote_sample("wsi1_2k_2k_svs"))
+    wsi4_512_512_svs = Path(remote_sample("wsi4_512_512_svs"))
+    wsi4_512_512_svs_2 = wsi4_512_512_svs.parent / (
+        wsi4_512_512_svs.stem + "_2" + wsi4_512_512_svs.suffix
+    )
+    wsi4_512_512_svs_2 = Path(
+        shutil.copy(str(wsi4_512_512_svs), str(wsi4_512_512_svs_2))
+    )
+
     # Return Probabilities is True
     # Add multi-input test
     # Use single task output from hovernet
@@ -326,7 +333,7 @@ def test_multi_input_wsi_mtsegmentor_zarr(
         num_workers=1,
     )
     output = mtsegmentor.run(
-        images=[sample_svs, wsi1_2k_2k_svs],
+        images=[wsi4_512_512_svs_2, wsi4_512_512_svs],
         return_probabilities=True,
         return_labels=False,
         device=device,
@@ -338,24 +345,24 @@ def test_multi_input_wsi_mtsegmentor_zarr(
         verbose=True,
     )
 
-    output_ = zarr.open(output[sample_svs], mode="r")
-    assert 34 < np.mean(output_["predictions"][:]) < 38
+    output_ = zarr.open(output[wsi4_512_512_svs], mode="r")
+    assert 23 < np.mean(output_["predictions"][:]) < 27
     assert "probabilities" in output_
     assert "canvas" not in output_
     assert "count" not in output_
 
-    output_ = zarr.open(output[wsi1_2k_2k_svs], mode="r")
-    assert 136 < np.mean(output_["predictions"][:]) < 140
+    output_ = zarr.open(output[wsi4_512_512_svs_2], mode="r")
+    assert 23 < np.mean(output_["predictions"][:]) < 27
     assert "probabilities" in output_
     assert "canvas" not in output_
     assert "count" not in output_
 
-    shutil.rmtree(output[sample_svs])
-    shutil.rmtree(output[wsi1_2k_2k_svs])
 
-
-def test_wsi_segmentor_annotationstore(sample_svs: Path, track_tmp_path: Path) -> None:
+def test_wsi_segmentor_annotationstore(
+    remote_sample: Callable, track_tmp_path: Path
+) -> None:
     """Test MultiTaskSegmentor for WSIs with AnnotationStore output."""
+    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
     mtsegmentor = MultiTaskSegmentor(
         model="hovernet_fast-pannuke",
         batch_size=32,
@@ -366,7 +373,7 @@ def test_wsi_segmentor_annotationstore(sample_svs: Path, track_tmp_path: Path) -
 
     # Return Probabilities is False
     output = mtsegmentor.run(
-        images=[sample_svs],
+        images=[wsi4_512_512_svs],
         return_probabilities=False,
         device=device,
         patch_mode=False,
@@ -376,19 +383,20 @@ def test_wsi_segmentor_annotationstore(sample_svs: Path, track_tmp_path: Path) -
         class_dict=class_dict,
     )
 
-    for output_ in output[sample_svs]:
+    for output_ in output[wsi4_512_512_svs]:
         assert output_.suffix != ".zarr"
 
-    store_file_name = f"{sample_svs.stem}.db"
+    store_file_name = f"{wsi4_512_512_svs.stem}.db"
     store_file_path = track_tmp_path / "wsi_out_check" / store_file_name
     assert store_file_path.exists()
-    assert store_file_path == output[sample_svs][0]
+    assert store_file_path == output[wsi4_512_512_svs][0]
 
 
 def test_wsi_segmentor_annotationstore_probabilities(
-    sample_svs: Path, track_tmp_path: Path, caplog: pytest.CaptureFixture
+    remote_sample: Callable, track_tmp_path: Path, caplog: pytest.CaptureFixture
 ) -> None:
     """Test MultiTaskSegmentor with AnnotationStore and probabilities output."""
+    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
     # Return Probabilities is True
     mtsegmentor = MultiTaskSegmentor(
         model="hovernetplus-oed",
@@ -397,7 +405,7 @@ def test_wsi_segmentor_annotationstore_probabilities(
     )
 
     output = mtsegmentor.run(
-        images=[sample_svs],
+        images=[wsi4_512_512_svs],
         return_probabilities=True,
         device=device,
         patch_mode=False,
@@ -407,22 +415,23 @@ def test_wsi_segmentor_annotationstore_probabilities(
     )
 
     assert "Probability maps cannot be saved as AnnotationStore." in caplog.text
-    zarr_group = zarr.open(output[sample_svs][0], mode="r")
+    zarr_group = zarr.open(output[wsi4_512_512_svs][0], mode="r")
     assert "probabilities" in zarr_group
 
     for task_name in mtsegmentor.tasks:
-        store_file_name = f"{sample_svs.stem}_{task_name}.db"
+        store_file_name = f"{wsi4_512_512_svs.stem}_{task_name}.db"
         store_file_path = track_tmp_path / "wsi_prob_out_check" / store_file_name
         assert store_file_path.exists()
-        assert store_file_path in output[sample_svs]
+        assert store_file_path in output[wsi4_512_512_svs]
         assert task_name not in zarr_group
 
 
 def test_raise_value_error_return_labels_wsi(
-    sample_svs: Path,
+    remote_sample: Callable,
     track_tmp_path: Path,
 ) -> None:
     """Tests MultiTaskSegmentor return_labels error."""
+    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
     mtsegmentor = MultiTaskSegmentor(model="hovernetplus-oed", device=device)
 
     with pytest.raises(
@@ -430,7 +439,7 @@ def test_raise_value_error_return_labels_wsi(
         match=r".*return_labels` is not supported for MultiTaskSegmentor.",
     ):
         _ = mtsegmentor.run(
-            images=[sample_svs],
+            images=[wsi4_512_512_svs],
             return_probabilities=False,
             return_labels=True,
             device=device,
