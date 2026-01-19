@@ -28,197 +28,12 @@ OutputType = dict[str, Any] | Any
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
 
-def assert_output_lengths(
-    output: OutputType, expected_counts: Sequence[int], fields: list[str]
-) -> None:
-    """Assert lengths of output dict fields against expected counts."""
-    for field in fields:
-        for i, expected in enumerate(expected_counts):
-            assert len(output[field][i]) == expected, f"{field}[{i}] mismatch"
-
-
-def assert_predictions_and_boxes(
-    output: OutputType, expected_counts: Sequence[int], *, is_zarr: bool = False
-) -> None:
-    """Assert predictions maxima and box lengths against expected counts."""
-    # predictions maxima
-    for idx, expected in enumerate(expected_counts):
-        if is_zarr and idx == 2:
-            # zarr output doesn't store predictions for patch 2
-            continue
-        assert np.max(output["predictions"][idx][:]) == expected, (
-            f"predictions[{idx}] mismatch"
-        )
-
-
-def assert_output_equal(
-    output_a: OutputType,
-    output_b: OutputType,
-    fields: Sequence[str],
-    indices_a: Sequence[int],
-    indices_b: Sequence[int],
-) -> None:
-    """Assert equality of arrays across outputs for given fields/indices."""
-    for field in fields:
-        for i_a, i_b in zip(indices_a, indices_b, strict=False):
-            left = output_a[field][i_a]
-            right = output_b[field][i_b]
-            assert all(
-                np.array_equal(a, b) for a, b in zip(left, right, strict=False)
-            ), f"{field}[{i_a}] vs {field}[{i_b}] mismatch"
-
-
-def assert_annotation_store_patch_output(
-    inputs: list | np.ndarray,
-    output_ann: list[Path],
-    task_name: str | None,
-    track_tmp_path: Path,
-    expected_counts: Sequence[int],
-    output_dict: OutputType,
-    fields: list[str],
-) -> None:
-    """Helper function to test AnnotationStore output."""
-    for patch_idx, db_path in enumerate(output_ann):
-        if isinstance(inputs[patch_idx], Path):
-            store_file_name = (
-                f"{inputs[patch_idx].stem}.db"
-                if task_name is None
-                else f"{inputs[patch_idx].stem}_{task_name}.db"
-            )
-        else:
-            store_file_name = (
-                f"{patch_idx}.db"
-                if task_name is None
-                else f"{patch_idx}_{task_name}.db"
-            )
-
-        assert (
-            db_path == track_tmp_path / "patch_output_annotationstore" / store_file_name
-        )
-        store_ = SQLiteStore.open(db_path)
-        annotations_ = store_.values()
-        annotations_geometry_type = [
-            str(annotation_.geometry_type) for annotation_ in annotations_
-        ]
-        annotations_list = list(annotations_)
-        if expected_counts[patch_idx] > 0:
-            assert "Polygon" in annotations_geometry_type
-
-            # Build result dict from annotation properties
-            result = {}
-            for ann in annotations_list:
-                for key, value in ann.properties.items():
-                    result.setdefault(key, []).append(value)
-            result["contours"] = [
-                list(poly.exterior.coords)
-                for poly in (a.geometry for a in annotations_list)
-            ]
-
-            # wrap it to make it compatible to assert_output_lengths
-            result_ = {field: [result[field]] for field in fields}
-
-            # Lengths and equality checks for this patch
-            assert_output_lengths(
-                result_,
-                expected_counts=[expected_counts[patch_idx]],
-                fields=fields,
-            )
-            fields_ = fields.copy()
-            fields_.remove("contours")
-            assert_output_equal(
-                result_,
-                output_dict,
-                fields=fields_,
-                indices_a=[0],
-                indices_b=[patch_idx],
-            )
-
-            # Contour check (discard last point)
-            matches = [
-                np.array_equal(np.array(a[:-1], dtype=int), np.array(b, dtype=int))
-                for a, b in zip(
-                    result["contours"], output_dict["contours"][patch_idx], strict=False
-                )
-            ]
-            # Due to make valid poly there might be translation in a few points
-            # in AnnotationStore
-            assert sum(matches) / len(matches) >= 0.95
-        else:
-            assert annotations_geometry_type == []
-            assert annotations_list == []
-
-
 def test_mtsegmentor_init() -> None:
     """Tests MultiTaskSegmentor initialization."""
     segmentor = MultiTaskSegmentor(model="hovernetplus-oed", device=device)
 
     assert isinstance(segmentor, MultiTaskSegmentor)
     assert isinstance(segmentor.model, torch.nn.Module)
-
-
-def test_raise_value_error_return_labels_wsi(
-    sample_svs: Path,
-    track_tmp_path: Path,
-) -> None:
-    """Tests MultiTaskSegmentor return_labels error."""
-    mtsegmentor = MultiTaskSegmentor(model="hovernetplus-oed", device=device)
-
-    with pytest.raises(
-        ValueError,
-        match=r".*return_labels` is not supported for MultiTaskSegmentor.",
-    ):
-        _ = mtsegmentor.run(
-            images=[sample_svs],
-            return_probabilities=False,
-            return_labels=True,
-            device=device,
-            patch_mode=False,
-            save_dir=track_tmp_path / "wsi_out_check",
-            batch_size=2,
-            output_type="zarr",
-        )
-
-
-def test_clear_zarr() -> None:
-    """Test _clear_zarr working appropriately.
-
-    This test only covers scenarios which are not feasible to run on GitHub Actions.
-
-    """
-    store = zarr.MemoryStore()
-    root = zarr.group(store=store)
-
-    # Create a dummy zarr array for probabilities_zarr
-    probabilities_zarr = root.create_dataset("probabilities", data=np.zeros((5, 3, 3)))
-
-    idx = 2
-    chunk_shape = (1,)
-    probabilities_shape = (3, 3)
-
-    result = _clear_zarr(
-        probabilities_zarr=probabilities_zarr,
-        probabilities_da=None,
-        zarr_group=root,
-        idx=idx,
-        chunk_shape=chunk_shape,
-        probabilities_shape=probabilities_shape,
-    )
-
-    # Ensure the keys still exist but the specific index was removed
-    assert "canvas" not in root
-    assert "count" not in root
-    assert isinstance(result, da.Array)
-
-    result_ = _clear_zarr(
-        probabilities_zarr=None,
-        probabilities_da=result,
-        zarr_group=root,
-        idx=idx,
-        chunk_shape=chunk_shape,
-        probabilities_shape=probabilities_shape,
-    )
-
-    assert np.all(result_.compute() == result.compute())
 
 
 def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> None:
@@ -336,6 +151,7 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
             fields=fields,
             expected_counts=expected_counts,
             task_name=task_name,
+            class_dict=mtsegmentor.model.class_dict,
         )
 
 
@@ -437,6 +253,7 @@ def test_single_task_mtsegmentor(
         fields=["box", "centroid", "contours", "prob", "type"],
         expected_counts=expected_counts_nuclei,
         task_name=None,
+        class_dict=mtsegmentor.model.class_dict["nuclei_segmentation"],
     )
 
     zarr_file = track_tmp_path / "patch_output_annotationstore" / "output.zarr"
@@ -458,12 +275,10 @@ def test_single_task_mtsegmentor(
 
 
 def test_wsi_mtsegmentor_zarr(
-    remote_sample: Callable,
     sample_svs: Path,
     track_tmp_path: Path,
 ) -> None:
     """Test MultiTaskSegmentor for WSIs with zarr output."""
-    wsi1_2k_2k_svs = Path(remote_sample("wsi1_2k_2k_svs"))
     mtsegmentor = MultiTaskSegmentor(
         model="hovernetplus-oed",
         batch_size=64,
@@ -492,17 +307,24 @@ def test_wsi_mtsegmentor_zarr(
     assert "count" not in output_["nuclei_segmentation"]
     assert "canvas" not in output_["layer_segmentation"]
     assert "count" not in output_["layer_segmentation"]
-    shutil.rmtree(output[sample_svs])
 
+
+def test_multi_input_wsi_mtsegmentor_zarr(
+    remote_sample: Callable,
+    sample_svs: Path,
+    track_tmp_path: Path,
+) -> None:
+    """Test MultiTaskSegmentor for multiple WSIs with zarr output."""
+    wsi1_2k_2k_svs = Path(remote_sample("wsi1_2k_2k_svs"))
+    # Return Probabilities is True
+    # Add multi-input test
+    # Use single task output from hovernet
     mtsegmentor = MultiTaskSegmentor(
         model="hovernet_fast-pannuke",
         batch_size=64,
         verbose=False,
         num_workers=1,
     )
-    # Return Probabilities is True
-    # Add multi-input test
-    # Use single task output from hovernet
     output = mtsegmentor.run(
         images=[sample_svs, wsi1_2k_2k_svs],
         return_probabilities=True,
@@ -532,9 +354,7 @@ def test_wsi_mtsegmentor_zarr(
     shutil.rmtree(output[wsi1_2k_2k_svs])
 
 
-def test_wsi_segmentor_annotationstore(
-    sample_svs: Path, track_tmp_path: Path, caplog: pytest.CaptureFixture
-) -> None:
+def test_wsi_segmentor_annotationstore(sample_svs: Path, track_tmp_path: Path) -> None:
     """Test MultiTaskSegmentor for WSIs with AnnotationStore output."""
     mtsegmentor = MultiTaskSegmentor(
         model="hovernet_fast-pannuke",
@@ -564,6 +384,11 @@ def test_wsi_segmentor_annotationstore(
     assert store_file_path.exists()
     assert store_file_path == output[sample_svs][0]
 
+
+def test_wsi_segmentor_annotationstore_probabilities(
+    sample_svs: Path, track_tmp_path: Path, caplog: pytest.CaptureFixture
+) -> None:
+    """Test MultiTaskSegmentor with AnnotationStore and probabilities output."""
     # Return Probabilities is True
     mtsegmentor = MultiTaskSegmentor(
         model="hovernetplus-oed",
@@ -591,3 +416,194 @@ def test_wsi_segmentor_annotationstore(
         assert store_file_path.exists()
         assert store_file_path in output[sample_svs]
         assert task_name not in zarr_group
+
+
+def test_raise_value_error_return_labels_wsi(
+    sample_svs: Path,
+    track_tmp_path: Path,
+) -> None:
+    """Tests MultiTaskSegmentor return_labels error."""
+    mtsegmentor = MultiTaskSegmentor(model="hovernetplus-oed", device=device)
+
+    with pytest.raises(
+        ValueError,
+        match=r".*return_labels` is not supported for MultiTaskSegmentor.",
+    ):
+        _ = mtsegmentor.run(
+            images=[sample_svs],
+            return_probabilities=False,
+            return_labels=True,
+            device=device,
+            patch_mode=False,
+            save_dir=track_tmp_path / "wsi_out_check",
+            batch_size=2,
+            output_type="zarr",
+        )
+
+
+def test_clear_zarr() -> None:
+    """Test _clear_zarr working appropriately.
+
+    This test only covers scenarios which are not feasible to run on GitHub Actions.
+
+    """
+    store = zarr.MemoryStore()
+    root = zarr.group(store=store)
+
+    # Create a dummy zarr array for probabilities_zarr
+    probabilities_zarr = root.create_dataset("probabilities", data=np.zeros((5, 3, 3)))
+
+    idx = 2
+    chunk_shape = (1,)
+    probabilities_shape = (3, 3)
+
+    result = _clear_zarr(
+        probabilities_zarr=probabilities_zarr,
+        probabilities_da=None,
+        zarr_group=root,
+        idx=idx,
+        chunk_shape=chunk_shape,
+        probabilities_shape=probabilities_shape,
+    )
+
+    # Ensure the keys still exist but the specific index was removed
+    assert "canvas" not in root
+    assert "count" not in root
+    assert isinstance(result, da.Array)
+
+    result_ = _clear_zarr(
+        probabilities_zarr=None,
+        probabilities_da=result,
+        zarr_group=root,
+        idx=idx,
+        chunk_shape=chunk_shape,
+        probabilities_shape=probabilities_shape,
+    )
+
+    assert np.all(result_.compute() == result.compute())
+
+
+# HELPER functions
+def assert_output_lengths(
+    output: OutputType, expected_counts: Sequence[int], fields: list[str]
+) -> None:
+    """Assert lengths of output dict fields against expected counts."""
+    for field in fields:
+        for i, expected in enumerate(expected_counts):
+            assert len(output[field][i]) == expected, f"{field}[{i}] mismatch"
+
+
+def assert_predictions_and_boxes(
+    output: OutputType, expected_counts: Sequence[int], *, is_zarr: bool = False
+) -> None:
+    """Assert predictions maxima and box lengths against expected counts."""
+    # predictions maxima
+    for idx, expected in enumerate(expected_counts):
+        if is_zarr and idx == 2:
+            # zarr output doesn't store predictions for patch 2
+            continue
+        assert np.max(output["predictions"][idx][:]) == expected, (
+            f"predictions[{idx}] mismatch"
+        )
+
+
+def assert_output_equal(
+    output_a: OutputType,
+    output_b: OutputType,
+    fields: Sequence[str],
+    indices_a: Sequence[int],
+    indices_b: Sequence[int],
+) -> None:
+    """Assert equality of arrays across outputs for given fields/indices."""
+    for field in fields:
+        for i_a, i_b in zip(indices_a, indices_b, strict=False):
+            left = output_a[field][i_a]
+            right = output_b[field][i_b]
+            assert all(
+                np.array_equal(a, b) for a, b in zip(left, right, strict=False)
+            ), f"{field}[{i_a}] vs {field}[{i_b}] mismatch"
+
+
+def assert_annotation_store_patch_output(
+    inputs: list | np.ndarray,
+    output_ann: list[Path],
+    task_name: str | None,
+    track_tmp_path: Path,
+    expected_counts: Sequence[int],
+    output_dict: OutputType,
+    fields: list[str],
+    class_dict: dict,
+) -> None:
+    """Helper function to test AnnotationStore output."""
+    for patch_idx, db_path in enumerate(output_ann):
+        if isinstance(inputs[patch_idx], Path):
+            store_file_name = (
+                f"{inputs[patch_idx].stem}.db"
+                if task_name is None
+                else f"{inputs[patch_idx].stem}_{task_name}.db"
+            )
+        else:
+            store_file_name = (
+                f"{patch_idx}.db"
+                if task_name is None
+                else f"{patch_idx}_{task_name}.db"
+            )
+
+        assert (
+            db_path == track_tmp_path / "patch_output_annotationstore" / store_file_name
+        )
+        store_ = SQLiteStore.open(db_path)
+        annotations_ = store_.values()
+        annotations_geometry_type = [
+            str(annotation_.geometry_type) for annotation_ in annotations_
+        ]
+        annotations_list = list(annotations_)
+        if expected_counts[patch_idx] > 0:
+            assert "Polygon" in annotations_geometry_type
+
+            # Build result dict from annotation properties
+            result = {}
+            for ann in annotations_list:
+                for key, value in ann.properties.items():
+                    result.setdefault(key, []).append(value)
+            result["contours"] = [
+                list(poly.exterior.coords)
+                for poly in (a.geometry for a in annotations_list)
+            ]
+
+            # wrap it to make it compatible to assert_output_lengths
+            result_ = {field: [result[field]] for field in fields}
+
+            # Lengths and equality checks for this patch
+            assert_output_lengths(
+                result_,
+                expected_counts=[expected_counts[patch_idx]],
+                fields=fields,
+            )
+            fields_ = fields.copy()
+            fields_.remove("contours")
+
+            class_dict_ = class_dict[task_name] if task_name else class_dict
+            type_ = [class_dict_[c_id] for c_id in output_dict["type"][patch_idx]]
+            output_dict["type"][patch_idx] = type_
+            assert_output_equal(
+                result_,
+                output_dict,
+                fields=fields_,
+                indices_a=[0],
+                indices_b=[patch_idx],
+            )
+
+            # Contour check (discard last point)
+            matches = [
+                np.array_equal(np.array(a[:-1], dtype=int), np.array(b, dtype=int))
+                for a, b in zip(
+                    result["contours"], output_dict["contours"][patch_idx], strict=False
+                )
+            ]
+            # Due to make valid poly there might be translation in a few points
+            # in AnnotationStore
+            assert sum(matches) / len(matches) >= 0.95
+        else:
+            assert annotations_geometry_type == []
+            assert annotations_list == []
