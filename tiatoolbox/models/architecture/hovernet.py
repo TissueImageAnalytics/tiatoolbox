@@ -337,8 +337,7 @@ class HoVerNet(ModelABC):
         self.mode = mode
         self.num_types = num_types
         self.nuc_type_dict = nuc_type_dict
-        self.tasks = []
-        self.tasks.append("nuclei_segmentation")
+        self.tasks = ["nuclei_segmentation"]
         self.class_dict = {
             self.tasks[0]: nuc_type_dict,
         }

@@ -96,9 +96,7 @@ class HoVerNetPlus(HoVerNet):
         self.num_layers = num_layers
         self.nuc_type_dict = nuc_type_dict
         self.layer_type_dict = layer_type_dict
-        self.tasks = []
-        self.tasks.append("nuclei_segmentation")
-        self.tasks.append("layer_segmentation")
+        self.tasks = ["nuclei_segmentation", "layer_segmentation"]
         self.class_dict = {
             self.tasks[0]: nuc_type_dict,
             self.tasks[1]: layer_type_dict,
