@@ -465,7 +465,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
             keys_to_compute = [
                 k for k in processed_predictions_ if k not in self.drop_keys
             ]
-
             if "coordinates" in processed_predictions:
                 processed_predictions_.update(
                     {"coordinates": processed_predictions["coordinates"]}
@@ -506,33 +505,31 @@ class MultiTaskSegmentor(SemanticSegmentor):
         if self.patch_mode:
             for idx, curr_image in enumerate(self.images):
                 values = [processed_predictions[key][idx] for key in keys_to_compute]
-                predictions_ = dict(zip(keys_to_compute, values, strict=False))
-                if isinstance(curr_image, Path):
-                    store_file_name = (
-                        f"{curr_image.stem}.db"
-                        if task_name is None
-                        else f"{curr_image.stem}_{task_name}.db"
-                    )
-                    output_path = save_path.parent / store_file_name
-                else:
-                    store_file_name = (
-                        f"{idx}.db" if task_name is None else f"{idx}_{task_name}.db"
-                    )
-                    output_path = save_path.parent / store_file_name
-
-                origin = predictions_.pop("coordinates")[:2]
-                store = SQLiteStore()
-                store = dict_to_store(
-                    store=store,
-                    processed_predictions=predictions_,
+                output_path = _save_annotation_store(
+                    curr_image=curr_image,
+                    keys_to_compute=keys_to_compute,
+                    values=values,
+                    task_name=task_name,
+                    idx=idx,
+                    save_path=save_path,
                     class_dict=class_dict,
                     scale_factor=scale_factor,
-                    origin=origin,
                 )
+                save_paths.append(output_path)
 
-                store.commit()
-                store.dump(output_path)
-
+        else:
+            for idx, curr_image in enumerate(self.images):
+                values = [processed_predictions[key] for key in keys_to_compute]
+                output_path = _save_annotation_store(
+                    curr_image=curr_image,
+                    keys_to_compute=keys_to_compute,
+                    values=values,
+                    task_name=task_name,
+                    idx=idx,
+                    save_path=save_path,
+                    class_dict=class_dict,
+                    scale_factor=scale_factor,
+                )
                 save_paths.append(output_path)
 
         for key in keys_to_compute:
@@ -638,16 +635,20 @@ class MultiTaskSegmentor(SemanticSegmentor):
             **kwargs,
         )
 
+        save_paths = []
         if isinstance(processed_predictions, Path):
+            if return_probabilities:
+                save_paths.append(processed_predictions)
             processed_predictions = zarr.open(str(processed_predictions), mode="r+")
 
-        save_paths = []
         if self.tasks & processed_predictions.keys():
             for task_name in self.tasks:
-                dict_for_store = {
-                    **processed_predictions[task_name],
-                    "coordinates": processed_predictions["coordinates"],
-                }
+                dict_for_store = processed_predictions[task_name]
+                if "coordinates" in processed_predictions:
+                    dict_for_store = {
+                        **processed_predictions[task_name],
+                        "coordinates": processed_predictions["coordinates"],
+                    }
                 out_path = self._save_predictions_as_annotationstore(
                     processed_predictions=dict_for_store,
                     task_name=task_name,
@@ -655,6 +656,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     **kwargs,
                 )
                 save_paths += out_path
+                del processed_predictions[task_name]
 
             return save_paths
 
@@ -1231,3 +1233,46 @@ def _check_and_update_for_memory_overload(
     tqdm_loop.desc = "Inferring patches"
 
     return canvas, count, canvas_zarr, count_zarr, tqdm_loop
+
+
+def _save_annotation_store(
+    curr_image: Path | None,
+    keys_to_compute: list[str],
+    values: list[da.Array | list[da.Array]],
+    task_name: str,
+    idx: int,
+    save_path: Path,
+    class_dict: dict,
+    scale_factor: tuple[float, float],
+) -> Path:
+    """Helper function to save to annotation store."""
+    if isinstance(curr_image, Path):
+        store_file_name = (
+            f"{curr_image.stem}.db"
+            if task_name is None
+            else f"{curr_image.stem}_{task_name}.db"
+        )
+    else:
+        store_file_name = f"{idx}.db" if task_name is None else f"{idx}_{task_name}.db"
+    predictions_ = dict(zip(keys_to_compute, values, strict=False))
+    output_path = save_path.parent / store_file_name
+    # Patch mode indexes the "coordinates" while calculating "values" variable.
+    origin = (
+        predictions_.pop("coordinates")[0][:2]
+        if len(predictions_["coordinates"].shape) > 1
+        else predictions_.pop("coordinates")[:2]
+    )
+    origin = tuple(max(0, x) for x in origin)
+    store = SQLiteStore()
+    store = dict_to_store(
+        store=store,
+        processed_predictions=predictions_,
+        class_dict=class_dict,
+        scale_factor=scale_factor,
+        origin=origin,
+    )
+
+    store.commit()
+    store.dump(output_path)
+
+    return output_path

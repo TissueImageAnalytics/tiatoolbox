@@ -470,7 +470,7 @@ def test_wsi_segmentor_annotationstore(
         batch_size=32,
         verbose=False,
     )
-    # Return Probabilities is False
+    # Return Probabilities is True
     output = segmentor.run(
         images=[sample_svs],
         return_probabilities=True,

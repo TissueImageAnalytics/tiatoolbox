@@ -6,13 +6,17 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
+import dask.array as da
 import numpy as np
 import pytest
 import torch
 import zarr
 
 from tiatoolbox.annotation import SQLiteStore
-from tiatoolbox.models.engine.multi_task_segmentor import MultiTaskSegmentor
+from tiatoolbox.models.engine.multi_task_segmentor import (
+    MultiTaskSegmentor,
+    _clear_zarr,
+)
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils import imwrite
 from tiatoolbox.wsicore import WSIReader
@@ -173,6 +177,43 @@ def test_raise_value_error_return_labels_wsi(
             batch_size=2,
             output_type="zarr",
         )
+
+
+def test_clear_zarr() -> None:
+    """Test _clear_zarr working appropriately.
+
+    This test only covers scenarios which are not feasible to run on GitHub Actions.
+
+    """
+    store = zarr.MemoryStore()
+    root = zarr.group(store=store)
+
+    # Create a dummy zarr array for probabilities_zarr
+    probabilities_zarr = root.create_dataset("probs", data=np.zeros((5, 3, 3)))
+
+    idx = 2
+    chunk_shape = (1,)
+    probabilities_shape = (3, 3)
+
+    # Add canvas and count arrays with multiple entries
+    root.create_dataset(f"canvas/{idx}", data=np.arange(10))
+    root.create_dataset(f"count/{idx}", data=np.arange(10))
+
+    result = _clear_zarr(
+        probabilities_zarr=probabilities_zarr,
+        probabilities_da=None,
+        zarr_group=root,
+        idx=idx,
+        chunk_shape=chunk_shape,
+        probabilities_shape=probabilities_shape,
+    )
+
+    # Ensure the keys still exist but the specific index was removed
+    assert "canvas" in root
+    assert "count" in root
+    assert 2 not in root["canvas"]
+    assert 2 not in root["count"]
+    assert isinstance(result, da.Array)
 
 
 def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> None:
@@ -489,3 +530,61 @@ def test_wsi_mtsegmentor_zarr(
 
     shutil.rmtree(output[sample_svs])
     shutil.rmtree(output[wsi1_2k_2k_svs])
+
+
+def test_wsi_segmentor_annotationstore(
+    sample_svs: Path, track_tmp_path: Path, caplog: pytest.CaptureFixture
+) -> None:
+    """Test MultiTaskSegmentor for WSIs with AnnotationStore output."""
+    mtsegmentor = MultiTaskSegmentor(
+        model="hovernetplus-oed",
+        batch_size=32,
+        verbose=False,
+    )
+    # Return Probabilities is False
+    output = mtsegmentor.run(
+        images=[sample_svs],
+        return_probabilities=False,
+        device=device,
+        patch_mode=False,
+        save_dir=track_tmp_path / "wsi_out_check",
+        verbose=True,
+        output_type="annotationstore",
+    )
+
+    for output_ in output[sample_svs]:
+        assert output_.suffix != ".zarr"
+
+    for task_name in mtsegmentor.tasks:
+        store_file_name = f"{sample_svs.stem}_{task_name}.db"
+        store_file_path = track_tmp_path / "wsi_out_check" / store_file_name
+        assert store_file_path.exists()
+        assert store_file_path in output[sample_svs]
+
+    # Return Probabilities is True
+    mtsegmentor = MultiTaskSegmentor(
+        model="hovernetplus-oed",
+        batch_size=32,
+        verbose=False,
+    )
+
+    output = mtsegmentor.run(
+        images=[sample_svs],
+        return_probabilities=True,
+        device=device,
+        patch_mode=False,
+        save_dir=track_tmp_path / "wsi_prob_out_check",
+        verbose=True,
+        output_type="annotationstore",
+    )
+
+    assert "Probability maps cannot be saved as AnnotationStore." in caplog.text
+    zarr_group = zarr.open(output[sample_svs][0], mode="r")
+    assert "probabilities" in zarr_group
+
+    for task_name in mtsegmentor.tasks:
+        store_file_name = f"{sample_svs.stem}_{task_name}.db"
+        store_file_path = track_tmp_path / "wsi_prob_out_check" / store_file_name
+        assert store_file_path.exists()
+        assert store_file_path in output[sample_svs]
+        assert task_name not in zarr_group

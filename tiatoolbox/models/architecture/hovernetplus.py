@@ -225,7 +225,19 @@ class HoVerNetPlus(HoVerNet):
                 cv2.RETR_TREE,
                 cv2.CHAIN_APPROX_NONE,
             )
+
             for layer in contours:
+                # * opencv protocol format may break
+                contour_ = np.squeeze(layer)
+
+                # < 3 points does not make a contour, so skip, likely artifact too
+                # as the contours obtained via approximation => too small
+                if contour_.shape[0] < 3:  # pragma: no cover  # noqa: PLR2004
+                    continue
+                # ! check for trickery shape
+                if len(contour_.shape) != 2:  # pragma: no cover  # noqa: PLR2004
+                    continue
+
                 coords = layer[:, 0, :]
                 layer_info_dict[count] = {
                     "contours": coords,
