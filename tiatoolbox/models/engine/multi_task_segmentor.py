@@ -164,7 +164,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
         """Perform model inference on a whole slide image (WSI)."""
         # Default Memory threshold percentage is 80.
         memory_threshold = kwargs.get("memory_threshold", 80)
-        vm = psutil.virtual_memory()
 
         keys = ["probabilities", "coordinates"]
         coordinates = []
@@ -246,38 +245,19 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     )
                 )
 
-                used_percent = vm.percent
-                total_bytes = sum(arr.nbytes for arr in canvas) if canvas else 0
-                canvas_used_percent = (total_bytes / vm.free) * 100
-
-                if (
-                    used_percent > memory_threshold
-                    or canvas_used_percent > memory_threshold
-                ):
-                    tqdm_loop.desc = "Spill intermediate data to disk"
-                    used_percent = (
-                        canvas_used_percent
-                        if (canvas_used_percent > memory_threshold)
-                        else used_percent
-                    )
-                    msg = (
-                        f"Current Memory usage: {used_percent} %  "
-                        f"exceeds specified threshold: {memory_threshold}. "
-                        f"Saving intermediate results to disk."
-                    )
-                    tqdm_.write(msg)
-                    # Flush data in Memory and clear dask graph
-                    canvas_zarr, count_zarr = save_multitask_to_cache(
-                        canvas,
-                        count,
-                        canvas_zarr,
-                        count_zarr,
+                canvas, count, canvas_zarr, count_zarr, tqdm_loop = (
+                    _check_and_update_for_memory_overload(
+                        canvas=canvas,
+                        count=count,
+                        canvas_zarr=canvas_zarr,
+                        count_zarr=count_zarr,
+                        memory_threshold=memory_threshold,
+                        tqdm_loop=tqdm_loop,
+                        tqdm_=tqdm_,
                         save_path=save_path,
+                        num_expected_output=num_expected_output,
                     )
-                    canvas = [None for _ in range(num_expected_output)]
-                    count = [None for _ in range(num_expected_output)]
-                    gc.collect()
-                    tqdm_loop.desc = "Inferring patches"
+                )
 
             coordinates.append(
                 da.from_array(
@@ -294,29 +274,16 @@ class MultiTaskSegmentor(SemanticSegmentor):
             change_indices=[len(output_locs)],
         )
 
-        zarr_group = None
-        if canvas_zarr is not None:
-            canvas_zarr, count_zarr = save_multitask_to_cache(
-                canvas, count, canvas_zarr, count_zarr
-            )
-            # Wrap zarr in dask array
-            for idx, canvas_zarr_ in enumerate(canvas_zarr):
-                canvas[idx] = da.from_zarr(canvas_zarr_, chunks=canvas_zarr_.chunks)
-                count[idx] = da.from_zarr(
-                    count_zarr[idx], chunks=count_zarr[idx].chunks
-                )
-
-            zarr_group = zarr.open(canvas_zarr[0].store.path, mode="a")
-
-        # Final vertical merge
-        raw_predictions["probabilities"] = merge_multitask_vertical_chunkwise(
-            canvas,
-            count,
-            output_locs_y_,
-            zarr_group,
-            save_path,
-            memory_threshold,
+        raw_predictions["probabilities"] = _calculate_probabilities(
+            canvas_zarr=canvas_zarr,
+            count_zarr=count_zarr,
+            canvas=canvas,
+            count=count,
+            output_locs_y_=output_locs_y_,
+            save_path=save_path,
+            memory_threshold=memory_threshold,
         )
+
         raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
 
         return raw_predictions
@@ -1155,7 +1122,7 @@ def _save_multitask_vertical_to_cache(
 
 
 def _clear_zarr(
-    probabilities_zarr: zarr.Array,
+    probabilities_zarr: zarr.Array | None,
     probabilities_da: da.Array | None,
     zarr_group: zarr.Group,
     idx: int,
@@ -1172,3 +1139,90 @@ def _clear_zarr(
             probabilities_zarr, chunks=(chunk_shape[0], *probabilities_shape)
         )
     return probabilities_da
+
+
+def _calculate_probabilities(
+    canvas_zarr: list[zarr.Array | None],
+    count_zarr: list[zarr.Array | None],
+    canvas: list[da.Array | None],
+    count: list[da.Array | None],
+    output_locs_y_: np.ndarray,
+    save_path: Path,
+    memory_threshold: int,
+) -> list[da.Array]:
+    """Helper function to calculate probabilities for MultiTaskSegmentor."""
+    zarr_group = None
+    if canvas_zarr is not None:
+        canvas_zarr, count_zarr = save_multitask_to_cache(
+            canvas, count, canvas_zarr, count_zarr
+        )
+        # Wrap zarr in dask array
+        for idx, canvas_zarr_ in enumerate(canvas_zarr):
+            canvas[idx] = da.from_zarr(canvas_zarr_, chunks=canvas_zarr_.chunks)
+            count[idx] = da.from_zarr(count_zarr[idx], chunks=count_zarr[idx].chunks)
+
+        zarr_group = zarr.open(canvas_zarr[0].store.path, mode="a")
+
+    # Final vertical merge
+    return merge_multitask_vertical_chunkwise(
+        canvas,
+        count,
+        output_locs_y_,
+        zarr_group,
+        save_path,
+        memory_threshold,
+    )
+
+
+def _check_and_update_for_memory_overload(
+    canvas: list[da.Array | None],
+    count: list[da.Array | None],
+    canvas_zarr: list[zarr.Array | None],
+    count_zarr: list[zarr.Array | None],
+    memory_threshold: int,
+    tqdm_loop: DataLoader | tqdm,
+    tqdm_: type[tqdm_notebook | tqdm],
+    save_path: Path,
+    num_expected_output: int,
+) -> tuple[
+    list[da.Array | None],
+    list[da.Array | None],
+    list[zarr.Array | None],
+    list[zarr.Array | None],
+    DataLoader | tqdm,
+]:
+    """Helper function to check and update the memory usage for multitask segmentor."""
+    vm = psutil.virtual_memory()
+    used_percent = vm.percent
+    total_bytes = sum(arr.nbytes for arr in canvas) if canvas else 0
+    canvas_used_percent = (total_bytes / vm.free) * 100
+
+    if not (used_percent > memory_threshold or canvas_used_percent > memory_threshold):
+        return canvas, count, canvas_zarr, count_zarr, tqdm_loop
+
+    tqdm_loop.desc = "Spill intermediate data to disk"
+    used_percent = (
+        canvas_used_percent
+        if (canvas_used_percent > memory_threshold)
+        else used_percent
+    )
+    msg = (
+        f"Current Memory usage: {used_percent} %  "
+        f"exceeds specified threshold: {memory_threshold}. "
+        f"Saving intermediate results to disk."
+    )
+    tqdm_.write(msg)
+    # Flush data in Memory and clear dask graph
+    canvas_zarr, count_zarr = save_multitask_to_cache(
+        canvas,
+        count,
+        canvas_zarr,
+        count_zarr,
+        save_path=save_path,
+    )
+    canvas = [None for _ in range(num_expected_output)]
+    count = [None for _ in range(num_expected_output)]
+    gc.collect()
+    tqdm_loop.desc = "Inferring patches"
+
+    return canvas, count, canvas_zarr, count_zarr, tqdm_loop
