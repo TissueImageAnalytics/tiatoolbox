@@ -1111,9 +1111,7 @@ def _save_multitask_vertical_to_cache(
     if probabilities_da[idx] is not None:
         vm = psutil.virtual_memory()
         # Calculate total bytes for all outputs
-        total_bytes = sum(
-            arr.nbytes if arr is not None else 0 for arr in probabilities_da
-        )
+        total_bytes = sum(0 if arr is None else arr.nbytes for arr in probabilities_da)
         used_percent = (total_bytes / vm.free) * 100
     if probabilities_zarr[idx] is None and used_percent > memory_threshold:
         msg = (
