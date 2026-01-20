@@ -30,7 +30,7 @@ from skimage.registration import phase_cross_correlation
 
 from tiatoolbox import cli, utils
 from tiatoolbox.annotation import SQLiteStore
-from tiatoolbox.utils import imread, postproc_defs, tiff_to_fsspec
+from tiatoolbox.utils import imread, tiff_to_fsspec
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
@@ -3017,57 +3017,17 @@ def test_read_multi_channel(source_image: Path) -> None:
     Create a virtual WSI by concatenating the source_image.
 
     """
-    img_array = utils.misc.imread(Path(source_image))
-    new_img_array = np.concatenate((img_array, img_array), axis=-1)
-
-    new_img_size = new_img_array.shape[:2][::-1]
-    meta = wsireader.WSIMeta(slide_dimensions=new_img_size, axes="YXS", mpp=(0.5, 0.5))
-    wsi = wsireader.VirtualWSIReader(new_img_array, info=meta)
-
-    region = wsi.read_rect(
-        location=(0, 0),
-        size=(50, 100),
-        pad_mode="reflect",
-        units="mpp",
-        resolution=0.25,
-    )
-    target = cv2.resize(
-        new_img_array[:50, :25, :],
-        (50, 100),
-        interpolation=cv2.INTER_CUBIC,
-    )
-
-    assert region.shape == (100, 50, (new_img_array.shape[-1]))
-    assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
-    assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
+    # Moved to tests/test_multichannel_reading.py
 
 
 def test_visualise_multi_channel(sample_qptiff: Path) -> None:
     """Test visualising a multi-channel qptiff multiplex image."""
-    wsi = wsireader.TIFFWSIReader(sample_qptiff, post_proc="auto")
-    wsi2 = wsireader.TIFFWSIReader(sample_qptiff, post_proc=None)
-
-    region = wsi.read_rect(location=(0, 0), size=(50, 100))
-    region2 = wsi2.read_rect(location=(0, 0), size=(50, 100))
-
-    assert region.shape == (100, 50, 3)
-    assert region2.shape == (100, 50, 5)
-    # Was 7 channels. Not sure if this is correct. Check this!
+    # Moved to tests/test_multichannel_reading.py
 
 
 def test_get_post_proc_variants() -> None:
     """Test different branches of get_post_proc method."""
-    reader = wsireader.VirtualWSIReader(np.zeros((10, 10, 3)))
-
-    assert callable(reader.get_post_proc(lambda x: x))
-    assert reader.get_post_proc(None) is None
-    assert isinstance(reader.get_post_proc("auto"), postproc_defs.MultichannelToRGB)
-    assert isinstance(
-        reader.get_post_proc("MultichannelToRGB"), postproc_defs.MultichannelToRGB
-    )
-
-    with pytest.raises(ValueError, match="Invalid post-processing function"):
-        reader.get_post_proc("invalid_proc")
+    # Moved to tests/test_multichannel_reading.py
 
 
 def test_post_proc_applied() -> None:

@@ -415,6 +415,6 @@ def pad_bounds(
     elif np.size(padding) == ndims:  # pragma: no cover
         padding = np.tile(padding, 2)
 
-    signs = np.repeat([-1, 1], ndims)
+    signs: np.ndarray = np.repeat([-1, 1], ndims)
     result = np.add(bounds, padding * signs)
     return (result[0], result[1], result[2], result[3])
