@@ -497,7 +497,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
         logger.info("Saving predictions as AnnotationStore.")
 
         # predictions are not required when saving to AnnotationStore.
-        processed_predictions.pop("predictions")
+        for key in ("canvas", "count", "predictions"):
+            processed_predictions.pop(key, None)
 
         keys_to_compute = list(processed_predictions.keys())
         if "probabilities" in keys_to_compute:
@@ -1097,8 +1098,8 @@ def merge_multitask_vertical_chunkwise(
 
 
 def _save_multitask_vertical_to_cache(
-    probabilities_zarr: list[zarr.Array],
-    probabilities_da: list[da.Array] | None,
+    probabilities_zarr: list[zarr.Array] | list[None],
+    probabilities_da: list[da.Array] | list[None],
     probabilities: np.ndarray,
     idx: int,
     tqdm_: type[tqdm_notebook | tqdm],
@@ -1121,16 +1122,16 @@ def _save_multitask_vertical_to_cache(
         )
         tqdm_.write(msg)
         zarr_group = zarr.open(str(save_path), mode="a")
-        probabilities_zarr = zarr_group.create_dataset(
+        probabilities_zarr[idx] = zarr_group.create_dataset(
             name=f"probabilities/{idx}",
-            shape=probabilities_da.shape,
+            shape=probabilities_da[idx].shape,
             chunks=(chunk_shape[0], *probabilities.shape[1:]),
             dtype=probabilities.dtype,
             overwrite=True,
         )
-        probabilities_zarr[idx][:] = probabilities_da.compute()
+        probabilities_zarr[idx][:] = probabilities_da[idx].compute()
 
-        probabilities_da = None
+        probabilities_da[idx] = None
 
     return probabilities_zarr, probabilities_da
 
@@ -1156,8 +1157,8 @@ def _clear_zarr(
 
 
 def _calculate_probabilities(
-    canvas_zarr: list[zarr.Array | None],
-    count_zarr: list[zarr.Array | None],
+    canvas_zarr: list[zarr.Array] | list[None],
+    count_zarr: list[zarr.Array] | list[None],
     canvas: list[da.Array | None],
     count: list[da.Array | None],
     output_locs_y_: np.ndarray,

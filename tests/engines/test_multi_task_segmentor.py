@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Any, ClassVar, Final
 
 import dask.array as da
 import numpy as np
+import psutil
 import pytest
 import torch
 import zarr
@@ -16,6 +17,7 @@ from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models.engine.multi_task_segmentor import (
     MultiTaskSegmentor,
     _clear_zarr,
+    _save_multitask_vertical_to_cache,
 )
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils import imwrite
@@ -381,6 +383,7 @@ def test_wsi_segmentor_annotationstore(
         verbose=True,
         output_type="annotationstore",
         class_dict=class_dict,
+        memory_threshold=0,
     )
 
     for output_ in output[wsi4_512_512_svs]:
@@ -490,6 +493,63 @@ def test_clear_zarr() -> None:
     )
 
     assert np.all(result_.compute() == result.compute())
+
+
+def test_vertical_save_branch_without_patch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test saving to cache if memory threshold is breached for vertical merge."""
+    idx = 0
+
+    # --- Fake psutil.virtual_memory() with extremely low free memory ---
+    class FakeVM:
+        free = 1  # force used_percent > memory_threshold
+
+    monkeypatch.setattr(psutil, "virtual_memory", lambda: FakeVM())
+
+    # --- Real dask array ---
+    da_arr = da.from_array(np.array([[1, 2, 3]]), chunks=(1, 3))
+    probabilities_da = [da_arr]
+
+    # --- probabilities_zarr slot is None to trigger the branch ---
+    probabilities_zarr = [None]
+
+    # --- Real numpy array for shape/dtype ---
+    probabilities = np.zeros((1, 3))
+
+    # --- Dummy tqdm with a write() method ---
+    class DummyTqdm:
+        messages: ClassVar[list[str]] = []
+
+        @classmethod
+        def write(cls: DummyTqdm, msg: str) -> None:
+            cls.messages.append(msg)
+
+    # --- Call function ---
+    new_zarr, new_da = _save_multitask_vertical_to_cache(
+        probabilities_zarr=probabilities_zarr,
+        probabilities_da=probabilities_da,
+        probabilities=probabilities,
+        idx=idx,
+        tqdm_=DummyTqdm,
+        save_path=tmp_path / "cache.zarr",
+        chunk_shape=(1,),
+        memory_threshold=0,  # ensure branch triggers
+    )
+
+    # --- Assertions ---
+    # tqdm.write was called
+    assert len(DummyTqdm.messages) == 1
+    assert "Saving intermediate results to disk" in DummyTqdm.messages[0]
+
+    # probabilities_da must be set to None
+    assert new_da[idx] is None
+
+    # new_zarr must be a real zarr array
+    assert isinstance(new_zarr[idx], zarr.Array)
+
+    # Data was written correctly
+    assert np.array_equal(new_zarr[idx][:], np.array([[1, 2, 3]]))
 
 
 # HELPER functions
