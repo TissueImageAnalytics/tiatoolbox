@@ -1110,8 +1110,9 @@ def _save_multitask_vertical_to_cache(
     used_percent = 0
     if probabilities_da[idx] is not None:
         vm = psutil.virtual_memory()
-        total_bytes = (
-            sum(arr.nbytes for arr in probabilities_da) if probabilities_da else 0
+        # Calculate total bytes for all outputs
+        total_bytes = sum(
+            arr.nbytes if arr is not None else 0 for arr in probabilities_da
         )
         used_percent = (total_bytes / vm.free) * 100
     if probabilities_zarr[idx] is None and used_percent > memory_threshold:
@@ -1167,7 +1168,7 @@ def _calculate_probabilities(
 ) -> list[da.Array]:
     """Helper function to calculate probabilities for MultiTaskSegmentor."""
     zarr_group = None
-    if canvas_zarr is not None:
+    if canvas_zarr[0] is not None:
         canvas_zarr, count_zarr = save_multitask_to_cache(
             canvas, count, canvas_zarr, count_zarr
         )
