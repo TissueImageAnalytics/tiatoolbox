@@ -501,11 +501,12 @@ def test_vertical_save_branch_without_patch(
     """Test saving to cache if memory threshold is breached for vertical merge."""
     idx = 0
 
-    # --- Fake psutil.virtual_memory() with extremely low free memory ---
     class FakeVM:
+        """Fake psutil.virtual_memory() with extremely low free memory."""
+
         free = 1  # force used_percent > memory_threshold
 
-    monkeypatch.setattr(psutil, "virtual_memory", lambda: FakeVM())
+    monkeypatch.setattr(psutil, "virtual_memory", FakeVM)
 
     # --- Real dask array ---
     da_arr = da.from_array(np.array([[1, 2, 3]]), chunks=(1, 3))
@@ -517,12 +518,14 @@ def test_vertical_save_branch_without_patch(
     # --- Real numpy array for shape/dtype ---
     probabilities = np.zeros((1, 3))
 
-    # --- Dummy tqdm with a write() method ---
     class DummyTqdm:
+        """Dummy tqdm with a write() method."""
+
         messages: ClassVar[list[str]] = []
 
         @classmethod
         def write(cls: DummyTqdm, msg: str) -> None:
+            """Append a message to the messages list."""
             cls.messages.append(msg)
 
     # --- Call function ---
