@@ -58,7 +58,9 @@ def main(svs_file_path: str, json_file_path: str, final_url: str) -> None:
         and can be accessed via HTTP byte range API.
 
     Example:
-        main('/path/to/CMU-1-Small-Region.svs', '/path/to/CMU-1-Small-Region.json', 'https://tiatoolbox.dcs.warwick.ac.uk/sample_wsis/CMU-1-Small-Region.svs')
+        main('/path/to/CMU-1-Small-Region.svs', '/path/to/CMU-1-Small-Region.json',
+        "https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/sample_wsis/CMU-1-Small-Region.svs"
+        )
 
     """
     url_to_replace = f"{URL_PLACEHOLDER}{Path(svs_file_path).name}"
