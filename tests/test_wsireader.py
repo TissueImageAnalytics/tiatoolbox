@@ -8,7 +8,6 @@ import json
 import logging
 import re
 import shutil
-from collections.abc import Callable
 from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
@@ -2894,6 +2893,7 @@ def _make_mock_post_proc(called: dict[str, bool]) -> Callable[[np.ndarray], np.n
     """Create a mock post-processing function that modifies the image and sets flag."""
 
     def mock_post_proc(image: np.ndarray) -> np.ndarray:
+        """Mock post-processing: set flag and modify image pixels."""
         called["flag"] = True
         image = image.copy()
         channels = image.shape[-1]
@@ -3082,6 +3082,7 @@ def test_post_proc_applied() -> None:
 
     # Define a dummy post-processing function
     def mock_post_proc(image: np.ndarray) -> np.ndarray:
+        """Mock post-processing that colors the top-left pixel red."""
         image[0, 0] = [255, 0, 0]  # Modify top-left pixel to red
         return image
 

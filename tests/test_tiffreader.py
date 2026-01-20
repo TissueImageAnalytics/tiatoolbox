@@ -119,6 +119,13 @@ def test_tiffreader_fallback_to_virtual(
     """
 
     class DummyTIFFWSIReader:
+        """Dummy TIFFWSIReader that always raises unsupported format errors.
+
+        This class is used to simulate `TIFFWSIReader` raising a
+        ValueError for unsupported TIFF formats so that fallback logic
+        can be tested.
+        """
+
         def __init__(
             self,
             input_path: Path,
@@ -152,6 +159,11 @@ def test_try_tiff_raises_other_valueerror(
 
     # Patch TIFFWSIReader to raise a different ValueError
     def raise_other_valueerror(*args: object, **kwargs: object) -> None:
+        """Raise a ValueError emulating a non-unsupported TIFF error.
+
+        This helper is patched in tests to ensure that `WSIReader.try_tiff`
+        surfaces non-unsupported ValueErrors as expected.
+        """
         _ = args
         _ = kwargs
         msg = "Some other TIFF error"
