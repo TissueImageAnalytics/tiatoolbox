@@ -196,7 +196,21 @@ def doc(data_path: dict[str, object]) -> Generator[Document, object, None]:
     # start tile server
     p = multiprocessing.Process(target=run_app, daemon=True)
     p.start()
-    time.sleep(2)  # allow time for server to start
+    # wait until server is ready
+    start = time.time()
+    url = f"http://127.0.0.1:{main.port}/tileserver/session_id"
+    while True:
+        try:
+            resp = requests.get(url, timeout=1)
+            if resp.status_code == 200:
+                break
+        except requests.RequestException:
+            pass
+        if time.time() - start > 10:
+            p.terminate()
+            msg = f"Tileserver failed to start within 10s: {url}"
+            raise RuntimeError(msg)
+        time.sleep(0.2)
 
     main.doc_config.set_sys_args(argv=["dummy_str", str(data_path["base_path"])])
     handler = FunctionHandler(main.doc_config.setup_doc)

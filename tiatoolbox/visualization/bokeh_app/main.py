@@ -144,7 +144,7 @@ def format_info(info: dict[str, Any]) -> str:
 
 def get_channel_info() -> dict[str, tuple[int, int, int]]:
     """Get the colors for the channels."""
-    resp = UI["s"].get(f"http://{host2}:5000/tileserver/channels")
+    resp = UI["s"].get(f"http://{host2}:{port}/tileserver/channels")
     try:
         resp = json.loads(resp.text)
         return resp.get("channels", {}), resp.get("active", [])
@@ -158,7 +158,7 @@ def set_channel_info(
 ) -> None:
     """Set the colors for the channels."""
     UI["s"].put(
-        f"http://{host2}:5000/tileserver/channels",
+        f"http://{host2}:{port}/tileserver/channels",
         data={"channels": json.dumps(colors), "active": json.dumps(active_channels)},
     )
 
@@ -286,7 +286,7 @@ def create_channel_color_ui() -> Column:
     ) -> None:
         """Enhance slider callback."""
         UI["s"].put(
-            f"http://{host2}:5000/tileserver/enhance",
+            f"http://{host2}:{port}/tileserver/enhance",
             data={"val": json.dumps(new)},
         )
         UI["vstate"].update_state = 1
