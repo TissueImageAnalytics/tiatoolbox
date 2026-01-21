@@ -63,12 +63,13 @@ def test_set_channel_info_uses_configured_port() -> None:
     main.UI = {"s": dummy}
     old_host2 = getattr(main, "host2", "127.0.0.1")
     old_port = getattr(main, "port", "5000")
+
+    main.host2 = "127.0.0.1"
+    main.port = "54321"
+    expected = f"http://{main.host2}:{main.port}/tileserver/channels"
     try:
-        main.host2 = "127.0.0.1"
-        main.port = "54321"
         colors = {"c0": "#ff0000"}
         main.set_channel_info(colors, [0])
-        expected = f"http://{main.host2}:{main.port}/tileserver/channels"
     finally:
         assert dummy.last_put == expected
         if old_ui is None:
