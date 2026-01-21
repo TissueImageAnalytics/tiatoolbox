@@ -153,7 +153,7 @@ def imresize(
     # can work on out-of-the-box (anything else will cause
     # error). The `converted type` has been selected so that
     # they can maintain the numeric precision of the `original type`.
-    dtype_mapping = [
+    dtype_mapping: list[tuple[type, type]] = [
         (np.bool_, np.uint8),
         (np.int8, np.int16),
         (np.int16, np.int16),
@@ -167,7 +167,7 @@ def imresize(
         (np.float32, np.float32),
         (np.float64, np.float64),
     ]
-    source_dtypes = [v[0] for v in dtype_mapping]
+    source_dtypes = [np.dtype(v[0]) for v in dtype_mapping]
     original_dtype = img.dtype
     if original_dtype not in source_dtypes:
         msg = f"Does not support resizing for array of dtype: {original_dtype}"
