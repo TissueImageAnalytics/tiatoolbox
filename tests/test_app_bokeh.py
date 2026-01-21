@@ -325,30 +325,31 @@ def test_add_slide_layer(doc: Document, data_path: pytest.TempPathFactory) -> No
 def test_transform_overlay(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test adding a transform overlay."""
 
-    # Mock the backend session so layer_drop_cb gets valid JSON
-    class DummySession:
-        """A minimal session mock that returns a dummy response for PUT requests."""
+    class DummyResponse:
+        """Dummy response for mocking requests.put()."""
 
-        def put(self) -> SimpleNamespace:
-            """Return a dummy successful response."""
-            return SimpleNamespace(
-                text=json.dumps({"status": "ok", "path": "dummy.npy"}),
-                status_code=200,
-            )
+        text = json.dumps("dummy.npy")
+        status_code = 200
 
-    old_ui = getattr(main, "UI", None)
-    main.UI = {"s": DummySession()}
+    def dummy_put(*_: object, **__: object) -> DummyResponse:
+        """Dummy put method to replace requests.Session.put()."""
+        return DummyResponse()
+
+    # Patch the method on the Session class
+    old_put = requests.sessions.Session.put
+    requests.sessions.Session.put = dummy_put
+
     try:
         layer_drop = doc.get_model_by_name("layer_drop0")
-        affine_layer_path = str(data_path["affine_trans"])  # sample .npy file
+        affine_layer_path = str(data_path["affine_trans"])
 
         click = MenuItemClick(layer_drop, affine_layer_path)
         layer_drop._trigger_event(click)
 
         assert len(layer_drop.menu) == 6
-        # If no exception is raised, the test passes
+
     finally:
-        main.UI = old_ui
+        requests.sessions.Session.put = old_put
 
 
 def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) -> None:
