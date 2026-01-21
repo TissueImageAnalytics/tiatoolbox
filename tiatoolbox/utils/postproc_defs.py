@@ -23,10 +23,10 @@ class MultichannelToRGB:
 
         """
         self.colors: np.ndarray | None = None
-        self.color_dict = color_dict
         self.is_validated: bool = False
         self.channels: list[int] | None = None
         self.enhance: float = 1.0
+        self.color_dict = color_dict
 
     def validate(self: MultichannelToRGB, n: int) -> None:
         """Validate the input color_dict on first read from image.
@@ -137,7 +137,7 @@ class MultichannelToRGB:
         """Ensure that colors is updated if color_dict is updated."""
         if name == "color_dict" and value is not None:
             self.colors = np.array(list(value.values()), dtype=np.float32)
-            if self.channels is None:
+            if getattr(self, "channels", None) is None:
                 self.channels = list(range(len(value)))
 
         super().__setattr__(name, value)
