@@ -33,7 +33,7 @@ test_requirements = [
 
 setup(
     author="TIA Centre",
-    author_email="tia@dcs.warwick.ac.uk",
+    author_email="TIA@warwick.ac.uk",
     python_requires=">=3.10, <3.14",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
