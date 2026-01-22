@@ -80,7 +80,7 @@ ______________________________________________________________________
 
 - Adds the bokeh visualization tool. #684
   - The tool allows a user to launch a server on their machine to visualise whole slide images, overlay the results of deep learning algorithms or to select a patch from whole slide image and run TIAToolbox deep learning engines.
-  - This tool powers the TIA demos server. For details please see https://warwick.ac.uk/tia/demos.
+  - This tool powers the TIA demos server. For details please see [https://warwick.ac.uk/tia/demos](https://warwick.ac.uk/tia/demos).
 - Extends Annotation to Support Init from WKB #639
 - Adds `IOConfig` for NuClick in `pretrained_model.yaml` #709
 - Adds functions to save the TIAToolbox Engine outputs to Zarr and AnnotationStore files. #724
