@@ -3,26 +3,22 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Sequence
-    from typing import Mapping
+    from collections.abc import Mapping
 
-import cv2
 import numpy as np
-import torch
-from torch import nn
-
-
-from tiatoolbox.models.models_abc import ModelABC
-
-from tiatoolbox.type_hints import IntPair
-from typing import Any, List, Optional, Tuple, Union
-
 import timm
 import torch
-import torch.nn as nn
-
+from torch import nn
 from torchvision.ops import Conv2dNormActivation
-from tiatoolbox.models.architecture.utils import SegmentationHead, Attention, peak_detection_map_overlap, nms_on_detection_maps
+
+from tiatoolbox.models.architecture.utils import (
+    Attention,
+    SegmentationHead,
+    nms_on_detection_maps,
+    peak_detection_map_overlap,
+)
+from tiatoolbox.models.models_abc import ModelABC
+from tiatoolbox.type_hints import IntPair
 
 
 class TimmEncoderFixed(nn.Module):
@@ -50,7 +46,7 @@ class TimmEncoderFixed(nn.Module):
         depth: int = 5,
         output_stride: int = 32,
         drop_rate: float = 0.5,
-        drop_path_rate: Optional[float] = 0.0,
+        drop_path_rate: float | None = 0.0,
     ) -> None:
         super().__init__()
         if drop_path_rate is None:
@@ -80,7 +76,7 @@ class TimmEncoderFixed(nn.Module):
         self._depth = depth
         self._output_stride = output_stride
 
-    def forward(self, x: torch.Tensor) -> List[torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> list[torch.Tensor]:
         """Forward pass through the encoder.
 
         Args:
@@ -97,7 +93,7 @@ class TimmEncoderFixed(nn.Module):
         return features
 
     @property
-    def out_channels(self) -> List[int]:
+    def out_channels(self) -> list[int]:
         """Get output channels for each feature level.
 
         Returns:
@@ -194,8 +190,7 @@ class DecoderBlock(nn.Module):
             activation_layer=nn.SiLU,
         )
         self.attention1 = Attention(
-            name=attention_type,
-            in_channels=in_channels + skip_channels
+            name=attention_type, in_channels=in_channels + skip_channels
         )
         self.conv2 = Conv2dNormActivation(
             out_channels,
@@ -205,13 +200,10 @@ class DecoderBlock(nn.Module):
             norm_layer=nn.BatchNorm2d,
             activation_layer=nn.SiLU,
         )
-        self.attention2 = Attention(
-            name=attention_type,
-            in_channels=out_channels
-        )
+        self.attention2 = Attention(name=attention_type, in_channels=out_channels)
 
     def forward(
-        self, x: torch.Tensor, skip: Optional[torch.Tensor] = None
+        self, x: torch.Tensor, skip: torch.Tensor | None = None
     ) -> torch.Tensor:
         """Forward pass through decoder block.
 
@@ -278,8 +270,8 @@ class KongNetDecoder(nn.Module):
 
     def __init__(
         self,
-        encoder_channels: List[int],
-        decoder_channels: Tuple[int, ...],
+        encoder_channels: list[int],
+        decoder_channels: tuple[int, ...],
         n_blocks: int = 5,
         attention_type: str = "scse",
         center: bool = True,
@@ -288,9 +280,7 @@ class KongNetDecoder(nn.Module):
 
         if n_blocks != len(decoder_channels):
             raise ValueError(
-                "Model depth is {}, but you provide `decoder_channels` for {} blocks.".format(
-                    n_blocks, len(decoder_channels)
-                )
+                f"Model depth is {n_blocks}, but you provide `decoder_channels` for {len(decoder_channels)} blocks."
             )
 
         # remove first skip with same spatial resolution
@@ -361,13 +351,13 @@ class KongNet(ModelABC):
     def __init__(
         self: KongNet,
         num_heads: int,
-        num_channels_per_head: List[int],
+        num_channels_per_head: list[int],
         target_channels: list[int],
         min_distance: int,
         threshold_abs: float,
         wide_decoder: bool = False,
         class_dict: dict | None = None,
-        postproc_tile_shape: IntPair = (2048, 2048)
+        postproc_tile_shape: IntPair = (2048, 2048),
     ) -> None:
         super(KongNet, self).__init__()
 
@@ -377,7 +367,7 @@ class KongNet(ModelABC):
                 f"Number of decoders ({len(num_channels_per_head)}) must match "
                 f"number of heads ({num_heads})"
             )
-        
+
         self.encoder = TimmEncoderFixed(
             name="tf_efficientnetv2_l.in21k_ft_in1k",
             in_channels=3,
@@ -400,7 +390,7 @@ class KongNet(ModelABC):
                     decoder_channels=decoder_channels,
                     n_blocks=len(decoder_channels),
                     center=True,
-                    attention_type='scse',
+                    attention_type="scse",
                 )
             )
 
@@ -519,7 +509,6 @@ class KongNet(ModelABC):
             probs = probs.permute(0, 2, 3, 1)  # to NHWC
 
         return probs.cpu().numpy()
-    
 
     #  skipcq: PYL-W0221  # noqa: ERA001
     def postproc(
@@ -582,6 +571,11 @@ class KongNet(ModelABC):
             peak_map,
             min_distance=min_distance_to_use,
         )
-    
-    def load_state_dict(self:KongNet, state_dict: Mapping[str, Any], strict: bool = True, assign: bool = False):
-        return super().load_state_dict(state_dict['model'], strict, assign)
+
+    def load_state_dict(
+        self: KongNet,
+        state_dict: Mapping[str, Any],
+        strict: bool = True,
+        assign: bool = False,
+    ):
+        return super().load_state_dict(state_dict["model"], strict, assign)

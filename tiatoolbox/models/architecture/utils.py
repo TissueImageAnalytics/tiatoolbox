@@ -6,9 +6,8 @@ import sys
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
-import scipy.ndimage as ndimage
-
 import torch
+from scipy import ndimage
 from skimage.feature import peak_local_max
 from skimage.measure import label, regionprops
 from torch import nn
@@ -238,7 +237,8 @@ class UpSample2x(nn.Module):
         ret = torch.tensordot(x, mat, dims=1)  # bxcxhxwxshxsw
         ret = ret.permute(0, 1, 2, 4, 3, 5)
         return ret.reshape((-1, input_shape[1], input_shape[2] * 2, input_shape[3] * 2))
-    
+
+
 class SegmentationHead(nn.Sequential):
     """Segmentation head for UNet++ architecture.
 
@@ -316,10 +316,11 @@ class Attention(nn.Module):
         elif name == "scse":
             self.attention = SCSEModule(**params)
         else:
-            raise ValueError("Attention {} is not implemented".format(name))
+            raise ValueError(f"Attention {name} is not implemented")
 
     def forward(self, x):
         return self.attention(x)
+
 
 class SCSEModule(nn.Module):
     def __init__(self, in_channels, reduction=16):
@@ -335,8 +336,6 @@ class SCSEModule(nn.Module):
 
     def forward(self, x):
         return x * self.cSE(x) + x * self.sSE(x)
-    
-
 
 
 def argmax_last_axis(image: np.ndarray) -> np.ndarray:
@@ -438,9 +437,8 @@ def peak_detection_map_overlap(
                     peak["mean_intensity"],
                 )
                 out_probs[int(r), int(c), ch] = confidence
-        
-    return out if not return_probability else out_probs
 
+    return out if not return_probability else out_probs
 
 
 def nms_on_detection_maps(
@@ -451,7 +449,7 @@ def nms_on_detection_maps(
 
     Args:
         detection_maps (np.ndarray): Sparse input (H, W, C) where pixels are already local peaks.
-        min_distance (int): Minimum distance required between ANY detections (even across classes). 
+        min_distance (int): Minimum distance required between ANY detections (even across classes).
 
     Returns:
         np.ndarray: The filtered maps with cross-channel suppression applied.
@@ -463,10 +461,7 @@ def nms_on_detection_maps(
     # 2. Handle Spatial Conflicts Across Channels (Global NMS)
     filter_size = 2 * min_distance + 1
     dilated_global_max = ndimage.maximum_filter(
-        max_across_channels, 
-        size=filter_size,
-        mode='constant',
-        cval=0.0
+        max_across_channels, size=filter_size, mode="constant", cval=0.0
     )
 
     # 3. Create the Keep Mask

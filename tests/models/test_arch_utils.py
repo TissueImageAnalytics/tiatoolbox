@@ -190,7 +190,7 @@ def test_attention_module() -> None:
     """Test for Attention module."""
 
     test_input = torch.zeros((1, 16, 32, 32), dtype=torch.float32)
-    
+
     # Default to identity
     attention = Attention(name=None, in_channels=16)
     output = attention(test_input)

@@ -462,7 +462,10 @@ class NucleusDetector(SemanticSegmentor):
         )
 
         task = centroid_maps.to_zarr(
-            url=zarr_file, component="centroid_maps", compute=False, zarr_array_kwargs={"object_codec": None}
+            url=zarr_file,
+            component="centroid_maps",
+            compute=False,
+            zarr_array_kwargs={"object_codec": None},
         )
         with ProgressBar():
             compute(task)

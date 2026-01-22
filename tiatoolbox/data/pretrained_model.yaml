@@ -1065,7 +1065,7 @@ KongNet_PUMA_T1_3:
             num_heads: 3
             num_channels_per_head: [3, 3, 3]
             target_channels: [2, 5, 8]
-            wide_decoder: False 
+            wide_decoder: False
             min_distance: 13
             threshold_abs: 0.5
             class_dict: {
@@ -1094,7 +1094,7 @@ KongNet_PUMA_T2_3:
             num_heads: 10
             num_channels_per_head: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
             target_channels: [2, 5, 8, 11, 14, 17, 20, 23, 26, 29]
-            wide_decoder: False 
+            wide_decoder: False
             min_distance: 13
             threshold_abs: 0.5
             class_dict: {
@@ -1148,4 +1148,3 @@ KongNet_Det_MIDOG_1:
             patch_output_shape: [512, 512]
             stride_shape: [492, 492]
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
-

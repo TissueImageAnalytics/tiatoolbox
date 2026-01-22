@@ -60,8 +60,8 @@ import torch
 from torch import nn
 
 from tiatoolbox.models.architecture.timm_efficientnet import EfficientNetEncoder
-from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.models.architecture.utils import SegmentationHead
+from tiatoolbox.models.models_abc import ModelABC
 
 
 class Conv2dReLU(nn.Sequential):
