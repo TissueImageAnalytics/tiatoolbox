@@ -13,7 +13,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import patch
-from xml.etree import ET
 
 import cv2
 import glymur
@@ -23,6 +22,7 @@ import SimpleITK as sitk  # noqa: N813
 import tifffile
 import zarr
 from click.testing import CliRunner
+from defusedxml import ElementTree
 from packaging.version import Version
 from skimage.filters import threshold_otsu
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
@@ -3766,12 +3766,12 @@ def test_wsireader_find_read_params_at_resolution_edge_cases(sample_svs: Path) -
 def test_tiffwsireader_parse_methods_edge_cases() -> None:
     """Test TIFFWSIReader parsing methods with edge cases."""
     # Test _get_namespace with no namespace
-    root = ET.fromstring("<root></root>")
+    root = ElementTree.fromstring("<root></root>")
     ns = TIFFWSIReader._get_namespace(root)
     assert ns == {}
 
     # Test _get_namespace with namespace
-    root = ET.fromstring("<root xmlns='http://example.com'></root>")
+    root = ElementTree.fromstring("<root xmlns='http://example.com'></root>")
     ns = TIFFWSIReader._get_namespace(root)
     assert "ns" in ns
 
