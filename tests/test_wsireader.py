@@ -1297,6 +1297,45 @@ def test_virtual_wsi_reader_read_rect(source_image: Path) -> None:
     assert info.as_dict() == wsi.info.as_dict()
 
 
+def test_virtual_rgb_mode_postproc_then_composite(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that post-processing in VirtualWSIReader occurs before compositing."""
+    # 3-channel input -> VirtualWSIReader.mode == "rgb"
+    img = np.zeros((16, 16, 3), dtype=np.uint8)
+    v = wsireader.VirtualWSIReader(img, post_proc=None)
+
+    calls = {"bg": 0, "alphas": [], "last": None}
+
+    def fake_bg_composite(*, image: np.ndarray, alpha: bool) -> np.ndarray:
+        """Fake background_composite to record calls."""
+        calls["bg"] += 1
+        calls["alphas"].append(alpha)
+        calls["last"] = image
+        return image
+
+    monkeypatch.setattr(utils.transforms, "background_composite", fake_bg_composite)
+
+    # No post-proc -> composite still called with alpha=False
+    out1 = v.read_rect((0, 0), (8, 8))
+    assert calls["bg"] == 1
+    assert calls["alphas"][-1] is False
+    assert out1.shape == (8, 8, 3)
+
+    # Attach a post-proc; it should run BEFORE composite
+    def recorder(img: np.ndarray) -> np.ndarray:
+        img2 = img.copy()
+        img2[..., 0] = 255  # make the effect visible at composite time
+        return img2
+
+    v.post_proc = recorder
+    out2 = v.read_rect((0, 0), (8, 8))
+    assert calls["bg"] == 2  # composite called again
+    # background_composite must have received the post-processed content
+    assert (calls["last"][..., 0] == 255).all()
+    assert out2.shape == (8, 8, 3)
+
+
 def test_virtual_wsi_reader_read_bounds_virtual_baseline(source_image: Path) -> None:
     """Test VirtualWSIReader read bounds with virtual baseline."""
     image_path = Path(source_image)
@@ -4144,3 +4183,19 @@ def test_virtual_wsireader_accepts_2d_bool_mask() -> None:
     mask = np.zeros((16, 16), dtype=np.uint8)
     wsi = VirtualWSIReader(mask, mode="bool")
     assert wsi.img.ndim == 2
+
+
+def test_canonical_shape_handles_cyx_and_syx() -> None:
+    """Test TIFFWSIReaderDelegate.canonical_shape with CYX and SYX axes."""
+    cs = TIFFWSIReaderDelegate.canonical_shape  # type: ignore[attr-defined]
+    assert tuple(cs("CYX", (3, 8, 10))) == (8, 10, 3)
+    assert tuple(cs("SYX", (5, 8, 10))) == (8, 10, 5)
+
+
+def test_virtual_read_rect_resolution_coord_space_roundtrip() -> None:
+    """Test VirtualWSIReader read_rect with resolution coord_space."""
+    img = np.arange(0, 32 * 32 * 4, dtype=np.uint8).reshape(32, 32, 4)
+    v = wsireader.VirtualWSIReader(img)
+    r1 = v.read_rect((0, 0), (8, 8), coord_space="resolution")
+    r2 = v.read_bounds((0, 0, 8, 8))
+    assert np.array_equal(r1, r2)

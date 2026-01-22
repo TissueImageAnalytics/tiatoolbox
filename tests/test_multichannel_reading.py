@@ -7,6 +7,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pytest
+from defusedxml import ElementTree
 
 from tiatoolbox import utils
 from tiatoolbox.utils import postproc_defs
@@ -94,8 +95,19 @@ def test_read_multi_channel(source_image: Path) -> None:
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 0.2
 
 
-def test_visualise_multi_channel(sample_qptiff: Path) -> None:
+def test_visualise_multi_channel(
+    sample_qptiff: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Test visualising a multi-channel qptiff multiplex image."""
+    calls = {"bg": 0}
+
+    def fake_bg_composite(*, image: np.ndarray) -> np.ndarray:
+        """Fake background_composite to record calls."""
+        calls["bg"] += 1
+        return image
+
+    monkeypatch.setattr(utils.transforms, "background_composite", fake_bg_composite)
+
     wsi = wsireader.TIFFWSIReader(sample_qptiff, post_proc="auto")
     wsi2 = wsireader.TIFFWSIReader(sample_qptiff, post_proc=None)
 
@@ -104,7 +116,17 @@ def test_visualise_multi_channel(sample_qptiff: Path) -> None:
 
     assert region.shape == (100, 50, 3)
     assert region2.shape == (100, 50, 5)
-    # Was 7 channels. Not sure if this is correct. Check this!
+    assert region2.shape[0:2] == (100, 50)
+    assert region2.shape[-1] >= 4  # robust vs variation (was hard-coded 5)
+
+    # In the TIFF delegate path, background_composite must NOT be called
+    assert calls["bg"] == 0
+
+
+def test_tiff_post_proc_auto_is_multichannel(sample_qptiff: Path) -> None:
+    """Test that post_proc='auto' yields MultichannelToRGB for multiplex images."""
+    r = wsireader.TIFFWSIReader(sample_qptiff, post_proc="auto")
+    assert isinstance(r.post_proc, postproc_defs.MultichannelToRGB)
 
 
 def test_get_post_proc_variants() -> None:
@@ -120,3 +142,46 @@ def test_get_post_proc_variants() -> None:
 
     with pytest.raises(ValueError, match="Invalid post-processing function"):
         reader.get_post_proc("invalid_proc")
+
+
+OME_MINI = """
+<OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06">
+  <Image ID="Image:0" Name="dummy">
+    <Pixels SizeX="4" SizeY="4" SizeC="3" Type="uint8">
+      <!-- OME Color is 24-bit: B + 256*G + 65536*R -->
+      <Channel ID="Channel:0" Name="DAPI"      Color="255" />
+      <Channel ID="Channel:1" Name="Alexa488"  Color="65280" />
+      <Channel ID="Channel:2" Name="TRITC"     Color="16711680" />
+    </Pixels>
+  </Image>
+</OME>
+"""
+
+
+def test_tiff_ome_channel_color_parsing_minimal_xml() -> None:
+    """Test TIFFWSIReader OME channel color parsing with minimal OME XML."""
+    root = ElementTree.fromstring(OME_MINI)
+
+    # Private, but stable on the TIFF path:
+    parse_channels = wsireader.TIFFWSIReader._parse_channel_data  # type: ignore[attr-defined]
+    build_dict = wsireader.TIFFWSIReader._build_color_dict  # type: ignore[attr-defined]
+
+    # Derive namespace from the root tag: "{uri}OME" -> uri
+    if root.tag.startswith("{") and "}":
+        uri = root.tag[root.tag.find("{") + 1 : root.tag.find("}")]
+    else:
+        uri = "http://www.openmicroscopy.org/Schemas/OME/2016-06"  # sensible default
+    ns = {"ns": uri}
+
+    channel_data = parse_channels(root, ns=ns, dye_mapping={})
+    color_dict = build_dict(channel_data, {})
+
+    # Helper to compare whether parser returns 0 to 1 floats or 0 to 255 ints
+    def as_255(rgb: str) -> tuple[int, int, int]:
+        """Convert comma-separated RGB string to 0-255 integer tuple."""
+        vals = [float(c) for c in rgb]
+        return tuple(round(c * 255) if max(vals) <= 1.0 else round(c) for c in vals)
+
+    assert as_255(color_dict["DAPI"]) == (0, 0, 255)
+    assert as_255(color_dict["Alexa488"]) == (0, 255, 0)
+    assert as_255(color_dict["TRITC"]) == (255, 0, 0)

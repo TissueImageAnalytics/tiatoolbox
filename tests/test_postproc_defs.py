@@ -65,7 +65,6 @@ def test_validate_warns_and_trims_when_n_colors_is_n_plus_one(
     """
     # Use N = 5 channels in the image so __call__ doesn't early-return,
     # and supply N+1 (=6) colors to trigger the trimming/warning path.
-    # 4 colors, but image will have 3 channels
     conv = MultichannelToRGB()
     conv.color_dict = {
         "c0": (1.0, 0.0, 0.0),
