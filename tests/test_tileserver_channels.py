@@ -45,6 +45,7 @@ class _FakeSlide:
     def slide_thumbnail(
         self, *, resolution: float = 8.0, units: str = "mpp"
     ) -> np.ndarray:
+        _ = (resolution, units)  # mark as used to satisfy Ruff
         # Parameters are part of the real Slide API; unused by the fake.
         self._thumb_called += 1
         # returning an array avoids PIL issues if used elsewhere
