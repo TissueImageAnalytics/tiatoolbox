@@ -1055,9 +1055,8 @@ def test_grab_files_from_dir(sample_visual_fields: Path) -> None:
 
 def test_download_unzip_data(track_tmp_path: Path) -> None:
     """Test download and unzip data from utils.misc."""
-    url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
+    url = "https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/testdata/utils/test_directory.zip"
     save_dir_path = track_tmp_path / "tmp"
-
     save_dir_path.mkdir()
     save_zip_path1 = misc.download_data(url, save_dir=save_dir_path)
     save_zip_path2 = misc.download_data(
@@ -1086,7 +1085,7 @@ def test_download_unzip_data(track_tmp_path: Path) -> None:
 
 def test_download_data(track_tmp_path: Path) -> None:
     """Test download data from utils.misc."""
-    url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
+    url = "https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/testdata/utils/test_directory.zip"
 
     save_dir_path = track_tmp_path / "downloads"
     save_zip_path = save_dir_path / "test_directory.zip"
@@ -1120,6 +1119,19 @@ def test_download_data(track_tmp_path: Path) -> None:
     shutil.rmtree(save_dir_path, ignore_errors=True)  # remove data
     misc.download_data(url, save_zip_path)  # to test skip download
     assert Path.exists(save_zip_path)
+
+    # Test that file exists and no unzip - should return early
+    result_path = misc.download_data(url, save_zip_path, overwrite=False, unzip=False)
+    assert result_path == save_zip_path
+    assert save_zip_path.exists()
+
+    # Test download with unzip=True
+    unzip_save_path = save_dir_path / "test_unzip.zip"
+    unzipped_path = misc.download_data(url, unzip_save_path, overwrite=True, unzip=True)
+    assert unzipped_path.exists()
+    assert unzipped_path.is_dir()
+    assert unzipped_path.name == "test_unzip"  # stem of the zip file
+
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
     # URL not valid
@@ -1127,7 +1139,7 @@ def test_download_data(track_tmp_path: Path) -> None:
     save_path = save_dir_path / "temp"
     with pytest.raises(HTTPError):
         misc.download_data(
-            "https://tiatoolbox.dcs.warwick.ac.uk/invalid-url",
+            "https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/invalid_url",
             save_path,
         )
 
