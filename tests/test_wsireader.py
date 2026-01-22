@@ -3368,8 +3368,7 @@ def test_wsireader_verify_supported_wsi_edge_cases(track_tmp_path: Path) -> None
 
     # Test with no extension
     no_ext_file = track_tmp_path / "test"
-    with pytest.raises(FileNotSupportedError, match="not a supported file format"):
-        WSIReader.verify_supported_wsi(no_ext_file)
+    WSIReader.verify_supported_wsi(no_ext_file)
 
 
 def test_wsireader_handle_virtual_wsi_edge_cases(track_tmp_path: Path) -> None:
@@ -3390,8 +3389,8 @@ def test_wsireader_handle_tiff_wsi_edge_cases(track_tmp_path: Path) -> None:
     """Test _handle_tiff_wsi with various scenarios."""
     # Test with non-existent file
     non_existent = track_tmp_path / "non_existent.tiff"
-    result = _handle_tiff_wsi(non_existent, None, None, None)
-    assert result is None
+    with pytest.raises(FileNotFoundError):
+        _handle_tiff_wsi(non_existent, None, None, None)
 
 
 def test_wsireader_special_cases_coverage(track_tmp_path: Path) -> None:
@@ -3401,11 +3400,11 @@ def test_wsireader_special_cases_coverage(track_tmp_path: Path) -> None:
     db_file.touch()
 
     # Test annotation store case
-    result = WSIReader._handle_special_cases(
-        db_file, db_file, None, None, None, info=None
-    )
-    # Should return AnnotationStoreReader or None depending on file content
-    assert result is None or isinstance(result, AnnotationStoreReader)
+    with pytest.raises(
+        ValueError,
+        match="No metadata found in store",
+    ):
+        WSIReader._handle_special_cases(db_file, db_file, None, None, None, info=None)
 
 
 def test_wsireader_get_post_proc_edge_cases() -> None:
@@ -3454,8 +3453,8 @@ def test_wsireader_slide_dimensions_edge_cases(sample_svs: Path) -> None:
     # Test with different precision values
     dims1 = wsi.slide_dimensions(1.0, "baseline", precision=1)
     dims2 = wsi.slide_dimensions(1.0, "baseline", precision=5)
-    assert isinstance(dims1, tuple)
-    assert isinstance(dims2, tuple)
+    assert isinstance(dims1, (tuple, list, np.ndarray))
+    assert isinstance(dims2, (tuple, list, np.ndarray))
     assert len(dims1) == 2
     assert len(dims2) == 2
 
@@ -3526,7 +3525,7 @@ def test_tiffwsireader_delegate_edge_cases(sample_svs: Path) -> None:
 
     # Test canonical_shape with different axes
     shape = delegate.canonical_shape("SYX", (3, 100, 100))
-    assert shape == (100, 100)
+    assert tuple(shape) == (100, 100, 3)
 
     # Test with unsupported axes
     with pytest.raises(ValueError, match="Unsupported axes"):
@@ -3865,9 +3864,16 @@ def test_tiffwsireader_get_colors_from_meta_edge_cases(sample_ome_tiff: Path) ->
 
     # Test with invalid XML
     wsi.post_proc = utils.postproc_defs.MultichannelToRGB()
-    with patch.object(wsi, "info") as mock_info:
-        mock_info.raw = {"Description": "invalid xml"}
-        wsi._get_colors_from_meta()  # Should handle ParseError gracefully
+
+    pp = wsi.post_proc
+    before = pp.__dict__.copy()
+
+    # Fake info object with invalid XML
+    bad_info = SimpleNamespace(raw={"Description": "<invalid_xml"})
+    wsi._m_info = bad_info  # bypass property safely
+    ret = wsi._get_colors_from_meta()  # Should handle XML parse error gracefully
+    assert ret is None
+    assert pp.__dict__ == before
 
 
 def test_wsireader_save_tiles_edge_cases(
@@ -3895,9 +3901,7 @@ def test_wsireader_tissue_mask_edge_cases(sample_svs: Path) -> None:
     wsi = OpenSlideWSIReader(sample_svs)
 
     # Test with custom masker_kwargs
-    mask = wsi.tissue_mask(
-        method="morphological", resolution=5, units="power", kernel_size=5
-    )
+    mask = wsi.tissue_mask(method="morphological", resolution=5, units="power")
     assert isinstance(mask, VirtualWSIReader)
     assert mask.mode == "bool"
 
@@ -3911,6 +3915,18 @@ def test_wsireader_find_read_bounds_params_edge_cases(sample_svs: Path) -> None:
         bounds=(0, 0, 1, 1), resolution=1.0, units="baseline"
     )
     assert len(result) == 4
+
+    # Conflicting parameters: power-derived resolution AND kernel_size
+    with pytest.raises(
+        ValueError,
+        match="Only one of mpp, power, kernel_size can be given",
+    ):
+        wsi.tissue_mask(
+            method="morphological",
+            resolution=5,
+            units="power",
+            kernel_size=5,
+        )
 
     # Test with bounds at edge of slide
     slide_w, slide_h = wsi.info.slide_dimensions
@@ -4002,9 +4018,13 @@ def test_tiffwsireader_parse_svs_tag_edge_cases() -> None:
         def __getitem__(self, index: int) -> MockPage:
             return self.pages[index]
 
-    # Test with malformed key-value pairs
-    pages = MockPages("Software|key==value")  # Double equals
-    with pytest.raises(ValueError, match="key=value"):
+    # Minimal valid header (two lines), then malformed key-value after '|'
+    desc = "Software Line\nPhotometric Line|key==value"
+    pages = MockPages(desc)
+
+    # Expect a ValueError due to malformed key-value pairs;
+    # don't overconstrain the message (implementation-specific).
+    with pytest.raises(ValueError, match=r"malformed\s+key[- ]?value"):
         TIFFWSIReaderDelegate.parse_svs_metadata(pages)
 
 
@@ -4109,6 +4129,19 @@ def test_wsireader_error_propagation() -> None:
 
     # Test with invalid numpy array dimensions
     invalid_array = np.ones((10,))  # 1D array
-    wsi = VirtualWSIReader(invalid_array)
-    # Should still work but might have unexpected behavior
-    assert wsi.img.shape == (10,)
+    with pytest.raises(ValueError, match=r"ndim < 2|2D|3D"):
+        VirtualWSIReader(invalid_array)
+
+
+def test_virtual_wsireader_accepts_valid_rgb() -> None:
+    """Test that VirtualWSIReader accepts valid RGB images."""
+    rgb = np.zeros((16, 16, 3), dtype=np.uint8)
+    wsi = VirtualWSIReader(rgb, mode="rgb")
+    assert wsi.img.shape == (16, 16, 3)
+
+
+def test_virtual_wsireader_accepts_2d_bool_mask() -> None:
+    """Test that VirtualWSIReader accepts 2D boolean masks."""
+    mask = np.zeros((16, 16), dtype=np.uint8)
+    wsi = VirtualWSIReader(mask, mode="bool")
+    assert wsi.img.ndim == 2

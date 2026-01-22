@@ -9,7 +9,7 @@ import math
 import os
 import re
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from numbers import Number
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -3113,6 +3113,14 @@ class VirtualWSIReader(WSIReader):
         else:
             self.img = utils.imread(self.input_path)
 
+        _min_image_ndims = (
+            2  # Minimum number of dimensions required for an image (H, W)
+        )
+        # Reject 1D (or otherwise <2D) inputs early with a clear message.
+        if self.img.ndim < _min_image_ndims:
+            msg = "Input image must be 2D (H, W) or 3D (H, W, C). Got a 1D array."
+            raise ValueError(msg)
+
         if mode != "bool" and (
             self.img.ndim == 2 or self.img.shape[2] not in [3, 4]  # noqa: PLR2004
         ):
@@ -4553,12 +4561,20 @@ class TIFFWSIReaderDelegate:
             value_string = value_string.strip()
 
             def us_date(string: str) -> datetime:
-                """Return datetime parsed according to US date format."""
-                return datetime.strptime(string, r"%m/%d/%y").astimezone()
+                """Return datetime parsed according to US date format (UTC-aware)."""
+                # and we immediately attach UTC.
+                dt = datetime.strptime(string, r"%m/%d/%y")  # noqa: DTZ007
+                return dt.replace(tzinfo=timezone.utc)
 
             def time(string: str) -> datetime:
-                """Return datetime parsed according to HMS format."""
-                return datetime.strptime(string, r"%H:%M:%S").astimezone()
+                """Return datetime parsed according to HMS format (UTC-aware)."""
+                # parse to time first; although .time() is tz-agnostic
+                # DTZ007 is triggered by strptime
+                t = datetime.strptime(string, r"%H:%M:%S").time()  # noqa: DTZ007
+                today_utc = datetime.now(timezone.utc)
+                return today_utc.replace(
+                    hour=t.hour, minute=t.minute, second=t.second, microsecond=0
+                )
 
             casting_precedence = [us_date, time, int, float]
             value = value_string
