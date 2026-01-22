@@ -13,6 +13,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest.mock import patch
+from xml.etree import ET
 
 import cv2
 import glymur
@@ -36,6 +37,7 @@ from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore import WSIReader, wsireader
+from tiatoolbox.wsicore.wsimeta import WSIMeta
 from tiatoolbox.wsicore.wsireader import (
     AnnotationStoreReader,
     ArrayView,
@@ -45,9 +47,14 @@ from tiatoolbox.wsicore.wsireader import (
     NGFFWSIReader,
     OpenSlideWSIReader,
     TIFFWSIReader,
+    TIFFWSIReaderDelegate,
     TransformedWSIReader,
     VirtualWSIReader,
+    _handle_tiff_wsi,
+    _handle_virtual_wsi,
+    is_dicom,
     is_ngff,
+    is_tiled_tiff,
     is_zarr,
 )
 
@@ -58,8 +65,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from openslide import OpenSlide
 
     from tiatoolbox.type_hints import IntBounds, IntPair
-    from tiatoolbox.wsicore.wsimeta import WSIMeta
-
 # -------------------------------------------------------------------------------------
 # Constants
 # -------------------------------------------------------------------------------------
@@ -3369,11 +3374,10 @@ def test_wsireader_verify_supported_wsi_edge_cases(track_tmp_path: Path) -> None
 
 def test_wsireader_handle_virtual_wsi_edge_cases(track_tmp_path: Path) -> None:
     """Test _handle_virtual_wsi with various file types."""
-    from tiatoolbox.wsicore.wsireader import _handle_virtual_wsi
-
     # Test with .npy file
     npy_file = track_tmp_path / "test.npy"
-    np.save(npy_file, np.random.rand(100, 100, 3))
+    rng = np.random.default_rng(0)
+    np.save(npy_file, rng.random((100, 100, 3)))
     result = _handle_virtual_wsi(".npy", npy_file, None, None)
     assert isinstance(result, VirtualWSIReader)
 
@@ -3384,8 +3388,6 @@ def test_wsireader_handle_virtual_wsi_edge_cases(track_tmp_path: Path) -> None:
 
 def test_wsireader_handle_tiff_wsi_edge_cases(track_tmp_path: Path) -> None:
     """Test _handle_tiff_wsi with various scenarios."""
-    from tiatoolbox.wsicore.wsireader import _handle_tiff_wsi
-
     # Test with non-existent file
     non_existent = track_tmp_path / "non_existent.tiff"
     result = _handle_tiff_wsi(non_existent, None, None, None)
@@ -3412,7 +3414,8 @@ def test_wsireader_get_post_proc_edge_cases() -> None:
     wsi = VirtualWSIReader(np.ones((10, 10, 3), dtype=np.uint8))
 
     # Test with callable
-    def dummy_proc(x):
+    def dummy_proc(x: np.ndarray) -> np.ndarray:
+        """Dummy post-processing function."""
         return x
 
     result = wsi.get_post_proc(dummy_proc)
@@ -3468,8 +3471,6 @@ def test_wsireader_find_tile_params_edge_cases(sample_svs: Path) -> None:
 
 def test_wsireader_check_unit_conversion_integrity_edge_cases() -> None:
     """Test _check_unit_conversion_integrity with various inputs."""
-    from tiatoolbox.wsicore.wsireader import WSIReader
-
     # Test invalid input units
     with pytest.raises(ValueError, match="Invalid input_unit"):
         WSIReader._check_unit_conversion_integrity("invalid", "mpp", None, None)
@@ -3536,14 +3537,16 @@ def test_jp2wsireader_get_jp2_boxes_edge_cases(track_tmp_path: Path) -> None:
     """Test JP2WSIReader._get_jp2_boxes with edge cases."""
     # Create a minimal JP2 file
     path = track_tmp_path / "test.jp2"
-    jp2 = glymur.Jp2k(path, data=np.ones((64, 64, 3), np.uint8))
+    _jp2 = glymur.Jp2k(path, data=np.ones((64, 64, 3), np.uint8))
 
     wsi = JP2WSIReader(path)
 
     # Test with missing header
-    with patch.object(wsi.glymur_jp2, "box", []):
-        with pytest.raises(ValueError, match="image header missing"):
-            wsi._get_jp2_boxes(wsi.glymur_jp2)
+    with (
+        patch.object(wsi.glymur_jp2, "box", []),
+        pytest.raises(ValueError, match="image header missing"),
+    ):
+        wsi._get_jp2_boxes(wsi.glymur_jp2)
 
 
 def test_virtualwsireader_find_params_from_baseline_edge_cases() -> None:
@@ -3570,7 +3573,7 @@ def test_fsspecjsonwsireader_set_axes_edge_cases(track_tmp_path: Path) -> None:
     json_path = track_tmp_path / "test.json"
     json_data = {".zattrs": {}, "0/.zarray": {"shape": [100, 100, 3], "dtype": "uint8"}}
 
-    with open(json_path, "w") as f:
+    with Path.open(json_path, "w") as f:
         json.dump(json_data, f)
 
     # This should fail due to missing _ARRAY_DIMENSIONS
@@ -3630,8 +3633,6 @@ def test_wsireader_read_region_edge_cases(sample_svs: Path) -> None:
 
 def test_is_dicom_edge_cases(track_tmp_path: Path) -> None:
     """Test is_dicom function with edge cases."""
-    from tiatoolbox.wsicore.wsireader import is_dicom
-
     # Test with .dcm file
     dcm_file = track_tmp_path / "test.dcm"
     dcm_file.touch()
@@ -3764,15 +3765,13 @@ def test_wsireader_find_read_params_at_resolution_edge_cases(sample_svs: Path) -
 
 def test_tiffwsireader_parse_methods_edge_cases() -> None:
     """Test TIFFWSIReader parsing methods with edge cases."""
-    from xml.etree import ElementTree
-
     # Test _get_namespace with no namespace
-    root = ElementTree.fromstring("<root></root>")
+    root = ET.fromstring("<root></root>")
     ns = TIFFWSIReader._get_namespace(root)
     assert ns == {}
 
     # Test _get_namespace with namespace
-    root = ElementTree.fromstring("<root xmlns='http://example.com'></root>")
+    root = ET.fromstring("<root xmlns='http://example.com'></root>")
     ns = TIFFWSIReader._get_namespace(root)
     assert "ns" in ns
 
@@ -3820,8 +3819,6 @@ def test_wsireader_read_rect_at_resolution_edge_cases(sample_svs: Path) -> None:
 
 def test_is_tiled_tiff_error_handling(track_tmp_path: Path) -> None:
     """Test is_tiled_tiff with files that cause TiffFileError."""
-    from tiatoolbox.wsicore.wsireader import is_tiled_tiff
-
     # Create a non-TIFF file with .tiff extension
     fake_tiff = track_tmp_path / "fake.tiff"
     fake_tiff.write_text("This is not a TIFF file")
@@ -3832,8 +3829,6 @@ def test_is_tiled_tiff_error_handling(track_tmp_path: Path) -> None:
 
 def test_is_zarr_error_handling(track_tmp_path: Path) -> None:
     """Test is_zarr with files that cause exceptions."""
-    from tiatoolbox.wsicore.wsireader import is_zarr
-
     # Create a file that looks like zarr but isn't
     fake_zarr = track_tmp_path / "fake.zarr"
     fake_zarr.mkdir()
@@ -3929,8 +3924,6 @@ def test_wsireader_find_read_bounds_params_edge_cases(sample_svs: Path) -> None:
 
 def test_wsireader_try_methods_comprehensive() -> None:
     """Test WSIReader.try_* methods comprehensively."""
-    from tiatoolbox.wsicore.wsireader import WSIReader
-
     # Test try_dicom with non-DICOM path
     result = WSIReader.try_dicom(Path("test.txt"), None, None, None)
     assert result is None
@@ -3960,11 +3953,9 @@ def test_wsireader_try_methods_comprehensive() -> None:
 
 def test_jp2wsireader_find_box_edge_cases(track_tmp_path: Path) -> None:
     """Test JP2WSIReader find_box method edge cases."""
-    from tiatoolbox.wsicore.wsireader import JP2WSIReader
-
     # Create a minimal JP2 file
     path = track_tmp_path / "test.jp2"
-    jp2 = glymur.Jp2k(path, data=np.ones((64, 64, 3), np.uint8))
+    _jp2 = glymur.Jp2k(path, data=np.ones((64, 64, 3), np.uint8))
 
     wsi = JP2WSIReader(path)
     boxes = wsi._get_jp2_boxes(wsi.glymur_jp2)
@@ -3994,18 +3985,21 @@ def test_virtualwsireader_info_edge_cases() -> None:
 
 def test_tiffwsireader_parse_svs_tag_edge_cases() -> None:
     """Test TIFFWSIReaderDelegate.parse_svs_tag with edge cases."""
-    from tiatoolbox.wsicore.wsireader import TIFFWSIReaderDelegate
 
     # Create a mock TiffPages object
     class MockPage:
-        def __init__(self, description):
+        """Mock TiffPage with description attribute."""
+
+        def __init__(self, description: str) -> None:
             self.description = description
 
     class MockPages:
-        def __init__(self, description):
+        """Mock TiffPages with __getitem__ method."""
+
+        def __init__(self, description: str) -> None:
             self.pages = [MockPage(description)]
 
-        def __getitem__(self, index):
+        def __getitem__(self, index: int) -> MockPage:
             return self.pages[index]
 
     # Test with malformed key-value pairs
@@ -4065,10 +4059,11 @@ def test_wsireader_read_with_pad_constant_values(sample_svs: Path) -> None:
     assert isinstance(region, np.ndarray)
 
 
-def test_virtualwsireader_bool_mode_interpolation(track_tmp_path: Path) -> None:
+def test_virtualwsireader_bool_mode_interpolation() -> None:
     """Test VirtualWSIReader with bool mode uses nearest interpolation."""
     # Create a binary mask
-    mask = np.random.choice([0, 1], size=(100, 100), p=[0.7, 0.3]).astype(np.uint8)
+    rng = np.random.default_rng(0)
+    mask = rng.choice([0, 1], size=(100, 100), p=[0.7, 0.3]).astype(np.uint8)
     wsi = VirtualWSIReader(mask, mode="bool")
 
     # Test that bool mode uses nearest interpolation
