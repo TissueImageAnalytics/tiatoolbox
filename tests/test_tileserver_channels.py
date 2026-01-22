@@ -25,6 +25,7 @@ class _FakeInfo:
         self.slide_dimensions = dims
 
     def as_dict(self) -> dict:
+        """Return info as a dictionary."""
         return {
             "mpp": self.mpp,
             "file_path": self.file_path,
@@ -45,6 +46,7 @@ class _FakeSlide:
     def slide_thumbnail(
         self, *, resolution: float = 8.0, units: str = "mpp"
     ) -> np.ndarray:
+        """Fake thumbnail method that counts calls."""
         _ = (resolution, units)  # mark as used to satisfy Ruff
         # Parameters are part of the real Slide API; unused by the fake.
         self._thumb_called += 1

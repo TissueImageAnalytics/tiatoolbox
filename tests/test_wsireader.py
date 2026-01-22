@@ -3871,8 +3871,7 @@ def test_tiffwsireader_get_colors_from_meta_edge_cases(sample_ome_tiff: Path) ->
     # Fake info object with invalid XML
     bad_info = SimpleNamespace(raw={"Description": "<invalid_xml"})
     wsi._m_info = bad_info  # bypass property safely
-    ret = wsi._get_colors_from_meta()  # Should handle XML parse error gracefully
-    assert ret is None
+    assert wsi._get_colors_from_meta() is None
     assert pp.__dict__ == before
 
 
@@ -4024,7 +4023,7 @@ def test_tiffwsireader_parse_svs_tag_edge_cases() -> None:
 
     # Expect a ValueError due to malformed key-value pairs;
     # don't overconstrain the message (implementation-specific).
-    with pytest.raises(ValueError, match=r"malformed\s+key[- ]?value"):
+    with pytest.raises(ValueError, match=r"Expected string of the format 'key=value'"):
         TIFFWSIReaderDelegate.parse_svs_metadata(pages)
 
 
