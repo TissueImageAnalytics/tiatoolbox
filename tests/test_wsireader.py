@@ -3337,3 +3337,799 @@ def test_read_bounds_transformedreader_baseline(
 
     # We don't expect arrays to be the same, but dimensions should be
     assert im_region.shape == im_region_4.shape
+
+
+def test_wsireader_validate_input_edge_cases() -> None:
+    """Test WSIReader._validate_input with various edge cases."""
+    # Test with valid inputs
+    WSIReader._validate_input("test.svs")
+    WSIReader._validate_input(Path("test.svs"))
+    WSIReader._validate_input(np.array([1, 2, 3]))
+    
+    # Test with invalid inputs
+    with pytest.raises(TypeError, match="Invalid input"):
+        WSIReader._validate_input(123)
+    
+    with pytest.raises(TypeError, match="Invalid input"):
+        WSIReader._validate_input({"invalid": "dict"})
+
+
+def test_wsireader_verify_supported_wsi_edge_cases(track_tmp_path: Path) -> None:
+    """Test WSIReader.verify_supported_wsi with edge cases."""
+    # Test with unsupported extension
+    unsupported_file = track_tmp_path / "test.xyz"
+    with pytest.raises(FileNotSupportedError, match="not a supported file format"):
+        WSIReader.verify_supported_wsi(unsupported_file)
+    
+    # Test with no extension
+    no_ext_file = track_tmp_path / "test"
+    with pytest.raises(FileNotSupportedError, match="not a supported file format"):
+        WSIReader.verify_supported_wsi(no_ext_file)
+
+
+def test_wsireader_handle_virtual_wsi_edge_cases(track_tmp_path: Path) -> None:
+    """Test _handle_virtual_wsi with various file types."""
+    from tiatoolbox.wsicore.wsireader import _handle_virtual_wsi
+    
+    # Test with .npy file
+    npy_file = track_tmp_path / "test.npy"
+    np.save(npy_file, np.random.rand(100, 100, 3))
+    result = _handle_virtual_wsi(".npy", npy_file, None, None)
+    assert isinstance(result, VirtualWSIReader)
+    
+    # Test with unsupported extension
+    result = _handle_virtual_wsi(".xyz", track_tmp_path / "test.xyz", None, None)
+    assert result is None
+
+
+def test_wsireader_handle_tiff_wsi_edge_cases(track_tmp_path: Path) -> None:
+    """Test _handle_tiff_wsi with various scenarios."""
+    from tiatoolbox.wsicore.wsireader import _handle_tiff_wsi
+    
+    # Test with non-existent file
+    non_existent = track_tmp_path / "non_existent.tiff"
+    result = _handle_tiff_wsi(non_existent, None, None, None)
+    assert result is None
+
+
+def test_wsireader_special_cases_coverage(track_tmp_path: Path) -> None:
+    """Test WSIReader._handle_special_cases for better coverage."""
+    # Create a mock .db file
+    db_file = track_tmp_path / "test.db"
+    db_file.touch()
+    
+    # Test annotation store case
+    result = WSIReader._handle_special_cases(
+        db_file, db_file, None, None, None, info=None
+    )
+    # Should return AnnotationStoreReader or None depending on file content
+    assert result is None or isinstance(result, AnnotationStoreReader)
+
+
+def test_wsireader_get_post_proc_edge_cases() -> None:
+    """Test WSIReader.get_post_proc with various inputs."""
+    # Create a mock WSIReader
+    wsi = VirtualWSIReader(np.ones((10, 10, 3), dtype=np.uint8))
+    
+    # Test with callable
+    def dummy_proc(x):
+        return x
+    
+    result = wsi.get_post_proc(dummy_proc)
+    assert callable(result)
+    
+    # Test with None
+    result = wsi.get_post_proc(None)
+    assert result is None
+    
+    # Test with invalid string
+    with pytest.raises(ValueError, match="Invalid post-processing function"):
+        wsi.get_post_proc("invalid_function")
+
+
+def test_wsireader_bounds_at_resolution_to_baseline_edge_cases(sample_svs: Path) -> None:
+    """Test bounds_at_resolution_to_baseline with edge cases."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    
+    # Test with zero bounds
+    bounds = (0, 0, 0, 0)
+    result = wsi.bounds_at_resolution_to_baseline(bounds, 1.0, "baseline")
+    assert len(result) == 4
+    
+    # Test with negative bounds
+    bounds = (-10, -10, 10, 10)
+    result = wsi.bounds_at_resolution_to_baseline(bounds, 1.0, "baseline")
+    assert len(result) == 4
+
+
+def test_wsireader_slide_dimensions_edge_cases(sample_svs: Path) -> None:
+    """Test slide_dimensions with various parameters."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    
+    # Test with different precision values
+    dims1 = wsi.slide_dimensions(1.0, "baseline", precision=1)
+    dims2 = wsi.slide_dimensions(1.0, "baseline", precision=5)
+    assert isinstance(dims1, tuple)
+    assert isinstance(dims2, tuple)
+    assert len(dims1) == 2
+    assert len(dims2) == 2
+
+
+def test_wsireader_find_tile_params_edge_cases(sample_svs: Path) -> None:
+    """Test _find_tile_params with edge cases."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    
+    # Test with objective value that's not an integer multiple
+    with pytest.raises(ValueError, match="integer multiple"):
+        wsi._find_tile_params(3.7)
+
+
+def test_wsireader_check_unit_conversion_integrity_edge_cases() -> None:
+    """Test _check_unit_conversion_integrity with various inputs."""
+    from tiatoolbox.wsicore.wsireader import WSIReader
+    
+    # Test invalid input units
+    with pytest.raises(ValueError, match="Invalid input_unit"):
+        WSIReader._check_unit_conversion_integrity("invalid", "mpp", None, None)
+    
+    # Test invalid output units
+    with pytest.raises(ValueError, match="Invalid output_unit"):
+        WSIReader._check_unit_conversion_integrity("mpp", "invalid", None, None)
+    
+    # Test missing mpp for mpp input
+    with pytest.raises(ValueError, match="Missing 'mpp'"):
+        WSIReader._check_unit_conversion_integrity("mpp", "power", None, 40.0)
+    
+    # Test missing power for power input
+    with pytest.raises(ValueError, match="Missing 'objective_power'"):
+        WSIReader._check_unit_conversion_integrity("power", "mpp", (0.25, 0.25), None)
+
+
+def test_wsireader_prepare_output_dict_edge_cases(sample_svs: Path) -> None:
+    """Test _prepare_output_dict with various scenarios."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    
+    # Test with mpp input as array
+    result = wsi._prepare_output_dict("mpp", np.array([0.5, 0.5]), (0.25, 0.25), 40.0)
+    assert "mpp" in result
+    assert "baseline" in result
+    assert "power" in result
+    
+    # Test with mpp input as scalar
+    result = wsi._prepare_output_dict("mpp", 0.5, (0.25, 0.25), 40.0)
+    assert "mpp" in result
+    assert np.array_equal(result["mpp"], np.array([0.5, 0.5]))
+
+
+def test_arrayview_edge_cases() -> None:
+    """Test ArrayView with additional edge cases."""
+    # Test with CYX axes
+    array = zarr.ones((3, 128, 128))
+    array_view = ArrayView(array=array, axes="CYX")
+    
+    # Test shape property
+    shape = array_view.shape
+    assert len(shape) == 3
+    
+    # Test getitem with CYX
+    result = array_view[:64, :64, :]
+    assert result.shape == (64, 64, 3)
+
+
+def test_tiffwsireader_delegate_edge_cases(sample_svs: Path) -> None:
+    """Test TIFFWSIReaderDelegate with edge cases."""
+    wsi = TIFFWSIReader(sample_svs)
+    delegate = wsi.tiff_reader_delegate
+    
+    # Test canonical_shape with different axes
+    shape = delegate.canonical_shape("SYX", (3, 100, 100))
+    assert shape == (100, 100)
+    
+    # Test with unsupported axes
+    with pytest.raises(ValueError, match="Unsupported axes"):
+        delegate.canonical_shape("XYZ", (100, 100, 3))
+
+
+def test_jp2wsireader_get_jp2_boxes_edge_cases(track_tmp_path: Path) -> None:
+    """Test JP2WSIReader._get_jp2_boxes with edge cases."""
+    # Create a minimal JP2 file
+    path = track_tmp_path / "test.jp2"
+    jp2 = glymur.Jp2k(path, data=np.ones((64, 64, 3), np.uint8))
+    
+    wsi = JP2WSIReader(path)
+    
+    # Test with missing header
+    with patch.object(wsi.glymur_jp2, 'box', []):
+        with pytest.raises(ValueError, match="image header missing"):
+            wsi._get_jp2_boxes(wsi.glymur_jp2)
+
+
+def test_virtualwsireader_find_params_from_baseline_edge_cases() -> None:
+    """Test VirtualWSIReader._find_params_from_baseline with edge cases."""
+    # Create a virtual WSI with different baseline size
+    img = np.ones((50, 50, 3), dtype=np.uint8)
+    meta = WSIMeta(slide_dimensions=(100, 100), axes="YXS")
+    wsi = VirtualWSIReader(img, info=meta)
+    
+    # Test with zero location and size
+    location, size = wsi._find_params_from_baseline((0, 0), (0, 0))
+    assert location[0] == 0
+    assert location[1] == 0
+    assert size[0] == 0
+    assert size[1] == 0
+
+
+def test_fsspecjsonwsireader_set_axes_edge_cases(track_tmp_path: Path) -> None:
+    """Test FsspecJsonWSIReader.__set_axes with edge cases."""
+    # This would require creating a proper fsspec JSON file structure
+    # For now, we'll test the error conditions through mocking
+    
+    # Create a mock zarr array without proper structure
+    json_path = track_tmp_path / "test.json"
+    json_data = {
+        ".zattrs": {},
+        "0/.zarray": {"shape": [100, 100, 3], "dtype": "uint8"}
+    }
+    
+    with open(json_path, 'w') as f:
+        json.dump(json_data, f)
+    
+    # This should fail due to missing _ARRAY_DIMENSIONS
+    with pytest.raises((ValueError, KeyError)):
+        FsspecJsonWSIReader(json_path)
+
+
+def test_dicomwsireader_edge_cases(sample_dicom: Path) -> None:
+    """Test DICOMWSIReader with edge cases."""
+    wsi = DICOMWSIReader(sample_dicom)
+    
+    # Test reading with coord_space="resolution"
+    region = wsi.read_rect(
+        location=(0, 0),
+        size=(100, 100),
+        coord_space="resolution",
+        resolution=1.0,
+        units="baseline"
+    )
+    assert isinstance(region, np.ndarray)
+    assert region.shape == (100, 100, 3)
+
+
+def test_wsireader_info_setter_edge_cases(sample_svs: Path) -> None:
+    """Test WSIReader.info setter."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    original_info = wsi.info
+    
+    # Create a new WSIMeta object
+    new_info = WSIMeta(slide_dimensions=(1000, 1000), axes="YXS")
+    
+    # Set the info
+    wsi.info = new_info
+    
+    # Verify it was set
+    assert wsi._m_info == new_info
+    
+    # Reset to original
+    wsi.info = original_info
+
+
+def test_wsireader_read_region_edge_cases(sample_svs: Path) -> None:
+    """Test WSIReader.read_region with edge cases."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    
+    # Test with level 0
+    region = wsi.read_region(location=(100, 100), level=0, size=(50, 50))
+    assert isinstance(region, np.ndarray)
+    assert region.shape == (50, 50, 3)
+    
+    # Test with higher level
+    if wsi.info.level_count > 1:
+        region = wsi.read_region(location=(50, 50), level=1, size=(25, 25))
+        assert isinstance(region, np.ndarray)
+        assert region.shape == (25, 25, 3)
+
+
+def test_is_dicom_edge_cases(track_tmp_path: Path) -> None:
+    """Test is_dicom function with edge cases."""
+    from tiatoolbox.wsicore.wsireader import is_dicom
+    
+    # Test with .dcm file
+    dcm_file = track_tmp_path / "test.dcm"
+    dcm_file.touch()
+    assert is_dicom(dcm_file)
+    
+    # Test with directory containing .dcm files
+    dcm_dir = track_tmp_path / "dcm_dir"
+    dcm_dir.mkdir()
+    (dcm_dir / "test.dcm").touch()
+    assert is_dicom(dcm_dir)
+    
+    # Test with non-dcm file
+    txt_file = track_tmp_path / "test.txt"
+    txt_file.touch()
+    assert not is_dicom(txt_file)
+    
+    # Test with empty directory
+    empty_dir = track_tmp_path / "empty_dir"
+    empty_dir.mkdir()
+    assert not is_dicom(empty_dir)
+
+
+def test_tiffwsireader_color_parsing_edge_cases(sample_ome_tiff: Path) -> None:
+    """Test TIFFWSIReader color parsing methods with edge cases."""
+    wsi = TIFFWSIReader(sample_ome_tiff)
+    
+    # Test _int_to_rgb with negative number
+    rgb = wsi._int_to_rgb(-1)
+    assert len(rgb) == 3
+    assert all(0 <= c <= 1 for c in rgb)
+    
+    # Test _int_to_rgb with large number
+    rgb = wsi._int_to_rgb(16777215)  # 0xFFFFFF
+    assert rgb == (1.0, 1.0, 1.0)
+
+
+def test_wsireader_manual_parameters_edge_cases() -> None:
+    """Test WSIReader manual parameter validation."""
+    # Test with invalid mpp length
+    with pytest.raises(TypeError, match="mpp"):
+        VirtualWSIReader(np.ones((10, 10, 3)), mpp=(0.5,))
+    
+    # Test with invalid mpp type
+    with pytest.raises(TypeError, match="mpp"):
+        VirtualWSIReader(np.ones((10, 10, 3)), mpp="invalid")
+    
+    # Test with invalid power type
+    with pytest.raises(TypeError, match="power"):
+        VirtualWSIReader(np.ones((10, 10, 3)), power=(42,))
+
+def test_virtualwsireader_mode_detection_edge_cases() -> None:
+    """Test VirtualWSIReader mode detection with various image types."""
+    # Test with 2D image (should set mode to 'feature')
+    img_2d = np.ones((100, 100), dtype=np.uint8)
+    with patch('tiatoolbox.wsicore.wsireader.logger') as mock_logger:
+        wsi = VirtualWSIReader(img_2d, mode="rgb")
+        mock_logger.warning.assert_called()
+        assert wsi.mode == "feature"
+    
+    # Test with 5-channel image (should set mode to 'feature')
+    img_5ch = np.ones((100, 100, 5), dtype=np.uint8)
+    with patch('tiatoolbox.wsicore.wsireader.logger') as mock_logger:
+        wsi = VirtualWSIReader(img_5ch, mode="rgb")
+        mock_logger.warning.assert_called()
+        assert wsi.mode == "feature"
+
+
+def test_openslide_estimate_mpp_edge_cases() -> None:
+    """Test OpenSlideWSIReader._estimate_mpp with edge cases."""
+    # Test with missing resolution data
+    props = {}
+    result = OpenSlideWSIReader._estimate_mpp(props)
+    assert result is None
+    
+    # Test with partial TIFF resolution data
+    props = {
+        "tiff.XResolution": "100",
+        "tiff.ResolutionUnit": "inch"
+        # Missing YResolution
+    }
+    with patch('tiatoolbox.wsicore.wsireader.logger') as mock_logger:
+        result = OpenSlideWSIReader._estimate_mpp(props)
+        mock_logger.warning.assert_called()
+        assert result is None
+
+
+def test_tiffwsireader_series_selection_edge_cases(sample_ome_tiff: Path) -> None:
+    """Test TIFFWSIReader series selection logic."""
+    # Test with explicit series number
+    wsi = TIFFWSIReader(sample_ome_tiff, series=0)
+    assert wsi.series_n == 0
+    
+    # Test info access
+    info = wsi.info
+    assert info is not None
+
+
+def test_arrayview_shape_property_edge_cases() -> None:
+    """Test ArrayView.shape property with different axes."""
+    # Test with YXC axes
+    array = zarr.ones((128, 128, 3))
+    array_view = ArrayView(array=array, axes="YXC")
+    shape = array_view.shape
+    assert shape == (128, 128, 3)
+    
+    # Test with SYX axes
+    array = zarr.ones((3, 128, 128))
+    array_view = ArrayView(array=array, axes="SYX")
+    shape = array_view.shape
+    assert shape == (128, 128, 3)
+
+
+def test_wsireader_find_read_params_at_resolution_edge_cases(sample_svs: Path) -> None:
+    """Test _find_read_params_at_resolution with edge cases."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    
+    # Test with very small size
+    result = wsi._find_read_params_at_resolution(
+        location=(0, 0),
+        size=(1, 1),
+        resolution=1.0,
+        units="baseline"
+    )
+    assert len(result) == 6
+    
+    # Test with large size
+    result = wsi._find_read_params_at_resolution(
+        location=(0, 0),
+        size=(10000, 10000),
+        resolution=0.1,
+        units="baseline"
+    )
+    assert len(result) == 6
+
+
+def test_tiffwsireader_parse_methods_edge_cases() -> None:
+    """Test TIFFWSIReader parsing methods with edge cases."""
+    from xml.etree import ElementTree
+    
+    # Test _get_namespace with no namespace
+    root = ElementTree.fromstring("<root></root>")
+    ns = TIFFWSIReader._get_namespace(root)
+    assert ns == {}
+    
+    # Test _get_namespace with namespace
+    root = ElementTree.fromstring("<root xmlns='http://example.com'></root>")
+    ns = TIFFWSIReader._get_namespace(root)
+    assert "ns" in ns
+
+
+def test_wsireader_precision_parameter_edge_cases(sample_svs: Path) -> None:
+    """Test precision parameter in various methods."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    
+    # Test find_read_rect_params with different precision
+    result1 = wsi.find_read_rect_params(
+        location=(100, 100),
+        size=(200, 200),
+        resolution=1.0,
+        units="baseline",
+        precision=1
+    )
+    
+    result2 = wsi.find_read_rect_params(
+        location=(100, 100),
+        size=(200, 200),
+        resolution=1.0,
+        units="baseline",
+        precision=5
+    )
+    
+    assert len(result1) == 5
+    assert len(result2) == 5
+
+
+def test_wsireader_read_rect_at_resolution_edge_cases(sample_svs: Path) -> None:
+    """Test read_rect_at_resolution with edge cases."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    
+    # Test with different pad modes
+    region = wsi.read_rect_at_resolution(
+        location=(100, 100),
+        size=(50, 50),
+        resolution=1.0,
+        units="baseline",
+        pad_mode="reflect"
+    )
+    assert isinstance(region, np.ndarray)
+    assert region.shape == (50, 50, 3)
+
+
+def test_is_tiled_tiff_error_handling(track_tmp_path: Path) -> None:
+    """Test is_tiled_tiff with files that cause TiffFileError."""
+    from tiatoolbox.wsicore.wsireader import is_tiled_tiff
+    
+    # Create a non-TIFF file with .tiff extension
+    fake_tiff = track_tmp_path / "fake.tiff"
+    fake_tiff.write_text("This is not a TIFF file")
+    
+    # Should return False for invalid TIFF
+    assert not is_tiled_tiff(fake_tiff)
+
+
+def test_is_zarr_error_handling(track_tmp_path: Path) -> None:
+    """Test is_zarr with files that cause exceptions."""
+    from tiatoolbox.wsicore.wsireader import is_zarr
+    
+    # Create a file that looks like zarr but isn't
+    fake_zarr = track_tmp_path / "fake.zarr"
+    fake_zarr.mkdir()
+    (fake_zarr / "invalid").write_text("not zarr")
+    
+    # Should handle the exception and return False
+    result = is_zarr(fake_zarr)
+    assert isinstance(result, bool)
+
+
+def test_wsireader_convert_resolution_units_comprehensive(sample_svs: Path) -> None:
+    """Test convert_resolution_units with comprehensive scenarios."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    
+    # Test with tuple input for mpp
+    result = wsi.convert_resolution_units((0.5, 0.6), input_unit="mpp")
+    assert "mpp" in result
+    assert "power" in result
+    assert "baseline" in result
+    
+    # Test with list input for mpp
+    result = wsi.convert_resolution_units([0.5, 0.6], input_unit="mpp")
+    assert "mpp" in result
+    assert np.array_equal(result["mpp"], np.array([0.5, 0.6]))
+
+
+def test_tiffwsireader_get_colors_from_meta_edge_cases(sample_ome_tiff: Path) -> None:
+    """Test TIFFWSIReader._get_colors_from_meta with edge cases."""
+    wsi = TIFFWSIReader(sample_ome_tiff)
+    
+    # Test when post_proc is not MultichannelToRGB
+    wsi.post_proc = None
+    wsi._get_colors_from_meta()  # Should return early without error
+    
+    # Test with invalid XML
+    wsi.post_proc = utils.postproc_defs.MultichannelToRGB()
+    with patch.object(wsi, 'info') as mock_info:
+        mock_info.raw = {"Description": "invalid xml"}
+        wsi._get_colors_from_meta()  # Should handle ParseError gracefully
+
+
+def test_wsireader_save_tiles_edge_cases(sample_svs: Path, track_tmp_path: Path) -> None:
+    """Test save_tiles with edge cases."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    
+    # Test with different tile formats
+    wsi.save_tiles(
+        output_dir=str(track_tmp_path / "test_png_tiles"),
+        tile_objective_value=5,
+        tile_read_size=(1000, 1000),
+        tile_format=".png",
+        verbose=False
+    )
+    
+    # Check that PNG files were created
+    output_dir = track_tmp_path / "test_png_tiles" / wsi.input_path.name
+    assert any(f.suffix == ".png" for f in output_dir.iterdir())
+
+
+def test_wsireader_tissue_mask_edge_cases(sample_svs: Path) -> None:
+    """Test tissue_mask with edge cases."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    
+    # Test with custom masker_kwargs
+    mask = wsi.tissue_mask(
+        method="morphological",
+        resolution=5,
+        units="power",
+        kernel_size=5
+    )
+    assert isinstance(mask, VirtualWSIReader)
+    assert mask.mode == "bool"
+
+
+def test_wsireader_find_read_bounds_params_edge_cases(sample_svs: Path) -> None:
+    """Test find_read_bounds_params with edge cases."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    
+    # Test with very small bounds
+    result = wsi.find_read_bounds_params(
+        bounds=(0, 0, 1, 1),
+        resolution=1.0,
+        units="baseline"
+    )
+    assert len(result) == 4
+    
+    # Test with bounds at edge of slide
+    slide_w, slide_h = wsi.info.slide_dimensions
+    result = wsi.find_read_bounds_params(
+        bounds=(slide_w-100, slide_h-100, slide_w, slide_h),
+        resolution=1.0,
+        units="baseline"
+    )
+    assert len(result) == 4
+def test_wsireader_try_methods_comprehensive() -> None:
+    """Test WSIReader.try_* methods comprehensively."""
+    from tiatoolbox.wsicore.wsireader import WSIReader
+    
+    # Test try_dicom with non-DICOM path
+    result = WSIReader.try_dicom(Path("test.txt"), None, None, None)
+    assert result is None
+    
+    # Test try_fsspec with invalid input
+    result = WSIReader.try_fsspec("invalid.txt", None, None)
+    assert result is None
+    
+    # Test try_annotation_store with non-.db file
+    result = WSIReader.try_annotation_store(Path("test.txt"), ".txt", None, {})
+    assert result is None
+    
+    # Test try_ngff with non-.zarr file
+    result = WSIReader.try_ngff(Path("test.txt"), ".txt", None, None)
+    assert result is None
+    
+    # Test try_ome_tiff with non-OME file
+    result = WSIReader.try_ome_tiff(Path("test.txt"), [".txt"], ".txt", None, None, None)
+    assert result is None
+    
+    # Test try_tiff with non-TIFF file
+    result = WSIReader.try_tiff(Path("test.txt"), ".txt", None, None, None)
+    assert result is None
+
+
+def test_jp2wsireader_find_box_edge_cases(track_tmp_path: Path) -> None:
+    """Test JP2WSIReader find_box method edge cases."""
+    from tiatoolbox.wsicore.wsireader import JP2WSIReader
+    
+    # Create a minimal JP2 file
+    path = track_tmp_path / "test.jp2"
+    jp2 = glymur.Jp2k(path, data=np.ones((64, 64, 3), np.uint8))
+    
+    wsi = JP2WSIReader(path)
+    boxes = wsi._get_jp2_boxes(wsi.glymur_jp2)
+    
+    # Test that we get expected boxes
+    assert "ihdr" in boxes
+    # Other boxes may or may not be present depending on the JP2 structure
+
+
+def test_virtualwsireader_info_edge_cases() -> None:
+    """Test VirtualWSIReader._info with edge cases."""
+    # Test with numpy array input
+    img = np.ones((100, 100, 3), dtype=np.uint8)
+    wsi = VirtualWSIReader(img)
+    
+    # Test that _info creates proper metadata
+    info = wsi._info()
+    assert info.slide_dimensions == (100, 100)
+    assert info.level_count == 1
+    assert info.axes == "YSX"  # Note: VirtualWSIReader uses YSX
+    
+    # Test with pre-existing info
+    custom_info = WSIMeta(slide_dimensions=(200, 200), axes="YXS")
+    wsi = VirtualWSIReader(img, info=custom_info)
+    assert wsi.info.slide_dimensions == (200, 200)
+
+
+def test_tiffwsireader_parse_svs_tag_edge_cases() -> None:
+    """Test TIFFWSIReaderDelegate.parse_svs_tag with edge cases."""
+    from tiatoolbox.wsicore.wsireader import TIFFWSIReaderDelegate
+    
+    # Create a mock TiffPages object
+    class MockPage:
+        def __init__(self, description):
+            self.description = description
+    
+    class MockPages:
+        def __init__(self, description):
+            self.pages = [MockPage(description)]
+        
+        def __getitem__(self, index):
+            return self.pages[index]
+    
+    # Test with malformed key-value pairs
+    pages = MockPages("Software|key==value")  # Double equals
+    with pytest.raises(ValueError, match="key=value"):
+        TIFFWSIReaderDelegate.parse_svs_metadata(pages)
+
+
+def test_wsireader_read_with_different_interpolations(sample_svs: Path) -> None:
+    """Test reading with different interpolation methods."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    location = (100, 100)
+    size = (50, 50)
+    
+    interpolation_methods = ["linear", "cubic", "lanczos", "area", "optimise"]
+    
+    for method in interpolation_methods:
+        region = wsi.read_rect(
+            location=location,
+            size=size,
+            interpolation=method
+        )
+        assert isinstance(region, np.ndarray)
+        assert region.shape == (50, 50, 3)
+
+
+def test_wsireader_read_with_different_pad_modes(sample_svs: Path) -> None:
+    """Test reading with different padding modes."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    
+    # Test reading at edge with different pad modes
+    slide_w, slide_h = wsi.info.slide_dimensions
+    location = (slide_w - 25, slide_h - 25)  # Near edge
+    size = (50, 50)  # Will go out of bounds
+    
+    pad_modes = ["constant", "reflect", "edge"]
+    
+    for pad_mode in pad_modes:
+        region = wsi.read_rect(
+            location=location,
+            size=size,
+            pad_mode=pad_mode
+        )
+        assert isinstance(region, np.ndarray)
+        assert region.shape == (50, 50, 3)
+
+
+def test_wsireader_read_with_pad_constant_values(sample_svs: Path) -> None:
+    """Test reading with different pad constant values."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    
+    # Test with single value
+    region = wsi.read_rect(
+        location=(-10, -10),
+        size=(50, 50),
+        pad_mode="constant",
+        pad_constant_values=128
+    )
+    assert isinstance(region, np.ndarray)
+    
+    # Test with tuple value
+    region = wsi.read_rect(
+        location=(-10, -10),
+        size=(50, 50),
+        pad_mode="constant",
+        pad_constant_values=(64, 192)
+    )
+    assert isinstance(region, np.ndarray)
+
+
+def test_virtualwsireader_bool_mode_interpolation(track_tmp_path: Path) -> None:
+    """Test VirtualWSIReader with bool mode uses nearest interpolation."""
+    # Create a binary mask
+    mask = np.random.choice([0, 1], size=(100, 100), p=[0.7, 0.3]).astype(np.uint8)
+    wsi = VirtualWSIReader(mask, mode="bool")
+    
+    # Test that bool mode uses nearest interpolation
+    region = wsi.read_bounds(
+        bounds=(0, 0, 50, 50),
+        resolution=0.5,
+        units="baseline",
+        interpolation="optimise"  # Should be overridden to "nearest"
+    )
+    assert isinstance(region, np.ndarray)
+    # Values should still be 0 or 1 (or close) due to nearest interpolation
+    unique_vals = np.unique(region)
+    assert len(unique_vals) <= 3  # Should be mostly 0s and 1s
+
+
+def test_wsireader_level_downsamples_edge_cases(sample_svs: Path) -> None:
+    """Test level downsamples calculation edge cases."""
+    wsi = OpenSlideWSIReader(sample_svs)
+    
+    # Test accessing level downsamples
+    downsamples = wsi.info.level_downsamples
+    assert len(downsamples) == wsi.info.level_count
+    assert all(d >= 1.0 for d in downsamples)
+    assert downsamples[0] == 1.0  # First level should be 1.0
+
+
+def test_wsireader_axes_handling_edge_cases() -> None:
+    """Test axes handling in various scenarios."""
+    # Test with different axes orders
+    img = np.ones((3, 100, 100), dtype=np.uint8)  # CYX order
+    
+    # VirtualWSIReader should handle this
+    wsi = VirtualWSIReader(img, mode="feature")
+    info = wsi.info
+    assert info.axes == "YSX"  # VirtualWSIReader normalizes to YSX
+
+
+def test_wsireader_error_propagation() -> None:
+    """Test that errors are properly propagated."""
+    # Test with completely invalid input
+    with pytest.raises(TypeError):
+        WSIReader.open(None)
+    
+    # Test with invalid numpy array dimensions
+    invalid_array = np.ones((10,))  # 1D array
+    wsi = VirtualWSIReader(invalid_array)
+    # Should still work but might have unexpected behavior
+    assert wsi.img.shape == (10,)

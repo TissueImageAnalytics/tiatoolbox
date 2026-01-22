@@ -105,7 +105,7 @@ lint.select = [
   "ASYNC", # flake8-async
 ]
 # Ignore rules which conflict with ruff formatter.
-lint.ignore = ["COM812", "ISC001", "RUF100"]
+lint.ignore = ["COM812", "ISC001"]
 # Allow Ruff to discover `*.ipynb` files.
 include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
 
