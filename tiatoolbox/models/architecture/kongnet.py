@@ -460,7 +460,7 @@ class KongNet(ModelABC):
             x (torch.Tensor): Input tensor of shape (B, C, H, W)
 
         Returns:
-            torch.Tensor: Concatenated output from all heads of shape (B, sum(head_channels), H, W)
+            torch.Tensor: Concatenated output from all heads of shape (B, sum(num_channels_per_head), H, W)
         """
         features = self.encoder(x)
         decoder_outputs = []
@@ -472,11 +472,11 @@ class KongNet(ModelABC):
             segmentation_head_outputs.append(head(decoder_output))
 
         output_all_channels = torch.cat(segmentation_head_outputs, 1)
-        return output_all_channels[:, self.target_channels, :, :]
+        return output_all_channels
 
     @staticmethod
     def infer_batch(
-        model: torch.nn.Module,
+        model: KongNet,
         batch_data: torch.Tensor,
         *,
         device: str,
@@ -502,7 +502,7 @@ class KongNet(ModelABC):
             >>> batch = torch.randn(4, 256, 256, 3)
             >>> probs = KongNet.infer_batch(model, batch, device="cpu")
             >>> probs.shape
-            (4, 256, 256, sum(target_channels))
+            (4, 256, 256, sum(model.target_channels))
 
         """
         model = model.to(device)
@@ -514,7 +514,8 @@ class KongNet(ModelABC):
 
         with torch.inference_mode():
             logits = model(imgs)
-            probs = torch.nn.functional.sigmoid(logits)
+            target_logits = logits[:, model.target_channels, :, :]
+            probs = torch.nn.functional.sigmoid(target_logits)
             probs = probs.permute(0, 2, 3, 1)  # to NHWC
 
         return probs.cpu().numpy()

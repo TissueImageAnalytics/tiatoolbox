@@ -457,15 +457,11 @@ def nms_on_detection_maps(
         np.ndarray: The filtered maps with cross-channel suppression applied.
     """
     # 1. Collapse channels to find the "Global Best" at every spatial location
-    # Shape becomes (H, W). Contains the highest score found across all classes at each pixel.
+    # Shape becomes (H, W). Contains the highest probability found across all classes at each pixel.
     max_across_channels = np.max(detection_maps, axis=2)
 
     # 2. Handle Spatial Conflicts Across Channels (Global NMS)
-    # Even if peaks are separated per-channel, they might be neighbors across channels
-    # (e.g., Class A at 10,10 and Class B at 10,11).
     filter_size = 2 * min_distance + 1
-    
-    # We dilate the "Global Best" map.
     dilated_global_max = ndimage.maximum_filter(
         max_across_channels, 
         size=filter_size,
@@ -475,13 +471,9 @@ def nms_on_detection_maps(
 
     # 3. Create the Keep Mask
     # A pixel is kept IF:
-    # A) It is the max value across its own channels (resolves Exact Pixel Conflict)
-    # B) It is the max value in its spatial neighborhood (resolves Neighborhood Conflict)
-    # C) It is non-zero (optimization to ignore empty background)
-    
-    # The final mask logic:
-    # 1. The pixel must equal the dilated maximum of the *entire* volume's projection.
-    # 2. We explicitly check > 0 to preserve sparsity.
+    # A) It is the max value across its own channels
+    # B) It is the max value in its spatial neighborhood
+    # C) It is non-zero
     keep_mask = (detection_maps == dilated_global_max[..., None]) & (detection_maps > 0)
 
     # Apply mask
