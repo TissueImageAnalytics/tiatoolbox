@@ -46,7 +46,6 @@ class _FakeSlide:
         self, *, resolution: float = 8.0, units: str = "mpp"
     ) -> np.ndarray:
         # Parameters are part of the real Slide API; unused by the fake.
-        # noqa: ARG002
         self._thumb_called += 1
         # returning an array avoids PIL issues if used elsewhere
         return np.zeros((8, 8, 3), dtype=np.uint8)
