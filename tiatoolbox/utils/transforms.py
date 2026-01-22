@@ -95,7 +95,7 @@ def imresize(
     img: np.ndarray,
     scale_factor: float | tuple[float, float] | None = None,
     output_size: int | tuple[int, int] | None = None,
-    interpolation: str = "optimise",
+    interpolation: str | int = "optimise",
 ) -> np.ndarray:
     """Resize input image.
 
