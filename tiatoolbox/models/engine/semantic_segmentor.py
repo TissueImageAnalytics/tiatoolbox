@@ -1024,7 +1024,7 @@ def merge_batch_to_canvas(
             continue
         # To deal with edge cases
         canvas[0 : ye - ys, xs:xe, :] += block[0 : ye - ys, 0 : xe - xs, :]
-        count[ys:ye, xs:xe, 0] += 1
+        count[0 : ye - ys, xs:xe, 0] += 1
     return canvas, count
 
 
