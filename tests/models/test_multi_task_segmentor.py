@@ -105,7 +105,7 @@ def test_functionality_hovernetplus(
 ) -> None:
     """Functionality test for multitask segmentor."""
     root_save_dir = Path(track_tmp_path)
-    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
     required_dims = (258, 258)
     # above image is 512 x 512 at 0.252 mpp resolution. This is 258 x 258 at 0.500 mpp.
 
@@ -115,7 +115,7 @@ def test_functionality_hovernetplus(
     multi_segmentor = MultiTaskSegmentor(
         pretrained_model="hovernetplus-oed",
         batch_size=BATCH_SIZE,
-        num_postproc_workers=NUM_POSTPROC_WORKERS,
+        num_postproc_workers=0,
     )
     output = multi_segmentor.predict(
         [mini_wsi_svs],
