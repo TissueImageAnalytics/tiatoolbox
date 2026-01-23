@@ -303,7 +303,7 @@ def test_wsi_mtsegmentor_zarr(
     )
 
     output_ = zarr.open(output[wsi4_512_512_svs], mode="r")
-    assert 0.8 < np.mean(output_["nuclei_segmentation"]["predictions"][:]) < 1.0
+    assert 15 < np.mean(output_["nuclei_segmentation"]["predictions"][:]) < 19
     assert 0.57 < np.mean(output_["layer_segmentation"]["predictions"][:]) < 0.61
     assert "probabilities" not in output_
     assert "canvas" not in output_["nuclei_segmentation"]

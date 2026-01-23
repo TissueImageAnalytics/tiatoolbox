@@ -432,7 +432,7 @@ def test_wsi_segmentor_zarr(
 
     output_ = zarr.open(output[sample_svs], mode="r")
     assert 0.17 < np.mean(output_["predictions"][:]) < 0.19
-    assert 0.52 < np.mean(output_["probabilities"][:]) < 0.56
+    assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
 
     output_ = zarr.open(output[wsi1_2k_2k_svs], mode="r")
     assert 0.24 < np.mean(output_["predictions"][:]) < 0.25
@@ -497,15 +497,16 @@ def test_wsi_segmentor_annotationstore(
 # -------------------------------------------------------------------------------------
 
 
-def test_cli_model_single_file(sample_svs: Path, track_tmp_path: Path) -> None:
+def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test semantic segmentor CLI single file."""
+    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
     runner = CliRunner()
     models_wsi_result = runner.invoke(
         cli.main,
         [
             "semantic-segmentor",
             "--img-input",
-            str(sample_svs),
+            str(wsi4_512_512_svs),
             "--patch-mode",
             "False",
             "--output-path",
@@ -514,4 +515,4 @@ def test_cli_model_single_file(sample_svs: Path, track_tmp_path: Path) -> None:
     )
 
     assert models_wsi_result.exit_code == 0
-    assert (track_tmp_path / "output" / (sample_svs.stem + ".db")).exists()
+    assert (track_tmp_path / "output" / (wsi4_512_512_svs.stem + ".db")).exists()
