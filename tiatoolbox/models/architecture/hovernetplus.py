@@ -369,7 +369,7 @@ class HoVerNetPlus(HoVerNet):
         }
 
         layer_info_dict_ = {}
-        if not nuc_inst_info_dict:
+        if not layer_info_dict:
             layer_info_dict_ = {  # inst_id should start at 1
                 "contours": da.empty(shape=0),
                 "type": da.empty(shape=0),
