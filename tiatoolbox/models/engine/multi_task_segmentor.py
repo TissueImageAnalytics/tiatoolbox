@@ -441,6 +441,15 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     for inst_uuid in remove_uuid_lists[inst_id]:
                         wsi_info_dict[inst_id].pop(inst_uuid, None)
 
+        a = wsi_info_dict[0]
+        keys = ["box", "centroid", "contours", "prob", "type"]
+        info_dict = {}
+        for key in keys:
+            # Extract the list of values for this key across all instances
+            values = [a[i][key] for i in a]
+            # Convert to a Dask array (single chunk of size N)
+            info_dict[key] = values
+
         return wsi_info_dict
 
     @staticmethod
