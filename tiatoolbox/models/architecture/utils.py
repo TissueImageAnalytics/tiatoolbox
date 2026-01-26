@@ -310,20 +310,21 @@ class SegmentationHead(nn.Sequential):
 class Attention(nn.Module):
     """Attention module to apply attention mechanism on feature maps."""
 
-    def __init__(self, name: str | None, **params: dict) -> None:
+    def __init__(self, name: str | None, in_channels: int, reduction: int = 16) -> None:
         """Initialize the Attention module.
 
         Args:
             name (str | None): Name of the attention mechanism.
                 Only "scse" is implemented. If None, identity is used.
-            **params: Additional parameters for the attention mechanism.
+            in_channels (int): Number of input channels.
+            reduction (int): Reduction ratio for channel attention.
         """
         super().__init__()
 
         if name is None:
-            self.attention = nn.Identity(**params)
+            self.attention = nn.Identity(in_channels)
         elif name == "scse":
-            self.attention = SCSEModule(**params)
+            self.attention = SCSEModule(in_channels=in_channels, reduction=reduction)
         else:
             msg = f"Attention {name} is not implemented"
             raise ValueError(msg)
