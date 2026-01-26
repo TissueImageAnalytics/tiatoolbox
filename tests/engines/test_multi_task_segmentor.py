@@ -288,6 +288,8 @@ def test_wsi_mtsegmentor_zarr(
         verbose=False,
         num_workers=1,
     )
+    ioconfig = mtsegmentor.ioconfig
+    ioconfig.tile_shape = (300, 300)
     # Return Probabilities is False
     output = mtsegmentor.run(
         images=[wsi4_512_512_svs],
@@ -299,6 +301,7 @@ def test_wsi_mtsegmentor_zarr(
         batch_size=2,
         output_type="zarr",
         memory_threshold=1,
+        ioconfig=ioconfig,
     )
 
     output_ = zarr.open(output[wsi4_512_512_svs], mode="r")
