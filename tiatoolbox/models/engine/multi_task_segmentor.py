@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import gc
 import uuid
+from collections import deque
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -13,12 +14,15 @@ import psutil
 import torch
 import zarr
 from dask import compute
+from shapely.geometry import box as shapely_box
 from shapely.geometry import shape as feature2geometry
+from shapely.strtree import STRtree
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.annotation.storage import Annotation
+from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.misc import get_tqdm, make_valid_poly
 from tiatoolbox.wsicore.wsireader import is_zarr
 
@@ -29,10 +33,6 @@ from .semantic_segmentor import (
     merge_batch_to_canvas,
     store_probabilities,
 )
-from tiatoolbox.tools.patchextraction import PatchExtractor
-from shapely.geometry import box as shapely_box
-from shapely.strtree import STRtree
-from collections import deque
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
@@ -342,7 +342,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         probabilities_is_zarr = False
         for probabilities_ in probabilities:
-            if any("from-zarr" in str(key) for key in probabilities_.dask.layers.keys()):
+            if any(
+                "from-zarr" in str(key) for key in probabilities_.dask.layers.keys()
+            ):
                 probabilities_is_zarr = True
                 break
 
@@ -409,7 +411,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 post_process_output = self.model.postproc_func(head_raws)
 
                 # create a list for info dict for each task
-                wsi_info_dict = [{} for _ in post_process_output] if wsi_info_dict is None else wsi_info_dict
+                wsi_info_dict = (
+                    [{} for _ in post_process_output]
+                    if wsi_info_dict is None
+                    else wsi_info_dict
+                )
                 inst_dicts = _get_inst_dicts(post_process_output=post_process_output)
 
                 tile_mode = set_idx
@@ -1545,6 +1551,7 @@ def _save_annotation_store(
 
     return output_path
 
+
 def _process_instance_predictions(
     inst_dict: dict,
     ioconfig: IOSegmentorConfig,
@@ -1715,8 +1722,7 @@ def _get_inst_dicts(post_process_output: tuple[dict]) -> list:
             [
                 {
                     i + 1: {
-                        key: values[i]
-                        for key, values in _output["info_dict"].items()
+                        key: values[i] for key, values in _output["info_dict"].items()
                     }
                     for i in range(len(_output["info_dict"][keys_[0]]))
                 }

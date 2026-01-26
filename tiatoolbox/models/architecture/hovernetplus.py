@@ -367,7 +367,9 @@ class HoVerNetPlus(HoVerNet):
 
         nuclei_seg = {
             "task_type": self.tasks[0],
-            "predictions": da.array(pred_inst) if isinstance(raw_maps[0], da.Array) else pred_inst,
+            "predictions": da.array(pred_inst)
+            if isinstance(raw_maps[0], da.Array)
+            else pred_inst,
             "info_dict": nuc_inst_info_dict_,
         }
 
@@ -389,7 +391,9 @@ class HoVerNetPlus(HoVerNet):
 
         layer_seg = {
             "task_type": self.tasks[1],
-            "predictions": da.array(pred_layer) if isinstance(raw_maps[0], da.Array) else pred_layer,
+            "predictions": da.array(pred_layer)
+            if isinstance(raw_maps[0], da.Array)
+            else pred_layer,
             "info_dict": layer_info_dict_,
         }
 

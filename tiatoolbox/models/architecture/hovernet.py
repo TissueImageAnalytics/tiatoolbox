@@ -808,7 +808,9 @@ class HoVerNet(ModelABC):
 
         nuclei_seg = {
             "task_type": self.tasks[0],
-            "predictions": da.array(pred_inst) if isinstance(raw_maps[0], da.Array) else pred_inst,
+            "predictions": da.array(pred_inst)
+            if isinstance(raw_maps[0], da.Array)
+            else pred_inst,
             "info_dict": nuc_inst_info_dict_,
         }
 
