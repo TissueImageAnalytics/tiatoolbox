@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import gc
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -28,6 +29,10 @@ from .semantic_segmentor import (
     merge_batch_to_canvas,
     store_probabilities,
 )
+from tiatoolbox.tools.patchextraction import PatchExtractor
+from shapely.geometry import box as shapely_box
+from shapely.strtree import STRtree
+from collections import deque
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
@@ -334,7 +339,18 @@ class MultiTaskSegmentor(SemanticSegmentor):
     ) -> dict:
         """Post-process raw patch predictions from inference."""
         probabilities = raw_predictions["probabilities"]
-        post_process_predictions = self.model.postproc_func(probabilities)
+
+        probabilities_is_zarr = False
+        for probabilities_ in probabilities:
+            if any("from-zarr" in str(key) for key in probabilities_.dask.layers.keys()):
+                probabilities_is_zarr = True
+                break
+
+        # If dask array can fit in memory process without tiling.
+        if not probabilities_is_zarr:
+            post_process_predictions = self.model.postproc_func(probabilities)
+        else:
+            post_process_predictions = self._process_tile_mode(probabilities)
 
         tasks = set()
         for seg in post_process_predictions:
@@ -355,6 +371,250 @@ class MultiTaskSegmentor(SemanticSegmentor):
         self.tasks = tasks
 
         return raw_predictions
+
+    def _process_tile_mode(
+        self: MultiTaskSegmentor,
+        probabilities: list[da.Array | np.ndarray],
+        *,
+        return_predictions: bool = False,
+    ) -> list[dict]:
+        """Helper function to process WSI in tile mode."""
+        highest_input_resolution = self.ioconfig.highest_input_resolution
+        wsi_reader = self.dataloader.dataset.reader
+
+        # assume ioconfig has already been converted to `baseline` for `tile` mode
+        wsi_proc_shape = wsi_reader.slide_dimensions(**highest_input_resolution)
+
+        # * retrieve tile placement and tile info flag
+        # tile shape will always be corrected to be multiple of output
+        tile_info_sets = self._get_tile_info(wsi_proc_shape, self.ioconfig)
+        ioconfig = self.ioconfig.to_baseline()
+
+        merged = []
+        wsi_info_dict = None
+        for set_idx, (set_bounds, set_flags) in enumerate(tile_info_sets):
+            for tile_idx, tile_bounds in enumerate(set_bounds):
+                tile_flag = set_flags[tile_idx]
+                tile_tl = tile_bounds[:2]
+                tile_br = tile_bounds[2:]
+                tile_shape = tile_br - tile_tl  # in width height
+                head_raws = [
+                    probabilities_[
+                        tile_bounds[1] : tile_bounds[3],
+                        tile_bounds[0] : tile_bounds[2],
+                        :,
+                    ]
+                    for probabilities_ in probabilities
+                ]
+                post_process_output = self.model.postproc_func(head_raws)
+
+                # create a list for info dict for each task
+                wsi_info_dict = [{} for _ in post_process_output] if wsi_info_dict is None else wsi_info_dict
+                inst_dicts = _get_inst_dicts(post_process_output=post_process_output)
+
+                tile_mode = set_idx
+                new_inst_dicts, remove_insts_in_origs = [], []
+                for inst_id, inst_dict in enumerate(inst_dicts):
+                    new_inst_dict, remove_insts_in_orig = _process_instance_predictions(
+                        inst_dict,
+                        ioconfig,
+                        tile_shape,
+                        tile_flag,
+                        tile_mode,
+                        tile_tl,
+                        wsi_info_dict[inst_id],
+                    )
+                    new_inst_dicts.append(new_inst_dict)
+                    remove_insts_in_origs.append(remove_insts_in_orig)
+
+                merged.append((new_inst_dicts, remove_insts_in_origs))
+
+            for new_inst_dicts, remove_uuid_lists in merged:
+                for inst_id, new_inst_dict in enumerate(new_inst_dicts):
+                    wsi_info_dict[inst_id].update(new_inst_dict)
+                    for inst_uuid in remove_uuid_lists[inst_id]:
+                        wsi_info_dict[inst_id].pop(inst_uuid, None)
+
+        return wsi_info_dict
+
+    @staticmethod
+    def _get_tile_info(
+        image_shape: list[int] | np.ndarray,
+        ioconfig: IOSegmentorConfig,
+    ) -> list[list, ...]:
+        """Generating tile information.
+
+        To avoid out of memory problem when processing WSI-scale in
+        general, the predictor will perform the inference and assemble
+        on a large image tiles (each may have size of 4000x4000 compared
+        to patch output of 256x256) first before stitching every tiles
+        by the end to complete the WSI output. For nuclei instance
+        segmentation, the stitching process will require removal of
+        predictions within some bounding areas. This function generates
+        both the tile placement and the flag to indicate how the removal
+        should be done to achieve the above goal.
+
+        Args:
+            image_shape (:class:`numpy.ndarray`, list(int)):
+                The shape of WSI to extract the tile from, assumed to be
+                in `[width, height]`.
+            ioconfig (:obj:IOSegmentorConfig):
+                The input and output configuration objects.
+
+        Returns:
+            list:
+                - :py:obj:`list` - Tiles and flags
+                    - :class:`numpy.ndarray` - Grid tiles
+                    - :class:`numpy.ndarray` - Removal flags
+                - :py:obj:`list` - Tiles and flags
+                    - :class:`numpy.ndarray` - Vertical strip tiles
+                    - :class:`numpy.ndarray` - Removal flags
+                - :py:obj:`list` - Tiles and flags
+                    - :class:`numpy.ndarray` - Horizontal strip tiles
+                    - :class:`numpy.ndarray` - Removal flags
+                - :py:obj:`list` - Tiles and flags
+                    - :class:`numpy.ndarray` - Cross-section tiles
+                    - :class:`numpy.ndarray` - Removal flags
+
+        """
+        margin = np.array(ioconfig.margin)
+        tile_shape = np.array(ioconfig.tile_shape)
+        tile_shape = (
+            np.floor(tile_shape / ioconfig.patch_output_shape)
+            * ioconfig.patch_output_shape
+        ).astype(np.int32)
+        image_shape = np.array(image_shape)
+        tile_outputs = PatchExtractor.get_coordinates(
+            image_shape=image_shape,
+            patch_input_shape=tile_shape,
+            patch_output_shape=tile_shape,
+            stride_shape=tile_shape,
+        )
+
+        # * === Now generating the flags to indicate which side should
+        # * === be removed in postproc callback
+        boxes = tile_outputs[1]
+
+        # This saves computation time if the image is smaller than the expected tile
+        if np.all(image_shape <= tile_shape):
+            flag = np.zeros([boxes.shape[0], 4], dtype=np.int32)
+            return [[boxes, flag]]
+
+        # * remove all sides for boxes
+        # unset for those lie within the selection
+        def unset_removal_flag(boxes: tuple, removal_flag: np.ndarray) -> np.ndarray:
+            """Unset removal flags for tiles intersecting image boundaries."""
+            sel_boxes = [
+                shapely_box(0, 0, w, 0),  # top edge
+                shapely_box(0, h, w, h),  # bottom edge
+                shapely_box(0, 0, 0, h),  # left
+                shapely_box(w, 0, w, h),  # right
+            ]
+            geometries = [shapely_box(*bounds) for bounds in boxes]
+            spatial_indexer = STRtree(geometries)
+
+            for idx, sel_box in enumerate(sel_boxes):
+                sel_indices = list(spatial_indexer.query(sel_box))
+                removal_flag[sel_indices, idx] = 0
+            return removal_flag
+
+        w, h = image_shape
+        boxes = tile_outputs[1]
+        #  expand to full four corners
+        boxes_br = boxes[:, 2:]
+        boxes_tr = np.dstack([boxes[:, 2], boxes[:, 1]])[0]
+        boxes_bl = np.dstack([boxes[:, 0], boxes[:, 3]])[0]
+
+        # * remove edges on all sides, excluding edges at on WSI boundary
+        flag = np.ones([boxes.shape[0], 4], dtype=np.int32)
+        flag = unset_removal_flag(boxes, flag)
+        info = deque([[boxes, flag]])
+
+        # * create vertical boxes at tile boundary and
+        # * flag top and bottom removal, excluding those
+        # * on the WSI boundary
+        # -------------------
+        # |    =|=   =|=    |
+        # |    =|=   =|=    |
+        # |   >=|=  >=|=    |
+        # -------------------
+        # |   >=|=  >=|=    |
+        # |    =|=   =|=    |
+        # |   >=|=  >=|=    |
+        # -------------------
+        # |   >=|=  >=|=    |
+        # |    =|=   =|=    |
+        # |    =|=   =|=    |
+        # -------------------
+        # only select boxes having right edges removed
+        sel_indices = np.nonzero(flag[..., 3])
+        _boxes = np.concatenate(
+            [
+                boxes_tr[sel_indices] - np.array([margin, 0])[None],
+                boxes_br[sel_indices] + np.array([margin, 0])[None],
+            ],
+            axis=-1,
+        )
+        _flag = np.full([_boxes.shape[0], 4], 0, dtype=np.int32)
+        _flag[:, [0, 1]] = 1
+        _flag = unset_removal_flag(_boxes, _flag)
+        info.append([_boxes, _flag])
+
+        # * create horizontal boxes at tile boundary and
+        # * flag left and right removal, excluding those
+        # * on the WSI boundary
+        # -------------
+        # |   |   |   |
+        # |  v|v v|v  |
+        # |===|===|===|
+        # -------------
+        # |===|===|===|
+        # |   |   |   |
+        # |   |   |   |
+        # -------------
+        # only select boxes having bottom edges removed
+        sel_indices = np.nonzero(flag[..., 1])
+        # top bottom left right
+        _boxes = np.concatenate(
+            [
+                boxes_bl[sel_indices] - np.array([0, margin])[None],
+                boxes_br[sel_indices] + np.array([0, margin])[None],
+            ],
+            axis=-1,
+        )
+        _flag = np.full([_boxes.shape[0], 4], 0, dtype=np.int32)
+        _flag[:, [2, 3]] = 1
+        _flag = unset_removal_flag(_boxes, _flag)
+        info.append([_boxes, _flag])
+
+        # * create boxes at tile cross-section and all sides
+        # ------------------------
+        # |     |     |     |    |
+        # |    v|     |     |    |
+        # |  > =|=   =|=   =|=   |
+        # -----=-=---=-=---=-=----
+        # |    =|=   =|=   =|=   |
+        # |     |     |     |    |
+        # |    =|=   =|=   =|=   |
+        # -----=-=---=-=---=-=----
+        # |    =|=   =|=   =|=   |
+        # |     |     |     |    |
+        # |     |     |     |    |
+        # ------------------------
+
+        # only select boxes having both right and bottom edges removed
+        sel_indices = np.nonzero(np.prod(flag[:, [1, 3]], axis=-1))
+        _boxes = np.concatenate(
+            [
+                boxes_br[sel_indices] - np.array([2 * margin, 2 * margin])[None],
+                boxes_br[sel_indices] + np.array([2 * margin, 2 * margin])[None],
+            ],
+            axis=-1,
+        )
+        flag = np.full([_boxes.shape[0], 4], 1, dtype=np.int32)
+        info.append([_boxes, flag])
+
+        return info
 
     def build_post_process_raw_predictions(
         self: MultiTaskSegmentor,
@@ -1284,3 +1544,183 @@ def _save_annotation_store(
     store.dump(output_path)
 
     return output_path
+
+def _process_instance_predictions(
+    inst_dict: dict,
+    ioconfig: IOSegmentorConfig,
+    tile_shape: list,
+    tile_flag: list,
+    tile_mode: int,
+    tile_tl: tuple,
+    ref_inst_dict: dict,
+) -> list | tuple:
+    """Function to merge new tile prediction with existing prediction.
+
+    Args:
+        inst_dict (dict): Dictionary containing instance information.
+        ioconfig (:class:`IOSegmentorConfig`): Object defines information
+            about input and output placement of patches.
+        tile_shape (list): A list of the tile shape.
+        tile_flag (list): A list of flag to indicate if instances within
+            an area extended from each side (by `ioconfig.margin`) of
+            the tile should be replaced by those within the same spatial
+            region in the accumulated output this run. The format is
+            [top, bottom, left, right], 1 indicates removal while 0 is not.
+            For example, [1, 1, 0, 0] denotes replacing top and bottom instances
+            within `ref_inst_dict` with new ones after this processing.
+        tile_mode (int): A flag to indicate the type of this tile. There
+            are 4 flags:
+            - 0: A tile from tile grid without any overlapping, it is not
+                an overlapping tile from tile generation. The predicted
+                instances are immediately added to accumulated output.
+            - 1: Vertical tile strip that stands between two normal tiles
+                (flag 0). It has the same height as normal tile but
+                less width (hence vertical strip).
+            - 2: Horizontal tile strip that stands between two normal tiles
+                (flag 0). It has the same width as normal tile but
+                less height (hence horizontal strip).
+            - 3: tile strip stands at the cross-section of four normal tiles
+                (flag 0).
+        tile_tl (tuple): Top left coordinates of the current tile.
+        ref_inst_dict (dict): Dictionary contains accumulated output. The
+            expected format is {instance_id: {type: int,
+            contour: List[List[int]], centroid:List[float], box:List[int]}.
+
+    Returns:
+        new_inst_dict (dict): A dictionary contain new instances to be accumulated.
+            The expected format is {instance_id: {type: int,
+            contour: List[List[int]], centroid:List[float], box:List[int]}.
+        remove_insts_in_orig (list): List of instance id within `ref_inst_dict`
+            to be removed to prevent overlapping predictions. These instances
+            are those get cutoff at the boundary due to the tiling process.
+
+    """
+    # should be rare, no nuclei detected in input images
+    if len(inst_dict) == 0:
+        return {}, []
+
+    # !
+    m = ioconfig.margin
+    w, h = tile_shape
+    inst_boxes = [v["box"] for v in inst_dict.values()]
+    inst_boxes = np.array(inst_boxes)
+
+    geometries = [shapely_box(*bounds) for bounds in inst_boxes]
+    tile_rtree = STRtree(geometries)
+    # !
+
+    # create margin bounding box, ordering should match with
+    # created tile info flag (top, bottom, left, right)
+    boundary_lines = [
+        shapely_box(0, 0, w, 1),  # top egde
+        shapely_box(0, h - 1, w, h),  # bottom edge
+        shapely_box(0, 0, 1, h),  # left
+        shapely_box(w - 1, 0, w, h),  # right
+    ]
+    margin_boxes = [
+        shapely_box(0, 0, w, m),  # top egde
+        shapely_box(0, h - m, w, h),  # bottom edge
+        shapely_box(0, 0, m, h),  # left
+        shapely_box(w - m, 0, w, h),  # right
+    ]
+    # ! this is wrt to WSI coord space, not tile
+    margin_lines = [
+        [[m, m], [w - m, m]],  # top egde
+        [[m, h - m], [w - m, h - m]],  # bottom edge
+        [[m, m], [m, h - m]],  # left
+        [[w - m, m], [w - m, h - m]],  # right
+    ]
+    margin_lines = np.array(margin_lines) + tile_tl[None, None]
+    margin_lines = [shapely_box(*v.flatten().tolist()) for v in margin_lines]
+
+    # the ids within this match with those within `inst_map`, not UUID
+    sel_indices = []
+    if tile_mode in [0, 3]:
+        # for `full grid` tiles `cross section` tiles
+        # -- extend from the boundary by the margin size, remove
+        #    nuclei whose entire contours lie within the margin area
+        sel_boxes = [
+            box
+            for idx, box in enumerate(margin_boxes)
+            if tile_flag[idx] or tile_mode == 3  # noqa: PLR2004
+        ]
+
+        sel_indices = [
+            geo
+            for bounds in sel_boxes
+            for geo in tile_rtree.query(bounds)
+            if bounds.contains(geometries[geo])
+        ]
+    elif tile_mode in [1, 2]:
+        # for `horizontal/vertical strip` tiles
+        # -- extend from the marked edges (top/bot or left/right) by
+        #    the margin size, remove all nuclei lie within the margin
+        #    area (including on the margin line)
+        # -- remove all nuclei on the boundary also
+
+        sel_boxes = [
+            margin_boxes[idx] if flag else boundary_lines[idx]
+            for idx, flag in enumerate(tile_flag)
+        ]
+
+        sel_indices = [geo for bounds in sel_boxes for geo in tile_rtree.query(bounds)]
+    else:
+        msg = f"Unknown tile mode {tile_mode}."
+        raise ValueError(msg)
+
+    def retrieve_sel_uids(sel_indices: list, inst_dict: dict) -> list:
+        """Helper to retrieved selected instance uids."""
+        if len(sel_indices) > 0:
+            # not sure how costly this is in large dict
+            inst_uids = list(inst_dict.keys())
+        return [inst_uids[idx] for idx in sel_indices]
+
+    remove_insts_in_tile = retrieve_sel_uids(sel_indices, inst_dict)
+
+    # external removal only for tile at cross-sections
+    # this one should contain UUID with the reference database
+    remove_insts_in_orig = []
+    if tile_mode == 3:  # noqa: PLR2004
+        inst_boxes = [v["box"] for v in ref_inst_dict.values()]
+        inst_boxes = np.array(inst_boxes)
+
+        geometries = [shapely_box(*bounds) for bounds in inst_boxes]
+        ref_inst_rtree = STRtree(geometries)
+        sel_indices = [
+            geo for bounds in margin_lines for geo in ref_inst_rtree.query(bounds)
+        ]
+
+        remove_insts_in_orig = retrieve_sel_uids(sel_indices, ref_inst_dict)
+
+    # move inst position from tile space back to WSI space
+    # an also generate universal uid as replacement for storage
+    new_inst_dict = {}
+    for inst_uid, inst_info in inst_dict.items():
+        if inst_uid not in remove_insts_in_tile:
+            inst_info["box"] += np.concatenate([tile_tl] * 2)
+            if "centroid" in inst_info:
+                inst_info["centroid"] += tile_tl
+            inst_info["contours"] += tile_tl
+            inst_uuid = uuid.uuid4().hex
+            new_inst_dict[inst_uuid] = inst_info
+    return new_inst_dict, remove_insts_in_orig
+
+
+def _get_inst_dicts(post_process_output: tuple[dict]) -> list:
+    inst_dicts = []
+    for _output in post_process_output:
+        keys_ = list(_output["info_dict"].keys())
+
+        inst_dicts.extend(
+            [
+                {
+                    i + 1: {
+                        key: values[i]
+                        for key, values in _output["info_dict"].items()
+                    }
+                    for i in range(len(_output["info_dict"][keys_[0]]))
+                }
+            ]
+        )
+
+    return inst_dicts

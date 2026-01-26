@@ -281,7 +281,7 @@ def test_wsi_mtsegmentor_zarr(
     track_tmp_path: Path,
 ) -> None:
     """Test MultiTaskSegmentor for WSIs with zarr output."""
-    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
+    wsi4_512_512_svs = remote_sample("wsi2_4k_4k_svs")
     mtsegmentor = MultiTaskSegmentor(
         model="hovernetplus-oed",
         batch_size=64,
@@ -299,7 +299,6 @@ def test_wsi_mtsegmentor_zarr(
         batch_size=2,
         output_type="zarr",
         memory_threshold=1,
-        stride_shape=(160, 160),
     )
 
     output_ = zarr.open(output[wsi4_512_512_svs], mode="r")

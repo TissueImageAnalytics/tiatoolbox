@@ -15,6 +15,7 @@ from torch import nn
 
 from tiatoolbox.models.architecture.hovernet import HoVerNet
 from tiatoolbox.models.architecture.utils import UpSample2x
+from tiatoolbox.utils.misc import get_bounding_box
 
 
 class HoVerNetPlus(HoVerNet):
@@ -225,6 +226,7 @@ class HoVerNetPlus(HoVerNet):
 
         for type_class in layer_list:
             layer = np.where(pred_layer == type_class, 1, 0).astype("uint8")
+            bounding_box = get_bounding_box(layer)
             contours, _ = cv2.findContours(
                 layer.astype("uint8"),
                 cv2.RETR_TREE,
@@ -245,6 +247,7 @@ class HoVerNetPlus(HoVerNet):
 
                 coords = layer[:, 0, :]
                 layer_info_dict[count] = {
+                    "box": bounding_box,
                     "contours": coords,
                     "type": type_class,
                 }
@@ -364,13 +367,14 @@ class HoVerNetPlus(HoVerNet):
 
         nuclei_seg = {
             "task_type": self.tasks[0],
-            "predictions": pred_inst,
+            "predictions": da.array(pred_inst) if isinstance(raw_maps[0], da.Array) else pred_inst,
             "info_dict": nuc_inst_info_dict_,
         }
 
         layer_info_dict_ = {}
         if not layer_info_dict:
             layer_info_dict_ = {  # inst_id should start at 1
+                "box": da.empty(shape=0),
                 "contours": da.empty(shape=0),
                 "type": da.empty(shape=0),
             }
@@ -385,7 +389,7 @@ class HoVerNetPlus(HoVerNet):
 
         layer_seg = {
             "task_type": self.tasks[1],
-            "predictions": pred_layer,
+            "predictions": da.array(pred_layer) if isinstance(raw_maps[0], da.Array) else pred_layer,
             "info_dict": layer_info_dict_,
         }
 
