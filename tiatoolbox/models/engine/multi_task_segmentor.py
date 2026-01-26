@@ -6,7 +6,7 @@ import gc
 import uuid
 from collections import deque
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import dask.array as da
 import numpy as np
@@ -342,9 +342,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         probabilities_is_zarr = False
         for probabilities_ in probabilities:
-            if any(
-                "from-zarr" in str(key) for key in probabilities_.dask.layers.keys()
-            ):
+            if any("from-zarr" in str(key) for key in probabilities_.dask.layers):
                 probabilities_is_zarr = True
                 break
 
@@ -379,10 +377,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
         probabilities: list[da.Array | np.ndarray],
         *,
         return_predictions: bool = False,
-    ) -> list[dict]:
+    ) -> list[dict] | None:
         """Helper function to process WSI in tile mode."""
         highest_input_resolution = self.ioconfig.highest_input_resolution
         wsi_reader = self.dataloader.dataset.reader
+        _ = return_predictions
 
         # assume ioconfig has already been converted to `baseline` for `tile` mode
         wsi_proc_shape = wsi_reader.slide_dimensions(**highest_input_resolution)
@@ -410,12 +409,13 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 ]
                 post_process_output = self.model.postproc_func(head_raws)
 
-                # create a list for info dict for each task
-                wsi_info_dict = (
-                    [{} for _ in post_process_output]
-                    if wsi_info_dict is None
-                    else wsi_info_dict
+                # create a list of info dict for each task
+                wsi_info_dict = _create_wsi_info_dict(
+                    post_process_output=post_process_output,
+                    wsi_info_dict=wsi_info_dict,
+                    wsi_proc_shape=wsi_proc_shape,
                 )
+
                 inst_dicts = _get_inst_dicts(post_process_output=post_process_output)
 
                 tile_mode = set_idx
@@ -428,7 +428,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         tile_flag,
                         tile_mode,
                         tile_tl,
-                        wsi_info_dict[inst_id],
+                        wsi_info_dict[inst_id]["info_dict"],
                     )
                     new_inst_dicts.append(new_inst_dict)
                     remove_insts_in_origs.append(remove_insts_in_orig)
@@ -437,18 +437,22 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
             for new_inst_dicts, remove_uuid_lists in merged:
                 for inst_id, new_inst_dict in enumerate(new_inst_dicts):
-                    wsi_info_dict[inst_id].update(new_inst_dict)
+                    wsi_info_dict[inst_id]["info_dict"].update(new_inst_dict)
                     for inst_uuid in remove_uuid_lists[inst_id]:
-                        wsi_info_dict[inst_id].pop(inst_uuid, None)
+                        wsi_info_dict[inst_id]["info_dict"].pop(inst_uuid, None)
 
-        a = wsi_info_dict[0]
-        keys = ["box", "centroid", "contours", "prob", "type"]
-        info_dict = {}
-        for key in keys:
-            # Extract the list of values for this key across all instances
-            values = [a[i][key] for i in a]
-            # Convert to a Dask array (single chunk of size N)
-            info_dict[key] = values
+        for idx, wsi_info_dict_ in enumerate(wsi_info_dict):
+            info_dict_keys: list[str] = wsi_info_dict_["info_dict_keys"]
+            info_dict = {}
+            for key in info_dict_keys:
+                # Extract the list of values for this key across all instances
+                values = [
+                    da.array(wsi_info_dict_["info_dict"][i][key])
+                    for i in wsi_info_dict_["info_dict"]
+                ]
+                info_dict[key] = values
+            wsi_info_dict[idx]["info_dict"] = info_dict
+            wsi_info_dict_.pop("info_dict_keys")
 
         return wsi_info_dict
 
@@ -1739,3 +1743,26 @@ def _get_inst_dicts(post_process_output: tuple[dict]) -> list:
         )
 
     return inst_dicts
+
+
+def _create_wsi_info_dict(
+    post_process_output: tuple[dict],
+    wsi_info_dict: tuple[dict] | None,
+    wsi_proc_shape: tuple[int, ...],
+) -> tuple[dict[str, dict[Any, Any] | list[Any] | Any], ...]:
+    """Helper function to create wsi info dict."""
+    if wsi_info_dict is not None:
+        return wsi_info_dict
+
+    return tuple(
+        {
+            "task_type": post_process_output_["task_type"],
+            "predictions": da.zeros(
+                shape=wsi_proc_shape,
+                dtype=post_process_output_["predictions"].dtype,
+            ),
+            "info_dict": {},
+            "info_dict_keys": list(post_process_output_["info_dict"]),
+        }
+        for post_process_output_ in post_process_output
+    )
