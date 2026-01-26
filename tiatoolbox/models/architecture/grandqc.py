@@ -8,8 +8,6 @@ Please cite the paper [1], if you use this model.
 
 Key Components:
 ---------------
-- SegmentationHead:
-    Final layer for segmentation output.
 - Conv2dReLU:
     Convolutional block with BatchNorm and ReLU activation.
 - DecoderBlock:

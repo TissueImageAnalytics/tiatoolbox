@@ -997,7 +997,7 @@ KongNet_CoNIC_1:
             stride_shape: [248, 248]
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
 
-KongNet_MONKEY_1:
+KongNet_PanNuke_1:
     hf_repo_id: TIACentre/KongNet_pretrained_weights
     architecture:
         class: kongnet.KongNet
@@ -1005,7 +1005,7 @@ KongNet_MONKEY_1:
             num_heads: 6
             num_channels_per_head: [3, 3, 3, 3, 3, 3]
             target_channels: [5, 8, 11, 14, 17]
-            wide_decoder: True
+            wide_decoder: False
             min_distance: 11
             threshold_abs: 0.5
             class_dict: {
@@ -1028,7 +1028,7 @@ KongNet_MONKEY_1:
             stride_shape: [240, 240]
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
 
-KongNet_PanNuke_1:
+KongNet_MONKEY_1:
     hf_repo_id: TIACentre/KongNet_pretrained_weights
     architecture:
         class: kongnet.KongNet
@@ -1036,7 +1036,7 @@ KongNet_PanNuke_1:
             num_heads: 3
             num_channels_per_head: [3, 3, 3]
             target_channels: [2, 5, 8]
-            wide_decoder: False
+            wide_decoder: True
             min_distance: 11
             threshold_abs: 0.5
             class_dict: {

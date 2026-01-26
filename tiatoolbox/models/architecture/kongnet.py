@@ -1,9 +1,86 @@
+"""KongNet Nuclei Detection Model Architecture [1].
+
+This module defines the KongNet model for nuclei detection and classification
+in digital pathology. It implements a multi-head encoder decoder architecture
+with an EfficientNetV2-L encoder. The model is designed to detect and classify
+nuclei in whole slide images (WSIs).
+
+KongNet achieved 1st on track 1 and 2nd on track 2 during the MONKEY Challenge [2].
+KongNet achieved 1st place in the 2025 MIDOG Challenge [3].
+KongNet ranked among the top three in the PUMA Challenge [4].
+KongNet achieved SOTA detection performance on PanNuke [5] and CoNIC [6] datasets.
+
+Please cite the paper [1], if you use this model.
+
+Pretrained Models:
+-----------------
+    - KongNet_MONKEY_1:
+        MONKEY Challenge model.
+    - KongNet_Det_MIDOG_1:
+        MIDOG Challenge lightweight detection model.
+    - KongNet_PUMA_T1_3:
+        PUMA Challenge model for track 1.
+    - KongNet_PUMA_T2_3:
+        PUMA Challenge model for track 2.
+    - KongNet_CoNIC_1:
+        CoNIC model.
+    - KongNet_PanNuke_1:
+        PanNuke model.
+
+Key Components:
+---------------
+- TimmEncoderFixed: Encoder module using TIMM models with fixed drop_path_rate handling.
+- SubPixelUpsample: Sub-pixel upsampling module using PixelShuffle.
+- DecoderBlock: U-Net style decoder block with attention mechanisms.
+- KongNetDecoder: U-Net style decoder with multiple decoder blocks.
+- KongNet: Multi-head segmentation model with shared encoder and multiple decoders.
+
+Features:
+---------
+- Multi-head architecture for accurate nuclei detection and classification.
+- Efficient inference pipeline for batch processing.
+
+Example:
+    >>> from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
+    >>> detector = NucleusDetector(model="KongNet_CoNIC_1")
+    >>> results = detector.run(
+    ...     ["/example_wsi.svs"],
+    ...     masks=None,
+    ...     auto_get_mask=False,
+    ...     patch_mode=False,
+    ...     save_dir=Path("/KongNet_CoNIC/"),
+    ...     output_type="annotationstore",
+    ... )
+
+References:
+    [1] Lv, Jiaqi et al., "KongNet: A Multi-headed Deep Learning Model for Detection
+    and Classification of Nuclei in Histopathology Images.", 2025,
+    arXiv preprint arXiv:2510.23559., URL: https://arxiv.org/abs/2510.23559
+    [2] L. Studer, “Structured description of the monkey challenge,” Sept. 2024.
+    [3] J. Ammeling, M. Aubreville, S. Banerjee, C. A. Bertram, K. Breininger,
+    D. Hirling, P. Horvath, N. Stathonikos, and M. Veta, “Mitosis domain
+    generalization challenge 2025,” Mar. 2025.
+    [4] M. Schuiveling, H. Liu, D. Eek, G. Breimer, K. Suijkerbuijk, W. Blokx,
+    and M. Veta, “A novel dataset for nuclei and tissue segmentation in
+    melanoma with baseline nuclei segmentation and tissue segmentation
+    benchmarks,” GigaScience, vol. 14, 01 2025.
+    [5] J. Gamper, N. A. Koohbanani, K. Benes, S. Graham, M. Jahanifar,
+    S. A. Khurram, A. Azam, K. Hewitt, and N. Rajpoot, “Pannuke dataset
+    extension, insights and baselines,” 2020.
+    [6]  S. Graham et al., “Conic challenge: Pushing the frontiers of nuclear detection,
+    segmentation, classification and counting,” Medical Image Analysis,
+    vol. 92, p. 103047, 2024.
+
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Mapping
+
+    from tiatoolbox.type_hints import IntPair
 
 import numpy as np
 import timm
@@ -18,7 +95,6 @@ from tiatoolbox.models.architecture.utils import (
     peak_detection_map_overlap,
 )
 from tiatoolbox.models.models_abc import ModelABC
-from tiatoolbox.type_hints import IntPair
 
 
 class TimmEncoderFixed(nn.Module):
@@ -28,51 +104,60 @@ class TimmEncoderFixed(nn.Module):
     for segmentation tasks. It extracts features at multiple scales from the encoder
     backbone.
 
-    Args:
-        name (str): Name of the TIMM model to use as backbone
-        pretrained (bool): Whether to use pretrained weights. Default: True
-        in_channels (int): Number of input channels. Default: 3
-        depth (int): Number of encoder stages to extract features from. Default: 5
-        output_stride (int): Output stride of the encoder. Default: 32
-        drop_rate (float): Dropout rate. Default: 0.5
-        drop_path_rate (Optional[float]): Drop path rate for stochastic depth. Default: 0.0
     """
 
     def __init__(
         self,
         name: str,
-        pretrained: bool = True,
         in_channels: int = 3,
         depth: int = 5,
         output_stride: int = 32,
         drop_rate: float = 0.5,
         drop_path_rate: float | None = 0.0,
+        *,
+        pretrained: bool = True,
     ) -> None:
+        """Initialize TimmEncoderFixed.
+
+        Args:
+            name (str):
+                Name of the TIMM model to use as backbone.
+            in_channels (int):
+                Number of input channels. Default is 3.
+            depth (int):
+                Number of encoder stages to extract features from. Default is 5.
+            output_stride (int):
+                Output stride of the encoder. Default is 32.
+            drop_rate (float):
+                Dropout rate. Default is 0.5.
+            drop_path_rate (float | None):
+                Drop path rate of the encoder. Default is 0.0.
+            pretrained (bool):
+                Whether to use pretrained weights. Default is True.
+        """
         super().__init__()
         if drop_path_rate is None:
-            kwargs = dict(
-                in_chans=in_channels,
-                features_only=True,
-                pretrained=pretrained,
-                out_indices=tuple(range(depth)),
-                drop_rate=drop_rate,
-            )
+            kwargs = {
+                "in_chans": in_channels,
+                "features_only": True,
+                "pretrained": pretrained,
+                "out_indices": tuple(range(depth)),
+                "drop_rate": drop_rate,
+            }
         else:
-            kwargs = dict(
-                in_chans=in_channels,
-                features_only=True,
-                pretrained=pretrained,
-                out_indices=tuple(range(depth)),
-                drop_rate=drop_rate,
-                drop_path_rate=drop_path_rate,
-            )
+            kwargs = {
+                "in_chans": in_channels,
+                "features_only": True,
+                "pretrained": pretrained,
+                "out_indices": tuple(range(depth)),
+                "drop_rate": drop_rate,
+                "drop_path_rate": drop_path_rate,
+            }
 
         self.model = timm.create_model(name, **kwargs)
 
         self._in_channels = in_channels
-        self._out_channels = [
-            in_channels,
-        ] + self.model.feature_info.channels()
+        self._out_channels = [in_channels, *self.model.feature_info.channels()]
         self._depth = depth
         self._output_stride = output_stride
 
@@ -87,10 +172,7 @@ class TimmEncoderFixed(nn.Module):
                 including the input as the first element
         """
         features = self.model(x)
-        features = [
-            x,
-        ] + features
-        return features
+        return [x, *features]
 
     @property
     def out_channels(self) -> list[int]:
@@ -126,7 +208,18 @@ class SubPixelUpsample(nn.Module):
     def __init__(
         self, in_channels: int, out_channels: int, upscale_factor: int = 2
     ) -> None:
-        super(SubPixelUpsample, self).__init__()
+        """Initialize SubPixelUpsample.
+
+        Args:
+            in_channels (int):
+                Number of input channels
+            out_channels (int):
+                Number of output channels
+            upscale_factor (int):
+                Factor to increase spatial resolution. Default is 2.
+
+        """
+        super().__init__()
         self.conv1 = Conv2dNormActivation(
             in_channels,
             out_channels * upscale_factor**2,
@@ -148,22 +241,25 @@ class SubPixelUpsample(nn.Module):
         """Forward pass through sub-pixel upsampling.
 
         Args:
-            x (torch.Tensor): Input tensor of shape (B, C, H, W)
+            x (torch.Tensor):
+                Input tensor of shape (B, C, H, W)
 
         Returns:
-            torch.Tensor: Upsampled tensor of shape (B, out_channels, H*upscale_factor, W*upscale_factor)
+            torch.Tensor:
+                Upsampled tensor of shape
+                (B, out_channels, H*upscale_factor, W*upscale_factor)
         """
         x = self.conv1(x)
         x = self.pixel_shuffle(x)
-        x = self.conv2(x)
-        return x
+        return self.conv2(x)
 
 
 class DecoderBlock(nn.Module):
     """Decoder block with upsampling, skip connection, and attention.
 
-    This block performs upsampling of the input features, concatenates with skip connections
-    from the encoder, applies attention mechanisms, and processes through convolutions.
+    This block performs upsampling of the input features, concatenates
+    with skip connections from the encoder, applies attention mechanisms,
+    and processes through convolutions.
 
     Args:
         in_channels (int): Number of input channels
@@ -179,6 +275,18 @@ class DecoderBlock(nn.Module):
         out_channels: int,
         attention_type: str = "scse",
     ) -> None:
+        """Initialize DecoderBlock.
+
+        Args:
+            in_channels (int):
+                Number of input channels
+            skip_channels (int):
+                Number of channels from skip connection
+            out_channels (int):
+                Number of output channels
+            attention_type (str):
+                Type of attention mechanism. Default: 'scse'
+        """
         super().__init__()
         self.up = SubPixelUpsample(in_channels, in_channels, upscale_factor=2)
         self.conv1 = Conv2dNormActivation(
@@ -208,8 +316,10 @@ class DecoderBlock(nn.Module):
         """Forward pass through decoder block.
 
         Args:
-            x (torch.Tensor): Input tensor to be upsampled
-            skip (Optional[torch.Tensor]): Skip connection tensor from encoder. Default: None
+            x (torch.Tensor):
+                Input tensor to be upsampled
+            skip (Optional[torch.Tensor]):
+                Skip connection tensor from encoder. Default: None
 
         Returns:
             torch.Tensor: Processed output tensor
@@ -220,8 +330,7 @@ class DecoderBlock(nn.Module):
             x = self.attention1(x)
         x = self.conv1(x)
         x = self.conv2(x)
-        x = self.attention2(x)
-        return x
+        return self.attention2(x)
 
 
 class CenterBlock(nn.Module):
@@ -235,6 +344,11 @@ class CenterBlock(nn.Module):
     """
 
     def __init__(self, in_channels: int) -> None:
+        """Initialize CenterBlock with attention.
+
+        Args:
+            in_channels (int): Number of input channels
+        """
         super().__init__()
         self.attention = Attention(name="scse", in_channels=in_channels)
 
@@ -247,8 +361,7 @@ class CenterBlock(nn.Module):
         Returns:
             torch.Tensor: Output tensor with attention applied
         """
-        x = self.attention(x)
-        return x
+        return self.attention(x)
 
 
 class KongNetDecoder(nn.Module):
@@ -274,14 +387,32 @@ class KongNetDecoder(nn.Module):
         decoder_channels: tuple[int, ...],
         n_blocks: int = 5,
         attention_type: str = "scse",
+        *,
         center: bool = True,
     ) -> None:
+        """Initialize KongNetDecoder.
+
+        Args:
+            encoder_channels (List[int]):
+                Number of channels at each encoder level.
+            decoder_channels (Tuple[int, ...]):
+                Number of channels at each decoder level.
+            n_blocks (int):
+                Number of decoder blocks. Default is 5.
+            attention_type (str):
+                Type of attention mechanism to use. Default is 'scse'.
+            center (bool):
+                Whether to include a center block at the bottleneck.
+                Default is True.
+        """
         super().__init__()
 
         if n_blocks != len(decoder_channels):
-            raise ValueError(
-                f"Model depth is {n_blocks}, but you provide `decoder_channels` for {len(decoder_channels)} blocks."
+            msg = (
+                f"The number of blocks {n_blocks} must match the"
+                f" length of decoder_channels {len(decoder_channels)}."
             )
+            raise ValueError(msg)
 
         # remove first skip with same spatial resolution
         encoder_channels = encoder_channels[1:]
@@ -290,22 +421,20 @@ class KongNetDecoder(nn.Module):
 
         # computing blocks input and output channels
         head_channels = encoder_channels[0]
-        in_channels = [head_channels] + list(decoder_channels[:-1])
-        skip_channels = list(encoder_channels[1:]) + [0]
+        in_channels = [head_channels, *list(decoder_channels[:-1])]
+        skip_channels = [*list(encoder_channels[1:]), 0]
         out_channels = decoder_channels
 
         if center:
-            # Bug fix: CenterBlock only takes in_channels parameter
             self.center = CenterBlock(head_channels)
         else:
             self.center = nn.Identity()
 
-        # combine decoder keyword arguments
-        # Bug fix: DecoderBlock doesn't use use_batchnorm parameter
-        kwargs = dict(attention_type=attention_type)
         blocks = [
-            DecoderBlock(in_ch, skip_ch, out_ch, **kwargs)
-            for in_ch, skip_ch, out_ch in zip(in_channels, skip_channels, out_channels)
+            DecoderBlock(in_ch, skip_ch, out_ch, attention_type=attention_type)
+            for in_ch, skip_ch, out_ch in zip(
+                in_channels, skip_channels, out_channels, strict=True
+            )
         ]
         self.blocks = nn.ModuleList(blocks)
 
@@ -313,7 +442,7 @@ class KongNetDecoder(nn.Module):
         """Forward pass through the decoder.
 
         Args:
-            *features: Variable number of feature tensors from encoder at different scales
+            *features: Feature tensors from encoder at different scales
 
         Returns:
             torch.Tensor: Decoded output tensor
@@ -333,19 +462,41 @@ class KongNetDecoder(nn.Module):
 
 
 class KongNet(ModelABC):
-    """KongNet: Multi-head segmentation model.
+    """KongNet: Multi-head nuclei detection model.
 
-    KongNet is a segmentation model with multiple decoder heads that can
-    produce different types of segmentation outputs simultaneously. It uses
-    a shared encoder and multiple task-specific decoders.
+    This module defines the KongNet model for nuclei detection and classification
+    in digital pathology. It implements a multi-head encoder decoder architecture
+    with an EfficientNetV2-L encoder. The model is designed to detect and classify
+    nuclei in whole slide images (WSIs).
 
-    Args:
+
+    Attributes:
         encoder: Encoder module (e.g., TimmEncoderFixed)
-        decoder_list (List[nn.Module]): List of decoder modules
-        head_list (List[nn.Module]): List of segmentation heads
+        decoders: List of decoder modules (KongNetDecoder)
+        heads: List of segmentation head modules (SegmentationHead)
+        min_distance: Minimum distance between peaks in post-processing
+        threshold_abs: Absolute threshold for peak detection in post-processing
+        target_channels: List of target channel indices for post-processing
+        output_class_dict: Optional dictionary mapping class names to indices
+        postproc_tile_shape: Tile shape for post-processing with dask
 
-    Raises:
-        ValueError: If decoder_list and head_list have different lengths
+    Example:
+        >>> from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
+        >>> detector = NucleusDetector(model="KongNet_CoNIC_1")
+        >>> results = detector.run(
+        ...     ["/example_wsi.svs"],
+        ...     masks=None,
+        ...     auto_get_mask=False,
+        ...     patch_mode=False,
+        ...     save_dir=Path("/KongNet_CoNIC/"),
+        ...     output_type="annotationstore",
+        ... )
+
+    References:
+        [1] Lv, Jiaqi et al., "KongNet: A Multi-headed Deep Learning Model for Detection
+        and Classification of Nuclei in Histopathology Images.", 2025,
+        arXiv preprint arXiv:2510.23559.,
+        URL: https://arxiv.org/abs/2510.23559
     """
 
     def __init__(
@@ -355,18 +506,40 @@ class KongNet(ModelABC):
         target_channels: list[int],
         min_distance: int,
         threshold_abs: float,
+        postproc_tile_shape: IntPair = (2048, 2048),
+        *,
         wide_decoder: bool = False,
         class_dict: dict | None = None,
-        postproc_tile_shape: IntPair = (2048, 2048),
     ) -> None:
-        super(KongNet, self).__init__()
+        """Initialize KongNet model.
+
+        Args:
+            num_heads (int):
+                Number of decoder heads.
+            num_channels_per_head (list[int]):
+                List specifying number of output channels for each head.
+            target_channels (list[int]):
+                List of target channel indices for post-processing.
+            min_distance (int):
+                Minimum distance between peaks in post-processing.
+            threshold_abs (float):
+                Absolute threshold for peak detection in post-processing.
+            postproc_tile_shape (IntPair):
+                Tile shape for post-processing with dask. Defaults to (2048, 2048).
+            wide_decoder (bool):
+                Whether to use a wider decoder architecture. Defaults to False.
+            class_dict (dict | None):
+                Optional dictionary mapping class names to indices. Defaults to None.
+        """
+        super().__init__()
 
         # Bug fix: Add validation for matching decoder and head lists
         if len(num_channels_per_head) != num_heads:
-            raise ValueError(
-                f"Number of decoders ({len(num_channels_per_head)}) must match "
-                f"number of heads ({num_heads})"
+            msg = (
+                f"Number of decoders {len(num_channels_per_head)}"
+                f" must match number of heads {num_heads}."
             )
+            raise ValueError(msg)
 
         self.encoder = TimmEncoderFixed(
             name="tf_efficientnetv2_l.in21k_ft_in1k",
@@ -382,28 +555,26 @@ class KongNet(ModelABC):
         if wide_decoder:
             decoder_channels = (512, 256, 128, 64, 32)
 
-        decoders = []
-        for i in range(num_heads):
-            decoders.append(
-                KongNetDecoder(
-                    encoder_channels=self.encoder.out_channels,
-                    decoder_channels=decoder_channels,
-                    n_blocks=len(decoder_channels),
-                    center=True,
-                    attention_type="scse",
-                )
+        decoders = [
+            KongNetDecoder(
+                encoder_channels=self.encoder.out_channels,
+                decoder_channels=decoder_channels,
+                n_blocks=len(decoder_channels),
+                center=True,
+                attention_type="scse",
             )
+            for _ in range(num_heads)
+        ]
 
-        heads = []
-        for i in range(num_heads):
-            heads.append(
-                SegmentationHead(
-                    in_channels=decoders[i].blocks[-1].conv2[0].out_channels,
-                    out_channels=num_channels_per_head[i],  # instance channels
-                    activation=None,
-                    kernel_size=1,
-                )
+        heads = [
+            SegmentationHead(
+                in_channels=decoders[i].blocks[-1].conv2[0].out_channels,
+                out_channels=num_channels_per_head[i],  # instance channels
+                activation=None,
+                kernel_size=1,
             )
+            for i in range(num_heads)
+        ]
 
         self.decoders = nn.ModuleList(decoders)
         self.heads = nn.ModuleList(heads)
@@ -448,21 +619,23 @@ class KongNet(ModelABC):
 
         Args:
             x (torch.Tensor): Input tensor of shape (B, C, H, W)
+            *args (tuple):
+                Additional positional arguments (unused).
+            **kwargs (dict):
+                Additional keyword arguments (unused).
 
         Returns:
-            torch.Tensor: Concatenated output from all heads of shape (B, sum(num_channels_per_head), H, W)
+            torch.Tensor: Concatenated output from all heads of shape
+                (B, sum(num_channels_per_head), H, W)
         """
         features = self.encoder(x)
-        decoder_outputs = []
-        for decoder in self.decoders:
-            decoder_outputs.append(decoder(*features))
+        decoder_outputs = [decoder(*features) for decoder in self.decoders]
 
         segmentation_head_outputs = []
-        for head, decoder_output in zip(self.heads, decoder_outputs):
+        for head, decoder_output in zip(self.heads, decoder_outputs, strict=True):
             segmentation_head_outputs.append(head(decoder_output))
 
-        output_all_channels = torch.cat(segmentation_head_outputs, 1)
-        return output_all_channels
+        return torch.cat(segmentation_head_outputs, 1)
 
     @staticmethod
     def infer_batch(
@@ -575,7 +748,9 @@ class KongNet(ModelABC):
     def load_state_dict(
         self: KongNet,
         state_dict: Mapping[str, Any],
+        *,
         strict: bool = True,
         assign: bool = False,
-    ):
+    ) -> None:
+        """Load state dict with support for wrapped models."""
         return super().load_state_dict(state_dict["model"], strict, assign)

@@ -308,7 +308,16 @@ class SegmentationHead(nn.Sequential):
 
 
 class Attention(nn.Module):
-    def __init__(self, name, **params):
+    """Attention module to apply attention mechanism on feature maps."""
+
+    def __init__(self, name: str | None, **params: dict) -> None:
+        """Initialize the Attention module.
+
+        Args:
+            name (str | None): Name of the attention mechanism.
+                Only "scse" is implemented. If None, identity is used.
+            **params: Additional parameters for the attention mechanism.
+        """
         super().__init__()
 
         if name is None:
@@ -316,14 +325,31 @@ class Attention(nn.Module):
         elif name == "scse":
             self.attention = SCSEModule(**params)
         else:
-            raise ValueError(f"Attention {name} is not implemented")
+            msg = f"Attention {name} is not implemented"
+            raise ValueError(msg)
 
-    def forward(self, x):
+    def forward(self: Attention, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass of the Attention module.
+
+        Args:
+            x (torch.Tensor): Input feature map of shape (N, C, H, W).
+
+        Returns:
+            torch.Tensor: Output feature map after applying attention.
+        """
         return self.attention(x)
 
 
 class SCSEModule(nn.Module):
-    def __init__(self, in_channels, reduction=16):
+    """Spatial and Channel Squeeze & Excitation (SCSE) module."""
+
+    def __init__(self, in_channels: int, reduction: int = 16) -> None:
+        """Initialize the SCSE module.
+
+        Args:
+            in_channels (int): Number of input channels.
+            reduction (int): Reduction ratio for channel attention.
+        """
         super().__init__()
         self.cSE = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
@@ -334,7 +360,15 @@ class SCSEModule(nn.Module):
         )
         self.sSE = nn.Sequential(nn.Conv2d(in_channels, 1, 1), nn.Sigmoid())
 
-    def forward(self, x):
+    def forward(self: SCSEModule, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass of the SCSE module.
+
+        Args:
+            x (torch.Tensor): Input feature map of shape (N, C, H, W).
+
+        Returns:
+            torch.Tensor: Output feature map after applying SCSE attention.
+        """
         return x * self.cSE(x) + x * self.sSE(x)
 
 
@@ -363,6 +397,7 @@ def peak_detection_map_overlap(
     block_info: dict | None = None,
     depth_h: int = 0,
     depth_w: int = 0,
+    *,
     return_probability: bool = False,
 ) -> np.ndarray:
     """Post-processing function for peak detection.
@@ -388,6 +423,8 @@ def peak_detection_map_overlap(
             Only used when called from dask.array.map_overlap.
         depth_w: Halo size in pixels for width (cols).
             Only used when it's called from dask.array.map_overlap.
+        return_probability: If True, returns the confidence scores at peak
+            locations instead of binary peak map.
 
     Returns:
         out: NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere.
@@ -448,14 +485,15 @@ def nms_on_detection_maps(
     """Apply NMS to pre-processed peak maps to handle cross-channel conflicts.
 
     Args:
-        detection_maps (np.ndarray): Sparse input (H, W, C) where pixels are already local peaks.
-        min_distance (int): Minimum distance required between ANY detections (even across classes).
+        detection_maps (np.ndarray):
+            (H, W, C) where pixels are already local peaks.
+        min_distance (int): Minimum distance required between ANY detections.
 
     Returns:
         np.ndarray: The filtered maps with cross-channel suppression applied.
     """
     # 1. Collapse channels to find the "Global Best" at every spatial location
-    # Shape becomes (H, W). Contains the highest probability found across all classes at each pixel.
+    # Contains the highest probability found across all classes at each pixel.
     max_across_channels = np.max(detection_maps, axis=2)
 
     # 2. Handle Spatial Conflicts Across Channels (Global NMS)

@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 import torch
 
+from tiatoolbox import rcParam
 from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.models.architecture.kongnet import (
     CenterBlock,
@@ -16,6 +17,7 @@ from tiatoolbox.models.architecture.kongnet import (
     SubPixelUpsample,
     TimmEncoderFixed,
 )
+from tiatoolbox.models.engine.io_config import IOSegmentorConfig
 from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
 from tiatoolbox.utils import env_detection as toolbox_env
 
@@ -23,7 +25,7 @@ device = "cuda" if toolbox_env.has_gpu() else "cpu"
 ON_GPU = toolbox_env.has_gpu()
 
 
-def test_TimmEncoderFixed_with_drop_path() -> None:
+def test_timm_encoder_fixed_with_drop_path() -> None:
     """Test TimmEncoderFixed encoder with drop_path_rate."""
     encoder = TimmEncoderFixed(
         name="resnet18",
@@ -51,7 +53,7 @@ def test_TimmEncoderFixed_with_drop_path() -> None:
     assert output_stride == 32
 
 
-def test_TimmEncoderFixed_without_drop_path() -> None:
+def test_timm_encoder_fixed_without_drop_path() -> None:
     """Test TimmEncoderFixed encoder without drop_path_rate (None)."""
     encoder = TimmEncoderFixed(
         name="resnet18",
@@ -70,7 +72,7 @@ def test_TimmEncoderFixed_without_drop_path() -> None:
     assert len(features) == 6
 
 
-def test_TimmEncoderFixed_output_stride_limit() -> None:
+def test_timm_encoder_fixed_output_stride_limit() -> None:
     """Test TimmEncoderFixed output_stride calculation."""
     encoder = TimmEncoderFixed(
         name="resnet18",
@@ -84,7 +86,7 @@ def test_TimmEncoderFixed_output_stride_limit() -> None:
     assert encoder.output_stride == 8
 
 
-def test_SubPixelUpsample() -> None:
+def test_sub_pixel_upsample() -> None:
     """Test SubPixelUpsample module."""
     upsample = SubPixelUpsample(
         in_channels=32,
@@ -99,7 +101,7 @@ def test_SubPixelUpsample() -> None:
     assert output.shape == (1, 16, 16, 16)  # 2x upsampling
 
 
-def test_DecoderBlock_with_skip() -> None:
+def test_decoder_block_with_skip() -> None:
     """Test DecoderBlock with skip connection."""
     decoder_block = DecoderBlock(
         in_channels=64,
@@ -116,7 +118,7 @@ def test_DecoderBlock_with_skip() -> None:
     assert output.shape == (1, 32, 8, 8)
 
 
-def test_DecoderBlock_without_skip() -> None:
+def test_decoder_block_without_skip() -> None:
     """Test DecoderBlock without skip connection."""
     decoder_block = DecoderBlock(
         in_channels=64,
@@ -131,7 +133,7 @@ def test_DecoderBlock_without_skip() -> None:
     assert output.shape == (1, 32, 8, 8)
 
 
-def test_CenterBlock() -> None:
+def test_center_block() -> None:
     """Test CenterBlock module."""
     center_block = CenterBlock(in_channels=64)
     assert center_block is not None
@@ -142,7 +144,7 @@ def test_CenterBlock() -> None:
     assert output.shape == (1, 64, 4, 4)
 
 
-def test_KongNetDecoder() -> None:
+def test_kongnet_decoder() -> None:
     """Test KongNetDecoder module."""
     encoder_channels = [3, 64, 128, 256, 512, 1024]
     decoder_channels = (256, 128, 64, 32, 16)
@@ -170,7 +172,7 @@ def test_KongNetDecoder() -> None:
     assert output.shape == (2, 16, 256, 256)
 
 
-def test_KongNetDecoder_without_center() -> None:
+def test_kongnet_decoder_without_center() -> None:
     """Test KongNetDecoder module without center block."""
     encoder_channels = [3, 64, 128, 256, 512, 1024]
     decoder_channels = (256, 128, 64, 32, 16)
@@ -198,12 +200,15 @@ def test_KongNetDecoder_without_center() -> None:
     assert output.shape == (2, 16, 256, 256)
 
 
-def test_KongNetDecoder_mismatch_error() -> None:
+def test_kongnet_decoder_mismatch_error() -> None:
     """Test KongNetDecoder raises error when n_blocks doesn't match decoder_channels."""
     encoder_channels = [3, 64, 128, 256, 512, 1024]
     decoder_channels = (256, 128, 64, 32, 16)
 
-    with pytest.raises(ValueError, match="Model depth is 3, but you provide"):
+    with pytest.raises(
+        ValueError,
+        match=r"The number of blocks 3 must match the length of decoder_channels 5.",
+    ):
         KongNetDecoder(
             encoder_channels=encoder_channels,
             decoder_channels=decoder_channels,
@@ -213,9 +218,15 @@ def test_KongNetDecoder_mismatch_error() -> None:
         )
 
 
-def test_KongNet_head_mismatch_error() -> None:
-    """Test KongNet raises error when num_channels_per_head length doesn't match num_heads."""
-    with pytest.raises(ValueError, match="Number of decoders .* must match"):
+def test_kongnet_head_mismatch_error() -> None:
+    """Test KongNet head_mismatch_error.
+
+    Raise error when num_channels_per_head length doesn't match num_heads.
+
+    """
+    with pytest.raises(
+        ValueError, match=r"Number of decoders 3 must match number of heads 6."
+    ):
         KongNet(
             num_heads=6,
             num_channels_per_head=[3, 3, 3],  # Only 3 elements
@@ -225,10 +236,11 @@ def test_KongNet_head_mismatch_error() -> None:
         )
 
 
-def test_KongNet_preproc() -> None:
+def test_kongnet_preproc() -> None:
     """Test KongNet preproc static method."""
     # Create a random uint8 image
-    image = np.random.randint(0, 255, (64, 64, 3), dtype=np.uint8)
+    rng = np.random.default_rng(1337)
+    image = rng.integers(0, 255, (64, 64, 3), dtype=np.uint8)
 
     # Apply preprocessing
     processed = KongNet.preproc(image)
@@ -244,7 +256,7 @@ def test_KongNet_preproc() -> None:
     assert processed.max() <= 3.0  # Roughly max after normalization
 
 
-def test_KongNet_postproc() -> None:
+def test_kongnet_postproc() -> None:
     """Test KongNet postproc method."""
     model = KongNet(
         num_heads=2,
@@ -255,7 +267,8 @@ def test_KongNet_postproc() -> None:
     )
 
     # Create a mock probability map
-    block = np.random.rand(64, 64, 2).astype(np.float32)
+    rng = np.random.default_rng(1337)
+    block = rng.random((64, 64, 2), dtype=np.float32)
 
     # Add some peaks
     block[15, 15, 0] = 0.9
@@ -271,7 +284,7 @@ def test_KongNet_postproc() -> None:
     assert output.max() > 0
 
 
-def test_KongNet_load_state_dict() -> None:
+def test_kongnet_load_state_dict() -> None:
     """Test KongNet load_state_dict method."""
     model = KongNet(
         num_heads=2,
@@ -292,7 +305,7 @@ def test_KongNet_load_state_dict() -> None:
     assert len(new_state) == len(original_state)
 
 
-def test_KongNet_wide_decoder() -> None:
+def test_kongnet_wide_decoder() -> None:
     """Test KongNet with wide_decoder option."""
     model = KongNet(
         num_heads=2,
@@ -313,7 +326,7 @@ def test_KongNet_wide_decoder() -> None:
         assert output.shape == (1, 4, 128, 128)
 
 
-def test_KongNet_Modeling() -> None:
+def test_kongnet_modeling() -> None:
     """Test for KongNet model."""
     # test creation
     model = KongNet(
@@ -341,11 +354,48 @@ def test_KongNet_Modeling() -> None:
         assert output.shape == (1, 128, 128, 3)
 
 
+def test_pretrained_model_creation() -> None:
+    """Test for get_pretrained_model function."""
+    pretrained_info = rcParam["pretrained_model_info"]
+    pretrained_model_names = [
+        "KongNet_CoNIC_1",
+        "KongNet_MONKEY_1",
+        "KongNet_PanNuke_1",
+        "KongNet_PUMA_T1_3",
+        "KongNet_PUMA_T2_3",
+        "KongNet_Det_MIDOG_1",
+    ]
+
+    for model_name in pretrained_model_names:
+        info = pretrained_info[model_name]
+        arch_info = info["architecture"]
+        model = KongNet(**arch_info["kwargs"])
+
+        assert (
+            model.target_channels == info["architecture"]["kwargs"]["target_channels"]
+        )
+        assert model.min_distance == info["architecture"]["kwargs"]["min_distance"]
+        assert model.threshold_abs == info["architecture"]["kwargs"]["threshold_abs"]
+        assert (
+            model.postproc_tile_shape
+            == info["architecture"]["kwargs"]["postproc_tile_shape"]
+        )
+
+        io_info = info["ioconfig"]
+        ioconfig = IOSegmentorConfig(**io_info["kwargs"])
+        assert ioconfig.input_resolutions == io_info["kwargs"]["input_resolutions"]
+        assert ioconfig.output_resolutions == io_info["kwargs"]["output_resolutions"]
+        assert ioconfig.patch_input_shape == io_info["kwargs"]["patch_input_shape"]
+        assert ioconfig.patch_output_shape == io_info["kwargs"]["patch_output_shape"]
+        assert ioconfig.stride_shape == io_info["kwargs"]["stride_shape"]
+        assert ioconfig.save_resolution == io_info["kwargs"]["save_resolution"]
+
+
 @pytest.mark.skipif(
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_KongNet_WSI_Inference(remote_sample: Callable, track_tmp_path: Path) -> None:
+def test_kongnet_wsi_inference(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test for KongNet model WSI inference."""
     sample_wsi = Path(remote_sample("wsi1_2k_2k_svs"))
 
@@ -366,24 +416,6 @@ def test_KongNet_WSI_Inference(remote_sample: Callable, track_tmp_path: Path) ->
     assert Path(annotation_store_path).exists()
     store = SQLiteStore.open(annotation_store_path)
     assert 1000 < len(store) < 1100
-
-    detector = NucleusDetector(model="KongNet_Det_MIDOG_1")
-    out = detector.run(
-        images=[sample_wsi],
-        patch_mode=False,
-        device="cuda",
-        save_dir=track_tmp_path,
-        overwrite=True,
-        output_type="annotationstore",
-        auto_get_mask=True,
-        memory_threshold=50,
-        batch_size=4,
-    )
-
-    annotation_store_path = out[sample_wsi]
-    assert Path(annotation_store_path).exists()
-    store = SQLiteStore.open(annotation_store_path)
-    assert len(store) == 0
 
     detector = NucleusDetector(model="KongNet_Det_MIDOG_1")
     out = detector.run(
