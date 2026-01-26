@@ -307,7 +307,7 @@ class SegmentationHead(nn.Sequential):
         super().__init__(conv2d, upsampling_layer, activation)
 
 
-class Attention(nn.Module):
+class AttentionModule(nn.Module):
     """Attention module to apply attention mechanism on feature maps."""
 
     def __init__(self, name: str | None, in_channels: int, reduction: int = 16) -> None:
@@ -329,7 +329,7 @@ class Attention(nn.Module):
             msg = f"Attention {name} is not implemented"
             raise ValueError(msg)
 
-    def forward(self: Attention, x: torch.Tensor) -> torch.Tensor:
+    def forward(self: AttentionModule, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the Attention module.
 
         Args:

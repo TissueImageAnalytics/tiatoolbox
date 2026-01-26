@@ -77,11 +77,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Mapping
-
-    from tiatoolbox.type_hints import IntPair
-
 import numpy as np
 import timm
 import torch
@@ -89,12 +84,17 @@ from torch import nn
 from torchvision.ops import Conv2dNormActivation
 
 from tiatoolbox.models.architecture.utils import (
-    Attention,
+    AttentionModule,
     SegmentationHead,
     nms_on_detection_maps,
     peak_detection_map_overlap,
 )
 from tiatoolbox.models.models_abc import ModelABC
+
+if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Mapping
+
+    from tiatoolbox.type_hints import IntPair
 
 
 class TimmEncoderFixed(nn.Module):
@@ -297,7 +297,7 @@ class DecoderBlock(nn.Module):
             norm_layer=nn.BatchNorm2d,
             activation_layer=nn.SiLU,
         )
-        self.attention1 = Attention(
+        self.attention1 = AttentionModule(
             name=attention_type, in_channels=in_channels + skip_channels
         )
         self.conv2 = Conv2dNormActivation(
@@ -308,7 +308,7 @@ class DecoderBlock(nn.Module):
             norm_layer=nn.BatchNorm2d,
             activation_layer=nn.SiLU,
         )
-        self.attention2 = Attention(name=attention_type, in_channels=out_channels)
+        self.attention2 = AttentionModule(name=attention_type, in_channels=out_channels)
 
     def forward(
         self, x: torch.Tensor, skip: torch.Tensor | None = None
@@ -350,7 +350,7 @@ class CenterBlock(nn.Module):
             in_channels (int): Number of input channels
         """
         super().__init__()
-        self.attention = Attention(name="scse", in_channels=in_channels)
+        self.attention = AttentionModule(name="scse", in_channels=in_channels)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through center block.

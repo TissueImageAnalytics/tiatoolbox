@@ -6,7 +6,7 @@ import pytest
 import torch
 
 from tiatoolbox.models.architecture.utils import (
-    Attention,
+    AttentionModule,
     UpSample2x,
     centre_crop,
     centre_crop_to_shape,
@@ -187,13 +187,13 @@ def test_attention_module() -> None:
     test_input = torch.zeros((1, 16, 32, 32), dtype=torch.float32)
 
     # Default to identity
-    attention = Attention(name=None, in_channels=16)
+    attention = AttentionModule(name=None, in_channels=16)
     output = attention(test_input)
     assert torch.sum(output - test_input) == 0
 
-    attention = Attention(name="scse", in_channels=16, reduction=4)
+    attention = AttentionModule(name="scse", in_channels=16, reduction=4)
     output = attention(test_input)
     assert output.shape == test_input.shape
 
     with pytest.raises(ValueError, match=r"Attention random_name is not implemented"):
-        attention = Attention(name="random_name", in_channels=16)
+        attention = AttentionModule(name="random_name", in_channels=16)
