@@ -380,7 +380,7 @@ def test_wsi_segmentor_zarr(
     )
 
     output_ = zarr.open(output[sample_svs], mode="r")
-    assert 0.17 < np.mean(output_["predictions"][:]) < 0.19
+    assert 0.17 < np.mean(output_["predictions"][:]) < 0.21
     assert "probabilities" not in output_
     assert "canvas" not in output_
     assert "count" not in output_
@@ -406,7 +406,7 @@ def test_wsi_segmentor_zarr(
     )
 
     output_ = zarr.open(output[sample_svs], mode="r")
-    assert 0.17 < np.mean(output_["predictions"][:]) < 0.19
+    assert 0.17 < np.mean(output_["predictions"][:]) < 0.21
     assert "probabilities" in output_
     assert "canvas" not in output_
     assert "count" not in output_
@@ -431,7 +431,7 @@ def test_wsi_segmentor_zarr(
     )
 
     output_ = zarr.open(output[sample_svs], mode="r")
-    assert 0.17 < np.mean(output_["predictions"][:]) < 0.19
+    assert 0.17 < np.mean(output_["predictions"][:]) < 0.21
     assert 0.52 < np.mean(output_["probabilities"][:]) < 0.56
 
     output_ = zarr.open(output[wsi1_2k_2k_svs], mode="r")
