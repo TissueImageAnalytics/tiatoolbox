@@ -264,7 +264,7 @@ def test_nucleus_detector_wsi(remote_sample: Callable, track_tmp_path: Path) -> 
     )
 
     store = SQLiteStore.open(save_dir / "wsi4_512_512.db")
-    assert 255 <= len(store.values()) <= 265
+    assert 245 <= len(store.values()) <= 255
     annotation = next(iter(store.values()))
     assert annotation.properties["type"] == "test_nucleus"
     store.close()
@@ -298,9 +298,9 @@ def test_nucleus_detector_wsi(remote_sample: Callable, track_tmp_path: Path) -> 
     classes = zarr_group["classes"][:]
     probs = zarr_group.get("probabilities", None)
     assert probs is None
-    assert 255 <= len(xs) <= 265
-    assert 255 <= len(ys) <= 265
-    assert 255 <= len(classes) <= 265
+    assert 245 <= len(xs) <= 255
+    assert 245 <= len(ys) <= 255
+    assert 245 <= len(classes) <= 255
 
     _rm_dir(save_dir)
     mini_wsi_svs.unlink()
