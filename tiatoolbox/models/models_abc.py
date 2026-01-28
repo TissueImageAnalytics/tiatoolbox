@@ -92,6 +92,7 @@ class ModelABC(ABC, torch.nn.Module):
         super().__init__()
         self._postproc = self.postproc
         self._preproc = self.preproc
+        self.class_dict = None
 
     @abstractmethod
     # This is generic abc, else pylint will complain
