@@ -303,7 +303,6 @@ def test_nucleus_detector_wsi(remote_sample: Callable, track_tmp_path: Path) -> 
     assert 245 <= len(classes) <= 255
 
     _rm_dir(save_dir)
-    mini_wsi_svs.unlink()
 
 
 # -------------------------------------------------------------------------------------
@@ -330,3 +329,4 @@ def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) ->
 
     assert models_wsi_result.exit_code == 0, models_wsi_result.output
     assert (track_tmp_path / "output" / ("wsi4_512_512" + ".db")).exists()
+    mini_wsi_svs.unlink()
