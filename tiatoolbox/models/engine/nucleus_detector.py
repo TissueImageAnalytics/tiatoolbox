@@ -1033,7 +1033,7 @@ class NucleusDetector(SemanticSegmentor):
 
                 Optional Keys:
                     auto_get_mask (bool):
-                        Whether to automatically generate segmentation masks using
+                        Whether to automatically generate tissue masks using
                         `wsireader.tissue_mask()` during processing.
                     batch_size (int):
                         Number of image patches to feed to the model in a forward pass.
