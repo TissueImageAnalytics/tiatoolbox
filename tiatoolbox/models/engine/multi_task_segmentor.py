@@ -404,7 +404,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         tile_bounds[1] : tile_bounds[3],
                         tile_bounds[0] : tile_bounds[2],
                         :,
-                    ]
+                    ].compute()
                     for probabilities_ in probabilities
                 ]
                 post_process_output = self.model.postproc_func(head_raws)
@@ -449,7 +449,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             for key in info_dict_keys:
                 # Extract the list of values for this key across all instances
                 values = [
-                    da.array(wsi_info_dict_["info_dict"][i][key])
+                    wsi_info_dict_["info_dict"][i][key]
                     for i in wsi_info_dict_["info_dict"]
                 ]
                 info_dict[key] = values
@@ -1725,6 +1725,13 @@ def _process_instance_predictions(
             inst_info["contours"] += tile_tl
             inst_uuid = uuid.uuid4().hex
             new_inst_dict[inst_uuid] = inst_info
+
+    for inst_uid, inst_info in new_inst_dict.items():
+        for key, value in inst_info.items():
+            new_inst_dict[inst_uid][key] = da.asarray(
+                value,
+            )
+
     return new_inst_dict, remove_insts_in_orig
 
 

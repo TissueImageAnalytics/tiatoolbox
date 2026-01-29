@@ -333,10 +333,13 @@ class HoVerNetPlus(HoVerNet):
         """
         np_map, hv_map, tp_map, ls_map = raw_maps
 
-        np_map = np_map.compute() if isinstance(np_map, da.Array) else np_map
-        hv_map = hv_map.compute() if isinstance(hv_map, da.Array) else hv_map
-        tp_map = tp_map.compute() if isinstance(tp_map, da.Array) else tp_map
-        ls_map = ls_map.compute() if isinstance(ls_map, da.Array) else ls_map
+        # Assumes raw_maps is a tuple of dask or numpy arrays.
+        is_dask = isinstance(raw_maps[0], da.Array)
+
+        np_map = np_map.compute() if is_dask else np_map
+        hv_map = hv_map.compute() if is_dask else hv_map
+        tp_map = tp_map.compute() if is_dask else tp_map
+        ls_map = ls_map.compute() if is_dask else ls_map
 
         pred_inst = HoVerNetPlus._proc_np_hv(np_map, hv_map, scale_factor=0.5)
         # fx=0.5 as nuclear processing is at 0.5 mpp instead of 0.25 mpp
@@ -350,50 +353,58 @@ class HoVerNetPlus(HoVerNet):
         nuc_inst_info_dict_ = {}
         if not nuc_inst_info_dict:
             nuc_inst_info_dict_ = {  # inst_id should start at 1
-                "box": da.empty(shape=0),
-                "centroid": da.empty(shape=0),
-                "contours": da.empty(shape=0),
-                "prob": da.empty(shape=0),
-                "type": da.empty(shape=0),
+                "box": da.empty(shape=0) if is_dask else np.empty(0),
+                "centroid": da.empty(shape=0) if is_dask else np.empty(0),
+                "contours": da.empty(shape=0) if is_dask else np.empty(0),
+                "prob": da.empty(shape=0) if is_dask else np.empty(0),
+                "type": da.empty(shape=0) if is_dask else np.empty(0),
             }
         else:
             # dask dataframe does not support transpose
             nuc_inst_info_df = pd.DataFrame(nuc_inst_info_dict).transpose()
             for key, col in nuc_inst_info_df.items():
-                nuc_inst_info_dict_[key] = da.from_array(
-                    col.to_numpy(),
-                    chunks=(len(col),),  # one chunk, avoids auto-rechunking
+                col_np = col.to_numpy()
+                nuc_inst_info_dict_[key] = (
+                    da.from_array(
+                        col_np,
+                        chunks=(len(col),),  # one chunk, avoids
+                        # auto-rechunking
+                    )
+                    if is_dask
+                    else col_np
                 )
 
         nuclei_seg = {
             "task_type": self.tasks[0],
-            "predictions": da.array(pred_inst)
-            if isinstance(raw_maps[0], da.Array)
-            else pred_inst,
+            "predictions": da.array(pred_inst) if is_dask else pred_inst,
             "info_dict": nuc_inst_info_dict_,
         }
 
         layer_info_dict_ = {}
         if not layer_info_dict:
             layer_info_dict_ = {  # inst_id should start at 1
-                "box": da.empty(shape=0),
-                "contours": da.empty(shape=0),
-                "type": da.empty(shape=0),
+                "box": da.empty(shape=0) if is_dask else np.empty(0),
+                "contours": da.empty(shape=0) if is_dask else np.empty(0),
+                "type": da.empty(shape=0) if is_dask else np.empty(0),
             }
         else:
             # dask dataframe does not support transpose
             layer_info_df = pd.DataFrame(layer_info_dict).transpose()
             for key, col in layer_info_df.items():
-                layer_info_dict_[key] = da.from_array(
-                    col.to_numpy(),
-                    chunks=(len(col),),  # one chunk, avoids auto-rechunking
+                col_np = col.to_numpy()
+                layer_info_dict_[key] = (
+                    da.from_array(
+                        col.to_numpy(),
+                        chunks=(len(col),),  # one chunk, avoids
+                        # auto-rechunking
+                    )
+                    if is_dask
+                    else col_np
                 )
 
         layer_seg = {
             "task_type": self.tasks[1],
-            "predictions": da.array(pred_layer)
-            if isinstance(raw_maps[0], da.Array)
-            else pred_layer,
+            "predictions": da.array(pred_layer) if is_dask else pred_layer,
             "info_dict": layer_info_dict_,
         }
 
