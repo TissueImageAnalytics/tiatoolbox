@@ -334,6 +334,7 @@ class HoVerNetPlus(HoVerNet):
         np_map, hv_map, tp_map, ls_map = raw_maps
 
         # Assumes raw_maps is a tuple of dask or numpy arrays.
+        # Only return dask if it's required.
         is_dask = isinstance(raw_maps[0], da.Array)
 
         np_map = np_map.compute() if is_dask else np_map

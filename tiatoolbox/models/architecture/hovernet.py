@@ -781,9 +781,13 @@ class HoVerNet(ModelABC):
             tp_map = None
             np_map, hv_map = raw_maps
 
-        np_map = np_map.compute() if isinstance(np_map, da.Array) else np_map
-        hv_map = hv_map.compute() if isinstance(hv_map, da.Array) else hv_map
-        pred_type = tp_map.compute() if isinstance(tp_map, da.Array) else tp_map
+        # Assumes raw_maps is a tuple of dask or numpy arrays.
+        # Only return dask if it's required.
+        is_dask = isinstance(raw_maps[0], da.Array)
+
+        np_map = np_map.compute() if is_dask else np_map
+        hv_map = hv_map.compute() if is_dask else hv_map
+        pred_type = tp_map.compute() if is_dask else tp_map
 
         pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
         nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
@@ -801,9 +805,14 @@ class HoVerNet(ModelABC):
             # dask dataframe does not support transpose
             nuc_inst_info_df = pd.DataFrame(nuc_inst_info_dict).transpose()
             for key, col in nuc_inst_info_df.items():
-                nuc_inst_info_dict_[key] = da.from_array(
-                    col.to_numpy(),
-                    chunks=(len(col),),  # one chunk, avoids auto-rechunking
+                col_np = col.to_numpy()
+                nuc_inst_info_dict_[key] = (
+                    da.from_array(
+                        col_np,
+                        chunks=(len(col),),
+                    )
+                    if is_dask
+                    else col_np
                 )
 
         nuclei_seg = {
