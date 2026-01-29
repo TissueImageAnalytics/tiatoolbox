@@ -493,7 +493,9 @@ class SemanticSegmentor(PatchPredictor):
                 batch_locs,
                 full_output_locs,
                 output_locs,
+                canvas_np=canvas_np,
                 save_path=save_path.with_name("full_batch_tmp"),
+                memory_threshold=memory_threshold,
                 is_last=(batch_idx == (len(dataloader) - 1)),
             )
 
@@ -565,6 +567,9 @@ class SemanticSegmentor(PatchPredictor):
 
         zarr_group = None
         if canvas_zarr is not None:
+            canvas_zarr, count_zarr = save_to_cache(
+                canvas, count, canvas_zarr, count_zarr
+            )
             # Wrap zarr in dask array
             canvas = da.from_zarr(canvas_zarr, chunks=canvas_zarr.chunks)
             count = da.from_zarr(count_zarr, chunks=count_zarr.chunks)
@@ -581,7 +586,8 @@ class SemanticSegmentor(PatchPredictor):
         )
         raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
 
-        shutil.rmtree(save_path.with_name("full_batch_tmp"))
+        if save_path.with_name("full_batch_tmp").exists():
+            shutil.rmtree(save_path.with_name("full_batch_tmp"))
 
         return raw_predictions
 
@@ -1144,36 +1150,32 @@ def save_to_cache(
 
         # Peek first block shapes to initialise datasets without computing all rows.
         # Blocks are 3D: (row_chunk, col_chunk, channel_chunk). Grab the first.
-        first_canvas = canvas.blocks[0, 0, 0].compute()
-        first_count = count.blocks[0, 0, 0].compute()
+        first_canvas_block = canvas.blocks[0, 0, 0].compute()
+        first_count_block = count.blocks[0, 0, 0].compute()
 
         canvas_zarr = zarr_group.create_dataset(
             name="canvas",
             # Append along axis 0 (height); keep width/channels fixed.
-            shape=(0, *first_canvas.shape[1:]),
-            chunks=(chunk0, *first_canvas.shape[1:]),
-            dtype=first_canvas.dtype,
+            shape=(0, *first_canvas_block.shape[1:]),
+            chunks=(chunk0, *first_canvas_block.shape[1:]),
+            dtype=first_canvas_block.dtype,
             overwrite=True,
         )
 
         count_zarr = zarr_group.create_dataset(
             name="count",
-            shape=(0, *first_count.shape[1:]),
-            dtype=first_count.dtype,
-            chunks=(chunk0, *first_count.shape[1:]),
+            shape=(0, *first_count_block.shape[1:]),
+            dtype=first_count_block.dtype,
+            chunks=(chunk0, *first_count_block.shape[1:]),
             overwrite=True,
         )
 
         # We already computed the first block; store it and start from the next.
-        canvas_zarr.resize(
-            (canvas_zarr.shape[0] + first_canvas.shape[0], *canvas_zarr.shape[1:])
-        )
-        canvas_zarr[-first_canvas.shape[0] :] = first_canvas
+        canvas_zarr.resize((first_canvas_block.shape[0], *canvas_zarr.shape[1:]))
+        canvas_zarr[-first_canvas_block.shape[0] :] = first_canvas_block
 
-        count_zarr.resize(
-            (count_zarr.shape[0] + first_count.shape[0], *count_zarr.shape[1:])
-        )
-        count_zarr[-first_count.shape[0] :] = first_count
+        count_zarr.resize((first_count_block.shape[0], *count_zarr.shape[1:]))
+        count_zarr[-first_count_block.shape[0] :] = first_count_block
 
         start_idx = 1
     else:
@@ -1377,7 +1379,9 @@ def prepare_full_batch(
     batch_locs: np.ndarray,
     full_output_locs: np.ndarray,
     output_locs: np.ndarray,
+    canvas_np: np.ndarray | zarr.Array | None = None,
     save_path: Path | str = "temp_fullbatch",
+    memory_threshold: int = 80,
     *,
     is_last: bool,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -1397,9 +1401,14 @@ def prepare_full_batch(
             Remaining global output locations to be matched.
         output_locs (np.ndarray):
             Accumulated output location array across batches.
+        canvas_np (np.ndarray | zarr.Array | None):
+            Accumulated canvas array from previous batches. Used to check
+            total memory footprint when deciding numpy vs zarr.
         save_path (Path | str):
             Path to a directory; a unique temp subfolder will be created within it
             to store the temporary full-batch zarr for this batch.
+        memory_threshold (int):
+            Memory usage threshold (in percentage) to trigger caching behavior.
         is_last (bool):
             Flag indicating whether this is the final batch.
 
@@ -1418,20 +1427,60 @@ def prepare_full_batch(
     total_size = int(np.max(matches).astype(np.uint32)) + 1
     sample_shape = batch_output.shape[1:]
 
-    # Always back the dense placement array by on-disk zarr to avoid RAM spikes.
-    # Use a unique temp subdirectory per call to avoid chunk-shape clashes.
-    save_path_dir = Path(save_path)
-    save_path_dir.mkdir(parents=True, exist_ok=True)
-    temp_dir = Path(tempfile.mkdtemp(prefix="full_batch_tmp_", dir=str(save_path_dir)))
+    # Calculate final size including potential padding
+    final_size = total_size
+    if is_last and len(full_output_locs):
+        final_size += len(full_output_locs)
 
-    store = zarr.DirectoryStore(str(temp_dir))
-    full_batch_output = zarr.zeros(
-        shape=(total_size, *sample_shape),
-        chunks=(len(batch_output), *sample_shape),
-        dtype=batch_output.dtype,
-        store=store,
-        overwrite=True,
-    )
+    # Check if array will fit in available memory
+    # Consider BOTH: new array size AND accumulated canvas_np size
+    array_bytes = final_size * np.prod(sample_shape) * batch_output.dtype.itemsize
+    canvas_bytes = canvas_np.nbytes if canvas_np is not None else 0
+    total_bytes = array_bytes + canvas_bytes
+
+    vm = psutil.virtual_memory()
+    # During concatenation, we temporarily need:
+    # - existing canvas_np (canvas_bytes)
+    # - new full_batch_output (array_bytes)
+    # - concatenated result (canvas_bytes + array_bytes)
+    # Total peak = 2 * (canvas_bytes + array_bytes)
+    peak_bytes = 2 * total_bytes
+    memory_available = vm.available * (memory_threshold / 100)
+
+    use_numpy = peak_bytes < memory_available
+
+    if use_numpy:
+        # Array fits safely in RAM, use numpy for better performance
+        full_batch_output = np.zeros(
+            shape=(final_size, *sample_shape),
+            dtype=batch_output.dtype,
+        )
+    else:
+        # Array too large, use zarr backed by disk to avoid RAM spikes
+        # Use a unique temp subdirectory per call to avoid chunk-shape clashes
+        msg = (
+            f"Estimated peak memory usage for full batch output: "
+            f"{peak_bytes / (1024**3):.2f} GB exceeds threshold of "
+            f"{memory_available / (1024**3):.2f} GB."
+            f"Allocating full batch output of size "
+            f"{final_size}x{sample_shape} using Zarr on disk."
+        )
+        logger.info(msg)
+
+        save_path_dir = Path(save_path)
+        save_path_dir.mkdir(parents=True, exist_ok=True)
+        temp_dir = Path(
+            tempfile.mkdtemp(prefix="full_batch_tmp_", dir=str(save_path_dir))
+        )
+
+        store = zarr.DirectoryStore(str(temp_dir))
+        full_batch_output = zarr.zeros(
+            shape=(total_size, *sample_shape),
+            chunks=(len(batch_output), *sample_shape),
+            dtype=batch_output.dtype,
+            store=store,
+            overwrite=True,
+        )
 
     # Place matching outputs using matching indices
     full_batch_output[matches] = batch_output
@@ -1443,7 +1492,10 @@ def prepare_full_batch(
 
     if is_last and len(full_output_locs):
         pad_len = len(full_output_locs)
-        full_batch_output.resize(total_size + pad_len, *sample_shape)
+        if not use_numpy:
+            # Resize zarr array to accommodate padding
+            full_batch_output.resize(total_size + pad_len, *sample_shape)
+        # For numpy, array is already pre-allocated to final_size
         full_batch_output[-pad_len:] = 0
 
         output_locs = concatenate_none(old_arr=output_locs, new_arr=full_output_locs)
