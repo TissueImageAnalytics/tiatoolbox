@@ -1114,11 +1114,28 @@ def save_to_cache(
     count_zarr: zarr.Array,
     save_path: str | Path = "temp.zarr",
 ) -> tuple[zarr.Array, zarr.Array]:
-    """Incrementally flush canvas and count chunks to Zarr.
+    """Incrementally save computed canvas and count arrays to Zarr cache.
 
-    Computes row-chunks one at a time to avoid materializing the full dask arrays
+    This function computes the given Dask arrays (`canvas` and `count`)
+    row-chunks one at a time to avoid materializing the full dask arrays
     in memory. If the datasets do not exist, they are created using the chunk
     shapes from the first block.
+
+    Args:
+        canvas (da.Array):
+            Dask array representing image or feature data.
+        count (da.Array):
+            Dask array representing count or normalization data.
+        canvas_zarr (zarr.Array):
+            Existing Zarr dataset for canvas data. If None, a new one is created.
+        count_zarr (zarr.Array):
+            Existing Zarr dataset for count data. If None, a new one is created.
+        save_path (str | Path):
+            Path to the Zarr group for saving datasets. Defaults to "temp.zarr".
+
+    Returns:
+        tuple[zarr.Array, zarr.Array]:
+            Updated Zarr datasets for canvas and count arrays.
     """
     chunk0 = canvas.chunks[0][0]
 
