@@ -416,7 +416,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     wsi_proc_shape=wsi_proc_shape,
                 )
 
-                inst_dicts = _get_inst_dicts(post_process_output=post_process_output)
+                inst_dicts = _get_inst_info_dicts(
+                    post_process_output=post_process_output
+                )
 
                 tile_mode = set_idx
                 new_inst_dicts, remove_insts_in_origs = [], []
@@ -1726,7 +1728,13 @@ def _process_instance_predictions(
     return new_inst_dict, remove_insts_in_orig
 
 
-def _get_inst_dicts(post_process_output: tuple[dict]) -> list:
+def _get_inst_info_dicts(post_process_output: tuple[dict]) -> list:
+    """Helper to convert post processing output to dictionary list.
+
+    This function makes the info_dict compatible with tile based processing of
+    info_dictionaries from HoVerNet.
+
+    """
     inst_dicts = []
     for _output in post_process_output:
         keys_ = list(_output["info_dict"].keys())
