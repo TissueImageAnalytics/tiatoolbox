@@ -2,7 +2,7 @@
 
 ## Development Lead
 
-- TIA Centre led by Nasir Rajpoot <tia@dcs.warwick.ac.uk>
+- TIA Centre led by Nasir Rajpoot <TIA@warwick.ac.uk>
 - Shan E Ahmed Raza \<@shaneahmed>
 - John Pocock \<@John-P>
 - Mark Eastwood \<@measty>
