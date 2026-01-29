@@ -1,7 +1,8 @@
 import sys
+
 sys.path.append("..")  # to import from parent directory
 from pathlib import Path
-from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
+
 from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
 
 wsi_path = "/media/u1910100/data/GitHub/tiatoolbox/examples/tmp/sample_wsis/D_P000019_PAS_CPG.tif"
@@ -36,4 +37,3 @@ out = segmentor.run(
     num_workers=0,
     batch_size=16,
 )
-
