@@ -1262,23 +1262,15 @@ def merge_vertical_chunkwise(
                 f"Saving intermediate results to disk."
             )
             tqdm.write(msg)
-            zarr_group = (
-                zarr.open(str(save_path), mode="a")
-                if zarr_group is None
-                else zarr_group
+            zarr_group = zarr.open(str(save_path), mode="a")
+            probabilities_zarr = zarr_group.create_dataset(
+                name="probabilities",
+                shape=probabilities_da.shape,
+                chunks=(chunk_shape[0], *probabilities.shape[1:]),
+                dtype=probabilities.dtype,
+                overwrite=True,
             )
-
-            num_prob_blocks = probabilities_da.numblocks[0]
-            for block_idx in range(num_prob_blocks):
-                block_idx_tuple = (block_idx,) + (0,) * (probabilities_da.ndim - 1)
-                prob_block = probabilities_da.blocks[block_idx_tuple].compute()
-                probabilities_zarr, _ = store_probabilities(
-                    probabilities=prob_block,
-                    chunk_shape=chunk_shape,
-                    probabilities_zarr=probabilities_zarr,
-                    probabilities_da=None,
-                    zarr_group=zarr_group,
-                )
+            probabilities_zarr[:] = probabilities_da.compute()
 
             probabilities_da = None
 
