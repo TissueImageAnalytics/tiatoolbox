@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 import dask.array as da
 import numpy as np
+import pandas as pd
 import psutil
 import torch
 import zarr
@@ -444,17 +445,15 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         wsi_info_dict[inst_id]["info_dict"].pop(inst_uuid, None)
 
         for idx, wsi_info_dict_ in enumerate(wsi_info_dict):
-            info_dict_keys: list[str] = wsi_info_dict_["info_dict_keys"]
-            info_dict = {}
-            for key in info_dict_keys:
-                # Extract the list of values for this key across all instances
-                values = [
-                    wsi_info_dict_["info_dict"][i][key]
-                    for i in wsi_info_dict_["info_dict"]
-                ]
-                info_dict[key] = values
-            wsi_info_dict[idx]["info_dict"] = info_dict
-            wsi_info_dict_.pop("info_dict_keys")
+            info_df = pd.DataFrame(wsi_info_dict_["info_dict"]).transpose()
+            dict_info_wsi = {}
+            for key, col in info_df.items():
+                col_np = col.to_numpy()
+                dict_info_wsi[key] = da.from_array(
+                    col_np,
+                    chunks=(len(col),),
+                )
+            wsi_info_dict[idx]["info_dict"] = dict_info_wsi
 
         return wsi_info_dict
 
@@ -1726,12 +1725,6 @@ def _process_instance_predictions(
             inst_uuid = uuid.uuid4().hex
             new_inst_dict[inst_uuid] = inst_info
 
-    for inst_uid, inst_info in new_inst_dict.items():
-        for key, value in inst_info.items():
-            new_inst_dict[inst_uid][key] = da.asarray(
-                value,
-            )
-
     return new_inst_dict, remove_insts_in_orig
 
 
@@ -1777,7 +1770,6 @@ def _create_wsi_info_dict(
                 dtype=post_process_output_["predictions"].dtype,
             ),
             "info_dict": {},
-            "info_dict_keys": list(post_process_output_["info_dict"]),
         }
         for post_process_output_ in post_process_output
     )

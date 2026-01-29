@@ -281,7 +281,7 @@ def test_wsi_mtsegmentor_zarr(
     track_tmp_path: Path,
 ) -> None:
     """Test MultiTaskSegmentor for WSIs with zarr output."""
-    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
+    wsi4_1k_1k_svs = remote_sample("wsi4_1k_1k_svs")
     mtsegmentor = MultiTaskSegmentor(
         model="hovernetplus-oed",
         batch_size=64,
@@ -289,10 +289,10 @@ def test_wsi_mtsegmentor_zarr(
         num_workers=1,
     )
     ioconfig = mtsegmentor.ioconfig
-    ioconfig.tile_shape = (300, 300)
+    ioconfig.tile_shape = (512, 512)
     # Return Probabilities is False
     output = mtsegmentor.run(
-        images=[wsi4_512_512_svs],
+        images=[wsi4_1k_1k_svs],
         return_probabilities=False,
         return_labels=False,
         device=device,
@@ -304,7 +304,7 @@ def test_wsi_mtsegmentor_zarr(
         ioconfig=ioconfig,
     )
 
-    output_ = zarr.open(output[wsi4_512_512_svs], mode="r")
+    output_ = zarr.open(output[wsi4_1k_1k_svs], mode="r")
     assert 15 < np.mean(output_["nuclei_segmentation"]["predictions"][:]) < 19
     assert 0.57 < np.mean(output_["layer_segmentation"]["predictions"][:]) < 0.61
     assert "probabilities" not in output_
@@ -312,6 +312,7 @@ def test_wsi_mtsegmentor_zarr(
     assert "count" not in output_["nuclei_segmentation"]
     assert "canvas" not in output_["layer_segmentation"]
     assert "count" not in output_["layer_segmentation"]
+    wsi4_1k_1k_svs.unlink()
 
 
 def test_multi_input_wsi_mtsegmentor_zarr(

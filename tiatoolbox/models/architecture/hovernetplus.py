@@ -367,8 +367,7 @@ class HoVerNetPlus(HoVerNet):
                 nuc_inst_info_dict_[key] = (
                     da.from_array(
                         col_np,
-                        chunks=(len(col),),  # one chunk, avoids
-                        # auto-rechunking
+                        chunks=(len(col),),
                     )
                     if is_dask
                     else col_np
@@ -395,8 +394,7 @@ class HoVerNetPlus(HoVerNet):
                 layer_info_dict_[key] = (
                     da.from_array(
                         col.to_numpy(),
-                        chunks=(len(col),),  # one chunk, avoids
-                        # auto-rechunking
+                        chunks=(len(col),),
                     )
                     if is_dask
                     else col_np
