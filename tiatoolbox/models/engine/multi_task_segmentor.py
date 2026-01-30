@@ -80,10 +80,10 @@ class MultiTaskSegmentorRunParams(SemanticSegmentorRunParams, total=False):
             Shape of output patches (height, width).
         return_labels (bool):
             Whether to return labels with predictions.
-        return_probabilities (bool):
-            Whether to return per-class probabilities.
         return_predictions (tuple(bool, ...):
             Whether to return array predictions for individual tasks.
+        return_probabilities (bool):
+            Whether to return per-class probabilities.
         scale_factor (tuple[float, float]):
             Scale factor for converting annotations to baseline resolution.
             Typically model_mpp / slide_mpp.
@@ -346,7 +346,96 @@ class MultiTaskSegmentor(SemanticSegmentor):
         save_path: Path,
         **kwargs: Unpack[MultiTaskSegmentorRunParams],
     ) -> dict[str, da.Array]:
-        """Perform model inference on a whole slide image (WSI)."""
+        """Perform model inference on a whole slide image (WSI).
+
+        This method iterates over WSI patches produced by a DataLoader,
+        runs each patch through the model's ``infer_batch`` callback, and
+        incrementally assembles full-resolution model outputs for each model
+        head (e.g., semantic, instance, edge). Patch-level outputs are merged
+        row-by-row using horizontal stitching, optionally spilling intermediate
+        results to disk when memory usage exceeds a threshold. After all rows
+        are processed, vertical merging is performed to generate the final
+        probability maps for each multitask head.
+
+        Raw probabilities and patch coordinates are returned as Dask arrays.
+        This method does not perform any post-processing; downstream calls to
+        ``post_process_wsi`` are required to convert model logits into
+        task-specific outputs (e.g., instances, contours, or label maps).
+
+        Args:
+            dataloader (DataLoader):
+                A PyTorch dataloader yielding dictionaries with keys such as
+                ``"image"`` and ``"output_locs"`` that correspond to extracted
+                WSI patches and their placement metadata.
+            save_path (Path):
+                A filesystem path used to store temporary Zarr cache data when
+                memory spilling is triggered. The directory is created if needed.
+            **kwargs (MultiTaskSegmentorRunParams):
+                Additional runtime parameters to configure segmentation.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_predictions (tuple(bool, ...):
+                        Whether to return array predictions for individual tasks.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
+
+        Returns:
+            dict[str, da.Array]:
+                A dictionary containing the raw multitask model outputs.
+
+                Keys:
+                    probabilities (list[da.Array]):
+                        One Dask array per model head, each representing the final
+                        WSI-sized probability map for that task. Each array has
+                        shape ``(H, W, C)`` depending on the head's channel count.
+                    coordinates (da.Array):
+                        A Dask array of shape ``(N, 2)`` or ``(N, 4)``, containing
+                        accumulated patch coordinate metadata produced during the
+                        WSI dataloader iteration.
+
+        Notes:
+            - The number of model heads is inferred from the first
+              ``infer_batch`` call.
+            - Patch predictions are merged horizontally when the x-coordinate
+              changes row, and vertically after all rows are processed.
+            - Large WSIs may trigger spilling intermediate canvas data to disk
+              when memory exceeds ``memory_threshold``.
+            - This function returns *raw probabilities only*. For task-specific
+              segmentation or instance extraction, call ``post_process_wsi``.
+
+        """
         # Default Memory threshold percentage is 80.
         memory_threshold = kwargs.get("memory_threshold", 80)
 
@@ -478,21 +567,87 @@ class MultiTaskSegmentor(SemanticSegmentor):
         raw_predictions: dict,
         **kwargs: Unpack[MultiTaskSegmentorRunParams],  # noqa: ARG002
     ) -> dict:
-        """Post-process raw patch predictions from inference.
+        """Post-process raw patch-level predictions for multitask segmentation.
 
-        This method applies a post-processing function (e.g., smoothing, filtering)
-        to the raw model predictions. It supports delayed execution using Dask
-        and returns a Dask array for efficient computation.
+        This method applies the model's ``postproc_func`` to per-patch probability
+        maps produced by ``infer_patches``. For multitask models (multiple heads),
+        it zips the per-head probability arrays across patches and invokes
+        ``postproc_func`` to obtain one or more task dictionaries per patch (e.g.,
+        semantic labels, instance info, edges). The per-patch outputs are then
+        reorganized into a task-centric structure using
+        ``build_post_process_raw_predictions`` for downstream saving.
 
         Args:
-            raw_predictions (dask.array.Array):
-                Raw model predictions as a dask array.
-            **kwargs (EngineABCRunParams):
-                Additional runtime parameters used for post-processing.
+            raw_predictions (dict):
+                Dictionary containing raw model outputs from ``infer_patches``.
+                Expected keys:
+                    - ``"probabilities"`` (list[da.Array]):
+                      One Dask array per model head. Each array typically has shape
+                      ``(N, H, W, C)`` for ``N`` patches, with head-specific channels.
+                      These are *raw* logits/probabilities and are not normalized
+                      beyond what the model provides.
+            **kwargs (MultiTaskSegmentorRunParams):
+                Additional runtime parameters to configure segmentation.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_predictions (tuple(bool, ...):
+                        Whether to return array predictions for individual tasks.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
 
         Returns:
-            dask.array.Array:
-                Post-processed predictions as a Dask array.
+            dict:
+                A task-organized dictionary suitable for saving, where each entry
+                corresponds to a task produced by ``postproc_func``. For each task
+                (e.g., ``"semantic"``, ``"instance"``), keys and value types depend
+                on the model's post-processing output. Typical patterns include:
+                    - ``"predictions"``: list[da.Array] with per-patch outputs,
+                      if the model returns patch-level prediction arrays.
+                    - ``"info_dict"``: list[dict] with per-patch metadata dictionaries
+                      (e.g., instance tables, properties). Lists are aligned to the
+                      number of input patches.
+                Any pre-existing keys in ``raw_predictions`` (e.g., ``"coordinates"``)
+                are preserved as returned by ``build_post_process_raw_predictions``.
+
+        Notes:
+            - This method is *patch-level* post-processing only; it does not perform
+              WSI-scale tiling or stitching. For WSI outputs, use ``post_process_wsi``.
+            - Inputs are typically Dask arrays; computation remains lazy until an
+              explicit save step or ``dask.compute`` is invoked downstream.
+            - The exact set of task keys and payload shapes are determined by the
+              model's ``postproc_func`` for each head.
 
         """
         probabilities = raw_predictions["probabilities"]
@@ -501,15 +656,10 @@ class MultiTaskSegmentor(SemanticSegmentor):
             for probs_for_idx in zip(*probabilities, strict=False)
         ]
 
-        raw_predictions = self.build_post_process_raw_predictions(
+        return self.build_post_process_raw_predictions(
             post_process_predictions=post_process_predictions,
             raw_predictions=raw_predictions,
         )
-
-        # Need to update info_dict
-        _ = raw_predictions
-
-        return raw_predictions
 
     def post_process_wsi(  # skipcq: PYL-R0201
         self: MultiTaskSegmentor,
@@ -517,7 +667,95 @@ class MultiTaskSegmentor(SemanticSegmentor):
         save_path: Path,
         **kwargs: Unpack[MultiTaskSegmentorRunParams],
     ) -> dict:
-        """Post-process raw patch predictions from inference."""
+        """Post-process whole slide image (WSI) predictions for multitask segmentation.
+
+        This method converts raw WSI-scale probability maps (produced by
+        ``infer_wsi``) into task-specific outputs using the model's
+        ``postproc_func``. If the probability maps are fully in memory, the method
+        processes the entire WSI at once. If they are Zarr-backed (spilled during
+        inference) or too large, it switches to tile mode: it iterates over WSI
+        tiles, applies ``postproc_func`` per tile, merges instance predictions
+        across tile boundaries, and optionally writes intermediate arrays to Zarr
+        under ``save_path.with_suffix(".zarr")`` for memory efficiency.
+
+        The result is organized into a task-centric dictionary (e.g., semantic,
+        instance) with arrays and/or metadata suitable for saving or further use.
+
+        Args:
+            raw_predictions (dict):
+                Dictionary containing WSI-scale model outputs from ``infer_wsi``.
+                Expected key:
+                    - ``"probabilities"`` (tuple[da.Array]):
+                      One Dask array per model head. Each array is either
+                      memory-backed (Dask→NumPy) or Zarr-backed depending on
+                      memory spilling during inference.
+            save_path (Path):
+                Base path for writing intermediate Zarr arrays in tile mode and
+                for allocating per-task outputs when disk-backed arrays are needed.
+            **kwargs (MultiTaskSegmentorRunParams):
+                Additional runtime parameters to configure segmentation.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_predictions (tuple(bool, ...):
+                        Whether to return array predictions for individual tasks.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    verbose (bool):
+                        Whether to enable verbose logging.
+
+        Returns:
+            dict:
+                A task-organized dictionary of WSI-scale outputs. For each task
+                (e.g., ``"semantic"``, ``"instance"``), typical entries include:
+                    - ``"predictions"`` (da.Array or np.ndarray, optional):
+                      Full-resolution task prediction map, present only where
+                      enabled by ``return_predictions``.
+                    - Additional task-specific keys (e.g., ``"info_dict"``,
+                      per-instance dictionaries, contours, classes, probabilities).
+                The set of keys and their exact shapes/types are determined by the
+                model's ``postproc_func``.
+
+        Notes:
+            - Full-WSI mode is selected when probability maps are not Zarr-backed;
+              otherwise tile mode is used.
+            - Tile mode uses model-specific merging of instances across tile
+              boundaries and may write intermediate arrays under a ``.zarr`` group
+              next to ``save_path``.
+            - Probability maps themselves are not modified here; this method produces
+              task-centric outputs from them. Use ``save_predictions`` to persist
+              results as ``dict``, ``zarr``, or ``annotationstore``.
+
+        """
         probabilities = raw_predictions["probabilities"]
 
         probabilities_is_zarr = False
@@ -568,7 +806,50 @@ class MultiTaskSegmentor(SemanticSegmentor):
         *,
         return_predictions: tuple[bool, ...] | None = None,
     ) -> list[dict] | None:
-        """Helper function to post process WSI when it can fit in memory."""
+        """Convert full-WSI probability maps into task-specific outputs in memory.
+
+        This helper is used when the WSI-scale probability maps (one per model head)
+        fit in memory without requiring Zarr-backed tiling. It invokes the model's
+        ``postproc_func`` once on the complete list of head maps and returns a list
+        of per-task dictionaries (e.g., semantic, instance). Optionally, it drops
+        the ``"predictions"`` array for tasks where returning the full-resolution
+        map is not requested.
+
+        Args:
+            probabilities (list[da.Array | np.ndarray]):
+                Full-resolution probability maps, one per model head. Each element
+                is either a Dask array or NumPy array with shape ``(H, W, C)``,
+                where ``C`` is head-specific. These are the outputs of
+                ``infer_wsi`` after horizontal/vertical stitching.
+            return_predictions (tuple[bool, ...] | None):
+                Per-task flags indicating whether to keep the task's
+                full-resolution ``"predictions"`` array in the result. If
+                ``None``, no task predictions are returned (all ``"predictions"``
+                keys are removed). The tuple length must match the number of
+                task dictionaries returned by ``postproc_func``.
+
+        Returns:
+            list[dict] | None:
+                A list of task dictionaries returned by the model's
+                ``postproc_func``. Each dictionary must include
+                ``"task_type"`` and may include keys such as
+                ``"predictions"`` (``np.ndarray`` or ``da.Array``) and/or an
+                ``"info_dict"`` with task-specific metadata. If all task
+                predictions are dropped and no other outputs are produced,
+                this may return ``None``.
+
+        Notes:
+            - This function performs no tiling or disk spilling; it assumes the
+              inputs fit in memory. For large WSIs or Zarr-backed probability
+              maps, use ``_process_tile_mode`` instead.
+            - The exact set of task keys and value types is model-dependent and
+              determined by ``postproc_func``.
+            - When ``return_predictions`` is provided, it is applied positionally
+              to the sequence of task dictionaries emitted by ``postproc_func``:
+              if a task's flag is ``False``, that task's ``"predictions"`` key is
+              removed from the output.
+
+        """
         post_process_predictions = self.model.postproc_func(probabilities)
         if return_predictions is None:
             return_predictions = [False for _ in post_process_predictions]
@@ -586,7 +867,72 @@ class MultiTaskSegmentor(SemanticSegmentor):
         *,
         return_predictions: tuple[bool, ...] | None = None,
     ) -> list[dict] | None:
-        """Helper function to process WSI in tile mode."""
+        """Convert WSI probability maps into outputs using tile-mode processing.
+
+        This helper is used when WSI-scale probability maps are Zarr-backed or too
+        large to fit comfortably in memory. It iterates over WSI tiles, extracts the
+        corresponding sub-arrays from each model head, applies the model's
+        ``postproc_func`` per tile, and merges task outputs across tile boundaries.
+        For instance-type tasks, it removes duplicated/cut instances near tile
+        margins using configuration from ``IOSegmentorConfig`` (tile flags, margin)
+        and consolidates detections into the slide coordinate system.
+
+        Optionally, full-resolution per-task prediction arrays (e.g., dense label or
+        probability maps) are allocated as NumPy or Zarr via ``create_smart_array``
+        and incrementally filled at the appropriate tile locations. Allocation and
+        spilling behavior are governed by ``memory_threshold``.
+
+        Args:
+            probabilities (list[da.Array | np.ndarray]):
+                WSI-scale probability maps, one per model head, with shape
+                ``(H, W, C)`` per head. These are the outputs of ``infer_wsi``
+                (after horizontal/vertical stitching) and may be Zarr-backed.
+            save_path (Path):
+                Base path used for creating a ``.zarr`` group to store
+                disk-backed arrays when memory usage exceeds the threshold and for
+                per-task predictions when requested by ``return_predictions``.
+            memory_threshold (float):
+                Maximum allowed RAM usage (percentage) for in-memory arrays before
+                switching to or continuing with Zarr-backed allocation. Defaults to 80.
+            return_predictions (tuple[bool, ...] | None):
+                Per-task flags indicating whether to retain a full-resolution
+                ``"predictions"`` array for each task. If ``None``, no task-level
+                prediction arrays are retained (i.e., they are set to ``None`` and not
+                allocated). The tuple length must match the number of task dictionaries
+                produced by ``postproc_func``.
+
+        Returns:
+            list[dict] | None:
+                A list of task dictionaries (one per multitask head output as produced
+                by ``postproc_func``) with fields such as:
+                    - ``"task_type"`` (str): Name/type of the task (e.g.,
+                      ``"semantic"``, ``"instance"``).
+                    - ``"predictions"`` (np.ndarray or Zarr-backed array | None):
+                      Full-resolution task prediction array if enabled by
+                      ``return_predictions``; otherwise ``None``.
+                    - ``"info_dict"`` (dict): Task-specific metadata accumulated across
+                      tiles. For instance tasks, this includes merged instance tables
+                      (e.g., boxes, centroids, contours) keyed by UUIDs in WSI space.
+
+                Returns ``None`` only if ``postproc_func`` yields no outputs.
+
+        Notes:
+            - Tile layout is derived from the engine IO config; each tile's bounds
+              are used to slice per-head probability maps and to place results back
+              into WSI space.
+            - For instance tasks, objects near tile margins are pruned/merged using
+              per-tile flags and a configurable margin to avoid duplicates across
+              tiles. Instance coordinates (boxes, centroids, contours) are translated
+              from tile space to WSI space prior to consolidation.
+            - When ``return_predictions`` requests any task array, allocation is done
+              via ``create_smart_array`` to choose between NumPy and Zarr based on
+              ``memory_threshold``. Arrays are filled tile-by-tile using the tile
+              bounds.
+            - Computation remains lazy for Dask-backed inputs until explicitly
+              computed or saved downstream. Probability maps themselves are not
+              modified in this method; it only derives task-centric outputs.
+
+        """
         highest_input_resolution = self.ioconfig.highest_input_resolution
         wsi_reader = self.dataloader.dataset.reader
 
@@ -856,33 +1202,71 @@ class MultiTaskSegmentor(SemanticSegmentor):
         post_process_predictions: list[tuple],
         raw_predictions: dict,
     ) -> dict:
-        """Merge per-image outputs into a task-organized prediction structure.
+        """Merge per-image, per-task outputs into a task-organized prediction structure.
 
-        This function takes a list of outputs, where each element corresponds to one
-        image and contains one or more segmentation dictionaries. Each segmentation
-        dictionary must include a ``"task_type"`` key along with any number of
-        additional fields (e.g., ``"predictions"``, ``"info_dict"``, or others).
+        This function takes a list of outputs where each element corresponds to one
+        image and contains one or more task dictionaries returned by the model's
+        post-processing step (e.g., semantic, instance). Each task dictionary must
+        include a ``"task_type"`` key along with any number of task-specific fields
+        (for example, ``"predictions"``, ``"info_dict"``, or additional metadata).
+        The function reorganizes this data into ``raw_predictions`` by grouping
+        entries under their respective task types and aligning values across images.
 
-        The function reorganizes these outputs into ``raw_predictions`` by grouping
-        entries under their respective task types. For each task, all keys except
-        ``"task_type"`` are stored in dictionaries indexed by ``img_id``. Existing
-        content in ``raw_predictions`` is preserved and extended as needed.
+        The merging logic is as follows:
+          1) For each task (identified by ``"task_type"``), values for keys other than
+             ``"task_type"`` are temporarily collected into lists, one entry per image.
+          2) After all images are processed, list entries are normalized:
+
+             - If all entries for a key are array-like (``np.ndarray`` or
+               ``dask.array.Array``),
+               they are stacked along a new leading dimension (image axis).
+             - If all entries for a key are dictionaries, their subkeys are expanded
+               into separate lists aligned across images (the original composite key
+               is removed).
+          3) Existing content in ``raw_predictions`` is preserved and extended as
+             needed.
 
         Args:
             post_process_predictions (list[tuple]):
-                A list where each element represents one image. Each element is an
-                iterable of segmentation dictionaries. Each segmentation dictionary
-                must contain a ``"task_type"`` field and may contain any number of
-                additional fields.
+                A list where each element represents a single image. Each element is
+                an iterable of task dictionaries. Every task dictionary **must**
+                contain:
+                    - ``"task_type"`` (str): Name/type of the task
+                      (e.g., ``"semantic"``, ``"instance"``, ``"edge"``).
+                and **may** contain any number of additional fields, such as:
+                    - ``"predictions"``: array-like output for that task
+                    - ``"info_dict"``: dictionary of task-specific metadata
+                    - Any other task-dependent keys
             raw_predictions (dict):
-                A dictionary that will be updated in-place. It may already contain
-                task entries or other unrelated keys. New tasks and new fields are
-                added dynamically as they appear in ``outputs``.
+                Dictionary that will be updated **in-place**. It may already contain
+                task entries or unrelated keys (e.g., ``"probabilities"``,
+                ``"coordinates"``). New tasks and fields are added as they appear.
 
         Returns:
             dict:
-                The updated ``raw_predictions`` dictionary, containing all tasks and
-                their associated per-image fields.
+                The updated ``raw_predictions`` dictionary containing one entry per
+                task type. Under each task name, keys hold per-image arrays (stacked
+                as Dask/NumPy where applicable) or lists/dicts aligned across images.
+                Example structure:
+                    {
+                      "semantic": {
+                        "predictions": da.Array | np.ndarray,  # stacked over images
+                        "info_dict": [dict, dict, ...]         # or expanded subkeys
+                      },
+                      "instance": {
+                        "info_dict": [...],                    # per-image metadata
+                        "contours": [...], "classes": [...],   # task-dependent keys
+                      },
+                      "coordinates": da.Array,                 # if previously present
+                    }
+
+        Notes:
+            - Array stacking occurs only when **all** per-image entries for a key are
+              array-like; mixed types remain as lists.
+            - Dictionary expansion occurs only when **all** per-image entries for a key
+              are dictionaries; subkeys are promoted to top-level keys under the task
+              and aligned across images.
+            - The set ``self.tasks`` is updated to include all encountered task types.
 
         """
         tasks = set()
