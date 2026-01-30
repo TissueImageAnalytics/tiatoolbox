@@ -49,6 +49,54 @@ if TYPE_CHECKING:  # pragma: no cover
     from .io_config import IOSegmentorConfig
 
 
+class MultiTaskSegmentorRunParams(SemanticSegmentorRunParams, total=False):
+    """Runtime parameters for configuring the `MultiTaskSegmentor.run()` method.
+
+    This class extends `SemanticSegmentorRunParams`, and adds parameters specific
+    to multitask segmentation workflows.
+
+    Attributes:
+        auto_get_mask (bool):
+            Whether to automatically generate segmentation masks using
+            `wsireader.tissue_mask()` during processing.
+        batch_size (int):
+            Number of image patches to feed to the model in a forward pass.
+        class_dict (dict):
+            Optional dictionary mapping classification outputs to class names.
+        device (str):
+            Device to run the model on (e.g., "cpu", "cuda").
+        labels (list):
+            Optional labels for input images. Only a single label per image
+            is supported.
+        memory_threshold (int):
+            Memory usage threshold (in percentage) to trigger caching behavior.
+        num_workers (int):
+            Number of workers used in DataLoader.
+        output_file (str):
+            Output file name for saving results (e.g., .zarr or .db).
+        output_resolutions (Resolution):
+            Resolution used for writing output predictions.
+        patch_output_shape (tuple[int, int]):
+            Shape of output patches (height, width).
+        return_labels (bool):
+            Whether to return labels with predictions.
+        return_probabilities (bool):
+            Whether to return per-class probabilities.
+        return_predictions (tuple(bool, ...):
+            Whether to return array predictions for individual tasks.
+        scale_factor (tuple[float, float]):
+            Scale factor for converting annotations to baseline resolution.
+            Typically model_mpp / slide_mpp.
+        stride_shape (tuple[int, int]):
+            Stride used during WSI processing. Defaults to patch_input_shape.
+        verbose (bool):
+            Whether to output logging information.
+
+    """
+
+    return_predictions: tuple[bool, ...]
+
+
 class MultiTaskSegmentor(SemanticSegmentor):
     """A multitask segmentation engine for models like hovernet and hovernetplus."""
 
@@ -165,7 +213,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         self: SemanticSegmentor,
         dataloader: DataLoader,
         save_path: Path,
-        **kwargs: Unpack[SemanticSegmentorRunParams],
+        **kwargs: Unpack[MultiTaskSegmentorRunParams],
     ) -> dict[str, da.Array]:
         """Perform model inference on a whole slide image (WSI)."""
         # Default Memory threshold percentage is 80.
@@ -297,7 +345,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
     def post_process_patches(  # skipcq: PYL-R0201
         self: MultiTaskSegmentor,
         raw_predictions: dict,
-        **kwargs: Unpack[SemanticSegmentorRunParams],  # noqa: ARG002
+        **kwargs: Unpack[MultiTaskSegmentorRunParams],  # noqa: ARG002
     ) -> dict:
         """Post-process raw patch predictions from inference.
 
@@ -336,7 +384,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         self: MultiTaskSegmentor,
         raw_predictions: dict,
         save_path: Path,
-        **kwargs: Unpack[SemanticSegmentorRunParams],
+        **kwargs: Unpack[MultiTaskSegmentorRunParams],
     ) -> dict:
         """Post-process raw patch predictions from inference."""
         probabilities = raw_predictions["probabilities"]
@@ -348,6 +396,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 break
 
         # If dask array can fit in memory process without tiling.
+        # This ignores post-processing tile size even if it is smaller.
         if not probabilities_is_zarr:
             post_process_predictions = self.model.postproc_func(probabilities)
         else:
@@ -355,7 +404,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 probabilities,
                 save_path=save_path.with_suffix(".zarr"),
                 memory_threshold=kwargs.get("memory_threshold", 80),
-                return_predictions=kwargs.get("return_predictions", False),
+                return_predictions=kwargs.get("return_predictions", None),
             )
 
         tasks = set()
@@ -384,12 +433,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
         save_path: Path,
         memory_threshold: float = 80,
         *,
-        return_predictions: bool = False,
+        return_predictions: tuple[bool, ...] | None = None,
     ) -> list[dict] | None:
         """Helper function to process WSI in tile mode."""
         highest_input_resolution = self.ioconfig.highest_input_resolution
         wsi_reader = self.dataloader.dataset.reader
-        _ = return_predictions
 
         # assume ioconfig has already been converted to `baseline` for `tile` mode
         wsi_proc_shape = wsi_reader.slide_dimensions(**highest_input_resolution)
@@ -424,6 +472,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     wsi_proc_shape=wsi_proc_shape,
                     save_path=save_path,
                     memory_threshold=memory_threshold,
+                    return_predictions=return_predictions,
                 )
 
                 wsi_info_dict = _update_tile_based_predictions_array(
@@ -730,7 +779,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         processed_predictions: dict,
         output_type: str,
         save_path: Path | None = None,
-        **kwargs: Unpack[SemanticSegmentorRunParams],
+        **kwargs: Unpack[MultiTaskSegmentorRunParams],
     ) -> dict | AnnotationStore | Path | list[Path]:
         """Helper function to save predictions as dictionary or zarr."""
         if output_type.lower() == "dict":
@@ -778,7 +827,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         processed_predictions: dict,
         task_name: str | None = None,
         save_path: Path | None = None,
-        **kwargs: Unpack[SemanticSegmentorRunParams],
+        **kwargs: Unpack[MultiTaskSegmentorRunParams],
     ) -> dict | AnnotationStore | Path | list[Path]:
         """Helper function to save predictions as annotationstore."""
         # scale_factor set from kwargs
@@ -848,7 +897,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         processed_predictions: dict,
         output_type: str,
         save_path: Path | None = None,
-        **kwargs: Unpack[SemanticSegmentorRunParams],
+        **kwargs: Unpack[MultiTaskSegmentorRunParams],
     ) -> dict | AnnotationStore | Path | list[Path]:
         """Save model predictions to disk or return them in memory.
 
@@ -983,7 +1032,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         save_dir: os.PathLike | Path | None = None,
         overwrite: bool = False,
         output_type: str = "dict",
-        **kwargs: Unpack[SemanticSegmentorRunParams],
+        **kwargs: Unpack[MultiTaskSegmentorRunParams],
     ) -> AnnotationStore | Path | str | dict | list[Path]:
         """Run the semantic segmentation engine on input images.
 
@@ -1017,7 +1066,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             output_type (str):
                 Desired output format: "dict", "zarr", or "annotationstore". Default
                 is "dict".
-            **kwargs (SemanticSegmentorRunParams):
+            **kwargs (MultiTaskSegmentorRunParams):
                 Additional runtime parameters to configure segmentation.
 
                 Optional Keys:
@@ -1773,6 +1822,7 @@ def _create_wsi_info_dict(
     wsi_info_dict: tuple[dict] | None,
     wsi_proc_shape: tuple[int, ...],
     save_path: Path,
+    return_predictions: tuple[bool, ...] | None,
     memory_threshold: float = 80,
 ) -> tuple[dict[str, dict[Any, Any] | list[Any] | Any], ...]:
     """Create or reuse WSI info dictionaries for post-processed outputs.
@@ -1813,10 +1863,15 @@ def _create_wsi_info_dict(
     if wsi_info_dict is not None:
         return wsi_info_dict
 
+    # Convert to tuple for each task
+    if return_predictions is None:
+        return_predictions = [None for _ in post_process_output]
+
     return tuple(
         {
             "task_type": post_process_output_["task_type"],
-            "predictions": create_smart_array(
+            "predictions": None if return_predictions[idx] is None else
+            create_smart_array(
                 shape=wsi_proc_shape,
                 dtype=post_process_output_["predictions"].dtype,
                 memory_threshold=memory_threshold,
@@ -1825,7 +1880,7 @@ def _create_wsi_info_dict(
             ),
             "info_dict": {},
         }
-        for post_process_output_ in post_process_output
+        for idx, post_process_output_ in enumerate(post_process_output)
     )
 
 
@@ -1838,11 +1893,13 @@ def _update_tile_based_predictions_array(
     x_start, y_start, x_end, y_end = bounds
 
     for idx, post_process_output_ in enumerate(post_process_output):
+        if wsi_info_dict[idx]["predictions"] is None:
+            continue
         max_h, max_w = wsi_info_dict[idx]["predictions"].shape
         x_end, y_end = min(x_end, max_w), min(y_end, max_h)
-        wsi_info_dict[idx]["predictions"][y_start:y_end, x_start:x_end, :] = (
+        wsi_info_dict[idx]["predictions"][y_start:y_end, x_start:x_end] = (
             post_process_output_["predictions"][
-                0 : y_end - y_start, 0 : x_end - x_start, :
+                0 : y_end - y_start, 0 : x_end - x_start
             ]
         )
 

@@ -296,15 +296,24 @@ def test_wsi_mtsegmentor_zarr(
         return_labels=False,
         device=device,
         patch_mode=False,
-        save_dir=track_tmp_path / "wsi_out_check",
+        save_dir=track_tmp_path / "wsi_out_full",
         batch_size=2,
         output_type="zarr",
-        memory_threshold=1,
         ioconfig=ioconfig,
     )
 
+    output_ = zarr.open(output_full[wsi4_1k_1k_svs], mode="r")
+    assert 37 < np.mean(output_["nuclei_segmentation"]["predictions"][:]) < 41
+    assert 0.87 < np.mean(output_["layer_segmentation"]["predictions"][:]) < 0.91
+    assert "probabilities" not in output_
+    assert "canvas" not in output_["nuclei_segmentation"]
+    assert "count" not in output_["nuclei_segmentation"]
+    assert "canvas" not in output_["layer_segmentation"]
+    assert "count" not in output_["layer_segmentation"]
+
     # Redefine tile size to force tile-based processing.
     ioconfig.tile_shape = (512, 512)
+
     # Return Probabilities is False
     output_tile = mtsegmentor.run(
         images=[wsi4_1k_1k_svs],
@@ -312,21 +321,19 @@ def test_wsi_mtsegmentor_zarr(
         return_labels=False,
         device=device,
         patch_mode=False,
-        save_dir=track_tmp_path / "wsi_out_check",
+        save_dir=track_tmp_path / "wsi_out_tile_based",
         batch_size=2,
         output_type="zarr",
-        memory_threshold=1,
+        memory_threshold=1,  # Memory threshold forces tile_mode
         ioconfig=ioconfig,
+        # HoVerNet does not return predictions once
+        # contours have been calculated in original implementation.
+        # It's also not straight forward to keep track of instances
+        # Prediction masks can be tracked and saved as for layer segmentation in
+        # HoVerNet Plus.
+        return_predictions=(False, True),
     )
 
-    output_ = zarr.open(output_full[wsi4_1k_1k_svs], mode="r")
-    assert 15 < np.mean(output_["nuclei_segmentation"]["predictions"][:]) < 19
-    assert 0.57 < np.mean(output_["layer_segmentation"]["predictions"][:]) < 0.61
-    assert "probabilities" not in output_
-    assert "canvas" not in output_["nuclei_segmentation"]
-    assert "count" not in output_["nuclei_segmentation"]
-    assert "canvas" not in output_["layer_segmentation"]
-    assert "count" not in output_["layer_segmentation"]
     _ = zarr.open(output_tile[wsi4_1k_1k_svs], mode="r")
     wsi4_1k_1k_svs.unlink()
 
