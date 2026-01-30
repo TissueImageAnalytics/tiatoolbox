@@ -1677,7 +1677,7 @@ def create_smart_array(
     dtype: np.dtype | str,
     memory_threshold: float,
     name: str | None,
-    zarr_path: str | Path = "array.zarr",
+    zarr_path: str | Path | None = None,
     chunks: tuple[int, ...] | None = None,
 ) -> np.ndarray | zarr.Array:
     """Allocate a NumPy or Zarr array depending on available memory and a threshold.
@@ -1729,9 +1729,8 @@ def create_smart_array(
         zarr_path = Path(str(temp_dir)) / "array.zarr"
 
     # Allocate Zarr array on disk
-    if chunks is None:
-        # Default chunking: try to chunk along spatial dims
-        chunks = (*(min(s, 512) for s in shape[:-1]), shape[-1])
+    # Default chunking: try to chunk along spatial dims
+    chunks = shape if chunks is None else chunks
 
     zarr_group = zarr.open(zarr_path, mode="a")
 

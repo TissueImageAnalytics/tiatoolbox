@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
@@ -13,6 +14,7 @@ import dask.array as da
 import joblib
 import numpy as np
 import pandas as pd
+import psutil
 import pytest
 import shapely
 import tifffile
@@ -35,7 +37,7 @@ from tiatoolbox.models.architecture.utils import (
 )
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
-from tiatoolbox.utils.misc import cast_to_min_dtype
+from tiatoolbox.utils.misc import cast_to_min_dtype, create_smart_array
 from tiatoolbox.utils.transforms import locsize2bounds
 
 if TYPE_CHECKING:
@@ -2248,3 +2250,72 @@ def test_cast_to_min_dtype_numpy_large_value() -> None:
     result = cast_to_min_dtype(large_value)
     assert result == large_value
     assert result.dtype == object
+
+
+def test_returns_numpy_when_fits_in_memory(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Test that a NumPy array is returned when the array fits in memory."""
+    shape = (10, 10, 3)
+    dtype = np.float32
+    bytes_needed = np.prod(shape) * np.dtype(dtype).itemsize
+
+    # Mock available memory to be very large
+    class FakeVM:
+        available = bytes_needed * 10
+
+    monkeypatch.setattr(psutil, "virtual_memory", lambda: FakeVM())
+
+    arr = create_smart_array(
+        shape=shape,
+        dtype=dtype,
+        memory_threshold=100,  # allow full RAM
+        name="test",
+        zarr_path=tmp_path / "array.zarr",
+    )
+
+    assert isinstance(arr, np.ndarray)
+    assert arr.shape == shape
+    assert arr.dtype == dtype
+
+
+def test_creates_temp_dir_when_zarr_path_none(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Test that a temporary directory is created when zarr_path is None."""
+    shape = (1000, 1000, 3)
+    dtype = np.float32
+
+    # Force fits_in_memory = False by mocking available memory to be tiny
+    class FakeVM:
+        available = 1
+
+    monkeypatch.setattr(psutil, "virtual_memory", lambda: FakeVM())
+
+    # Track calls to tempfile.mkdtemp
+    created_dirs = []
+
+    def fake_mkdtemp(prefix: str) -> str:
+        """Fake mkdtemp method."""
+        _ = prefix
+        path = tmp_path / "tempdir"
+        created_dirs.append(path)
+        return str(path)
+
+    monkeypatch.setattr(tempfile, "mkdtemp", fake_mkdtemp)
+
+    arr = create_smart_array(
+        shape=shape,
+        dtype=dtype,
+        memory_threshold=0,  # force Zarr allocation
+        name="test",
+        zarr_path=None,
+    )
+
+    # Ensure mkdtemp was called
+    assert len(created_dirs) == 1
+
+    # Ensure returned object is a Zarr array
+    assert isinstance(arr, zarr.Array)
+    assert arr.shape == shape
+    assert arr.dtype == dtype

@@ -326,7 +326,7 @@ def test_wsi_mtsegmentor_zarr(
         save_dir=track_tmp_path / "wsi_out_tile_based",
         batch_size=2,
         output_type="zarr",
-        memory_threshold=1,  # Memory threshold forces tile_mode
+        memory_threshold=0,  # Memory threshold forces tile_mode
         ioconfig=ioconfig,
         # HoVerNet does not return predictions once
         # contours have been calculated in original implementation.

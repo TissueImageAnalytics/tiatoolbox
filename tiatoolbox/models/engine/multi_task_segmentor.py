@@ -1946,7 +1946,7 @@ def _create_wsi_info_dict(
                 memory_threshold=memory_threshold,
                 zarr_path=save_path,
                 chunks=post_process_output_["predictions"].shape,
-                name="predictions",
+                name=f"{post_process_output_['task_type']}/predictions",
             ),
             "info_dict": {},
         }
