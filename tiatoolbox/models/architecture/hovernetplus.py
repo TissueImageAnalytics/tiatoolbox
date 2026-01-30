@@ -7,13 +7,15 @@ from collections import OrderedDict
 import cv2
 import dask.array as da
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn.functional as F  # noqa: N812
 from skimage import morphology
 from torch import nn
 
-from tiatoolbox.models.architecture.hovernet import HoVerNet
+from tiatoolbox.models.architecture.hovernet import (
+    HoVerNet,
+    _inst_dict_for_dask_processing,
+)
 from tiatoolbox.models.architecture.utils import UpSample2x
 from tiatoolbox.utils.misc import get_bounding_box
 
@@ -361,18 +363,11 @@ class HoVerNetPlus(HoVerNet):
                 "type": da.empty(shape=0) if is_dask else np.empty(0),
             }
         else:
-            # dask dataframe does not support transpose
-            nuc_inst_info_df = pd.DataFrame(nuc_inst_info_dict).transpose()
-            for key, col in nuc_inst_info_df.items():
-                col_np = col.to_numpy()
-                nuc_inst_info_dict_[key] = (
-                    da.from_array(
-                        col_np,
-                        chunks=(len(col),),
-                    )
-                    if is_dask
-                    else col_np
-                )
+            nuc_inst_info_dict_ = _inst_dict_for_dask_processing(
+                inst_info_dict=nuc_inst_info_dict,
+                inst_info_dict_=nuc_inst_info_dict_,
+                is_dask=is_dask,
+            )
 
         nuclei_seg = {
             "task_type": self.tasks[0],
@@ -388,19 +383,11 @@ class HoVerNetPlus(HoVerNet):
                 "type": da.empty(shape=0) if is_dask else np.empty(0),
             }
         else:
-            # dask dataframe does not support transpose
-            layer_info_df = pd.DataFrame(layer_info_dict).transpose()
-            for key, col in layer_info_df.items():
-                col_np = col.to_numpy()
-                layer_info_dict_[key] = (
-                    da.from_array(
-                        col.to_numpy(),
-                        chunks=(len(col),),
-                    )
-                    if is_dask
-                    else col_np
-                )
-
+            layer_info_dict_ = _inst_dict_for_dask_processing(
+                inst_info_dict=layer_info_dict,
+                inst_info_dict_=layer_info_dict_,
+                is_dask=is_dask,
+            )
         layer_seg = {
             "task_type": self.tasks[1],
             "predictions": da.array(pred_layer) if is_dask else pred_layer,
