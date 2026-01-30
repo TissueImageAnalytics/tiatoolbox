@@ -445,6 +445,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
             if not return_predictions_:
                 del post_process_predictions[idx]["predictions"]
 
+        return post_process_predictions
+
     def _process_tile_mode(
         self: MultiTaskSegmentor,
         probabilities: list[da.Array | np.ndarray],
