@@ -1764,8 +1764,12 @@ def _get_sel_indices_margin_lines(
     inst_dict: dict,
 ) -> tuple[list, list]:
     """Helper function to retrieve margin lines and selected indices within bounds."""
-    m = ioconfig.margin
-    w, h = tile_shape
+    if tile_mode not in [0, 1, 2, 3]:
+        msg = f"Unknown tile mode {tile_mode}."
+        raise ValueError(msg)
+
+    margin = ioconfig.margin
+    width, height = tile_shape
     inst_boxes = [v["box"] for v in inst_dict.values()]
     inst_boxes = np.array(inst_boxes)
 
@@ -1776,32 +1780,25 @@ def _get_sel_indices_margin_lines(
     # create margin bounding box, ordering should match with
     # created tile info flag (top, bottom, left, right)
     boundary_lines = [
-        shapely_box(0, 0, w, 1),  # top egde
-        shapely_box(0, h - 1, w, h),  # bottom edge
-        shapely_box(0, 0, 1, h),  # left
-        shapely_box(w - 1, 0, w, h),  # right
+        shapely_box(0, 0, width, 1),  # top egde
+        shapely_box(0, height - 1, width, height),  # bottom edge
+        shapely_box(0, 0, 1, height),  # left
+        shapely_box(width - 1, 0, width, height),  # right
     ]
     margin_boxes = [
-        shapely_box(0, 0, w, m),  # top egde
-        shapely_box(0, h - m, w, h),  # bottom edge
-        shapely_box(0, 0, m, h),  # left
-        shapely_box(w - m, 0, w, h),  # right
+        shapely_box(0, 0, width, margin),  # top egde
+        shapely_box(0, height - margin, width, height),  # bottom edge
+        shapely_box(0, 0, margin, height),  # left
+        shapely_box(width - margin, 0, width, height),  # right
     ]
-    # ! this is wrt to WSI coord space, not tile
-    margin_lines = [
-        [[m, m], [w - m, m]],  # top egde
-        [[m, h - m], [w - m, h - m]],  # bottom edge
-        [[m, m], [m, h - m]],  # left
-        [[w - m, m], [w - m, h - m]],  # right
-    ]
-    margin_lines = np.array(margin_lines) + tile_tl[None, None]
-    margin_lines = [shapely_box(*v.flatten().tolist()) for v in margin_lines]
+    margin_lines = _get_margin_lines(
+        margin=margin,
+        height=height,
+        width=width,
+        tile_tl=tile_tl,
+    )
 
     # the ids within this match with those within `inst_map`, not UUID
-    if tile_mode not in [0, 1, 2, 3]:
-        msg = f"Unknown tile mode {tile_mode}."
-        raise ValueError(msg)
-
     if tile_mode in [0, 3]:
         # for `full grid` tiles `cross section` tiles
         # -- extend from the boundary by the margin size, remove
@@ -1835,6 +1832,23 @@ def _get_sel_indices_margin_lines(
     sel_indices = [geo for bounds in sel_boxes for geo in tile_rtree.query(bounds)]
 
     return sel_indices, margin_lines
+
+
+def _get_margin_lines(
+    margin: int,
+    height: int,
+    width: int,
+    tile_tl: tuple[int, int],
+) -> list:
+    # ! this is wrt to WSI coord space, not tile
+    margin_lines = [
+        [[margin, margin], [width - margin, margin]],  # top egde
+        [[margin, height - margin], [width - margin, height - margin]],  # bottom edge
+        [[margin, margin], [margin, height - margin]],  # left
+        [[width - margin, margin], [width - margin, height - margin]],  # right
+    ]
+    margin_lines = np.array(margin_lines) + tile_tl[None, None]
+    return [shapely_box(*v.flatten().tolist()) for v in margin_lines]
 
 
 def _move_tile_space_to_wsi_space(

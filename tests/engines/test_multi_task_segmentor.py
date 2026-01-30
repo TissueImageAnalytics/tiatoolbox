@@ -17,6 +17,7 @@ from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models.engine.multi_task_segmentor import (
     MultiTaskSegmentor,
     _clear_zarr,
+    _get_sel_indices_margin_lines,
     _save_multitask_vertical_to_cache,
 )
 from tiatoolbox.utils import env_detection as toolbox_env
@@ -497,6 +498,25 @@ def test_raise_value_error_return_labels_wsi(
             save_dir=track_tmp_path / "wsi_out_check",
             batch_size=2,
             output_type="zarr",
+        )
+
+    # inst_dict must contain boxes
+    inst_dict = {
+        1: {"box": np.array([81, 0, 96, 9])},
+        2: {"box": np.array([138, 0, 151, 8])},
+    }
+
+    invalid_tile_mode = 99  # not in [0,1,2,3]
+    ioconfig = mtsegmentor.ioconfig
+    ioconfig.margin = 128
+    with pytest.raises(ValueError, match=r".*Unknown tile mode.*"):
+        _get_sel_indices_margin_lines(
+            ioconfig=ioconfig,
+            tile_shape=(492, 492),
+            tile_flag=(0, 1, 0, 1),
+            tile_mode=invalid_tile_mode,
+            tile_tl=(0, 0),
+            inst_dict=inst_dict,
         )
 
 

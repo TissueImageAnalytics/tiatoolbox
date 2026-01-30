@@ -2260,11 +2260,12 @@ def test_returns_numpy_when_fits_in_memory(
     dtype = np.float32
     bytes_needed = np.prod(shape) * np.dtype(dtype).itemsize
 
-    # Mock available memory to be very large
     class FakeVM:
+        """Mock available memory to be very large."""
+
         available = bytes_needed * 10
 
-    monkeypatch.setattr(psutil, "virtual_memory", lambda: FakeVM())
+    monkeypatch.setattr(psutil, "virtual_memory", FakeVM)
 
     arr = create_smart_array(
         shape=shape,
@@ -2286,11 +2287,12 @@ def test_creates_temp_dir_when_zarr_path_none(
     shape = (1000, 1000, 3)
     dtype = np.float32
 
-    # Force fits_in_memory = False by mocking available memory to be tiny
     class FakeVM:
+        """Force fits_in_memory = False by mocking available memory to be tiny."""
+
         available = 1
 
-    monkeypatch.setattr(psutil, "virtual_memory", lambda: FakeVM())
+    monkeypatch.setattr(psutil, "virtual_memory", FakeVM)
 
     # Track calls to tempfile.mkdtemp
     created_dirs = []
