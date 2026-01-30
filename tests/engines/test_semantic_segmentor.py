@@ -288,6 +288,35 @@ def test_empty_blocks() -> None:
     assert np.array_equal(count, np.zeros((2, 2, 1), dtype=np.uint8))
 
 
+def test_merge_batch_to_canvas_with_dask_arrays() -> None:
+    """Test merge_batch_to_canvas with Dask arrays to trigger conversion."""
+    # Create numpy blocks and locations first
+    blocks_np = np.array([np.ones((2, 2, 1)), np.ones((2, 2, 1)) * 2])
+    output_locations_np = np.array([[0, 0, 2, 2], [2, 0, 4, 2]])
+
+    # Convert to Dask arrays to trigger the isinstance checks
+    blocks_dask = da.from_array(blocks_np, chunks=blocks_np.shape)
+    output_locations_dask = da.from_array(
+        output_locations_np, chunks=output_locations_np.shape
+    )
+
+    merged_shape = (2, 4, 1)
+
+    # Call with Dask arrays - should convert to numpy internally
+    canvas, count = semantic_segmentor.merge_batch_to_canvas(
+        blocks_dask, output_locations_dask, merged_shape
+    )
+
+    # Verify results match expected output
+    assert np.array_equal(canvas[:, :2, :], np.ones((2, 2, 1)))
+    assert np.array_equal(canvas[:, 2:, :], np.ones((2, 2, 1)) * 2)
+    assert np.array_equal(count, np.ones((2, 4, 1)))
+
+    # Verify the function returns numpy arrays
+    assert isinstance(canvas, np.ndarray)
+    assert isinstance(count, np.ndarray)
+
+
 def test_merge_vertical_chunkwise_memory_threshold_triggered() -> None:
     """Test merge vertical chunkwise for memory threshold."""
     # Create dummy canvas and count arrays with 3 vertical chunks
@@ -698,6 +727,64 @@ def test_prepare_full_batch_last_batch_padding(track_tmp_path: Path) -> None:
     assert isinstance(full_batch_output, np.ndarray)
     expected_size = num_full_locs + batch_size  # batch_size + remaining
     assert full_batch_output.shape[0] == expected_size
+
+    # Verify that remaining locations are zero-padded
+    for i in range(batch_size, expected_size):
+        assert np.all(full_batch_output[i] == 0)
+
+    # All locations should be consumed
+    assert len(updated_full_locs) == 0
+    assert len(updated_output_locs) == num_full_locs
+
+
+def test_prepare_full_batch_last_batch_padding_zarr(track_tmp_path: Path) -> None:
+    """Test prepare_full_batch with is_last=True and low memory (zarr resize path)."""
+    batch_size = 5
+    patch_h, patch_w, channels = 512, 512, 3  # Larger patches to exceed memory
+    rand = np.random.default_rng(12345)
+    batch_output = rand.random((batch_size, patch_h, patch_w, channels)).astype(
+        np.float32
+    )
+
+    batch_locs = np.array([[i * 100, 0, i * 100 + 100, 100] for i in range(batch_size)])
+
+    # Have more full_output_locs than batch_size to trigger padding
+    num_full_locs = 15  # More locations to increase array size
+    full_output_locs = np.array(
+        [[i * 100, 0, i * 100 + 100, 100] for i in range(num_full_locs)]
+    )
+
+    output_locs = np.empty((0, 4), dtype=batch_locs.dtype)
+
+    # Mock psutil to simulate low memory (trigger zarr path)
+    mock_vm = mock.MagicMock()
+    mock_vm.available = 1024 * 1024  # 1 MB - force zarr
+    mock_vm.free = 1024 * 1024 * 1024  # 1 GB for checking
+
+    with mock.patch("psutil.virtual_memory", return_value=mock_vm):
+        full_batch_output, updated_full_locs, updated_output_locs = prepare_full_batch(
+            batch_output=batch_output,
+            batch_locs=batch_locs,
+            full_output_locs=full_output_locs,
+            output_locs=output_locs,
+            canvas_np=None,
+            save_path=track_tmp_path / "test_last_zarr",
+            memory_threshold=80,
+            is_last=True,  # Last batch with low memory
+        )
+
+    # Verify that a zarr array was created (disk-based)
+    assert isinstance(full_batch_output, zarr.Array)
+
+    # Verify padding was applied (zarr resize happened)
+    expected_size = 15
+    assert full_batch_output.shape[0] == expected_size
+
+    # Check that batch_output was correctly placed
+    for i in range(batch_size):
+        np.testing.assert_array_almost_equal(
+            full_batch_output[i], batch_output[i], decimal=5
+        )
 
     # Verify that remaining locations are zero-padded
     for i in range(batch_size, expected_size):
