@@ -404,7 +404,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 probabilities,
                 save_path=save_path.with_suffix(".zarr"),
                 memory_threshold=kwargs.get("memory_threshold", 80),
-                return_predictions=kwargs.get("return_predictions", None),
+                return_predictions=kwargs.get("return_predictions"),
             )
 
         tasks = set()
@@ -1870,8 +1870,9 @@ def _create_wsi_info_dict(
     return tuple(
         {
             "task_type": post_process_output_["task_type"],
-            "predictions": None if return_predictions[idx] is None else
-            create_smart_array(
+            "predictions": None
+            if return_predictions[idx] is None
+            else create_smart_array(
                 shape=wsi_proc_shape,
                 dtype=post_process_output_["predictions"].dtype,
                 memory_threshold=memory_threshold,
