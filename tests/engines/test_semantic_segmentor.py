@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sqlite3
 import tempfile
 from pathlib import Path
@@ -22,6 +23,7 @@ from tiatoolbox.models.engine import semantic_segmentor
 from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     merge_vertical_chunkwise,
+    prepare_full_batch,
 )
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imread
@@ -490,6 +492,220 @@ def test_wsi_segmentor_annotationstore(
     zarr_group = zarr.open(output[sample_svs].with_suffix(".zarr"), mode="r")
     assert "probabilities" in zarr_group
     assert "Probability maps cannot be saved as AnnotationStore." in caplog.text
+
+
+def test_prepare_full_batch_low_memory(track_tmp_path: Path) -> None:
+    """Test prepare_full_batch with low memory condition (disk-based zarr)."""
+    # Create mock data
+    batch_size = 10
+    patch_h, patch_w, channels = 256, 256, 3
+    rand = np.random.default_rng(12345)
+    batch_output = rand.random((batch_size, patch_h, patch_w, channels)).astype(
+        np.float32
+    )
+
+    # Create batch locations (x_start, y_start, x_end, y_end)
+    batch_locs = np.array([[i * 100, 0, i * 100 + 100, 100] for i in range(batch_size)])
+
+    # Create full output locations (all possible patch locations)
+    num_full_locs = 50
+    full_output_locs = np.array(
+        [[i * 100, 0, i * 100 + 100, 100] for i in range(num_full_locs)]
+    )
+
+    output_locs = np.empty((0, 4), dtype=batch_locs.dtype)
+
+    # Mock psutil.virtual_memory to simulate low memory
+    mock_vm = mock.MagicMock()
+    # Set very small available memory to force zarr usage
+    mock_vm.available = 1024 * 1024  # 1 MB
+    mock_vm.free = 1024 * 1024 * 1024  # 1 GB for checking purposes
+
+    with mock.patch("psutil.virtual_memory", return_value=mock_vm):
+        full_batch_output, updated_full_locs, updated_output_locs = prepare_full_batch(
+            batch_output=batch_output,
+            batch_locs=batch_locs,
+            full_output_locs=full_output_locs,
+            output_locs=output_locs,
+            canvas_np=None,
+            save_path=track_tmp_path / "test_zarr",
+            memory_threshold=80,
+            is_last=False,
+        )
+
+    # Verify that a zarr array was created (disk-based)
+    assert isinstance(full_batch_output, zarr.Array)
+    assert full_batch_output.shape[0] == batch_size
+    assert full_batch_output.shape[1:] == (patch_h, patch_w, channels)
+
+    # Check that batch_output was correctly placed
+    for i in range(batch_size):
+        np.testing.assert_array_almost_equal(
+            full_batch_output[i], batch_output[i], decimal=5
+        )
+
+    # Verify output locations were updated correctly
+    assert len(updated_output_locs) == batch_size
+    assert len(updated_full_locs) == num_full_locs - batch_size
+
+    # Clean up temp directories
+    if (track_tmp_path / "test_zarr").exists():
+        shutil.rmtree(track_tmp_path / "test_zarr")
+
+
+def test_prepare_full_batch_sufficient_memory(track_tmp_path: Path) -> None:
+    """Test prepare_full_batch with sufficient memory (in-memory numpy)."""
+    # Create mock data
+    batch_size = 1
+    patch_h, patch_w, channels = 256, 256, 3
+    rand = np.random.default_rng(12345)
+    batch_output = rand.random((batch_size, patch_h, patch_w, channels)).astype(
+        np.float32
+    )
+
+    # Create batch locations
+    batch_locs = np.array([[i * 100, 0, i * 100 + 100, 100] for i in range(batch_size)])
+
+    # Create full output locations
+    num_full_locs = 50
+    full_output_locs = np.array(
+        [[i * 100, 0, i * 100 + 100, 100] for i in range(num_full_locs)]
+    )
+
+    output_locs = np.empty((0, 4), dtype=batch_locs.dtype)
+
+    # Mock psutil.virtual_memory to simulate sufficient memory
+    mock_vm = mock.MagicMock()
+    # Set large available memory to force numpy usage
+    mock_vm.available = 1024 * 1024 * 1024 * 100  # 100 GB
+    mock_vm.free = 1024 * 1024 * 1024 * 100  # 100 GB
+
+    with mock.patch("psutil.virtual_memory", return_value=mock_vm):
+        full_batch_output, updated_full_locs, updated_output_locs = prepare_full_batch(
+            batch_output=batch_output,
+            batch_locs=batch_locs,
+            full_output_locs=full_output_locs,
+            output_locs=output_locs,
+            canvas_np=None,
+            save_path=track_tmp_path / "test_numpy",
+            memory_threshold=80,
+            is_last=False,
+        )
+
+    # Verify that a numpy array was created (in-memory)
+    assert isinstance(full_batch_output, np.ndarray)
+    assert full_batch_output.shape[0] == batch_size
+    assert full_batch_output.shape[1:] == (patch_h, patch_w, channels)
+
+    # Check that batch_output was correctly placed
+    for i in range(batch_size):
+        np.testing.assert_array_almost_equal(
+            full_batch_output[i], batch_output[i], decimal=5
+        )
+
+    # Verify output locations were updated correctly
+    assert len(updated_output_locs) == batch_size
+    assert len(updated_full_locs) == num_full_locs - batch_size
+
+
+def test_prepare_full_batch_with_existing_canvas(track_tmp_path: Path) -> None:
+    """Test prepare_full_batch considering existing canvas memory footprint."""
+    # Create mock data for first batch
+    batch_size = 5
+    patch_h, patch_w, channels = 128, 128, 2
+    rand = np.random.default_rng(12345)
+    batch_output = rand.random((batch_size, patch_h, patch_w, channels)).astype(
+        np.float32
+    )
+
+    batch_locs = np.array([[i * 100, 0, i * 100 + 100, 100] for i in range(batch_size)])
+
+    num_full_locs = 20
+    full_output_locs = np.array(
+        [[i * 100, 0, i * 100 + 100, 100] for i in range(num_full_locs)]
+    )
+
+    output_locs = np.empty((0, 4), dtype=batch_locs.dtype)
+
+    # Create an existing canvas that would contribute to memory usage
+    existing_canvas = rand.random((100, patch_h, patch_w, channels)).astype(np.float32)
+
+    # Mock psutil to simulate moderate memory
+    mock_vm = mock.MagicMock()
+    # Set memory such that new array + existing canvas exceeds threshold
+    mock_vm.available = (
+        existing_canvas.nbytes + batch_output.nbytes
+    )  # Just barely enough
+    mock_vm.free = 1024 * 1024 * 1024  # 1 GB
+
+    with mock.patch("psutil.virtual_memory", return_value=mock_vm):
+        full_batch_output, _, _ = prepare_full_batch(
+            batch_output=batch_output,
+            batch_locs=batch_locs,
+            full_output_locs=full_output_locs,
+            output_locs=output_locs,
+            canvas_np=existing_canvas,  # Pass existing canvas
+            save_path=track_tmp_path / "test_with_canvas",
+            memory_threshold=80,
+            is_last=False,
+        )
+
+    # With existing canvas, should trigger zarr usage due to memory constraints
+    assert isinstance(full_batch_output, zarr.Array)
+
+    # Clean up
+    if (track_tmp_path / "test_with_canvas").exists():
+        shutil.rmtree(track_tmp_path / "test_with_canvas")
+
+
+def test_prepare_full_batch_last_batch_padding(track_tmp_path: Path) -> None:
+    """Test prepare_full_batch with is_last=True to verify padding behavior."""
+    batch_size = 5
+    patch_h, patch_w, channels = 64, 64, 1
+    rand = np.random.default_rng(12345)
+    batch_output = rand.random((batch_size, patch_h, patch_w, channels)).astype(
+        np.float32
+    )
+
+    batch_locs = np.array([[i * 100, 0, i * 100 + 100, 100] for i in range(batch_size)])
+
+    # Have more full_output_locs than batch_size to trigger padding
+    num_full_locs = 10
+    full_output_locs = np.array(
+        [[i * 100, 0, i * 100 + 100, 100] for i in range(num_full_locs)]
+    )
+
+    output_locs = np.empty((0, 4), dtype=batch_locs.dtype)
+
+    # Use sufficient memory for numpy array
+    mock_vm = mock.MagicMock()
+    mock_vm.available = 1024 * 1024 * 1024 * 10  # 10 GB
+    mock_vm.free = 1024 * 1024 * 1024 * 10
+
+    with mock.patch("psutil.virtual_memory", return_value=mock_vm):
+        full_batch_output, updated_full_locs, updated_output_locs = prepare_full_batch(
+            batch_output=batch_output,
+            batch_locs=batch_locs,
+            full_output_locs=full_output_locs,
+            output_locs=output_locs,
+            canvas_np=None,
+            save_path=track_tmp_path / "test_last",
+            memory_threshold=80,
+            is_last=True,  # Last batch
+        )
+
+    # Verify padding was applied
+    assert isinstance(full_batch_output, np.ndarray)
+    expected_size = num_full_locs + batch_size  # batch_size + remaining
+    assert full_batch_output.shape[0] == expected_size
+
+    # Verify that remaining locations are zero-padded
+    for i in range(batch_size, expected_size):
+        assert np.all(full_batch_output[i] == 0)
+
+    # All locations should be consumed
+    assert len(updated_full_locs) == 0
+    assert len(updated_output_locs) == num_full_locs
 
 
 # -------------------------------------------------------------------------------------
