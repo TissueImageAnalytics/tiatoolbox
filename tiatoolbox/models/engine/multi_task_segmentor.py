@@ -1713,7 +1713,7 @@ def _process_instance_predictions(
     if len(inst_dict) == 0:
         return {}, []
 
-    sel_indices, margin_lines = _get_sel_indices(
+    sel_indices, margin_lines = _get_sel_indices_margin_lines(
         ioconfig=ioconfig,
         tile_shape=tile_shape,
         inst_dict=inst_dict,
@@ -1755,7 +1755,7 @@ def _process_instance_predictions(
     return new_inst_dict, remove_insts_in_orig
 
 
-def _get_sel_indices(
+def _get_sel_indices_margin_lines(
     ioconfig: IOSegmentorConfig,
     tile_shape: tuple[int, int],
     tile_flag: tuple[int, int, int, int],
@@ -1798,7 +1798,10 @@ def _get_sel_indices(
     margin_lines = [shapely_box(*v.flatten().tolist()) for v in margin_lines]
 
     # the ids within this match with those within `inst_map`, not UUID
-    sel_indices = []
+    if tile_mode not in [0, 1, 2, 3]:
+        msg = f"Unknown tile mode {tile_mode}."
+        raise ValueError(msg)
+
     if tile_mode in [0, 3]:
         # for `full grid` tiles `cross section` tiles
         # -- extend from the boundary by the margin size, remove
@@ -1815,22 +1818,21 @@ def _get_sel_indices(
             for geo in tile_rtree.query(bounds)
             if bounds.contains(geometries[geo])
         ]
-    elif tile_mode in [1, 2]:
-        # for `horizontal/vertical strip` tiles
-        # -- extend from the marked edges (top/bot or left/right) by
-        #    the margin size, remove all nuclei lie within the margin
-        #    area (including on the margin line)
-        # -- remove all nuclei on the boundary also
+        return sel_indices, margin_lines
 
-        sel_boxes = [
-            margin_boxes[idx] if flag else boundary_lines[idx]
-            for idx, flag in enumerate(tile_flag)
-        ]
+    # otherwise if tile_mode in [1, 2]:
+    # for `horizontal/vertical strip` tiles
+    # -- extend from the marked edges (top/bot or left/right) by
+    #    the margin size, remove all nuclei lie within the margin
+    #    area (including on the margin line)
+    # -- remove all nuclei on the boundary also
 
-        sel_indices = [geo for bounds in sel_boxes for geo in tile_rtree.query(bounds)]
-    else:
-        msg = f"Unknown tile mode {tile_mode}."
-        raise ValueError(msg)
+    sel_boxes = [
+        margin_boxes[idx] if flag else boundary_lines[idx]
+        for idx, flag in enumerate(tile_flag)
+    ]
+
+    sel_indices = [geo for bounds in sel_boxes for geo in tile_rtree.query(bounds)]
 
     return sel_indices, margin_lines
 

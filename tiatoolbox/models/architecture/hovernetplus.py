@@ -333,16 +333,14 @@ class HoVerNetPlus(HoVerNet):
             >>> output = model.postproc(output)
 
         """
-        np_map, hv_map, tp_map, ls_map = raw_maps
-
         # Assumes raw_maps is a tuple of dask or numpy arrays.
         # Only return dask if it's required.
         is_dask = isinstance(raw_maps[0], da.Array)
+        raw_maps = [
+            raw_maps_.compute() if is_dask else raw_maps_ for raw_maps_ in raw_maps
+        ]
 
-        np_map = np_map.compute() if is_dask else np_map
-        hv_map = hv_map.compute() if is_dask else hv_map
-        tp_map = tp_map.compute() if is_dask else tp_map
-        ls_map = ls_map.compute() if is_dask else ls_map
+        np_map, hv_map, tp_map, ls_map = raw_maps
 
         pred_inst = HoVerNetPlus._proc_np_hv(np_map, hv_map, scale_factor=0.5)
         # fx=0.5 as nuclear processing is at 0.5 mpp instead of 0.25 mpp
