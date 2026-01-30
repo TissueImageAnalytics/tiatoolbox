@@ -1676,6 +1676,7 @@ def create_smart_array(
     shape: tuple[int, ...],
     dtype: np.dtype | str,
     memory_threshold: float,
+    name: str | None,
     zarr_path: str | Path = "array.zarr",
     chunks: tuple[int, ...] | None = None,
 ) -> np.ndarray | zarr.Array:
@@ -1702,6 +1703,8 @@ def create_smart_array(
         chunks (tuple(int,...) | None):
             Chunk shape for the Zarr array. If None, a reasonable default is chosen
             based on the array shape.
+        name (str | None):
+            Name for the zarr dataset.
 
     Returns:
         np.ndarray | zarr.core.Array:
@@ -1719,17 +1722,22 @@ def create_smart_array(
 
     if fits_in_memory:
         # Allocate in-memory NumPy array
-        arr = np.zeros(shape, dtype=dtype)
-    else:
-        if zarr_path is None:
-            temp_dir = tempfile.mkdtemp(prefix="smartarray_")
-            zarr_path = Path(str(temp_dir)) / "array.zarr"
+        return np.zeros(shape, dtype=dtype)
 
-        # Allocate Zarr array on disk
-        if chunks is None:
-            # Default chunking: try to chunk along spatial dims
-            chunks = (*(min(s, 512) for s in shape[:-1]), shape[-1])
+    if zarr_path is None:
+        temp_dir = tempfile.mkdtemp(prefix="smartarray_")
+        zarr_path = Path(str(temp_dir)) / "array.zarr"
 
-        arr = zarr.open(zarr_path, mode="w", shape=shape, chunks=chunks, dtype=dtype)
+    # Allocate Zarr array on disk
+    if chunks is None:
+        # Default chunking: try to chunk along spatial dims
+        chunks = (*(min(s, 512) for s in shape[:-1]), shape[-1])
 
-    return arr
+    zarr_group = zarr.open(zarr_path, mode="a")
+
+    return zarr_group.create_dataset(
+        name=name,
+        shape=shape,
+        chunks=chunks,
+        dtype=dtype,
+    )

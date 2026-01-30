@@ -1763,6 +1763,7 @@ def _get_sel_indices(
     tile_tl: tuple[int, int],
     inst_dict: dict,
 ) -> tuple[list, list]:
+    """Helper function to retrieve margin lines and selected indices within bounds."""
     m = ioconfig.margin
     w, h = tile_shape
     inst_boxes = [v["box"] for v in inst_dict.values()]
@@ -1943,6 +1944,7 @@ def _create_wsi_info_dict(
                 memory_threshold=memory_threshold,
                 zarr_path=save_path,
                 chunks=post_process_output_["predictions"].shape,
+                name="predictions",
             ),
             "info_dict": {},
         }
