@@ -24,7 +24,7 @@ from tiatoolbox import logger
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.annotation.storage import Annotation
 from tiatoolbox.tools.patchextraction import PatchExtractor
-from tiatoolbox.utils.misc import get_tqdm, make_valid_poly
+from tiatoolbox.utils.misc import create_smart_array, get_tqdm, make_valid_poly
 from tiatoolbox.wsicore.wsireader import is_zarr
 
 from .semantic_segmentor import (
@@ -335,8 +335,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
     def post_process_wsi(  # skipcq: PYL-R0201
         self: MultiTaskSegmentor,
         raw_predictions: dict,
-        save_path: Path,  # noqa: ARG002
-        **kwargs: Unpack[SemanticSegmentorRunParams],  # noqa: ARG002
+        save_path: Path,
+        **kwargs: Unpack[SemanticSegmentorRunParams],
     ) -> dict:
         """Post-process raw patch predictions from inference."""
         probabilities = raw_predictions["probabilities"]
@@ -351,7 +351,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
         if not probabilities_is_zarr:
             post_process_predictions = self.model.postproc_func(probabilities)
         else:
-            post_process_predictions = self._process_tile_mode(probabilities)
+            post_process_predictions = self._process_tile_mode(
+                probabilities,
+                save_path=save_path.with_suffix(".zarr"),
+                memory_threshold=kwargs.get("memory_threshold", 80),
+                return_predictions=kwargs.get("return_predictions", False),
+            )
 
         tasks = set()
         for seg in post_process_predictions:
@@ -376,6 +381,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
     def _process_tile_mode(
         self: MultiTaskSegmentor,
         probabilities: list[da.Array | np.ndarray],
+        save_path: Path,
+        memory_threshold: float = 80,
         *,
         return_predictions: bool = False,
     ) -> list[dict] | None:
@@ -415,6 +422,14 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     post_process_output=post_process_output,
                     wsi_info_dict=wsi_info_dict,
                     wsi_proc_shape=wsi_proc_shape,
+                    save_path=save_path,
+                    memory_threshold=memory_threshold,
+                )
+
+                wsi_info_dict = _update_tile_based_predictions_array(
+                    post_process_output=post_process_output,
+                    wsi_info_dict=wsi_info_dict,
+                    bounds=tile_bounds,
                 )
 
                 inst_dicts = _get_inst_info_dicts(
@@ -1757,19 +1772,78 @@ def _create_wsi_info_dict(
     post_process_output: tuple[dict],
     wsi_info_dict: tuple[dict] | None,
     wsi_proc_shape: tuple[int, ...],
+    save_path: Path,
+    memory_threshold: float = 80,
 ) -> tuple[dict[str, dict[Any, Any] | list[Any] | Any], ...]:
-    """Helper function to create wsi info dict."""
+    """Create or reuse WSI info dictionaries for post-processed outputs.
+
+    This function constructs a tuple of WSI information dictionaries, one for each
+    element in `post_process_output`. If an existing `wsi_info_dict` is provided,
+    it is returned unchanged. Otherwise, a new dictionary is created for each item,
+    containing task metadata, an allocated prediction array (NumPy or Zarr, chosen
+    based on available memory), and an empty `info_dict` for downstream metadata.
+
+    Args:
+        post_process_output (tuple[dict]):
+            A tuple of dictionaries produced by the post-processing step. Each
+            dictionary must contain at least:
+            - "task_type": str
+            - "predictions": array-like with a `.dtype` and `.shape` attribute
+        wsi_info_dict (tuple[dict] | None):
+            Existing WSI info dictionaries. If provided, they are returned as-is.
+        wsi_proc_shape (tuple[int, ...]):
+            The full shape of the WSI-level prediction array to allocate for each
+            output item.
+        save_path (Path):
+            Filesystem path where Zarr arrays will be stored if disk-backed
+            allocation is required.
+        memory_threshold (float, optional):
+            Fraction of available RAM allowed for in-memory allocation. Must be
+            between 0.0 and 100. Defaults to 80.
+
+    Returns:
+        tuple[dict[str, dict[Any, Any] | list[Any] | Any], ...]:
+            A tuple of dictionaries, one per post-processing output. Each dictionary
+            contains:
+            - "task_type": str
+            - "predictions": allocated NumPy or Zarr array.
+            - "info_dict": an empty dictionary for additional metadata.
+
+    """
     if wsi_info_dict is not None:
         return wsi_info_dict
 
     return tuple(
         {
             "task_type": post_process_output_["task_type"],
-            "predictions": da.zeros(
+            "predictions": create_smart_array(
                 shape=wsi_proc_shape,
                 dtype=post_process_output_["predictions"].dtype,
+                memory_threshold=memory_threshold,
+                zarr_path=save_path,
+                chunks=post_process_output_["predictions"].shape,
             ),
             "info_dict": {},
         }
         for post_process_output_ in post_process_output
     )
+
+
+def _update_tile_based_predictions_array(
+    post_process_output: tuple[dict],
+    wsi_info_dict: tuple[dict],
+    bounds: tuple[int, int, int, int],
+) -> tuple[dict]:
+    """Helper function to update tile based predictions array."""
+    x_start, y_start, x_end, y_end = bounds
+
+    for idx, post_process_output_ in enumerate(post_process_output):
+        max_h, max_w = wsi_info_dict[idx]["predictions"].shape
+        x_end, y_end = min(x_end, max_w), min(y_end, max_h)
+        wsi_info_dict[idx]["predictions"][y_start:y_end, x_start:x_end, :] = (
+            post_process_output_["predictions"][
+                0 : y_end - y_start, 0 : x_end - x_start, :
+            ]
+        )
+
+    return wsi_info_dict

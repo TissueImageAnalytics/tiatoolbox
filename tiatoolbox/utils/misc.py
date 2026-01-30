@@ -15,6 +15,7 @@ import dask.array as da
 import joblib
 import numpy as np
 import pandas as pd
+import psutil
 import requests
 import tifffile
 import yaml
@@ -1669,3 +1670,66 @@ def cast_to_min_dtype(array: np.ndarray | da.Array) -> np.ndarray | da.Array:
             return array.astype(dtype)
 
     return array
+
+
+def create_smart_array(
+    shape: tuple[int, ...],
+    dtype: np.dtype | str,
+    memory_threshold: float,
+    zarr_path: str | Path = "array.zarr",
+    chunks: tuple[int, ...] | None = None,
+) -> np.ndarray | zarr.Array:
+    """Allocate a NumPy or Zarr array depending on available memory and a threshold.
+
+    This function estimates the memory required for an array of the given shape and
+    dtype. If the required memory is below the allowed fraction of available RAM
+    (defined by `memory_threshold`), a NumPy array is created in memory. Otherwise,
+    a Zarr array is created on disk. This enables seamless scaling between in-memory
+    and out-of-core workflows.
+
+    Args:
+        shape (tuple(int,...)):
+            Shape of the array to allocate, e.g., (height, width, channels).
+        dtype (np.dtype | str):
+            NumPy dtype or dtype string for the array, e.g., np.float32 or "float32".
+        memory_threshold (float):
+            Fraction of available RAM allowed for this allocation. Must be between
+            0.0 and 100. A value of 100 allows using all available RAM; 0.0 forces
+            Zarr allocation.
+        zarr_path (str | None):
+            Filesystem path where the Zarr array will be created if needed.
+            Defaults to "array.zarr".
+        chunks (tuple(int,...) | None):
+            Chunk shape for the Zarr array. If None, a reasonable default is chosen
+            based on the array shape.
+
+    Returns:
+        np.ndarray | zarr.core.Array:
+            - The allocated array (NumPy or Zarr).
+
+    """
+    # Compute required bytes
+    bytes_needed = np.prod(shape) * np.dtype(dtype).itemsize
+
+    # Available memory
+    available = psutil.virtual_memory().available
+    allowed = available * (memory_threshold / 100.0)
+
+    fits_in_memory = bytes_needed <= allowed
+
+    if fits_in_memory:
+        # Allocate in-memory NumPy array
+        arr = np.zeros(shape, dtype=dtype)
+    else:
+        if zarr_path is None:
+            temp_dir = tempfile.mkdtemp(prefix="smartarray_")
+            zarr_path = Path(str(temp_dir)) / "array.zarr"
+
+        # Allocate Zarr array on disk
+        if chunks is None:
+            # Default chunking: try to chunk along spatial dims
+            chunks = (*(min(s, 512) for s in shape[:-1]), shape[-1])
+
+        arr = zarr.open(zarr_path, mode="w", shape=shape, chunks=chunks, dtype=dtype)
+
+    return arr
