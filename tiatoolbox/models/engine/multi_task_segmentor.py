@@ -395,13 +395,17 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 probabilities_is_zarr = True
                 break
 
+        return_predictions = kwargs.get("return_predictions")
         # If dask array can fit in memory process without tiling.
         # This ignores post-processing tile size even if it is smaller.
         if not probabilities_is_zarr:
-            post_process_predictions = self.model.postproc_func(probabilities)
+            post_process_predictions = self._process_full_wsi(
+                probabilities=probabilities,
+                return_predictions=return_predictions,
+            )
         else:
             post_process_predictions = self._process_tile_mode(
-                probabilities,
+                probabilities=probabilities,
                 save_path=save_path.with_suffix(".zarr"),
                 memory_threshold=kwargs.get("memory_threshold", 80),
                 return_predictions=kwargs.get("return_predictions"),
@@ -426,6 +430,20 @@ class MultiTaskSegmentor(SemanticSegmentor):
         self.tasks = tasks
 
         return raw_predictions
+
+    def _process_full_wsi(
+        self: MultiTaskSegmentor,
+        probabilities: list[da.Array | np.ndarray],
+        *,
+        return_predictions: tuple[bool, ...] | None = None,
+    ) -> list[dict] | None:
+        """Helper function to post process WSI when it can fit in memory."""
+        post_process_predictions = self.model.postproc_func(probabilities)
+        if return_predictions is None:
+            return_predictions = [False for _ in post_process_predictions]
+        for idx, return_predictions_ in enumerate(return_predictions):
+            if not return_predictions_:
+                del post_process_predictions[idx]["predictions"]
 
     def _process_tile_mode(
         self: MultiTaskSegmentor,
@@ -1847,6 +1865,9 @@ def _create_wsi_info_dict(
         save_path (Path):
             Filesystem path where Zarr arrays will be stored if disk-backed
             allocation is required.
+        return_predictions (tuple[bool, ...]):
+            Whether to return predictions for individual tasks. Default is None,
+            which returns no predictions.
         memory_threshold (float, optional):
             Fraction of available RAM allowed for in-memory allocation. Must be
             between 0.0 and 100. Defaults to 80.
@@ -1865,13 +1886,13 @@ def _create_wsi_info_dict(
 
     # Convert to tuple for each task
     if return_predictions is None:
-        return_predictions = [None for _ in post_process_output]
+        return_predictions = [False for _ in post_process_output]
 
     return tuple(
         {
             "task_type": post_process_output_["task_type"],
             "predictions": None
-            if return_predictions[idx] is None
+            if not return_predictions[idx]
             else create_smart_array(
                 shape=wsi_proc_shape,
                 dtype=post_process_output_["predictions"].dtype,

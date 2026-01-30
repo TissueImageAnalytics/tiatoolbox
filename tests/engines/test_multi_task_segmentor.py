@@ -300,19 +300,21 @@ def test_wsi_mtsegmentor_zarr(
         batch_size=2,
         output_type="zarr",
         ioconfig=ioconfig,
+        return_predictions=(True, True),  # True for both tasks.
     )
 
-    output_ = zarr.open(output_full[wsi4_1k_1k_svs], mode="r")
-    assert 37 < np.mean(output_["nuclei_segmentation"]["predictions"][:]) < 41
-    assert 0.87 < np.mean(output_["layer_segmentation"]["predictions"][:]) < 0.91
-    assert "probabilities" not in output_
-    assert "canvas" not in output_["nuclei_segmentation"]
-    assert "count" not in output_["nuclei_segmentation"]
-    assert "canvas" not in output_["layer_segmentation"]
-    assert "count" not in output_["layer_segmentation"]
+    output_full_ = zarr.open(output_full[wsi4_1k_1k_svs], mode="r")
+    assert 37 < np.mean(output_full_["nuclei_segmentation"]["predictions"][:]) < 41
+    assert 0.50 < np.mean(output_full_["layer_segmentation"]["predictions"][:]) < 0.54
+    assert "probabilities" not in output_full_
+    assert "canvas" not in output_full_["nuclei_segmentation"]
+    assert "count" not in output_full_["nuclei_segmentation"]
+    assert "canvas" not in output_full_["layer_segmentation"]
+    assert "count" not in output_full_["layer_segmentation"]
 
     # Redefine tile size to force tile-based processing.
     ioconfig.tile_shape = (512, 512)
+    mtsegmentor.drop_keys = []
 
     # Return Probabilities is False
     output_tile = mtsegmentor.run(
@@ -334,7 +336,25 @@ def test_wsi_mtsegmentor_zarr(
         return_predictions=(False, True),
     )
 
-    _ = zarr.open(output_tile[wsi4_1k_1k_svs], mode="r")
+    output_tile_ = zarr.open(output_tile[wsi4_1k_1k_svs], mode="r")
+    assert "predictions" not in output_tile_["nuclei_segmentation"]
+    assert 0.87 < np.mean(output_tile_["layer_segmentation"]["predictions"][:]) < 0.91
+    predictions_tile = output_tile_["layer_segmentation"]["predictions"]
+    # Full predictions are usually larger in size with extra padding as it's faster to
+    # process full arrays if they can be divided into rectangular chunks in dask/zarr
+    predictions_full = output_full_["layer_segmentation"]["predictions"][
+        0 : predictions_tile.shape[0], 0 : predictions_tile.shape[1]
+    ]
+    overlap_pct = np.mean(predictions_full == predictions_tile) * 100
+    assert overlap_pct > 99
+    assert len(output_full_["layer_segmentation"]["contours"]) == len(
+        output_tile_["layer_segmentation"]["contours"]
+    )
+    assert (
+        len(output_tile_["nuclei_segmentation"]["contours"])
+        / len(output_full_["nuclei_segmentation"]["contours"])
+        > 0.9
+    )
     wsi4_1k_1k_svs.unlink()
 
 
@@ -371,6 +391,7 @@ def test_multi_input_wsi_mtsegmentor_zarr(
         output_type="zarr",
         stride_shape=(160, 160),
         verbose=True,
+        return_predictions=(True,),
     )
 
     output_ = zarr.open(output[wsi4_512_512_svs], mode="r")
