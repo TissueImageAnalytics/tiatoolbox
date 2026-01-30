@@ -1848,30 +1848,74 @@ def prepare_multitask_full_batch(
     *,
     is_last: bool,
 ) -> tuple[list[np.ndarray], np.ndarray, np.ndarray]:
-    """Prepare full-sized output and count arrays for a batch of patch predictions.
+    """Align patch predictions to the global output index and pad to cover gaps.
 
-    This function aligns patch-level predictions with global output locations when
-    a mask (e.g., auto_get_mask) is applied. It initializes full-sized arrays and
-    fills them using matched indices. If the batch is the last in the sequence,
-    it pads the arrays to cover remaining locations.
+    This helper prepares a *full-sized* set of outputs for the current batch by
+    aligning patch-level predictions with the remaining global output locations.
+    It uses the provided `full_output_locs` (the outstanding locations yet to be
+    filled) to place each patch's predictions at the correct indices, returning
+    arrays sized to the current span. If this is the final batch (`is_last=True`),
+    it pads the arrays with zeros to cover any remaining, unmatched output
+    locations and appends those locations to `output_locs`.
+
+    Concretely:
+      1) A lookup is built over `full_output_locs` so each row in `batch_locs`
+         maps to a unique index (“match”).
+      2) For each head in `batch_output`, an appropriately sized zero-initialized
+         array is created and the matched batch predictions are placed at the
+         computed indices.
+      3) `output_locs` is extended by the portion of `full_output_locs` covered
+         in this call; `full_output_locs` is advanced accordingly.
+      4) If `is_last=True`, the function also appends any remaining locations to
+         `output_locs` and pads the per-head arrays with zeros so their first
+         dimension matches the updated number of locations.
 
     Args:
-        batch_output (np.ndarray):
-            Patch-level model predictions of shape (N, H, W, C).
+        batch_output (tuple[np.ndarray]):
+            Tuple of per-head patch predictions for the current batch. Each
+            element has shape ``(N, H, W, C)`` (head-specific), where ``N`` is
+            the number of patches in the batch.
         batch_locs (np.ndarray):
-            Output locations corresponding to `batch_output`.
+            Array of output locations (e.g., patch output boxes) corresponding
+            to `batch_output`. Each row must uniquely identify a location and
+            match rows in `full_output_locs`.
         full_output_locs (np.ndarray):
-            Remaining global output locations to be matched.
+            The remaining global output location array, carrying the canonical
+            order of all locations that should be filled. This is progressively
+            consumed from the front as batches are placed.
         output_locs (np.ndarray):
-            Accumulated output location array across batches.
+            Accumulated output location array across previous batches. This is
+            extended in-place with the portion of `full_output_locs` filled in
+            this call, and with any remaining tail (zeros padded in outputs)
+            when `is_last=True`.
         is_last (bool):
-            Flag indicating whether this is the final batch.
+            Whether this is the final batch. When True, any locations left in
+            `full_output_locs` after placing matches are appended to
+            `output_locs`, and the per-head output arrays are padded with zeros
+            to match the total number of output locations.
 
     Returns:
         tuple[list[np.ndarray], np.ndarray, np.ndarray]:
-            - full_batch_output: Full-sized output array with predictions placed.
-            - full_output_locs: Updated remaining global output locations.
-            - output_locs: Updated accumulated output locations.
+            - full_batch_output (list[np.ndarray]):
+              One array per head containing the aligned outputs for this call.
+              Each has shape ``(M, H, W, C)``, where ``M`` is the number of
+              locations consumed (and possibly padded to include the remaining
+              tail when `is_last=True`).
+            - full_output_locs (np.ndarray):
+              Updated remaining global output locations (the unconsumed tail).
+            - output_locs (np.ndarray):
+              Updated accumulated output locations including those added by
+              this call (and any final tail when `is_last=True`).
+
+    Notes:
+        - Ordering is defined by `full_output_locs`. The number of rows
+          consumed during this call equals ``max(match_indices) + 1``.
+        - Padding on the last batch is performed with zeros of the same dtype
+          as each head's predictions (uint8 for the padded section in the
+          implementation).
+        - This function is agnostic to the semantic meaning of locations; it
+          only ensures that per-head arrays and the accumulated location index
+          remain consistent across batches.
 
     """
     # Use np.intersect1d once numpy version is upgraded to 2.0
@@ -1919,7 +1963,87 @@ def merge_multitask_horizontal(
     output_locs: np.ndarray,
     change_indices: np.ndarray | list[int],
 ) -> tuple[list[da.Array], list[da.Array], list[np.ndarray], np.ndarray, np.ndarray]:
-    """Merge horizontal patches incrementally for each row of patches."""
+    """Merge horizontally a run of patch outputs into per-head row blocks.
+
+    This helper performs **row-wise stitching** of patch predictions for
+    multitask heads. It consumes the leftmost segment of ``canvas_np`` (per head)
+    up to each index in ``change_indices``—which mark where the dataloader
+    advanced to a new row of output patches—and merges that segment into a
+    horizontally concatenated row block for each head. The merged blocks and
+    their per-pixel hit counts are appended to ``canvas`` and ``count`` (as
+    Dask arrays with chunking equal to the merged row height), while the consumed
+    portion is removed from ``canvas_np``. The function also updates and returns
+    ``output_locs`` (with the consumed locations removed) and accumulates the
+    vertical extents of each merged row in ``output_locs_y_``.
+
+    For each row segment:
+      1) The function determines the row's horizontal span from
+         ``output_locs`` (min x0, max x1).
+      2) For each head, it calls ``merge_batch_to_canvas`` to place the segment's
+         patch outputs into a contiguous row block and an aligned count map.
+      3) The row block and count map are wrapped as Dask arrays and appended to
+         the running lists in ``canvas`` and ``count`` (one list per head).
+      4) The segment is removed from ``canvas_np`` and ``output_locs``; the
+         segment's vertical bounds ``(y0, y1)`` are appended to ``output_locs_y_``.
+
+    Args:
+        canvas (list[da.Array] | list[None]):
+            Accumulated per-head row blocks (probability/logit sums) as Dask
+            arrays. Each entry grows along the first axis with each merged row.
+            Pass ``None`` for each head on the first call.
+        count (list[da.Array] | list[None]):
+            Accumulated per-head row count maps, aligned with ``canvas``.
+            Pass ``None`` for each head on the first call.
+        output_locs_y_ (np.ndarray):
+            Accumulated vertical extents of already-merged rows. Each appended
+            element is ``[y0, y1]`` corresponding to the merged row's span.
+            Pass ``None`` on the first call; it will be initialized internally
+            via concatenation.
+        canvas_np (list[np.ndarray]):
+            In-memory patch outputs awaiting merge, one list entry per head.
+            Each head's entry is a NumPy array of stacked patch outputs for the
+            **current** unmerged part of the row, with shape
+            ``(N_seg, H, W, C)`` for the segment being merged.
+        output_locs (np.ndarray):
+            Output placement boxes for the awaiting patches in ``canvas_np``,
+            shaped ``(N_pending, 4)`` as ``[x0, y0, x1, y1]``. The function
+            consumes from the front up to each ``change_indices`` boundary and
+            returns the remaining tail.
+        change_indices (np.ndarray | list[int]):
+            Sorted indices (relative to the current ``output_locs``) where a
+            **row change** occurs. Each index marks the end of a contiguous row
+            segment to be merged in this call.
+
+    Returns:
+        tuple[list[da.Array], list[da.Array], list[np.ndarray], np.ndarray, np.ndarray]:
+            - ``canvas``:
+              Updated list of per-head Dask arrays containing concatenated row
+              blocks (values are sums; normalization happens later).
+            - ``count``:
+              Updated list of per-head Dask arrays containing concatenated row
+              hit counts for normalization.
+            - ``canvas_np``:
+              Updated in-memory per-head arrays with consumed segment removed.
+            - ``output_locs``:
+              Updated placement boxes with the consumed segment removed.
+            - ``output_locs_y_``:
+              Updated array of accumulated vertical row extents, with the new
+              row's ``[y0, y1]`` appended.
+
+    Notes:
+        - The merged row block shape per head is
+          ``(row_height, row_width, C)``, where:
+            * ``row_height`` is the head's patch output height,
+            * ``row_width`` is ``max(x1) - min(x0)`` for the row,
+            * ``C`` is the number of channels for that head.
+        - ``merge_batch_to_canvas`` handles placement and accumulation of
+          overlapping patch outputs and produces a matching count map.
+        - Normalization (division by counts) is **not** performed here; it is
+          done later during vertical merging to form the final probability maps.
+        - Dask chunking is set to the full row height to facilitate subsequent
+          vertical concatenation and overlap handling.
+
+    """
     start_idx = 0
     for c_idx in change_indices:
         output_locs_ = output_locs[: c_idx - start_idx]
@@ -1962,7 +2086,60 @@ def save_multitask_to_cache(
     count_zarr: list[zarr.Array | None],
     save_path: str | Path = "temp.zarr",
 ) -> tuple[list[zarr.Array], list[zarr.Array]]:
-    """Save computed canvas and count list of arrays to Zarr cache."""
+    """Write accumulated horizontal row blocks to a Zarr cache on disk.
+
+    This function is called when intermediate per-head accumulators
+    (``canvas`` and ``count``) become large enough to risk exceeding the
+    memory threshold. It computes the current Dask arrays for each head,
+    writes them to Zarr datasets under ``save_path``, and updates
+    ``canvas_zarr`` / ``count_zarr`` so later merges operate directly on
+    Zarr-backed arrays rather than holding everything in memory.
+
+    For each head:
+      1) The corresponding ``canvas`` and ``count`` Dask arrays are fully
+         computed.
+      2) If this is the first time spilling for that head, new Zarr datasets
+         are created using chunk shapes consistent with the canvas rows.
+      3) The computed rows are appended to the Zarr datasets by resizing the
+         arrays and writing the new rows at the end.
+      4) The updated Zarr arrays are returned to be wrapped by Dask in later
+         steps.
+
+    Args:
+        canvas (list[da.Array]):
+            Accumulated per-head row blocks (probability/logit sums). Each
+            head's entry has shape ``(N_rows, H, W, C)`` where ``N_rows`` grows
+            as horizontal rows are merged.
+        count (list[da.Array]):
+            Accumulated per-head row hit counts aligned with ``canvas``,
+            with matching shape and chunking.
+        canvas_zarr (list[zarr.Array | None]):
+            List of Zarr datasets for storing accumulated ``canvas`` values
+            per head. ``None`` entries indicate that no Zarr datasets have
+            been created yet for those heads.
+        count_zarr (list[zarr.Array | None]):
+            List of Zarr datasets mirroring ``canvas_zarr`` but storing hit
+            counts instead of accumulated values.
+        save_path (str | Path):
+            Path to the Zarr group used for caching. A new group is created
+            if needed on the first spill.
+
+    Returns:
+        tuple[list[zarr.Array], list[zarr.Array]]:
+            Updated ``canvas_zarr`` and ``count_zarr`` lists, where each head
+            now has a Zarr dataset containing all accumulated rows up to this
+            point.
+
+    Notes:
+        - Chunking for the Zarr datasets follows the Dask chunk size along
+          the row axis to allow efficient later vertical merging.
+        - This function does **not** normalize probabilities; normalization
+          happens in the final vertical merge via
+          ``merge_multitask_vertical_chunkwise``.
+        - After spilling, upstream functions will reset in-memory ``canvas``
+          and ``count`` to free RAM and continue populating new entries.
+
+    """
     zarr_group = None
     for idx, canvas_ in enumerate(canvas):
         computed_values = compute(*[canvas_, count[idx]])
@@ -2016,7 +2193,71 @@ def merge_multitask_vertical_chunkwise(
     save_path: Path,
     memory_threshold: int = 80,
 ) -> list[da.Array]:
-    """Merge vertically chunked arrays into a single probability map."""
+    """Merge horizontally stitched row blocks into final WSI probability maps.
+
+    After horizontal stitching, each head has a stack of row blocks (values) and
+    matching row-wise count maps. This function merges those rows **vertically**,
+    resolving overlaps between adjacent rows using the provided `output_locs_y_`
+    spans. For each head and row boundary, overlapping rows are summed in the
+    overlap region, then normalized by the corresponding summed counts. The
+    normalized row is appended to a Zarr-backed or Dask-backed accumulator to
+    build the final full-height probability map.
+
+    Concretely, for each head:
+      1) Iterate across row boundaries using `output_locs_y_`, compute overlap height.
+      2) If there is an overlap with the next row, add overlapping slices from
+         the next row's canvas and count into the tail of the current row.
+      3) Normalize the current row by its count map (with zero-division guarded).
+      4) Append normalized rows to Zarr (or keep in-memory) via `store_probabilities`.
+      5) Periodically spill in-memory arrays to Zarr when memory exceeds
+         `memory_threshold` (via `_save_multitask_vertical_to_cache`).
+      6) After processing all rows, clear temporary Zarr datasets for canvas/count
+         and return a Dask view (from Zarr if spilled, otherwise from memory).
+
+    Args:
+        canvas (list[da.Array]):
+            Per-head Dask arrays of horizontally merged **row blocks** (sums).
+            For each head `h`, `canvas[h]` has shape
+            `(N_rows, row_height, row_width, C)`, chunked along the row axis.
+        count (list[da.Array]):
+            Per-head Dask arrays of **row-wise hit counts** matching `canvas`.
+        output_locs_y_ (np.ndarray):
+            Array of shape `(N_rows, 2)` where each row is `[y0, y1]` indicating
+            the vertical extent of the corresponding row block in slide
+            coordinates. Overlaps are computed as `prev_y1 - next_y0`.
+        zarr_group (zarr.Group):
+            Zarr group used to create/append the per-head probability datasets
+            (under `"probabilities/{idx}"`) and to clear temporary `"canvas"` and
+            `"count"` datasets after finalization.
+        save_path (Path):
+            Base path of the Zarr store (used when spilling additional data and
+            when returning Zarr-backed Dask arrays).
+        memory_threshold (int):
+            Maximum allowed RAM usage (percentage) before converting in-memory
+            probability accumulators to Zarr-backed arrays. Default is 80.
+
+    Returns:
+        list[da.Array]:
+            One Dask array per head, each representing the **final** WSI-sized
+            probability map with shape `(H, W, C)`. If spilling occurred, these
+            are backed by Zarr datasets created under `zarr_group`; otherwise
+            they are in-memory Dask arrays.
+
+    Notes:
+        - Overlaps along the vertical direction are handled by **additive merge**
+          of both values and counts, followed by normalization. Non-overlapping
+          regions are passed through unchanged.
+        - Zero counts are guarded by replacing with 1 during normalization to
+          avoid division by zero; this is safe because values are zero where
+          counts are zero.
+        - Chunking along the first axis (row blocks) is preserved to facilitate
+          incremental appends and memory spill; final arrays are exposed with
+          appropriate Dask chunking for downstream use.
+        - Temporary row-level `"canvas/*"` and `"count/*"` datasets are deleted
+          before returning when Zarr-backed accumulators are used (see
+          `_clear_zarr`).
+
+    """
     y0s, y1s = np.unique(output_locs_y_[:, 0]), np.unique(output_locs_y_[:, 1])
     overlaps = np.append(y1s[:-1] - y0s[1:], 0)
 
@@ -2464,6 +2705,7 @@ def _get_margin_lines(
     width: int,
     tile_tl: tuple[int, int],
 ) -> list:
+    """Helper function to get margin lines."""
     # ! this is wrt to WSI coord space, not tile
     margin_lines = [
         [[margin, margin], [width - margin, margin]],  # top egde
