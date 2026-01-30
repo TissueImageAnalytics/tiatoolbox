@@ -98,7 +98,106 @@ class MultiTaskSegmentorRunParams(SemanticSegmentorRunParams, total=False):
 
 
 class MultiTaskSegmentor(SemanticSegmentor):
-    """A multitask segmentation engine for models like hovernet and hovernetplus."""
+    """MultiTask segmentation engine to run models like hovernet and hovernetplus.
+
+    MultiTaskSegmentor performs segmentation across multiple model heads
+    (e.g., semantic, instance, edge). It abstracts model invocation,
+    preprocessing, and output postprocessing for multi-head segmentation.
+
+    Args:
+        model (str | ModelABC):
+            A PyTorch model instance or name of a pretrained model from TIAToolbox.
+            The user can request pretrained models from the toolbox model zoo using
+            the list of pretrained models available at this `link
+            <https://tia-toolbox.readthedocs.io/en/latest/pretrained.html>`_
+            By default, the corresponding pretrained weights will also
+            be downloaded. However, you can override with your own set
+            of weights using the `weights` parameter. Default is `None`.
+        batch_size (int):
+            Number of image patches processed per forward pass. Default is 8.
+        num_workers (int):
+            Number of workers for data loading. Default is 0.
+        weights (str | Path | None):
+            Path to model weights. If None, default weights are used.
+
+            >>> engine = SemanticSegmentor(
+            ...    model="pretrained-model",
+            ...    weights="/path/to/pretrained-local-weights.pth"
+            ... )
+
+        device (str):
+            Device to run the model on (e.g., "cpu", "cuda"). Default is "cpu".
+        verbose (bool):
+            Whether to enable verbose logging. Default is True.
+
+    Attributes:
+        images (list[str | Path] | np.ndarray):
+            Input image patches or WSI paths.
+        masks (list[str | Path] | np.ndarray):
+            Optional tissue masks for WSI processing.
+            These are only utilized when patch_mode is False.
+            If not provided, then a tissue mask will be automatically
+            generated for whole slide images.
+        patch_mode (bool):
+            Whether input is treated as patches (`True`) or WSIs (`False`).
+        model (ModelABC):
+            Loaded PyTorch model.
+        ioconfig (ModelIOConfigABC):
+            IO configuration for patch extraction and resolution.
+        return_labels (bool):
+            Whether to include labels in the output.
+        input_resolutions (list[dict]):
+            Resolution settings for model input. Supported
+            units are `level`, `power` and `mpp`. Keys should be "units" and
+            "resolution" e.g., [{"units": "mpp", "resolution": 0.25}]. Please see
+            :class:`WSIReader` for details.
+        patch_input_shape (tuple[int, int]):
+            Shape of input patches (height, width). Patches are at
+            requested read resolution, not with respect to level 0,
+            and must be positive.
+        stride_shape (tuple[int, int]):
+            Stride used during patch extraction. Stride is
+            at requested read resolution, not with respect to
+            level 0, and must be positive. If not provided,
+            `stride_shape=patch_input_shape`.
+        labels (list | None):
+            Optional labels for input images.
+            Only a single label per image is supported.
+        drop_keys (list):
+            Keys to exclude from model output.
+        output_type (str):
+            Format of output ("dict", "zarr", "annotationstore").
+        output_locations (list | None):
+            Coordinates of output patches used during WSI processing.
+
+    Examples:
+    >>> # list of 2 image patches as input
+    >>> wsis = ['path/img.svs', 'path/img.svs']
+    >>> mtsegmentor = MultiTaskSegmentor(model="hovernetplus-oed")
+    >>> output = mtsegmentor.run(wsis, patch_mode=False)
+
+    >>> # array of list of 2 image patches as input
+    >>> image_patches = [np.ndarray, np.ndarray]
+    >>> mtsegmentor = MultiTaskSegmentor(model="hovernetplus-oed")
+    >>> output = mtsegmentor.run(image_patches, patch_mode=True)
+
+    >>> # list of 2 image patch files as input
+    >>> data = ['path/img.png', 'path/img.png']
+    >>> mtsegmentor = MultiTaskSegmentor(model="hovernet_fast-pannuke")
+    >>> output = mtsegmentor.run(data, patch_mode=False)
+
+    >>> # list of 2 image tile files as input
+    >>> tile_file = ['path/tile1.png', 'path/tile2.png']
+    >>> mtsegmentor = MultiTaskSegmentor(model="hovernet_fast-pannuke")
+    >>> output = mtsegmentor.run(tile_file, patch_mode=False)
+
+    >>> # list of 2 wsi files as input
+    >>> wsis = ['path/wsi1.svs', 'path/wsi2.svs']
+    >>> mtsegmentor = MultiTaskSegmentor(model="hovernet_fast-pannuke")
+    >>> output = mtsegmentor.run(wsis, patch_mode=False)
+
+
+    """
 
     def __init__(
         self: MultiTaskSegmentor,
@@ -110,7 +209,25 @@ class MultiTaskSegmentor(SemanticSegmentor):
         device: str = "cpu",
         verbose: bool = True,
     ) -> None:
-        """Initialize :class:`NucleusInstanceSegmentor`."""
+        """Initialize :class:`MultiTaskSegmentor`.
+
+        Args:
+            model (str | ModelABC):
+                A PyTorch model instance or name of a pretrained model from TIAToolbox.
+                If a string is provided, the corresponding pretrained weights will be
+                downloaded unless overridden via `weights`.
+            batch_size (int):
+                Number of image patches processed per forward pass. Default is 8.
+            num_workers (int):
+                Number of workers for data loading. Default is 0.
+            weights (str | Path | None):
+                Path to model weights. If None, default weights are used.
+            device (str):
+                Device to run the model on (e.g., "cpu", "cuda"). Default is "cpu".
+            verbose (bool):
+                Whether to enable verbose logging. Default is True.
+
+        """
         self.tasks = set()
         super().__init__(
             model=model,
@@ -127,26 +244,40 @@ class MultiTaskSegmentor(SemanticSegmentor):
         *,
         return_coordinates: bool = False,
     ) -> dict[str, list[da.Array]]:
-        """Run model inference on image patches and return predictions.
+        """Run inference on a batch of image patches using the multitask model.
 
-        This method performs batched inference using a PyTorch DataLoader,
-        and accumulates predictions in Dask arrays. It supports optional inclusion
-        of coordinates and labels in the output.
+        This method processes patches provided by a PyTorch ``DataLoader`` and runs
+        them through the model's ``infer_batch`` method. Models with multiple heads
+        (e.g., semantic, instance, edge) may return multiple outputs per patch.
+        Outputs are collected as Dask arrays for efficient large-scale aggregation.
 
         Args:
             dataloader (DataLoader):
-                PyTorch DataLoader containing image patches for inference.
+                A PyTorch dataloader that yields dicts containing ``"image"`` tensors
+                and optionally other metadata (e.g., coordinates).
             return_coordinates (bool):
-                Whether to include coordinates in the output. Required when
-                called by `infer_wsi` and `patch_mode` is False.
+                Whether to return the spatial coordinates associated with each patch
+                (when available from the dataset). Default is False.
 
         Returns:
-            dict[str, dask.array.Array]:
-                Dictionary containing prediction results as Dask arrays.
-                Keys include:
-                    - "probabilities": Model output probabilities.
-                    - "coordinates": Patch coordinates (if `return_coordinates` is
-                      True).
+            dict[str, list[da.Array]]:
+                A dictionary containing the model outputs for all patches.
+
+                Keys:
+                    probabilities (list[da.Array]):
+                        A list of Dask arrays containing model outputs for each head.
+                        Each array has shape ``(N, C, H, W)`` depending on the model.
+                    coordinates (da.Array):
+                        Returned only when ``return_coordinates=True``.
+                        A Dask array of shape ``(N, 2)`` or ``(N, 4)`` depending on
+                        how patch coordinates are stored in the dataset.
+
+        Notes:
+            - The number of model outputs (heads) is inferred dynamically from the
+              first forward pass.
+            - Outputs are stacked via ``dask.array.concatenate`` for scalability.
+            - This method does not perform postprocessing; raw logits/probabilities
+              are returned exactly as produced by the model.
 
         """
         keys = ["probabilities"]
