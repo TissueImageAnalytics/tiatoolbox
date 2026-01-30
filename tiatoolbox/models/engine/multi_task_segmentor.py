@@ -1436,20 +1436,44 @@ class MultiTaskSegmentor(SemanticSegmentor):
     ) -> dict | AnnotationStore | Path | list[Path]:
         """Save model predictions to disk or return them in memory.
 
-        Depending on the output type, this method saves predictions as a zarr group,
-        an AnnotationStore (SQLite database), or returns them as a dictionary.
+        Depending on ``output_type``, this method either:
+          - returns a Python dictionary (``"dict"``),
+          - writes a Zarr group to disk and returns the path (``"zarr"``), or
+          - writes one or more SQLite-backed AnnotationStore ``.db`` files and
+            returns the resulting path(s) (``"annotationstore"``).
+
+        For multitask outputs, this function also:
+          - Preserves task separation when saving to Zarr (one group per task).
+          - Optionally saves raw probability maps if ``return_probabilities=True``
+            (as Zarr only; probabilities cannot be written to AnnotationStore).
+          - Merges per-task keys for saving to AnnotationStore, including optional
+            coordinates to establish slide origin.
 
         Args:
             processed_predictions (dict):
-                Dictionary containing processed model predictions.
+                Task-organized dictionary produced by post-processing (e.g. from
+                ``post_process_patches`` or ``post_process_wsi``). For multitask
+                models this typically includes:
+                    - ``"probabilities"`` (optional): list[da.Array] of WSI maps,
+                      present if preserved for saving.
+                    - Per-task sub-dicts (e.g., ``"semantic"``, ``"instance"``),
+                      each containing task-specific arrays/metadata such as
+                      ``"predictions"``, ``"info_dict"``, etc.
+                    - ``"coordinates"`` (optional): Dask/NumPy array used to set
+                      spatial origin when saving vector outputs.
             output_type (str):
-                Desired output format.
-                Supported values are "dict", "zarr", and "annotationstore".
+                Desired output format. Supported values are:
+                ``"dict"``, ``"zarr"``, or ``"annotationstore"`` (case-sensitive).
             save_path (Path | None):
-                Path to save the output file.
-                Required for "zarr" and "annotationstore" formats.
-            **kwargs (EngineABCRunParams):
-                Additional runtime parameters to update engine attributes.
+                Base filesystem path for file outputs. Required for
+                ``"zarr"`` and ``"annotationstore"``. For Zarr, a
+                ``save_path.with_suffix(".zarr")`` group is used. For
+                AnnotationStore, ``.db`` files are written (one per image in
+                patch mode, one per WSI in WSI mode). Ignored when
+                ``output_type="dict"``.
+            **kwargs (MultiTaskSegmentorRunParams):
+                Additional runtime parameters to configure segmentation.
+
                 Optional Keys:
                     auto_get_mask (bool):
                         Automatically generate segmentation masks using
@@ -1460,34 +1484,62 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         Mapping of classification outputs to class names.
                     device (str):
                         Device to run the model on (e.g., "cpu", "cuda").
-                        See :class:`torch.device` for more details.
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
                         Number of workers for DataLoader and post-processing.
                     output_file (str):
-                        Filename for saving output (e.g., "zarr" or "annotationstore").
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    output_resolutions (Resolution):
+                        Resolution used for writing output predictions.
+                    patch_output_shape (tuple[int, int]):
+                        Shape of output patches (height, width).
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_predictions (tuple(bool, ...):
+                        Whether to return array predictions for individual tasks.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities.
                     scale_factor (tuple[float, float]):
                         Scale factor for annotations (model_mpp / slide_mpp).
-                        Used to convert coordinates from non-baseline to baseline
-                        resolution.
-                    stride_shape (IntPair):
-                        Stride used during WSI processing, at requested read resolution.
-                        Must be positive. Defaults to `patch_input_shape` if not
-                        provided.
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
                     verbose (bool):
                         Whether to enable verbose logging.
 
         Returns:
-            dict | AnnotationStore | Path | list [Path]:
-                - If output_type is "dict": returns predictions as a dictionary.
-                - If output_type is "zarr": returns path to saved zarr file.
-                - If output_type is "annotationstore": returns an AnnotationStore
-                  or path to .db file.
+            dict | AnnotationStore | Path | list[Path]:
+                - If ``output_type == "dict"``:
+                    Returns the (possibly simplified) prediction dictionary.
+                    For a single task, the task level is flattened.
+                - If ``output_type == "zarr"``:
+                    Returns the ``Path`` to the saved ``.zarr`` group.
+                - If ``output_type == "annotationstore"``:
+                    Returns a list of paths to saved ``.db`` files (patch mode),
+                    or a single path / store handle for WSI mode. If probability
+                    maps were requested for saving, the Zarr path holding those
+                    maps may also be included.
 
         Raises:
             TypeError:
-                If an unsupported output_type is provided.
+                If an unsupported ``output_type`` is provided.
+
+        Notes:
+            - For ``"dict"`` and ``"zarr"``, saving is delegated to
+              ``_save_predictions_as_dict_zarr`` to keep behavior aligned across
+              engines.
+            - When ``output_type == "annotationstore"``, arrays are first computed
+              (via a Zarr/dict pass) to obtain concrete NumPy payloads suitable
+              for vector export, after which per-task stores are written using
+              ``_save_predictions_as_annotationstore``.
+            - If ``return_probabilities=True``, probability maps are written only
+              to Zarr, never to AnnotationStore. A guidance message is logged
+              describing how to visualize heatmaps (e.g., converting to OME-TIFF).
 
         """
         if output_type in ["dict", "zarr"]:
@@ -1569,7 +1621,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         output_type: str = "dict",
         **kwargs: Unpack[MultiTaskSegmentorRunParams],
     ) -> AnnotationStore | Path | str | dict | list[Path]:
-        """Run the semantic segmentation engine on input images.
+        """Run the `MultiTaskSegmentor` engine on input images.
 
         This method orchestrates the full inference pipeline, including preprocessing,
         model inference, post-processing, and saving results. It supports both
@@ -1614,7 +1666,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         Mapping of classification outputs to class names.
                     device (str):
                         Device to run the model on (e.g., "cpu", "cuda").
-
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
                     num_workers (int):
@@ -1626,7 +1680,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     patch_output_shape (tuple[int, int]):
                         Shape of output patches (height, width).
                     return_labels (bool):
-                        Whether to return labels with predictions. Should be False.
+                        Whether to return labels with predictions.
+                    return_predictions (tuple(bool, ...):
+                        Whether to return array predictions for individual tasks.
                     return_probabilities (bool):
                         Whether to return per-class probabilities.
                     scale_factor (tuple[float, float]):
@@ -1647,12 +1703,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
         Examples:
             >>> wsis = ['wsi1.svs', 'wsi2.svs']
             >>> image_patches = [np.ndarray, np.ndarray]
-            >>> segmentor = SemanticSegmentor(model="fcn-tissue_mask")
-            >>> output = segmentor.run(image_patches, patch_mode=True)
+            >>> mtsegmentor = MultiTaskSegmentor(model="hovernet_fast-pannuke")
+            >>> output = mtsegmentor.run(image_patches, patch_mode=True)
             >>> output
             ... "/path/to/Output.db"
 
-            >>> output = segmentor.run(
+            >>> output = mtsegmentor.run(
             ...     image_patches,
             ...     patch_mode=True,
             ...     output_type="zarr"
@@ -1660,7 +1716,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             >>> output
             ... "/path/to/Output.zarr"
 
-            >>> output = segmentor.run(wsis, patch_mode=False)
+            >>> output = mtsegmentor.run(wsis, patch_mode=False)
             >>> output.keys()
             ... ['wsi1.svs', 'wsi2.svs']
             >>> output['wsi1.svs']
@@ -1697,7 +1753,60 @@ def dict_to_store(
     origin: tuple[float, float] = (0, 0),
     scale_factor: tuple[float, float] = (1, 1),
 ) -> AnnotationStore:
-    """Helper function to convert dict to store."""
+    """Write polygonal multitask predictions into an SQLite-backed AnnotationStore.
+
+    Converts a task dictionary (with per-object fields) into `Annotation` records,
+    applying coordinate scaling and translation to move predictions into the slide's
+    baseline coordinate space. Each geometry is created from the per-object
+    `"contours"` entry, validated, and shifted by `origin`. All remaining keys in
+    `processed_predictions` are attached as annotation properties; the `"type"` key
+    can be mapped via `class_dict`.
+
+    Expected `processed_predictions` structure:
+        - "contours": list-like of polygon coordinates per object, where each item
+          is shaped like `[[x0, y0], [x1, y1], ..., [xN, yN]]`. These are interpreted
+          according to `"geom_type"` (default `"Polygon"`).
+        - Optional "geom_type": str (e.g., "Polygon", "MultiPolygon").
+          Defaults to "Polygon".
+        - Additional per-object fields (e.g., "type", "probability", scores, attributes)
+          with list-like values aligned to `contours` length.
+
+    Args:
+        store (SQLiteStore):
+            Target annotation store that will receive the converted annotations.
+        processed_predictions (dict):
+            Dictionary containing per-object fields. Must include `"contours"`;
+            may include `"geom_type"` and any number of additional fields to be
+            written as properties.
+        class_dict (dict | None):
+            Optional mapping for the `"type"` field. When provided and when
+            `"type"` is present in `processed_predictions`, each `"type"` value is
+            replaced by `class_dict[type_id]` in the saved annotation properties.
+        origin (tuple[float, float]):
+            `(x0, y0)` offset to add to the final geometry coordinates (in pixels)
+            after scaling. Typically corresponds to the tile/patch origin in WSI
+            space.
+        scale_factor (tuple[float, float]):
+            `(sx, sy)` factors applied to coordinates before translation, used to
+            convert from model space to baseline slide resolution (e.g.,
+            `model_mpp / slide_mpp`).
+
+    Returns:
+        AnnotationStore:
+            The input `store` after appending all converted annotations.
+
+    Notes:
+        - Geometries are constructed from `processed_predictions["contours"]` using
+          `geom_type` (default `"Polygon"`), scaled by `scale_factor`, and translated
+          by `origin`. Invalid geometries are auto-corrected using `make_valid_poly`.
+        - Per-object properties are created by taking the i-th element from each
+          remaining key in `processed_predictions`. Scalars are coerced to arrays
+          first, then converted with `.tolist()` to ensure JSON-serializable values.
+        - If `class_dict` is provided and a `"type"` key exists, `"type"` values are
+          mapped prior to saving.
+        - All annotations are appended in a single batch via `store.append_many(...)`.
+
+    """
     contour = processed_predictions.pop("contours")
 
     ann = []
