@@ -708,6 +708,124 @@ def test_prepare_full_batch_last_batch_padding(track_tmp_path: Path) -> None:
     assert len(updated_output_locs) == num_full_locs
 
 
+def test_infer_wsi_cleanup_full_batch_tmp(track_tmp_path: Path) -> None:
+    """Test that infer_wsi cleans up full_batch_tmp directory after processing."""
+    # Create a minimal segmentor
+    segmentor = SemanticSegmentor(
+        model="fcn-tissue_mask", batch_size=2, verbose=False, device=device
+    )
+
+    # Create save path
+    save_path = track_tmp_path / "test_cleanup" / "output.zarr"
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Create the full_batch_tmp directory that would be created during processing
+    full_batch_tmp_dir = save_path.with_name("full_batch_tmp")
+    full_batch_tmp_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create a dummy file inside to verify it gets removed
+    dummy_file = full_batch_tmp_dir / "dummy.txt"
+    dummy_file.write_text("test")
+
+    # Verify directory exists before running
+    assert full_batch_tmp_dir.exists()
+    assert dummy_file.exists()
+
+    # Mock the dataloader to return minimal data
+    mock_dataloader = mock.MagicMock()
+    mock_batch = {
+        "image": torch.randn(1, 3, 256, 256),
+        "output_locs": torch.tensor([[0, 0, 256, 256]]),
+        "coords": np.array([[0, 0, 256, 256]]),  # Required by _get_coordinates
+    }
+    mock_dataloader.__iter__ = mock.MagicMock(return_value=iter([mock_batch]))
+    mock_dataloader.__len__ = mock.MagicMock(return_value=1)
+    mock_dataloader.dataset = mock.MagicMock()
+    mock_dataloader.dataset.outputs = np.array([[0, 0, 256, 256]])
+    mock_dataloader.dataset.full_outputs = np.array([[0, 0, 256, 256]])
+
+    rand = np.random.default_rng(12345)
+    # Mock the model's infer_batch method
+    with mock.patch.object(
+        segmentor.model,
+        "infer_batch",
+        return_value=rand.random((1, 256, 256, 2)).astype(np.float32),
+    ):
+        # Run infer_wsi
+        _ = segmentor.infer_wsi(
+            dataloader=mock_dataloader,
+            save_path=save_path,
+            memory_threshold=80,
+        )
+
+    # Verify that full_batch_tmp directory was cleaned up
+    assert not full_batch_tmp_dir.exists(), "full_batch_tmp directory should be removed"
+    assert not dummy_file.exists(), "Files in full_batch_tmp should be removed"
+
+
+def test_save_predictions_cleanup_zarr(track_tmp_path: Path) -> None:
+    """Test that save_predictions cleans up .zarr file.
+
+    When saving as annotationstore without probabilities,
+    zarr directory should be removed.
+
+    """
+    # Create a minimal segmentor
+    segmentor = SemanticSegmentor(
+        model="fcn-tissue_mask", batch_size=2, verbose=False, device=device
+    )
+    segmentor.patch_mode = True
+    segmentor.images = [Path("dummy.png")]
+
+    # Create save path
+    save_path = track_tmp_path / "output" / "result.db"
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Create a .zarr file that should be cleaned up
+    zarr_path = save_path.with_suffix(".zarr")
+    zarr_path.mkdir(parents=True, exist_ok=True)
+
+    # Create a dummy file inside the zarr directory
+    dummy_file = zarr_path / ".zarray"
+    dummy_file.write_text('{"test": "data"}')
+
+    # Verify zarr directory exists before running
+    assert zarr_path.exists()
+    assert dummy_file.exists()
+
+    rand = np.random.default_rng(12345)
+    # Create minimal processed predictions
+    processed_predictions = {
+        "predictions": [rand.integers(0, 2, size=(256, 256), dtype=np.uint8)]
+    }
+
+    # Mock the parent class save_predictions to return predictions as dict
+    with mock.patch.object(
+        semantic_segmentor.PatchPredictor,
+        "save_predictions",
+        return_value=processed_predictions,
+    ):
+        # Call save_predictions with annotationstore output type
+        # and return_probabilities=False
+        result = segmentor.save_predictions(
+            processed_predictions=processed_predictions,
+            output_type="annotationstore",
+            save_path=save_path,
+            return_probabilities=False,  # This should trigger zarr cleanup
+            class_dict={0: "background", 1: "tissue"},
+            scale_factor=(1.0, 1.0),
+        )
+
+    # Verify that .zarr directory was cleaned up
+    assert not zarr_path.exists(), ".zarr directory should be removed"
+    assert not dummy_file.exists(), "Files in .zarr directory should be removed"
+
+    # Verify that .db file was created
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert result[0].suffix == ".db"
+
+
 # -------------------------------------------------------------------------------------
 # Command Line Interface
 # -------------------------------------------------------------------------------------
