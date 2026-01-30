@@ -1653,27 +1653,32 @@ def _save_annotation_store(
 def _process_instance_predictions(
     inst_dict: dict,
     ioconfig: IOSegmentorConfig,
-    tile_shape: list,
-    tile_flag: list,
+    tile_shape: tuple[int, int],
+    tile_flag: tuple[int, int, int, int],
     tile_mode: int,
-    tile_tl: tuple,
+    tile_tl: tuple[int, int],
     ref_inst_dict: dict,
 ) -> list | tuple:
     """Function to merge new tile prediction with existing prediction.
 
     Args:
-        inst_dict (dict): Dictionary containing instance information.
-        ioconfig (:class:`IOSegmentorConfig`): Object defines information
+        inst_dict (dict):
+            Dictionary containing instance information.
+        ioconfig (:class:`IOSegmentorConfig`):
+            Object defines information
             about input and output placement of patches.
-        tile_shape (list): A list of the tile shape.
-        tile_flag (list): A list of flag to indicate if instances within
+        tile_shape (tuple(int, int)):
+            A list of the tile shape.
+        tile_flag (list):
+            A list of flag to indicate if instances within
             an area extended from each side (by `ioconfig.margin`) of
             the tile should be replaced by those within the same spatial
             region in the accumulated output this run. The format is
             [top, bottom, left, right], 1 indicates removal while 0 is not.
             For example, [1, 1, 0, 0] denotes replacing top and bottom instances
             within `ref_inst_dict` with new ones after this processing.
-        tile_mode (int): A flag to indicate the type of this tile. There
+        tile_mode (int):
+            A flag to indicate the type of this tile. There
             are 4 flags:
             - 0: A tile from tile grid without any overlapping, it is not
                 an overlapping tile from tile generation. The predicted
@@ -1686,16 +1691,20 @@ def _process_instance_predictions(
                 less height (hence horizontal strip).
             - 3: tile strip stands at the cross-section of four normal tiles
                 (flag 0).
-        tile_tl (tuple): Top left coordinates of the current tile.
-        ref_inst_dict (dict): Dictionary contains accumulated output. The
+        tile_tl (tuple):
+            Top left coordinates of the current tile.
+        ref_inst_dict (dict):
+            Dictionary contains accumulated output. The
             expected format is {instance_id: {type: int,
             contour: List[List[int]], centroid:List[float], box:List[int]}.
 
     Returns:
-        new_inst_dict (dict): A dictionary contain new instances to be accumulated.
+        new_inst_dict (dict):
+            A dictionary contain new instances to be accumulated.
             The expected format is {instance_id: {type: int,
             contour: List[List[int]], centroid:List[float], box:List[int]}.
-        remove_insts_in_orig (list): List of instance id within `ref_inst_dict`
+        remove_insts_in_orig (list):
+            List of instance id within `ref_inst_dict`
             to be removed to prevent overlapping predictions. These instances
             are those get cutoff at the boundary due to the tiling process.
 
@@ -1704,7 +1713,56 @@ def _process_instance_predictions(
     if len(inst_dict) == 0:
         return {}, []
 
-    # !
+    sel_indices, margin_lines = _get_sel_indices(
+        ioconfig=ioconfig,
+        tile_shape=tile_shape,
+        inst_dict=inst_dict,
+        tile_tl=tile_tl,
+        tile_mode=tile_mode,
+        tile_flag=tile_flag,
+    )
+
+    def retrieve_sel_uids(sel_indices: list, inst_dict: dict) -> list:
+        """Helper to retrieved selected instance uids."""
+        if len(sel_indices) > 0:
+            # not sure how costly this is in large dict
+            inst_uids = list(inst_dict.keys())
+        return [inst_uids[idx] for idx in sel_indices]
+
+    remove_insts_in_tile = retrieve_sel_uids(sel_indices, inst_dict)
+
+    # external removal only for tile at cross-sections
+    # this one should contain UUID with the reference database
+    remove_insts_in_orig = []
+    if tile_mode == 3:  # noqa: PLR2004
+        inst_boxes = [v["box"] for v in ref_inst_dict.values()]
+        inst_boxes = np.array(inst_boxes)
+
+        geometries = [shapely_box(*bounds) for bounds in inst_boxes]
+        ref_inst_rtree = STRtree(geometries)
+        sel_indices = [
+            geo for bounds in margin_lines for geo in ref_inst_rtree.query(bounds)
+        ]
+
+        remove_insts_in_orig = retrieve_sel_uids(sel_indices, ref_inst_dict)
+
+    new_inst_dict = _move_tile_space_to_wsi_space(
+        inst_dict=inst_dict,
+        tile_tl=tile_tl,
+        remove_insts_in_tile=remove_insts_in_tile,
+    )
+
+    return new_inst_dict, remove_insts_in_orig
+
+
+def _get_sel_indices(
+    ioconfig: IOSegmentorConfig,
+    tile_shape: tuple[int, int],
+    tile_flag: tuple[int, int, int, int],
+    tile_mode: int,
+    tile_tl: tuple[int, int],
+    inst_dict: dict,
+) -> tuple[list, list]:
     m = ioconfig.margin
     w, h = tile_shape
     inst_boxes = [v["box"] for v in inst_dict.values()]
@@ -1773,32 +1831,17 @@ def _process_instance_predictions(
         msg = f"Unknown tile mode {tile_mode}."
         raise ValueError(msg)
 
-    def retrieve_sel_uids(sel_indices: list, inst_dict: dict) -> list:
-        """Helper to retrieved selected instance uids."""
-        if len(sel_indices) > 0:
-            # not sure how costly this is in large dict
-            inst_uids = list(inst_dict.keys())
-        return [inst_uids[idx] for idx in sel_indices]
+    return sel_indices, margin_lines
 
-    remove_insts_in_tile = retrieve_sel_uids(sel_indices, inst_dict)
 
-    # external removal only for tile at cross-sections
-    # this one should contain UUID with the reference database
-    remove_insts_in_orig = []
-    if tile_mode == 3:  # noqa: PLR2004
-        inst_boxes = [v["box"] for v in ref_inst_dict.values()]
-        inst_boxes = np.array(inst_boxes)
-
-        geometries = [shapely_box(*bounds) for bounds in inst_boxes]
-        ref_inst_rtree = STRtree(geometries)
-        sel_indices = [
-            geo for bounds in margin_lines for geo in ref_inst_rtree.query(bounds)
-        ]
-
-        remove_insts_in_orig = retrieve_sel_uids(sel_indices, ref_inst_dict)
-
+def _move_tile_space_to_wsi_space(
+    inst_dict: dict,
+    tile_tl: tuple,
+    remove_insts_in_tile: list,
+) -> dict:
+    """Helper function to move inst dict from tile space to wsi space."""
     # move inst position from tile space back to WSI space
-    # an also generate universal uid as replacement for storage
+    # and also generate universal uid as replacement for storage
     new_inst_dict = {}
     for inst_uid, inst_info in inst_dict.items():
         if inst_uid not in remove_insts_in_tile:
@@ -1808,8 +1851,7 @@ def _process_instance_predictions(
             inst_info["contours"] += tile_tl
             inst_uuid = uuid.uuid4().hex
             new_inst_dict[inst_uuid] = inst_info
-
-    return new_inst_dict, remove_insts_in_orig
+    return new_inst_dict
 
 
 def _get_inst_info_dicts(post_process_output: tuple[dict]) -> list:
