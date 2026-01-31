@@ -528,8 +528,8 @@ def cli_return_probabilities(
 
 
 def parse_bool_list(
-    ctx: click.Context,  # noqa: ARG001
-    param: click.Parameter,  # noqa: ARG001
+    _ctx: click.Context,
+    _param: click.Parameter,
     value: str | None,
 ) -> tuple[bool, ...] | None:
     """Parse a comma-separated list of boolean values for a Click option.
