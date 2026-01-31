@@ -257,6 +257,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
             IO configuration for patch extraction and resolution.
         return_labels (bool):
             Whether to include labels in the output.
+        return_predictions (dict):
+            This dictionary helps keep track of which tasks require predictions in
+            the output.
         input_resolutions (list[dict]):
             Resolution settings for model input. Supported
             units are `level`, `power` and `mpp`. Keys should be "units" and
@@ -340,6 +343,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         """
         self.tasks = set()
+        self.return_predictions_dict = {}
         super().__init__(
             model=model,
             batch_size=batch_size,
@@ -676,7 +680,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
     def post_process_patches(  # skipcq: PYL-R0201
         self: MultiTaskSegmentor,
         raw_predictions: dict,
-        **kwargs: Unpack[MultiTaskSegmentorRunParams],  # noqa: ARG002
+        **kwargs: Unpack[MultiTaskSegmentorRunParams],
     ) -> dict:
         """Post-process raw patch-level predictions for multitask segmentation.
 
@@ -770,6 +774,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         return self.build_post_process_raw_predictions(
             post_process_predictions=post_process_predictions,
             raw_predictions=raw_predictions,
+            return_predictions=kwargs.get("return_predictions"),
         )
 
     def post_process_wsi(  # skipcq: PYL-R0201
@@ -892,8 +897,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
             )
 
         tasks = set()
-        for seg in post_process_predictions:
+        for idx, seg in enumerate(post_process_predictions):
             task_name = seg["task_type"]
+            self.return_predictions_dict[task_name] = (
+                return_predictions[idx] if return_predictions is not None else False
+            )
             tasks.add(task_name)
             raw_predictions[task_name] = {}
 
@@ -1312,6 +1320,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         self: MultiTaskSegmentor,
         post_process_predictions: list[tuple],
         raw_predictions: dict,
+        return_predictions: tuple[bool, ...] | None,
     ) -> dict:
         """Merge per-image, per-task outputs into a task-organized prediction structure.
 
@@ -1352,6 +1361,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 Dictionary that will be updated **in-place**. It may already contain
                 task entries or unrelated keys (e.g., ``"probabilities"``,
                 ``"coordinates"``). New tasks and fields are added as they appear.
+            return_predictions (tuple[bool, ...]):
+                Whether to return array predictions for individual tasks.
 
         Returns:
             dict:
@@ -1382,8 +1393,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
         """
         tasks = set()
         for seg_list in post_process_predictions:
-            for seg in seg_list:
+            for idx, seg in enumerate(seg_list):
                 task = seg["task_type"]
+                self.return_predictions_dict[task] = (
+                    return_predictions[idx] if return_predictions is not None else False
+                )
                 tasks.add(task)
 
                 # Initialize task entry if needed
@@ -1486,13 +1500,16 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         logger.info("Saving predictions as AnnotationStore.")
 
-        # predictions are not required when saving to AnnotationStore.
-        for key in ("canvas", "count", "predictions"):
+        for key in ("canvas", "count"):
             processed_predictions.pop(key, None)
 
         keys_to_compute = list(processed_predictions.keys())
         if "probabilities" in keys_to_compute:
             keys_to_compute.remove("probabilities")
+        if "predictions" in keys_to_compute:
+            if not self.return_predictions_dict.get(task_name):
+                processed_predictions.pop("predictions")
+            keys_to_compute.remove("predictions")
         if self.patch_mode:
             for idx, curr_image in enumerate(self.images):
                 values = [processed_predictions[key][idx] for key in keys_to_compute]
@@ -1663,16 +1680,20 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         # Save to AnnotationStore
         return_probabilities = kwargs.get("return_probabilities", False)
+        return_predictions = kwargs.get("return_predictions", (False,))
+        return_predictions_ = any(rp_ is True for rp_ in return_predictions)
         output_type_ = (
             "zarr"
-            if is_zarr(save_path.with_suffix(".zarr")) or return_probabilities
+            if is_zarr(save_path.with_suffix(".zarr"))
+            or return_probabilities
+            or return_predictions_
             else "dict"
         )
 
         # This runs dask.compute and returns numpy arrays
         # for saving annotationstore output.
         class_dict = kwargs.get("class_dict", self.model.class_dict)
-        if len(self.tasks) == 1:
+        if len(self.tasks) == 1 and class_dict is not None:
             kwargs["class_dict"] = class_dict[next(iter(self.tasks))]
         else:
             kwargs["class_dict"] = class_dict
@@ -1707,7 +1728,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     **kwargs,
                 )
                 save_paths += out_path
-                del processed_predictions[task_name]
+                if not self.return_predictions_dict[task_name]:
+                    del processed_predictions[task_name]
 
             return save_paths
 

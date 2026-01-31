@@ -12,7 +12,9 @@ import psutil
 import pytest
 import torch
 import zarr
+from click.testing import CliRunner
 
+from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models.engine.multi_task_segmentor import (
     MultiTaskSegmentor,
@@ -356,7 +358,6 @@ def test_wsi_mtsegmentor_zarr(
         / len(output_full_["nuclei_segmentation"]["contours"])
         > 0.9
     )
-    wsi4_1k_1k_svs.unlink()
 
 
 def test_multi_input_wsi_mtsegmentor_zarr(
@@ -746,3 +747,43 @@ def assert_annotation_store_patch_output(
         else:
             assert annotations_geometry_type == []
             assert annotations_list == []
+
+
+# -------------------------------------------------------------------------------------
+# Command Line Interface
+# -------------------------------------------------------------------------------------
+
+
+def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) -> None:
+    """Test semantic segmentor CLI single file."""
+    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
+    runner = CliRunner()
+    models_wsi_result = runner.invoke(
+        cli.main,
+        [
+            "multitask-segmentor",
+            "--img-input",
+            str(wsi4_512_512_svs),
+            "--patch-mode",
+            "False",
+            "--output-path",
+            str(track_tmp_path / "output"),
+            "--return-predictions",
+            "False, True",
+        ],
+    )
+
+    assert models_wsi_result.exit_code == 0
+    assert (
+        track_tmp_path / "output" / f"{wsi4_512_512_svs.stem}_layer_segmentation.db"
+    ).exists()
+    assert (
+        track_tmp_path / "output" / f"{wsi4_512_512_svs.stem}_nuclei_segmentation.db"
+    ).exists()
+    zarr_group = zarr.open(
+        str(track_tmp_path / "output" / f"{wsi4_512_512_svs.stem}.zarr"), mode="r"
+    )
+    assert "probabilities" in zarr_group
+    assert "nuclei_segmentation" not in zarr_group
+    assert "layer_segmentation" in zarr_group
+    assert "predictions" in zarr_group["layer_segmentation"]

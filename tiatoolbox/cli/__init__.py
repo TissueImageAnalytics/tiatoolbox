@@ -8,6 +8,7 @@ import click
 from tiatoolbox import __version__
 from tiatoolbox.cli.common import tiatoolbox_cli
 from tiatoolbox.cli.deep_feature_extractor import deep_feature_extractor
+from tiatoolbox.cli.multitask_segmentor import multitask_segmentor
 from tiatoolbox.cli.nucleus_detector import nucleus_detector
 from tiatoolbox.cli.nucleus_instance_segment import nucleus_instance_segment
 from tiatoolbox.cli.patch_predictor import patch_predictor
@@ -45,6 +46,7 @@ main.add_command(patch_predictor)
 main.add_command(read_bounds)
 main.add_command(save_tiles)
 main.add_command(semantic_segmentor)
+main.add_command(multitask_segmentor)
 main.add_command(nucleus_detector)
 main.add_command(deep_feature_extractor)
 main.add_command(slide_info)

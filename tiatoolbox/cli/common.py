@@ -527,6 +527,71 @@ def cli_return_probabilities(
     )
 
 
+def parse_bool_list(
+    ctx: click.Context,  # noqa: ARG001
+    param: click.Parameter,  # noqa: ARG001
+    value: str | None,
+) -> tuple[bool, ...] | None:
+    """Parse a comma-separated list of boolean values for a Click option.
+
+    This function is intended for use as a Click callback. It converts a
+    comma-separated string (e.g., ``"true,false,1,0"``) into a tuple of Python
+    booleans. Each item is stripped, lowercased, and validated against a set of
+    accepted truthy and falsy representations.
+
+    Accepted truthy values:
+        ``"true"``, ``"1"``, ``"yes"``, ``"y"``
+
+    Accepted falsy values:
+        ``"false"``, ``"0"``, ``"no"``, ``"n"``
+
+    Args:
+        ctx (click.Context):
+            The Click context object (unused but required by Click callback API).
+        param (click.Parameter):
+            The Click parameter object (unused but required by Click callback API).
+        value (str | None):
+            The raw string provided by the user. If ``None``, the function returns
+            ``None`` unchanged.
+
+    Returns:
+        tuple[bool, ...] | None:
+            A tuple of parsed boolean values, or ``None`` if no value was provided.
+
+    Raises:
+        click.BadParameter:
+            If any item in the comma-separated list is not a valid boolean string.
+    """
+    if value is None:
+        return None
+    items = value.split(",")
+    out = []
+    for item in items:
+        item_ = item.strip().lower()
+        if item_ in ("true", "1", "yes", "y"):
+            out.append(True)
+        elif item_ in ("false", "0", "no", "n"):
+            out.append(False)
+        else:
+            msg = f"Invalid boolean: {item_}"
+            raise click.BadParameter(msg)
+    return tuple(out)
+
+
+def cli_return_predictions(
+    usage_help: str = "Whether to return raw model probabilities.",
+    *,
+    default: tuple[bool, ...] | None = None,
+) -> Callable:
+    """Enables --return-probabilities option for cli."""
+    return click.option(
+        "--return-predictions",
+        callback=parse_bool_list,
+        help=add_default_to_usage_help(usage_help, default=default),
+        default=default,
+    )
+
+
 def cli_merge_predictions(
     usage_help: str = "Whether to merge the predictions to form a 2-dimensional map.",
     *,
