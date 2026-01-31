@@ -10,6 +10,7 @@ from tiatoolbox.cli.common import (
     cli_class_dict,
     cli_input_resolutions,
     cli_output_resolutions,
+    parse_bool_list,
 )
 
 
@@ -143,3 +144,35 @@ def test_cli_resolutions_not_list(option: str) -> None:
     )
     assert result.exit_code != 0
     assert "Must be a JSON list of dictionaries" in result.output
+
+
+def test_parse_bool_list_none() -> None:
+    """parse_bool_list should return None when value is None."""
+    result = parse_bool_list(ctx=None, param=None, value=None)
+    assert result is None
+
+
+@pytest.mark.parametrize(
+    ("input_str", "expected"),
+    [
+        ("true,false", (True, False)),
+        ("1,0", (True, False)),
+        ("yes,no", (True, False)),
+        ("y,n", (True, False)),
+        (" true , 0 , YES ", (True, False, True)),
+    ],
+)
+def test_parse_bool_list_valid(
+    input_str: str,
+    expected: tuple[bool, ...],
+) -> None:
+    """parse_bool_list should correctly parse valid boolean lists."""
+    result = parse_bool_list(ctx=None, param=None, value=input_str)
+    assert result == expected
+
+
+@pytest.mark.parametrize("bad_value", ["foo", "true,bar", "1,2", "yes,maybe"])
+def test_parse_bool_list_invalid(bad_value: str) -> None:
+    """parse_bool_list should raise BadParameter on invalid tokens."""
+    with pytest.raises(click.BadParameter):
+        parse_bool_list(ctx=None, param=None, value=bad_value)
