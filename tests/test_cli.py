@@ -148,7 +148,7 @@ def test_cli_resolutions_not_list(option: str) -> None:
 
 def test_parse_bool_list_none() -> None:
     """parse_bool_list should return None when value is None."""
-    result = parse_bool_list(ctx=None, param=None, value=None)
+    result = parse_bool_list(_ctx=None, _param=None, value=None)
     assert result is None
 
 
@@ -167,7 +167,7 @@ def test_parse_bool_list_valid(
     expected: tuple[bool, ...],
 ) -> None:
     """parse_bool_list should correctly parse valid boolean lists."""
-    result = parse_bool_list(ctx=None, param=None, value=input_str)
+    result = parse_bool_list(_ctx=None, _param=None, value=input_str)
     assert result == expected
 
 
@@ -175,4 +175,4 @@ def test_parse_bool_list_valid(
 def test_parse_bool_list_invalid(bad_value: str) -> None:
     """parse_bool_list should raise BadParameter on invalid tokens."""
     with pytest.raises(click.BadParameter):
-        parse_bool_list(ctx=None, param=None, value=bad_value)
+        parse_bool_list(_ctx=None, _param=None, value=bad_value)

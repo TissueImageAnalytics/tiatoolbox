@@ -1415,6 +1415,20 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
                     raw_predictions[task][key].append(value)
 
+        raw_predictions = self._rearrange_raw_predictions_to_per_task_dict(
+            tasks=tasks,
+            raw_predictions=raw_predictions,
+        )
+
+        self.tasks = tasks
+        return raw_predictions
+
+    @staticmethod
+    def _rearrange_raw_predictions_to_per_task_dict(
+        tasks: set,
+        raw_predictions: dict,
+    ) -> dict:
+        """Rearranges `raw_predictions` to per-task output."""
         for task in tasks:
             task_dict = raw_predictions[task]
             for key in list(task_dict.keys()):
@@ -1431,7 +1445,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
                     del raw_predictions[task][key]
 
-        self.tasks = tasks
         return raw_predictions
 
     def _save_predictions_as_dict_zarr(

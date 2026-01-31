@@ -587,7 +587,7 @@ def cli_return_predictions(
     return click.option(
         "--return-predictions",
         callback=parse_bool_list,
-        help=add_default_to_usage_help(usage_help, default=default),
+        help=add_default_to_usage_help(usage_help, default=None),
         default=default,
     )
 
