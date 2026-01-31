@@ -245,7 +245,7 @@ class SemanticSegmentor(PatchPredictor):
         >>> # array of list of 2 image patches as input
         >>> image_patches = [np.ndarray, np.ndarray]
         >>> segmentor = SemanticSegmentor(model="fcn-tissue_mask")
-        >>> output = segmentor.run(data, patch_mode=True)
+        >>> output = segmentor.run(image_patches, patch_mode=True)
 
         >>> # list of 2 image patch files as input
         >>> data = ['path/img.png', 'path/img.png']
