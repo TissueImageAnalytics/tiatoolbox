@@ -16,6 +16,7 @@ import pytest
 import torch
 import zarr
 from click.testing import CliRunner
+from huggingface_hub import hf_hub_download
 
 from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
@@ -139,17 +140,53 @@ def _test_store_output_patch(output: Path) -> None:
     cur = con.cursor()
     annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
 
-    out = []
+    annotation_types = set()
 
     for item in annotations_properties:
         for json_str in item:
             probs = json.loads(json_str)
             if "type" in probs:
-                out.append(probs.pop("type"))
-
-    assert "mask" in out
+                annotation_types.add(probs.pop("type"))
+    # When class_dict is none, types are assigned as 0, 1, ...
+    assert 0 in annotation_types
+    assert 1 in annotation_types
 
     assert annotations_properties is not None
+
+
+def test_semantic_segmentor_tiles(track_tmp_path: Path) -> None:
+    """Tests SemanticSegmentor on image tiles with no mpp metadata."""
+    segmentor = SemanticSegmentor(
+        model="fcn-tissue_mask", batch_size=32, verbose=False, device=device
+    )
+
+    sample_image = Path(
+        hf_hub_download(
+            repo_id="TIACentre/TIAToolBox_Remote_Samples",
+            subfolder="sample_imgs",
+            filename="breast_tissue.jpg",
+            repo_type="dataset",
+            local_dir=track_tmp_path,
+        )
+    )
+
+    inputs = [sample_image]
+
+    output = segmentor.run(
+        images=inputs,
+        device=device,
+        patch_mode=False,
+        auto_get_mask=False,
+        save_dir=track_tmp_path / "output",
+        input_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        patch_input_shape=(1024, 1024),
+    )
+    print(output)
+    output = zarr.open(output[sample_image], mode="r")
+
+    assert output["predictions"].shape == (2048, 3584)
+
+    sample_image.unlink()
 
 
 def test_save_annotation_store(remote_sample: Callable, track_tmp_path: Path) -> None:
