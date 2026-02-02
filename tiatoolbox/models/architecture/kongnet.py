@@ -533,7 +533,6 @@ class KongNet(ModelABC):
         """
         super().__init__()
 
-        # Bug fix: Add validation for matching decoder and head lists
         if len(num_channels_per_head) != num_heads:
             msg = (
                 f"Number of decoders {len(num_channels_per_head)}"
@@ -647,7 +646,7 @@ class KongNet(ModelABC):
         """Run inference on a batch of images.
 
         Transfers the model and input batch to the specified device, performs
-        forward pass, and returns softmax probabilities.
+        forward pass, and returns probability maps.
 
         Args:
             model (torch.nn.Module):
@@ -665,7 +664,7 @@ class KongNet(ModelABC):
             >>> batch = torch.randn(4, 256, 256, 3)
             >>> probs = KongNet.infer_batch(model, batch, device="cpu")
             >>> probs.shape
-            (4, 256, 256, sum(model.target_channels))
+            (4, 256, 256, len(model.target_channels))
 
         """
         model = model.to(device)
@@ -694,7 +693,7 @@ class KongNet(ModelABC):
         depth_h: int = 0,
         depth_w: int = 0,
     ) -> np.ndarray:
-        """MapDe post-processing function.
+        """KongNet post-processing function.
 
         Builds a processed mask per input channel, runs peak_local_max then
         writes 1.0 at peak pixels.

@@ -289,11 +289,8 @@ class SegmentationHead(nn.Sequential):
             upsampling (int):
                 Upsampling factor applied to the output. Defaults to 1.
 
-        Raises:
-            ValueError:
-                If `kernel_size` or `upsampling` is not a positive integer.
-
         """
+
         conv2d = nn.Conv2d(
             in_channels, out_channels, kernel_size=kernel_size, padding=kernel_size // 2
         )
@@ -322,7 +319,7 @@ class AttentionModule(nn.Module):
         super().__init__()
 
         if name is None:
-            self.attention = nn.Identity(in_channels)
+            self.attention = nn.Identity()
         elif name == "scse":
             self.attention = SCSEModule(in_channels=in_channels, reduction=reduction)
         else:
@@ -447,7 +444,8 @@ def peak_detection_map_overlap(
     cmin, cmax = depth_w, depth_w + core_w
 
     out = np.zeros((block_height, block_width, block_channels), dtype=np.float32)
-    out_probs = np.zeros((block_height, block_width, block_channels), dtype=np.float32)
+    if return_probability:
+        out_probs = np.zeros((block_height, block_width, block_channels), dtype=np.float32)
 
     for ch in range(block_channels):
         img = np.asarray(block[..., ch])  # NumPy 2D view

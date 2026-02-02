@@ -196,4 +196,4 @@ def test_attention_module() -> None:
     assert output.shape == test_input.shape
 
     with pytest.raises(ValueError, match=r"Attention random_name is not implemented"):
-        attention = AttentionModule(name="random_name", in_channels=16)
+        _ = AttentionModule(name="random_name", in_channels=16)
