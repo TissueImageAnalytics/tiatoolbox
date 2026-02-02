@@ -73,8 +73,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import IntPair, Resolution, Units
 
-dask.config.set({"dataframe.convert-string": False})
-
 
 class EngineABCRunParams(TypedDict, total=False):
     """Parameters for configuring the :func:`EngineABC.run()` method.

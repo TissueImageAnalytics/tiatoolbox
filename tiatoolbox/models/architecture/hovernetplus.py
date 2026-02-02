@@ -396,7 +396,7 @@ class HoVerNetPlus(HoVerNet):
 
     @staticmethod
     def infer_batch(  # skipcq: PYL-W0221
-        model: nn.Module, batch_data: np.ndarray, *, device: str
+        model: nn.Module, batch_data: np.ndarray | torch.Tensor, *, device: str
     ) -> tuple:
         """Run inference on an input batch.
 

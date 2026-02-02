@@ -1677,7 +1677,7 @@ def create_smart_array(
     dtype: np.dtype | str,
     memory_threshold: float,
     name: str | None,
-    zarr_path: str | Path | None = None,
+    zarr_path: str | Path,
     chunks: tuple[int, ...] | None = None,
 ) -> np.ndarray | zarr.Array:
     """Allocate a NumPy or Zarr array depending on available memory and a threshold.
@@ -1697,14 +1697,14 @@ def create_smart_array(
             Fraction of available RAM allowed for this allocation. Must be between
             0.0 and 100. A value of 100 allows using all available RAM; 0.0 forces
             Zarr allocation.
+        name (str | None):
+            Name for the zarr dataset.
         zarr_path (str | None):
             Filesystem path where the Zarr array will be created if needed.
             Defaults to "array.zarr".
         chunks (tuple(int,...) | None):
             Chunk shape for the Zarr array. If None, a reasonable default is chosen
             based on the array shape.
-        name (str | None):
-            Name for the zarr dataset.
 
     Returns:
         np.ndarray | zarr.core.Array:
@@ -1723,10 +1723,6 @@ def create_smart_array(
     if fits_in_memory:
         # Allocate in-memory NumPy array
         return np.zeros(shape, dtype=dtype)
-
-    if zarr_path is None:
-        temp_dir = tempfile.mkdtemp(prefix="smartarray_")
-        zarr_path = Path(str(temp_dir)) / "array.zarr"
 
     # Allocate Zarr array on disk
     # Default chunking: try to chunk along spatial dims

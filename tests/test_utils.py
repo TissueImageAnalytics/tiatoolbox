@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
-import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
@@ -2276,48 +2275,5 @@ def test_returns_numpy_when_fits_in_memory(
     )
 
     assert isinstance(arr, np.ndarray)
-    assert arr.shape == shape
-    assert arr.dtype == dtype
-
-
-def test_creates_temp_dir_when_zarr_path_none(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    """Test that a temporary directory is created when zarr_path is None."""
-    shape = (1000, 1000, 3)
-    dtype = np.float32
-
-    class FakeVM:
-        """Force fits_in_memory = False by mocking available memory to be tiny."""
-
-        available = 1
-
-    monkeypatch.setattr(psutil, "virtual_memory", FakeVM)
-
-    # Track calls to tempfile.mkdtemp
-    created_dirs = []
-
-    def fake_mkdtemp(prefix: str) -> str:
-        """Fake mkdtemp method."""
-        _ = prefix
-        path = tmp_path / "tempdir"
-        created_dirs.append(path)
-        return str(path)
-
-    monkeypatch.setattr(tempfile, "mkdtemp", fake_mkdtemp)
-
-    arr = create_smart_array(
-        shape=shape,
-        dtype=dtype,
-        memory_threshold=0,  # force Zarr allocation
-        name="test",
-        zarr_path=None,
-    )
-
-    # Ensure mkdtemp was called
-    assert len(created_dirs) == 1
-
-    # Ensure returned object is a Zarr array
-    assert isinstance(arr, zarr.Array)
     assert arr.shape == shape
     assert arr.dtype == dtype

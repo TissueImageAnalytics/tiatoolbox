@@ -421,7 +421,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         tqdm_loop = (
             tqdm_(dataloader, leave=False, desc="Inferring patches")
             if self.verbose
-            else self.dataloader
+            else dataloader
         )
 
         for batch_data in tqdm_loop:

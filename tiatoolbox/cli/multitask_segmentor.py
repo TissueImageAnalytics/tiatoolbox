@@ -100,7 +100,7 @@ def multitask_segmentor(
     verbose: bool,
     overwrite: bool,
 ) -> None:
-    """Process a set of input images with a semantic segmentation engine."""
+    """Process a set of input images with a multitask segmentation engine."""
     from tiatoolbox.models import IOSegmentorConfig, MultiTaskSegmentor  # noqa: PLC0415
 
     files_all, masks_all, output_path = prepare_model_cli(
@@ -132,7 +132,6 @@ def multitask_segmentor(
         patch_output_shape=patch_output_shape,
         input_resolutions=input_resolutions,
         output_resolutions=output_resolutions,
-        batch_size=batch_size,
         ioconfig=ioconfig,
         device=device,
         save_dir=output_path,
@@ -141,10 +140,8 @@ def multitask_segmentor(
         return_probabilities=return_probabilities,
         auto_get_mask=auto_get_mask,
         memory_threshold=memory_threshold,
-        num_workers=num_workers,
         output_file=output_file,
         scale_factor=scale_factor,
         stride_shape=stride_shape,
         overwrite=overwrite,
-        verbose=verbose,
     )

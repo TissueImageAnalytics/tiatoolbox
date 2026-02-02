@@ -579,11 +579,11 @@ def parse_bool_list(
 
 
 def cli_return_predictions(
-    usage_help: str = "Whether to return raw model probabilities.",
+    usage_help: str = "Whether to return predictions for individual tasks.",
     *,
     default: tuple[bool, ...] | None = None,
 ) -> Callable:
-    """Enables --return-probabilities option for cli."""
+    """Enables --return-predictions option for cli."""
     return click.option(
         "--return-predictions",
         callback=parse_bool_list,
