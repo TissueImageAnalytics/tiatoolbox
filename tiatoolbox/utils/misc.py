@@ -39,6 +39,8 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from shapely import geometry
 
+    from tiatoolbox.type_hints import JSON
+
 
 def split_path_name_ext(
     full_path: PathLike | str,
@@ -1246,6 +1248,7 @@ def process_contours(
     contours: list[np.ndarray],
     hierarchy: np.ndarray,
     scale_factor: tuple[float, float] = (1, 1),
+    properties: dict[str, JSON] | None = None,
 ) -> list[Annotation]:
     """Process contours and hierarchy to create annotations.
 
@@ -1256,6 +1259,8 @@ def process_contours(
             A list of hierarchy.
         scale_factor (tuple[float, float]):
             The scale factor to use when loading the annotations.
+        properties (dict | None):
+            Optional properties to include with each annotation type.
 
     Returns:
         list:
@@ -1265,6 +1270,9 @@ def process_contours(
     annotations_list: list[Annotation] = []
     outer_contours: dict[int, np.ndarray] = {}
     holes_dict: dict[int, list[np.ndarray]] = {}
+    base_props: dict[str, JSON] = {"type": "mask"}
+    if properties:
+        base_props.update(properties)
 
     for i, layer_ in enumerate(contours):
         coords: np.ndarray = layer_.squeeze()
@@ -1291,7 +1299,7 @@ def process_contours(
                 [
                     Annotation(
                         geometry=feature_geom,
-                        properties={"type": "mask"},
+                        properties=base_props,
                     )
                 ]
             )
@@ -1307,7 +1315,7 @@ def process_contours(
                 [
                     Annotation(
                         geometry=feature_geom,
-                        properties={"type": "mask"},
+                        properties=base_props,
                     )
                 ]
             )
@@ -1333,7 +1341,7 @@ def process_contours(
             [
                 Annotation(
                     geometry=feature_geom,
-                    properties={"type": "mask"},
+                    properties=base_props,
                 )
             ]
         )
@@ -1374,15 +1382,17 @@ def dict_to_store_semantic_segmentor(
 
     # Get the number of unique predictions
     layer_list = da.unique(preds).compute()
-    layer_list = layer_list[layer_list != 0]
 
     store = SQLiteStore()
 
-    _ = class_dict  # use it once overlay is working
+    if class_dict is None:
+        class_dict = {int(i): int(i) for i in layer_list.tolist()}
 
     annotations_list: list[Annotation] = []
 
     for type_class in layer_list:
+        class_id = int(type_class)
+        class_label = class_dict.get(class_id, class_id)
         layer = da.where(preds == type_class, 1, 0).astype("uint8").compute()
         contours, hierarchy = cv2.findContours(
             layer,
@@ -1392,7 +1402,9 @@ def dict_to_store_semantic_segmentor(
 
         contours = cast("list[np.ndarray]", contours)
 
-        annotations_list_ = process_contours(contours, hierarchy, scale_factor)
+        annotations_list_ = process_contours(
+            contours, hierarchy, scale_factor, {"type": class_label, "class": class_id}
+        )
         annotations_list.extend(annotations_list_)
 
     _ = store.append_many(

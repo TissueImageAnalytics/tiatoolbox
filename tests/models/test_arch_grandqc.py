@@ -98,20 +98,25 @@ def test_grandqc_with_semantic_segmentor(
         output_type="annotationstore",
         save_dir=track_tmp_path / "grandqc_test_outputs",
         overwrite=True,
+        class_dict={0: "background", 1: "tissue"},
     )
 
     assert len(output) == 1
     assert Path(output[sample_image]).exists()
 
     store = SQLiteStore.open(output[sample_image])
-    assert len(store) == 3
+    assert len(store) == 4
+
+    unique_types = set()
 
     tissue_area_px = 0.0
     for annotation in store.values():
-        assert annotation.properties["type"] == "mask"
-        tissue_area_px += annotation.geometry.area
+        unique_types.add(annotation.properties["type"])
+        if annotation.properties["type"] == "tissue":
+            tissue_area_px += annotation.geometry.area
     assert 2999000 < tissue_area_px < 3004000
 
+    assert unique_types == {"background", "tissue"}
     store.close()
 
 
