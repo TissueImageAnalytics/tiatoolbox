@@ -572,7 +572,7 @@ def test_vertical_save_branch_without_patch(
     class FakeVM:
         """Fake psutil.virtual_memory() with extremely low free memory."""
 
-        free = 1  # force used_percent > memory_threshold
+        available = 0  # force used_percent > memory_threshold
 
     monkeypatch.setattr(psutil, "virtual_memory", FakeVM)
 

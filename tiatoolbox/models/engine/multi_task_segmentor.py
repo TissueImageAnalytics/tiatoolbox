@@ -2452,7 +2452,7 @@ def _save_multitask_vertical_to_cache(
         vm = psutil.virtual_memory()
         # Calculate total bytes for all outputs
         total_bytes = sum(0 if arr is None else arr.nbytes for arr in probabilities_da)
-        used_percent = (total_bytes / vm.free) * 100
+        used_percent = (total_bytes / max(vm.available, 1)) * 100
     if probabilities_zarr[idx] is None and used_percent > memory_threshold:
         msg = (
             f"Current Memory usage: {used_percent} %  "
@@ -2549,7 +2549,7 @@ def _check_and_update_for_memory_overload(
     vm = psutil.virtual_memory()
     used_percent = vm.percent
     total_bytes = sum(arr.nbytes for arr in canvas) if canvas else 0
-    canvas_used_percent = (total_bytes / vm.free) * 100
+    canvas_used_percent = (total_bytes / max(vm.available, 1)) * 100
 
     if not (used_percent > memory_threshold or canvas_used_percent > memory_threshold):
         return canvas, count, canvas_zarr, count_zarr, tqdm_loop
