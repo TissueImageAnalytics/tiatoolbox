@@ -16,6 +16,7 @@ from click.testing import CliRunner
 
 from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
+from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.engine.multi_task_segmentor import (
     MultiTaskSegmentor,
     _clear_zarr,
@@ -414,8 +415,11 @@ def test_wsi_segmentor_annotationstore(
 ) -> None:
     """Test MultiTaskSegmentor for WSIs with AnnotationStore output."""
     wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
+    # testing different configuration for hovernet.
+    # kumar only has two probability maps
+    model_name = "hovernet_original-kumar"
     mtsegmentor = MultiTaskSegmentor(
-        model="hovernet_fast-pannuke",
+        model=model_name,
         batch_size=32,
         verbose=False,
     )
@@ -442,6 +446,9 @@ def test_wsi_segmentor_annotationstore(
     store_file_path = track_tmp_path / "wsi_out_check" / store_file_name
     assert store_file_path.exists()
     assert store_file_path == output[wsi4_512_512_svs][0]
+
+    weights_path = Path(fetch_pretrained_weights(model_name=model_name))
+    weights_path.unlink()
 
 
 def test_wsi_segmentor_annotationstore_probabilities(
