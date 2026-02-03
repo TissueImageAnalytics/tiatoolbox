@@ -1524,11 +1524,17 @@ class MultiTaskSegmentor(SemanticSegmentor):
         for key in ("canvas", "count"):
             processed_predictions.pop(key, None)
 
+        return_predictions = (
+            next(iter(self.return_predictions_dict.values()))
+            if task_name is None and len(self.return_predictions_dict) == 1
+            else self.return_predictions_dict.get(task_name)
+        )
+
         keys_to_compute = list(processed_predictions.keys())
         if "probabilities" in keys_to_compute:
             keys_to_compute.remove("probabilities")
         if "predictions" in keys_to_compute:
-            if not self.return_predictions_dict.get(task_name):
+            if not return_predictions:
                 processed_predictions.pop("predictions")
             keys_to_compute.remove("predictions")
         if self.patch_mode:

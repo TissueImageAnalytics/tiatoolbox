@@ -606,20 +606,6 @@ def cli_merge_predictions(
     )
 
 
-def cli_return_labels(
-    usage_help: str = "Whether to return raw model output as labels.",
-    *,
-    default: bool = False,
-) -> Callable:
-    """Enables --return-labels option for cli."""
-    return click.option(
-        "--return-labels",
-        type=bool,
-        help=add_default_to_usage_help(usage_help, default=default),
-        default=default,
-    )
-
-
 def cli_batch_size(
     usage_help: str = "Number of image patches to feed into the model each time.",
     default: int = 1,

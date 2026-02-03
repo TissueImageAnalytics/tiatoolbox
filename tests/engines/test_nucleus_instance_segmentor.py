@@ -7,7 +7,10 @@ from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
 import torch
+import zarr
+from click.testing import CliRunner
 
+from tiatoolbox import cli
 from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     NucleusInstanceSegmentor,
 )
@@ -78,3 +81,37 @@ def test_mtsegmentor_patches(remote_sample: Callable) -> None:
         fields=["box", "centroid", "contours", "prob", "type"],
     )
     assert_predictions_and_boxes(output_dict, expected_counts_nuclei, is_zarr=False)
+
+
+# -------------------------------------------------------------------------------------
+# Command Line Interface
+# -------------------------------------------------------------------------------------
+
+
+def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) -> None:
+    """Test semantic segmentor CLI single file."""
+    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
+    runner = CliRunner()
+    models_wsi_result = runner.invoke(
+        cli.main,
+        [
+            "nucleus-instance-segment",
+            "--img-input",
+            str(wsi4_512_512_svs),
+            "--patch-mode",
+            "False",
+            "--output-path",
+            str(track_tmp_path / "output"),
+            "--return-predictions",
+            "True",
+        ],
+    )
+
+    assert models_wsi_result.exit_code == 0
+    assert (track_tmp_path / "output" / f"{wsi4_512_512_svs.stem}.db").exists()
+    zarr_group = zarr.open(
+        str(track_tmp_path / "output" / f"{wsi4_512_512_svs.stem}.zarr"), mode="r"
+    )
+    assert "probabilities" in zarr_group
+    assert "nuclei_segmentation" not in zarr_group
+    assert "predictions" in zarr_group
