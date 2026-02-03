@@ -772,9 +772,13 @@ class EngineABC(ABC):  # noqa: B024
         for key in keys_to_compute:
             dask_output = processed_predictions[key]
             if isinstance(dask_output, da.Array):
+                object_codec = Pickle() if dask_output.dtype == "object" else None
                 dask_output = dask_output.rechunk("auto")
                 task = dask_output.to_zarr(
-                    url=save_path, component=key, compute=False, object_codec=None
+                    url=save_path,
+                    component=key,
+                    compute=False,
+                    zarr_array_kwargs={"object_codec": object_codec},
                 )
                 write_tasks.append(task)
 

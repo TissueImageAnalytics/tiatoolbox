@@ -750,6 +750,6 @@ class KongNet(ModelABC):
         *,
         strict: bool = True,
         assign: bool = False,
-    ) -> None:
+    ) -> nn.Module:
         """Load state dict with support for wrapped models."""
         return super().load_state_dict(state_dict["model"], strict, assign)
