@@ -2094,7 +2094,7 @@ def prepare_multitask_full_batch(
                 old_arr=full_batch_output[idx],
                 new_arr=np.zeros(
                     shape=(len(full_output_locs), *batch_output_.shape[1:]),
-                    dtype=np.uint8,
+                    dtype=batch_output_.dtype,
                 ),
             )
 

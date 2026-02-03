@@ -815,7 +815,7 @@ class EngineABC(ABC):  # noqa: B024
             keys_to_compute = [k for k in keys_to_compute if k not in zarr_group]
 
             # If the task group already exists, only compute missing keys
-            if task_name in zarr_group:
+            if task_name is not None and task_name in zarr_group:
                 task_group = zarr_group[task_name]
                 keys_to_compute = [k for k in keys_to_compute if k not in task_group]
 

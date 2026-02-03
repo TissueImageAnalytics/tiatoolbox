@@ -787,19 +787,21 @@ class HoVerNet(ModelABC):
 
         np_map = np_map.compute() if is_dask else np_map
         hv_map = hv_map.compute() if is_dask else hv_map
-        pred_type = tp_map.compute() if is_dask else tp_map
+        pred_type = tp_map.compute() if tp_map is not None and is_dask else tp_map
 
         pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
         nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
 
         nuc_inst_info_dict_ = {}
         if not nuc_inst_info_dict:
-            nuc_inst_info_dict_ = {  # inst_id should start at 1
-                "box": da.empty(shape=0),
-                "centroid": da.empty(shape=0),
-                "contours": da.empty(shape=0),
-                "prob": da.empty(shape=0),
-                "type": da.empty(shape=0),
+            # inst_id should start at 1; use NumPy or Dask empty arrays
+            empty_array = da.empty(shape=0) if is_dask else np.empty(shape=0)
+            nuc_inst_info_dict_ = {
+                "box": empty_array,
+                "centroid": empty_array,
+                "contours": empty_array,
+                "prob": empty_array,
+                "type": empty_array,
             }
         else:
             nuc_inst_info_dict_ = _inst_dict_for_dask_processing(

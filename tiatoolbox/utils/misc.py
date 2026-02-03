@@ -1713,7 +1713,6 @@ def create_smart_array(
             Name for the zarr dataset.
         zarr_path (str | None):
             Filesystem path where the Zarr array will be created if needed.
-            Defaults to "array.zarr".
         chunks (tuple(int,...) | None):
             Chunk shape for the Zarr array. If None, a reasonable default is chosen
             based on the array shape.
