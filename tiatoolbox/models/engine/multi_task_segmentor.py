@@ -233,7 +233,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         weights (str | Path | None):
             Path to model weights. If None, default weights are used.
 
-            >>> engine = SemanticSegmentor(
+            >>> engine = MultiTaskSegmentor(
             ...    model="pretrained-model",
             ...    weights="/path/to/pretrained-local-weights.pth"
             ... )
@@ -259,7 +259,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             IO configuration for patch extraction and resolution.
         return_labels (bool):
             Whether to include labels in the output.
-        return_predictions (dict):
+        return_predictions_dict (dict):
             This dictionary helps keep track of which tasks require predictions in
             the output.
         input_resolutions (list[dict]):
