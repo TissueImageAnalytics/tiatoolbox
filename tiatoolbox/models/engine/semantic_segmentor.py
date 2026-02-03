@@ -1421,6 +1421,7 @@ def prepare_full_batch(
     """
     # Map batch locations back to indices in the full output grid.
     # Use a dict to avoid allocating a huge dense array when locations are sparse.
+    # Use np.intersect1d once numpy version is upgraded to 2.0
     full_output_dict = {tuple(row): i for i, row in enumerate(full_output_locs)}
     matches = np.array([full_output_dict[tuple(row)] for row in batch_locs])
 

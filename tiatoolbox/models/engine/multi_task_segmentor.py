@@ -143,6 +143,7 @@ from .semantic_segmentor import (
     SemanticSegmentorRunParams,
     concatenate_none,
     merge_batch_to_canvas,
+    prepare_full_batch,
     store_probabilities,
 )
 
@@ -605,10 +606,13 @@ class MultiTaskSegmentor(SemanticSegmentor):
             # Interpolate outputs for masked regions
             full_batch_output, full_output_locs, output_locs = (
                 prepare_multitask_full_batch(
-                    batch_output,
-                    batch_locs,
-                    full_output_locs,
-                    output_locs,
+                    batch_output=batch_output,
+                    batch_locs=batch_locs,
+                    full_output_locs=full_output_locs,
+                    output_locs=output_locs,
+                    canvas_np=canvas_np,
+                    save_path=save_path.with_name("full_batch_tmp"),
+                    memory_threshold=memory_threshold,
                     is_last=(batch_idx == (len(dataloader) - 1)),
                 )
             )
@@ -1991,6 +1995,9 @@ def prepare_multitask_full_batch(
     batch_locs: np.ndarray,
     full_output_locs: np.ndarray,
     output_locs: np.ndarray,
+    canvas_np: list[np.ndarray | zarr.Array | None] | None = None,
+    save_path: Path | str = "temp_fullbatch",
+    memory_threshold: int = 80,
     *,
     is_last: bool,
 ) -> tuple[list[np.ndarray], np.ndarray, np.ndarray]:
@@ -2034,6 +2041,14 @@ def prepare_multitask_full_batch(
             extended in-place with the portion of `full_output_locs` filled in
             this call, and with any remaining tail (zeros padded in outputs)
             when `is_last=True`.
+        canvas_np (tuple[np.ndarray | zarr.Array] | None):
+            List of accumulated canvas arrays from previous batches. Used to check
+            total memory footprint when deciding numpy vs zarr.
+        save_path (Path | str):
+            Path to a directory; a unique temp subfolder will be created within it
+            to store the temporary full-batch zarr for this batch.
+        memory_threshold (int):
+            Memory usage threshold (in percentage) to trigger caching behavior.
         is_last (bool):
             Whether this is the final batch. When True, any locations left in
             `full_output_locs` after placing matches are appended to
@@ -2064,41 +2079,22 @@ def prepare_multitask_full_batch(
           remain consistent across batches.
 
     """
-    # Use np.intersect1d once numpy version is upgraded to 2.0
-    full_output_dict = {tuple(row): i for i, row in enumerate(full_output_locs)}
-    matches = [full_output_dict[tuple(row)] for row in batch_locs]
-
-    total_size = np.max(matches).astype(np.uint32) + 1
-
     full_batch_output = [np.empty(0) for _ in range(len(batch_output))]
-
+    full_output_locs_ = full_output_locs.copy()
+    output_locs_ = output_locs
     for idx, batch_output_ in enumerate(batch_output):
-        # Initialize full output array
-        full_batch_output[idx] = np.zeros(
-            shape=(total_size, *batch_output_.shape[1:]),
-            dtype=batch_output_.dtype,
+        full_batch_output[idx], full_output_locs_, output_locs_ = prepare_full_batch(
+            batch_output=batch_output_,
+            batch_locs=batch_locs,
+            full_output_locs=full_output_locs,
+            output_locs=output_locs,
+            canvas_np=canvas_np[idx],
+            save_path=save_path.with_name(f"_{idx}"),
+            memory_threshold=memory_threshold,
+            is_last=is_last,
         )
 
-        # Place matching outputs using matching indices
-        full_batch_output[idx][matches] = batch_output_
-
-    output_locs = concatenate_none(
-        old_arr=output_locs, new_arr=full_output_locs[:total_size]
-    )
-    full_output_locs = full_output_locs[total_size:]
-
-    if is_last:
-        output_locs = concatenate_none(old_arr=output_locs, new_arr=full_output_locs)
-        for idx, batch_output_ in enumerate(batch_output):
-            full_batch_output[idx] = concatenate_none(
-                old_arr=full_batch_output[idx],
-                new_arr=np.zeros(
-                    shape=(len(full_output_locs), *batch_output_.shape[1:]),
-                    dtype=batch_output_.dtype,
-                ),
-            )
-
-    return full_batch_output, full_output_locs, output_locs
+    return full_batch_output, full_output_locs_, output_locs_
 
 
 def merge_multitask_horizontal(
