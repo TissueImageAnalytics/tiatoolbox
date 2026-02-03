@@ -1119,6 +1119,7 @@ def save_to_cache(
     canvas_zarr: zarr.Array,
     count_zarr: zarr.Array,
     save_path: str | Path = "temp.zarr",
+    zarr_dataset_name: tuple[str, str] = ("canvas", "count"),
 ) -> tuple[zarr.Array, zarr.Array]:
     """Incrementally save computed canvas and count arrays to Zarr cache.
 
@@ -1138,6 +1139,9 @@ def save_to_cache(
             Existing Zarr dataset for count data. If None, a new one is created.
         save_path (str | Path):
             Path to the Zarr group for saving datasets. Defaults to "temp.zarr".
+        zarr_dataset_name (tuple[str, str]):
+            Tuple of name for zarr dataset to save canvas and count.
+            Defaults to ("canvas", "count").
 
     Returns:
         tuple[zarr.Array, zarr.Array]:
@@ -1146,7 +1150,7 @@ def save_to_cache(
     chunk0 = canvas.chunks[0][0]
 
     if canvas_zarr is None:
-        zarr_group = zarr.open(str(save_path), mode="w")
+        zarr_group = zarr.open(str(save_path), mode="a")
 
         # Peek first block shapes to initialise datasets without computing all rows.
         # Blocks are 3D: (row_chunk, col_chunk, channel_chunk). Grab the first.
@@ -1154,7 +1158,7 @@ def save_to_cache(
         first_count_block = count.blocks[0, 0, 0].compute()
 
         canvas_zarr = zarr_group.create_dataset(
-            name="canvas",
+            name=zarr_dataset_name[0],
             # Append along axis 0 (height); keep width/channels fixed.
             shape=(0, *first_canvas_block.shape[1:]),
             chunks=(chunk0, *first_canvas_block.shape[1:]),
@@ -1163,7 +1167,7 @@ def save_to_cache(
         )
 
         count_zarr = zarr_group.create_dataset(
-            name="count",
+            name=zarr_dataset_name[1],
             shape=(0, *first_count_block.shape[1:]),
             dtype=first_count_block.dtype,
             chunks=(chunk0, *first_count_block.shape[1:]),

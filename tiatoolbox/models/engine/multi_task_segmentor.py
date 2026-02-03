@@ -125,7 +125,6 @@ import pandas as pd
 import psutil
 import torch
 import zarr
-from dask import compute
 from shapely.geometry import box as shapely_box
 from shapely.geometry import shape as feature2geometry
 from shapely.strtree import STRtree
@@ -144,6 +143,7 @@ from .semantic_segmentor import (
     concatenate_none,
     merge_batch_to_canvas,
     prepare_full_batch,
+    save_to_cache,
     store_probabilities,
 )
 
@@ -2282,47 +2282,15 @@ def save_multitask_to_cache(
           and ``count`` to free RAM and continue populating new entries.
 
     """
-    zarr_group = None
     for idx, canvas_ in enumerate(canvas):
-        computed_values = compute(*[canvas_, count[idx]])
-        canvas_computed, count_computed = computed_values
-
-        chunk_shape = tuple(chunk[0] for chunk in canvas_.chunks)
-        if canvas_zarr[idx] is None:
-            # Only open zarr for first canvas.
-            zarr_group = zarr.open(str(save_path), mode="w") if idx == 0 else zarr_group
-
-            canvas_zarr[idx] = zarr_group.create_dataset(
-                name=f"canvas/{idx}",
-                shape=(0, *canvas_computed.shape[1:]),
-                chunks=(chunk_shape[0], *canvas_computed.shape[1:]),
-                dtype=canvas_computed.dtype,
-                overwrite=True,
-            )
-
-            count_zarr[idx] = zarr_group.create_dataset(
-                name=f"count/{idx}",
-                shape=(0, *count_computed.shape[1:]),
-                dtype=count_computed.dtype,
-                chunks=(chunk_shape[0], *count_computed.shape[1:]),
-                overwrite=True,
-            )
-
-        canvas_zarr[idx].resize(
-            (
-                canvas_zarr[idx].shape[0] + canvas_computed.shape[0],
-                *canvas_zarr[idx].shape[1:],
-            )
+        canvas_zarr[idx], count_zarr[idx] = save_to_cache(
+            canvas=canvas_,
+            count=count[idx],
+            canvas_zarr=canvas_zarr[idx],
+            count_zarr=count_zarr[idx],
+            save_path=save_path,
+            zarr_dataset_name=(f"canvas/{idx}", f"count/{idx}"),
         )
-        canvas_zarr[idx][-canvas_computed.shape[0] :] = canvas_computed
-
-        count_zarr[idx].resize(
-            (
-                count_zarr[idx].shape[0] + count_computed.shape[0],
-                *count_zarr[idx].shape[1:],
-            )
-        )
-        count_zarr[idx][-count_computed.shape[0] :] = count_computed
 
     return canvas_zarr, count_zarr
 
