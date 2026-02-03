@@ -141,7 +141,7 @@ from .semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
     concatenate_none,
-    merge_batch_to_canvas,
+    merge_horizontal,
     prepare_full_batch,
     save_to_cache,
     store_probabilities,
@@ -2100,7 +2100,7 @@ def prepare_multitask_full_batch(
 def merge_multitask_horizontal(
     canvas: list[None] | list[da.Array],
     count: list[None] | list[da.Array],
-    output_locs_y_: np.ndarray,
+    output_locs_y: np.ndarray,
     canvas_np: list[np.ndarray],
     output_locs: np.ndarray,
     change_indices: np.ndarray | list[int],
@@ -2136,7 +2136,7 @@ def merge_multitask_horizontal(
         count (list[da.Array] | list[None]):
             Accumulated per-head row count maps, aligned with ``canvas``.
             Pass ``None`` for each head on the first call.
-        output_locs_y_ (np.ndarray):
+        output_locs_y (np.ndarray):
             Accumulated vertical extents of already-merged rows. Each appended
             element is ``[y0, y1]`` corresponding to the merged row's span.
             Pass ``None`` on the first call; it will be initialized internally
@@ -2186,39 +2186,22 @@ def merge_multitask_horizontal(
           vertical concatenation and overlap handling.
 
     """
-    start_idx = 0
-    for c_idx in change_indices:
-        output_locs_ = output_locs[: c_idx - start_idx]
+    output_locs_ = np.empty(0)
+    output_locs_y_ = np.empty(0)
 
-        batch_xs = np.min(output_locs[:, 0], axis=0)
-        batch_xe = np.max(output_locs[:, 2], axis=0)
-
-        for idx, canvas_np_ in enumerate(canvas_np):
-            canvas_np__ = canvas_np_[: c_idx - start_idx]
-            merged_shape = (
-                canvas_np__.shape[1],
-                batch_xe - batch_xs,
-                canvas_np__.shape[3],
+    for idx, canvas_np_ in enumerate(canvas_np):
+        canvas[idx], count[idx], canvas_np[idx], output_locs_, output_locs_y_ = (
+            merge_horizontal(
+                canvas_np=canvas_np_,
+                canvas=canvas[idx],
+                count=count[idx],
+                output_locs_y=output_locs_y,
+                output_locs=output_locs,
+                change_indices=change_indices,
             )
-            canvas_merge, count_merge = merge_batch_to_canvas(
-                blocks=canvas_np__,
-                output_locations=output_locs_,
-                merged_shape=merged_shape,
-            )
-            canvas_merge = da.from_array(canvas_merge, chunks=canvas_merge.shape)
-            count_merge = da.from_array(count_merge, chunks=count_merge.shape)
-            canvas[idx] = concatenate_none(old_arr=canvas[idx], new_arr=canvas_merge)
-            count[idx] = concatenate_none(old_arr=count[idx], new_arr=count_merge)
-            canvas_np[idx] = canvas_np[idx][c_idx - start_idx :]
-
-        output_locs_y_ = concatenate_none(
-            old_arr=output_locs_y_, new_arr=output_locs[:, (1, 3)]
         )
 
-        output_locs = output_locs[c_idx - start_idx :]
-        start_idx = c_idx
-
-    return canvas, count, canvas_np, output_locs, output_locs_y_
+    return canvas, count, canvas_np, output_locs_, output_locs_y_
 
 
 def save_multitask_to_cache(

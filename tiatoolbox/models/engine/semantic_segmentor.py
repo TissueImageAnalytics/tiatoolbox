@@ -1046,7 +1046,7 @@ def merge_batch_to_canvas(
 def merge_horizontal(
     canvas: None | da.Array,
     count: None | da.Array,
-    output_locs_y_: np.ndarray,
+    output_locs_y: np.ndarray,
     canvas_np: np.ndarray,
     output_locs: np.ndarray,
     change_indices: np.ndarray | list[int],
@@ -1063,7 +1063,7 @@ def merge_horizontal(
             Existing Dask array for canvas data, or None if uninitialized.
         count (None | da.Array):
             Existing Dask array for count data, or None if uninitialized.
-        output_locs_y_ (np.ndarray):
+        output_locs_y (np.ndarray):
             Array tracking vertical output locations for merged patches.
         canvas_np (np.ndarray):
             NumPy array of canvas patches to be merged.
@@ -1102,15 +1102,15 @@ def merge_horizontal(
         canvas = concatenate_none(old_arr=canvas, new_arr=canvas_merge)
         count = concatenate_none(old_arr=count, new_arr=count_merge)
 
-        output_locs_y_ = concatenate_none(
-            old_arr=output_locs_y_, new_arr=output_locs_[:, (1, 3)]
+        output_locs_y = concatenate_none(
+            old_arr=output_locs_y, new_arr=output_locs_[:, (1, 3)]
         )
 
         canvas_np = canvas_np[c_idx - start_idx :]
         output_locs = output_locs[c_idx - start_idx :]
         start_idx = c_idx
 
-    return canvas, count, canvas_np, output_locs, output_locs_y_
+    return canvas, count, canvas_np, output_locs, output_locs_y
 
 
 def save_to_cache(
