@@ -114,6 +114,7 @@ Notes:
 from __future__ import annotations
 
 import gc
+import shutil
 import uuid
 from collections import deque
 from pathlib import Path
@@ -678,6 +679,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
         )
 
         raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
+
+        if save_path.with_name("full_batch_tmp").exists():
+            shutil.rmtree(save_path.with_name("full_batch_tmp"))
 
         return raw_predictions
 
@@ -2089,7 +2093,7 @@ def prepare_multitask_full_batch(
             full_output_locs=full_output_locs,
             output_locs=output_locs,
             canvas_np=canvas_np[idx],
-            save_path=save_path.with_name(f"_{idx}"),
+            save_path=save_path,
             memory_threshold=memory_threshold,
             is_last=is_last,
         )
