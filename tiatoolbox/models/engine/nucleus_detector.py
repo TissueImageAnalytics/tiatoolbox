@@ -879,7 +879,7 @@ class NucleusDetector(SemanticSegmentor):
             ]
 
         tqdm = get_tqdm()
-        tqdm_loop = tqdm(range(0, n, batch_size), desc="Writing detections to store")
+        tqdm_loop = tqdm(range(0, n, batch_size), desc="Writing detections to store.")
         written = 0
         for i in tqdm_loop:
             j = min(i + batch_size, n)

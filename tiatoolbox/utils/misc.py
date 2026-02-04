@@ -1220,7 +1220,11 @@ def patch_predictions_as_annotations(
 ) -> list:
     """Helper function to generate annotation per patch predictions."""
     annotations = []
-    for i, _ in enumerate(patch_coords):
+    tqdm_ = get_tqdm()
+
+    for i, _ in enumerate(
+        tqdm_(patch_coords, leave=False, desc="Converting outputs to AnnotationStore.")
+    ):
         if "probabilities" in keys:
             props = {
                 f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
@@ -1390,7 +1394,11 @@ def dict_to_store_semantic_segmentor(
 
     annotations_list: list[Annotation] = []
 
-    for type_class in layer_list:
+    tqdm_ = get_tqdm()
+
+    for type_class in tqdm_(
+        layer_list, leave=False, desc="Converting outputs to AnnotationStore."
+    ):
         class_id = int(type_class)
         class_label = class_dict.get(class_id, class_id)
         layer = da.where(preds == type_class, 1, 0).astype("uint8").compute()

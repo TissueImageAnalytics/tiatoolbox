@@ -1970,7 +1970,11 @@ def dict_to_store(
     contour = processed_predictions.pop("contours")
 
     ann = []
-    for i, contour_ in enumerate(contour):
+    tqdm_ = get_tqdm()
+
+    for i, contour_ in enumerate(
+        tqdm_(contour, leave=False, desc="Converting outputs to AnnotationStore.")
+    ):
         ann_ = Annotation(
             make_valid_poly(
                 feature2geometry(
