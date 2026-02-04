@@ -574,6 +574,7 @@ class MicroNet(ModelABC):
 
         return [out, aux1, aux2, aux3]
 
+    # skipcq: PYL-W0221  # noqa: ERA001
     def postproc(self: MicroNet, raw_maps: list[np.ndarray | da.Array]) -> tuple[dict]:
         """Post-processing script for MicroNet.
 
