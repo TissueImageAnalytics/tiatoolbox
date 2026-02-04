@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 
+import dask.array as da
 import numpy as np
 import torch
 from scipy import ndimage
@@ -17,8 +18,12 @@ from skimage import morphology
 from torch import nn
 from torch.nn import functional
 
-from tiatoolbox.models.architecture.hovernet import HoVerNet
+from tiatoolbox.models.architecture.hovernet import (
+    HoVerNet,
+    _inst_dict_for_dask_processing,
+)
 from tiatoolbox.models.models_abc import ModelABC
+from tiatoolbox.utils.misc import get_tqdm
 
 
 def group1_forward_branch(
@@ -451,6 +456,7 @@ class MicroNet(ModelABC):
             raise ValueError(msg)
         self.__num_output_channels = num_output_channels
         self.in_ch = num_input_channels
+        self.tasks = ["nuclei_segmentation"]
 
         module_dict = OrderedDict()
         module_dict["b1"] = group1_arch_branch(
@@ -568,13 +574,12 @@ class MicroNet(ModelABC):
 
         return [out, aux1, aux2, aux3]
 
-    @staticmethod
-    def postproc(image: np.ndarray) -> tuple[np.ndarray, dict]:
+    def postproc(self: MicroNet, raw_maps: list[np.ndarray | da.Array]) -> tuple[dict]:
         """Post-processing script for MicroNet.
 
         Args:
-            image (ndarray):
-                Input image of type numpy array.
+            raw_maps (list[ndarray | da.Array]):
+                A list of prediction outputs of each head from inference model.
 
         Returns:
             :class:`numpy.ndarray`:
@@ -582,16 +587,60 @@ class MicroNet(ModelABC):
                 prediction.
 
         """
-        pred_bin = np.argmax(image[0], axis=2)
+        is_dask = isinstance(raw_maps[0], da.Array)
+        pred_map = raw_maps[0].compute() if is_dask else raw_maps[0]
+        pred_bin = np.argmax(pred_map, axis=2)
         pred_inst = ndimage.label(pred_bin)[0]
         pred_inst = morphology.remove_small_objects(pred_inst, min_size=50)
         canvas = np.zeros(pred_inst.shape[:2], dtype=np.int32)
-        for inst_id in range(1, np.max(pred_inst) + 1):
-            inst_map = np.array(pred_inst == inst_id, dtype=np.uint8)
-            inst_map = ndimage.binary_fill_holes(inst_map)
-            canvas[inst_map > 0] = inst_id
+        tqdm_ = get_tqdm()
+        for inst_id in tqdm_(
+            range(1, np.max(pred_inst) + 1),
+            leave=False,
+            desc="Performing morphological operations to improve segmentation quality.",
+        ):
+            # Get coordinates of this instance
+            ys, xs = np.where(pred_inst == inst_id)
+            if len(xs) == 0:
+                continue  # skip empty IDs
+            # Bounding box
+            y1, y2 = ys.min(), ys.max() + 1
+            x1, x2 = xs.min(), xs.max() + 1
+            # Crop region
+            crop = pred_inst[y1:y2, x1:x2] == inst_id
+            # Fill holes only inside this small region
+            filled = ndimage.binary_fill_holes(crop)
+            # Paste back into canvas
+            canvas[y1:y2, x1:x2][filled] = inst_id
+
         nuc_inst_info_dict = HoVerNet.get_instance_info(canvas)
-        return canvas, nuc_inst_info_dict
+
+        nuc_inst_info_dict_ = {}
+        if not nuc_inst_info_dict:
+            # inst_id should start at 1; use NumPy or Dask empty arrays
+            empty_array = da.empty(shape=0) if is_dask else np.empty(shape=0)
+            nuc_inst_info_dict_ = {
+                "box": empty_array,
+                "centroid": empty_array,
+                "contours": empty_array,
+                "prob": empty_array,
+                "type": empty_array,
+            }
+        else:
+            nuc_inst_info_dict_ = _inst_dict_for_dask_processing(
+                inst_info_dict=nuc_inst_info_dict,
+                inst_info_dict_=nuc_inst_info_dict_,
+                is_dask=is_dask,
+            )
+
+        nuclei_seg = {
+            "task_type": self.tasks[0],
+            "predictions": da.array(pred_inst)
+            if isinstance(raw_maps[0], da.Array)
+            else pred_inst,
+            "info_dict": nuc_inst_info_dict_,
+        }
+        return (nuclei_seg,)
 
     @staticmethod
     def preproc(image: np.ndarray) -> np.ndarray:
@@ -629,7 +678,7 @@ class MicroNet(ModelABC):
         batch_data: torch.Tensor,
         *,
         device: str,
-    ) -> list[np.ndarray]:
+    ) -> tuple[np.ndarray]:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O
@@ -660,8 +709,4 @@ class MicroNet(ModelABC):
             pred, _, _, _ = model(patch_imgs_gpu)
 
         pred = pred.permute(0, 2, 3, 1).contiguous()
-        pred = pred.cpu().numpy()
-
-        return [
-            pred,
-        ]
+        return (pred.cpu().numpy(),)

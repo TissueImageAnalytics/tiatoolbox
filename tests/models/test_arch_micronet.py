@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import torch
+import zarr
 
 from tiatoolbox.models import MicroNet, NucleusInstanceSegmentor
 from tiatoolbox.models.architecture import fetch_pretrained_weights
@@ -59,28 +60,34 @@ def test_micronet_output(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test the output of MicroNet."""
     svs_1_small = Path(remote_sample("svs-1-small"))
     micronet_output = Path(remote_sample("micronet-output"))
-    pretrained_model = "micronet-consep"
-    batch_size = 5
-    num_loader_workers = 0
-    num_postproc_workers = 0
+    model = "micronet-consep"
+    batch_size = 64
+    num_workers = 0
 
-    predictor = NucleusInstanceSegmentor(
-        pretrained_model=pretrained_model,
+    ninst_seg = NucleusInstanceSegmentor(
+        model=model,
         batch_size=batch_size,
-        num_loader_workers=num_loader_workers,
-        num_postproc_workers=num_postproc_workers,
+        num_workers=num_workers,
     )
 
-    output = predictor.predict(
-        imgs=[
+    output = ninst_seg.run(
+        images=[
             svs_1_small,
         ],
         save_dir=track_tmp_path / "output",
+        patch_mode=False,
+        verbose=True,
+        device=select_device(on_gpu=ON_GPU),
+        return_predictions=(True,),
+        return_probabilities=True,
+        output_type="zarr",
     )
 
-    output = np.load(output[0][1] + ".raw.0.npy")
+    output = zarr.open(output[svs_1_small], mode="r")
     output_on_server = np.load(str(micronet_output))
     output_on_server = np.round(output_on_server, decimals=3)
-    new_output = np.round(output[500:1000, 1000:1500, :], decimals=3)
+    new_output = np.round(
+        output["probabilities"][0][1000:2000:2, 2000:3000:2, :], decimals=3
+    )
     diff = new_output - output_on_server
     assert diff.mean() < 1e-5

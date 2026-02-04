@@ -54,7 +54,7 @@ if TYPE_CHECKING:  # pragma: no cover
 @cli_model(default="hovernetplus-oed")
 @cli_weights()
 @cli_device(default="cpu")
-@cli_batch_size(default=1)
+@cli_batch_size(default=64)
 @cli_yaml_config_path()
 @cli_masks(default=None)
 @cli_num_workers(default=0)
