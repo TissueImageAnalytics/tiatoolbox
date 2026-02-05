@@ -301,7 +301,6 @@ def create_channel_color_ui() -> Column:
             <li>Double-click on the 'Active' column to toggle channel visibility</li>
             <li>Click on a row to select it for color editing</li>
             <li>Use 'Select All' or 'Deselect All' for quick selection</li>
-            <li>Enable 'Solo Mode' and select a channel to view it alone</li>
             <li>Use the color picker to change the color of the selected channel</li>
             <li>Click 'Apply Changes' to update the image</li>
         </ul>

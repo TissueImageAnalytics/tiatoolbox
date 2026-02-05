@@ -123,6 +123,24 @@ def get_renderer_prop(prop: str) -> json:
     return resp.json()
 
 
+def get_channel_ui_elements() -> tuple[
+    bkmodels.DataTable,
+    bkmodels.DataTable,
+    bkmodels.ColorPicker,
+    bkmodels.Button,
+    bkmodels.Slider,
+]:
+    """Return channel selection UI widgets."""
+    channel_select = main.UI["channel_select"]
+    inner_column = channel_select.children[1]
+    table_row = inner_column.children[0]
+    channel_table, color_table = table_row.children
+    picker_row = inner_column.children[1]
+    color_picker, apply_button = picker_row.children
+    enhance_slider = inner_column.children[2]
+    return channel_table, color_table, color_picker, apply_button, enhance_slider
+
+
 @pytest.fixture(scope="module", autouse=True)
 def annotation_path(data_path: dict[str, Path]) -> dict[str, object]:
     """Download some testing slides and overlays.
@@ -141,6 +159,10 @@ def annotation_path(data_path: dict[str, Path]) -> dict[str, object]:
     )
     data_path["slide3"] = fetch_sample_to_dir(
         "patch-extraction-vf",
+        data_path["base_path"] / "slides",
+    )
+    data_path["qptiff"] = fetch_sample_to_dir(
+        "qptiff_sample",
         data_path["base_path"] / "slides",
     )
     data_path["annotations"] = fetch_sample_to_dir(
@@ -264,8 +286,8 @@ def test_config_loaded(data_path: pytest.TempPathFactory) -> None:
 def test_slide_select(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test slide selection."""
     slide_select = doc.get_model_by_name("slide_select0")
-    # check there are three available slides
-    assert len(slide_select.options) == 3
+    # check there are four available slides
+    assert len(slide_select.options) == 4
     assert slide_select.options[0][0] == data_path["slide1"].name
 
     # select a slide and check it is loaded
@@ -287,7 +309,7 @@ def test_dual_window(doc: Document, data_path: pytest.TempPathFactory) -> None:
     doc.get_model_by_name("slide_windows")
     control_tabs.active = 1
     slide_select = doc.get_model_by_name("slide_select1")
-    assert len(slide_select.options) == 3
+    assert len(slide_select.options) == 4
     assert slide_select.options[0][0] == data_path["slide1"].name
 
     control_tabs.active = 0
@@ -889,7 +911,7 @@ def test_option_buttons() -> None:
 def test_populate_slide_list(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test populating the slide list."""
     slide_select = doc.get_model_by_name("slide_select0")
-    assert len(slide_select.options) == 3
+    assert len(slide_select.options) == 4
     main.populate_slide_list(
         data_path["base_path"] / "slides",
         search_txt="TCGA-HE-7130-01Z-00-DX1",
@@ -898,7 +920,69 @@ def test_populate_slide_list(doc: Document, data_path: pytest.TempPathFactory) -
     main.populate_slide_list(
         data_path["base_path"] / "slides",
     )
-    assert len(slide_select.options) == 3
+    assert len(slide_select.options) == 4
+
+
+def test_channel_color_ui_callbacks(
+    doc: Document,
+    data_path: pytest.TempPathFactory,
+) -> None:
+    """Test channel color selection and apply changes callbacks on qptiff."""
+    slide_select = doc.get_model_by_name("slide_select0")
+    slide_select.value = [data_path["qptiff"].name]
+    assert main.UI["vstate"].slide_path == data_path["qptiff"]
+
+    channel_table, color_table, color_picker, apply_button, _ = (
+        get_channel_ui_elements()
+    )
+    # check we see 5 channels
+    assert len(channel_table.source.data["channels"]) == 5
+
+    # select the first channel and set it to blue
+    channel_index = 0
+    color_table.source.selected.indices = [channel_index]
+    color_picker.color = "#0000ff"
+    channel_table.source.selected.indices = [channel_index]
+    click = ButtonClick(apply_button)
+    apply_button._trigger_event(click)
+
+    # check that getting a tile now blue
+    tile = get_tile("slide", 0, 0, 0, show=False).astype(np.float32)
+    sum_b = tile[:, :, 2].sum()
+    sum_rg = tile[:, :, :2].sum()
+    assert sum_b > 0
+    # may be tiny non-zero r and g values due to webp compression
+    # but should be almost pure blue
+    assert sum_rg / (sum_b + 1e-5) < 0.05
+
+
+def test_enhance_slider_callback(
+    doc: Document,
+    data_path: pytest.TempPathFactory,
+) -> None:
+    """Test enhance slider callback on qptiff."""
+    slide_select = doc.get_model_by_name("slide_select0")
+    slide_select.value = [data_path["qptiff"].name]
+    assert main.UI["vstate"].slide_path == data_path["qptiff"]
+
+    channel_table, color_table, color_picker, apply_button, enhance_slider = (
+        get_channel_ui_elements()
+    )
+    assert len(channel_table.source.data["channels"]) > 0
+
+    channel_index = 0
+    color_table.source.selected.indices = [channel_index]
+    color_picker.color = "#0000ff"
+    channel_table.source.selected.indices = [channel_index]
+    click = ButtonClick(apply_button)
+    apply_button._trigger_event(click)
+
+    before = get_tile("slide", 0, 0, 0, show=False).astype(np.float32)
+    enhance_slider.value = 2.0
+    after = get_tile("slide", 0, 0, 0, show=False).astype(np.float32)
+    # enhance should have made it brighter
+    diff = after - before
+    assert np.max(diff) > 0
 
 
 def test_clearing_doc(doc: Document) -> None:
