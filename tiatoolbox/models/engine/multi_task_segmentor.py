@@ -1973,7 +1973,7 @@ def dict_to_store(
     tqdm_ = get_tqdm()
 
     for i, contour_ in enumerate(
-        tqdm_(contour, leave=False, desc="Converting outputs to AnnotationStore.")
+        tqdm_(contour, leave=False, desc="Converting outputs to AnnotationStore")
     ):
         ann_ = Annotation(
             make_valid_poly(
@@ -2376,7 +2376,9 @@ def merge_multitask_vertical_chunkwise(
         chunk_shape = tuple(chunk[0] for chunk in canvas_.chunks)
 
         tqdm_ = get_tqdm()
-        tqdm_loop = tqdm_(overlaps, leave=False, desc="Merging rows")
+        tqdm_loop = tqdm_(
+            overlaps, leave=False, desc=f"Merging rows for probability map {idx}"
+        )
 
         curr_chunk = canvas_.blocks[0, 0].compute()
         curr_count = count[idx].blocks[0, 0].compute()
