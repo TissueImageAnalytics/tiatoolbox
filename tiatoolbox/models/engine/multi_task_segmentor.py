@@ -114,6 +114,7 @@ Notes:
 from __future__ import annotations
 
 import gc
+import multiprocessing
 import shutil
 import uuid
 from collections import deque
@@ -126,12 +127,13 @@ import pandas as pd
 import psutil
 import torch
 import zarr
+from dask import compute, delayed
 from shapely.geometry import box as shapely_box
 from shapely.geometry import shape as feature2geometry
 from shapely.strtree import STRtree
 from typing_extensions import Unpack
 
-from tiatoolbox import DuplicateFilter, logger
+from tiatoolbox import logger
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.annotation.storage import Annotation
 from tiatoolbox.tools.patchextraction import PatchExtractor
@@ -897,10 +899,16 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 return_predictions=return_predictions,
             )
         else:
+            num_workers = (
+                kwargs.get("num_workers", multiprocessing.cpu_count())
+                if self.num_workers == 0
+                else self.num_workers
+            )
             post_process_predictions = self._process_tile_mode(
                 probabilities=probabilities,
                 save_path=save_path.with_suffix(".zarr"),
                 memory_threshold=kwargs.get("memory_threshold", 80),
+                num_workers=num_workers,
                 return_predictions=kwargs.get("return_predictions"),
             )
 
@@ -991,6 +999,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         probabilities: list[da.Array | np.ndarray],
         save_path: Path,
         memory_threshold: float = 80,
+        num_workers: int = multiprocessing.cpu_count(),
         *,
         return_predictions: tuple[bool, ...] | None = None,
     ) -> list[dict] | None:
@@ -1021,6 +1030,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
             memory_threshold (float):
                 Maximum allowed RAM usage (percentage) for in-memory arrays before
                 switching to or continuing with Zarr-backed allocation. Defaults to 80.
+            num_workers (int):
+                Number of workers for data loading.
+                Default is multiprocessing.cpu_count().
             return_predictions (tuple[bool, ...] | None):
                 Per-task flags indicating whether to retain a full-resolution
                 ``"predictions"`` array for each task. If ``None``, no task-level
@@ -1071,32 +1083,32 @@ class MultiTaskSegmentor(SemanticSegmentor):
         tile_info_sets = self._get_tile_info(wsi_proc_shape, self.ioconfig)
         ioconfig = self.ioconfig.to_baseline()
 
-        merged = []
-        wsi_info_dict = None
-        duplicate_filter = DuplicateFilter()
-        logger.addFilter(duplicate_filter)
         tqdm_ = get_tqdm()
-        for set_idx, (set_bounds, set_flags) in enumerate(
-            tqdm_(
-                tile_info_sets,
-                leave=False,
-                desc="Post-Processing WSI to generate predictions and contours",
-            )
+
+        delayed_results, tile_metadata = _build_delayed_tile_tasks(
+            probabilities=probabilities,
+            tile_info_sets=tile_info_sets,
+            model=self.model,
+        )
+
+        wsi_info_dict = None
+        merge_idx = 0
+        for i in tqdm_(
+            range(0, len(delayed_results), num_workers),
+            leave=False,
+            desc="Post-Processing WSI to generate predictions and contours",
         ):
-            for tile_idx, tile_bounds in enumerate(set_bounds):
-                tile_flag = set_flags[tile_idx]
-                tile_tl = tile_bounds[:2]
-                tile_br = tile_bounds[2:]
-                tile_shape = tile_br - tile_tl  # in width height
-                head_raws = [
-                    probabilities_[
-                        tile_bounds[1] : tile_bounds[3],
-                        tile_bounds[0] : tile_bounds[2],
-                        :,
-                    ].compute()
-                    for probabilities_ in probabilities
-                ]
-                post_process_output = self.model.postproc_func(head_raws)
+            batch = delayed_results[i : i + num_workers]
+
+            # Compute only this batch in parallel to avoid memory overload.
+            batch_outputs = compute(
+                *batch, scheduler="threads", num_workers=num_workers
+            )
+
+            # Merge each tile result immediately
+            for post_process_output in batch_outputs:
+                tile_bounds, tile_flag, tile_mode = tile_metadata[merge_idx]
+                merge_idx += 1
 
                 # create a list of info dict for each task
                 wsi_info_dict = _create_wsi_info_dict(
@@ -1117,8 +1129,10 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 inst_dicts = _get_inst_info_dicts(
                     post_process_output=post_process_output
                 )
+                tile_tl = tile_bounds[:2]
+                tile_br = tile_bounds[2:]
+                tile_shape = tile_br - tile_tl
 
-                tile_mode = set_idx
                 new_inst_dicts, remove_insts_in_origs = [], []
                 for inst_id, inst_dict in enumerate(inst_dicts):
                     new_inst_dict, remove_insts_in_orig = _process_instance_predictions(
@@ -1133,14 +1147,10 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     new_inst_dicts.append(new_inst_dict)
                     remove_insts_in_origs.append(remove_insts_in_orig)
 
-                merged.append((new_inst_dicts, remove_insts_in_origs))
-
-            for new_inst_dicts, remove_uuid_lists in merged:
                 for inst_id, new_inst_dict in enumerate(new_inst_dicts):
                     wsi_info_dict[inst_id]["info_dict"].update(new_inst_dict)
-                    for inst_uuid in remove_uuid_lists[inst_id]:
+                    for inst_uuid in remove_insts_in_origs[inst_id]:
                         wsi_info_dict[inst_id]["info_dict"].pop(inst_uuid, None)
-        logger.removeFilter(duplicate_filter)
 
         for idx, wsi_info_dict_ in enumerate(
             tqdm_(
@@ -2892,7 +2902,7 @@ def _create_wsi_info_dict(
     save_path: Path,
     return_predictions: tuple[bool, ...] | None,
     memory_threshold: float = 80,
-) -> tuple[dict[str, dict[Any, Any] | list[Any] | Any], ...]:
+) -> tuple[dict, ...]:
     """Create or reuse WSI info dictionaries for post-processed outputs.
 
     This function constructs a tuple of WSI information dictionaries, one for each
@@ -2961,7 +2971,7 @@ def _update_tile_based_predictions_array(
     post_process_output: tuple[dict],
     wsi_info_dict: tuple[dict],
     bounds: tuple[int, int, int, int],
-) -> tuple[dict]:
+) -> tuple[dict, ...]:
     """Helper function to update tile based predictions array."""
     x_start, y_start, x_end, y_end = bounds
 
@@ -2977,3 +2987,91 @@ def _update_tile_based_predictions_array(
         )
 
     return wsi_info_dict
+
+
+@delayed
+def _compute_tile(
+    probabilities: list[da.Array | np.ndarray],
+    tile_bounds: tuple[int, int, int, int],
+    model: ModelABC,
+) -> tuple:
+    """Compute post-processing outputs for a single WSI tile.
+
+    This function performs lazy slicing of the probability maps for the given
+    tile bounds and applies the model's `postproc_func` to produce per-task
+    outputs (semantic, instance, etc.).
+
+    Args:
+        probabilities:
+            List of WSI-scale probability maps, one per model head. Each element
+            is either a Dask array or NumPy array with shape (H, W, C).
+        tile_bounds:
+            A 4-tuple (x_start, y_start, x_end, y_end) defining the tile region
+            in WSI coordinates.
+        model:
+            The multitask model containing a `postproc_func` method that accepts
+            a list of tile-level arrays and returns a tuple of task dictionaries.
+
+    Returns:
+        A tuple of dictionaries, one per task, as produced by `postproc_func`.
+        Each dictionary typically contains:
+            - "task_type": str
+            - "predictions": np.ndarray
+            - "info_dict": dict
+    """
+    head_raws = [
+        p[tile_bounds[1] : tile_bounds[3], tile_bounds[0] : tile_bounds[2], :]
+        for p in probabilities
+    ]
+    return model.postproc_func(head_raws)
+
+
+def _build_delayed_tile_tasks(
+    probabilities: list[da.Array | np.ndarray],
+    tile_info_sets: list,
+    model: ModelABC,
+) -> tuple[
+    list[Any],  # delayed results
+    list,  # metadata
+]:
+    """Build delayed tile-processing tasks and associated metadata.
+
+    This function iterates over all tile sets and constructs:
+      - a list of delayed tasks (each calling `_compute_tile`)
+      - a parallel list of metadata entries describing each tile
+
+    Metadata entries contain:
+        (tile_bounds, tile_flag, tile_mode)
+
+    Args:
+        probabilities:
+            List of WSI-scale probability maps, one per model head.
+            Each element is a Dask array or NumPy array with shape (H, W, C).
+        tile_info_sets:
+            A list where each element is a tuple:
+                (set_bounds, set_flags)
+            - set_bounds: list of tile bounds (x0, y0, x1, y1)
+            - set_flags: list of per-tile flags used for instance merging
+        model:
+            The multitask model containing a `postproc_func` method.
+
+    Returns:
+        A tuple:
+            - delayed_results: list of delayed `_compute_tile` tasks
+            - tile_metadata: list of metadata tuples
+              (tile_bounds, tile_flag, tile_mode)
+    """
+    delayed_results: list = []
+    tile_metadata: list = []
+
+    for set_idx, (set_bounds, set_flags) in enumerate(tile_info_sets):
+        for tile_idx, tile_bounds in enumerate(set_bounds):
+            tile_flag = set_flags[tile_idx]
+
+            # Create delayed tile compute task
+            delayed_results.append(_compute_tile(probabilities, tile_bounds, model))
+
+            # Store metadata for merging
+            tile_metadata.append((tile_bounds, tile_flag, set_idx))
+
+    return delayed_results, tile_metadata
