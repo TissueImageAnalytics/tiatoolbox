@@ -68,7 +68,7 @@ class MultichannelToRGB:
         msg = f"Number of colors: {n_colors} does not match channels in image: {n}."
         raise ValueError(msg)
 
-    def generate_colors(self: MultichannelToRGB, n_channels: int) -> None:
+    def generate_colors(self: MultichannelToRGB, n_channels: int) -> np.ndarray:
         """Generate a set of visually distinct colors.
 
         Args:
@@ -82,6 +82,7 @@ class MultichannelToRGB:
             f"channel_{i}": colorsys.hsv_to_rgb(i / n_channels, 1, 1)
             for i in range(n_channels)
         }
+        return np.array(list(self.color_dict.values()), dtype=np.float32)
 
     def __call__(self: MultichannelToRGB, image: np.ndarray) -> np.ndarray:
         """Convert a multi-channel image to an RGB image.
@@ -99,8 +100,9 @@ class MultichannelToRGB:
             # assume already rgb(a) so just return image
             return image
 
-        if self.colors is None:
-            self.generate_colors(n)
+        colors = self.colors
+        if colors is None:
+            colors = self.generate_colors(n)
 
         if not self.is_validated:
             self.validate(n)
@@ -113,7 +115,7 @@ class MultichannelToRGB:
             np.einsum(
                 "hwn,nc->hwc",
                 image[:, :, self.channels],
-                self.colors[self.channels, :],
+                colors[self.channels, :],
                 optimize=True,
             )
             * self.enhance
