@@ -172,3 +172,18 @@ def test_ctor_with_color_dict_does_not_raise() -> None:
     )
     assert conv.channels == [0, 1, 2]
     assert conv.colors.shape == (3, 3)
+
+
+def test_validate_handles_nones() -> None:
+    """validate() should handle None for colors and channels gracefully."""
+    conv = MultichannelToRGB()
+    with pytest.raises(ValueError, match="Colors must be initialized"):
+        conv.validate(5)
+    # now set a colors but leave channels None
+    conv.colors = np.array(
+        [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0], [1, 0, 1]]
+    )  # N=5
+    conv.validate(5)
+    # validate should have set channels to range(num_colors)
+    assert conv.is_validated is True
+    assert conv.channels == [0, 1, 2, 3, 4]

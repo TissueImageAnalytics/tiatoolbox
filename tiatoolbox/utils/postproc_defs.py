@@ -45,12 +45,12 @@ class MultichannelToRGB:
             raise ValueError(msg)
 
         n_colors = len(self.colors)
+        if self.channels is None:
+            self.channels = list(range(n_colors))
+
         if n_colors == n:
             self.is_validated = True
             return
-
-        if self.channels is None:
-            self.channels = list(range(n_colors))
 
         if n_colors - 1 == n:
             self.colors = self.colors[:n]
@@ -105,15 +105,8 @@ class MultichannelToRGB:
         if not self.is_validated:
             self.validate(n)
 
-        if self.channels is None:
-            self.channels = list(range(image.shape[2]))
-
         if image.dtype == np.uint16:
             image = (image / 256).astype(np.uint8)
-
-        if self.colors is None:
-            msg = "self.colors must be initialized before RGB conversion."
-            raise RuntimeError(msg)
 
         # Convert to RGB image
         rgb_image = (
