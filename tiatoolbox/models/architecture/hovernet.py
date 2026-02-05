@@ -22,7 +22,7 @@ from tiatoolbox.models.architecture.utils import (
     centre_crop_to_shape,
 )
 from tiatoolbox.models.models_abc import ModelABC
-from tiatoolbox.utils.misc import get_bounding_box
+from tiatoolbox.utils.misc import get_bounding_box, get_tqdm
 
 
 class TFSamepaddingLayer(nn.Module):
@@ -650,7 +650,10 @@ class HoVerNet(ModelABC):
         """
         inst_id_list = np.unique(pred_inst)[1:]  # exclude background
         inst_info_dict = {}
-        for inst_id in inst_id_list:
+        tqdm_ = get_tqdm()
+        for inst_id in tqdm_(
+            inst_id_list, leave=False, desc="Generating 'info_dict' for instances"
+        ):
             inst_map = pred_inst == inst_id
             inst_box = get_bounding_box(inst_map)
             inst_box_tl = inst_box[:2]

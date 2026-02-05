@@ -131,7 +131,7 @@ from shapely.geometry import shape as feature2geometry
 from shapely.strtree import STRtree
 from typing_extensions import Unpack
 
-from tiatoolbox import logger
+from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.annotation.storage import Annotation
 from tiatoolbox.tools.patchextraction import PatchExtractor
@@ -1073,7 +1073,16 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         merged = []
         wsi_info_dict = None
-        for set_idx, (set_bounds, set_flags) in enumerate(tile_info_sets):
+        duplicate_filter = DuplicateFilter()
+        logger.addFilter(duplicate_filter)
+        tqdm_ = get_tqdm()
+        for set_idx, (set_bounds, set_flags) in enumerate(
+            tqdm_(
+                tile_info_sets,
+                leave=False,
+                desc="Post-Processing WSI to generate predictions and contours",
+            )
+        ):
             for tile_idx, tile_bounds in enumerate(set_bounds):
                 tile_flag = set_flags[tile_idx]
                 tile_tl = tile_bounds[:2]
@@ -1131,8 +1140,13 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     wsi_info_dict[inst_id]["info_dict"].update(new_inst_dict)
                     for inst_uuid in remove_uuid_lists[inst_id]:
                         wsi_info_dict[inst_id]["info_dict"].pop(inst_uuid, None)
+        logger.removeFilter(duplicate_filter)
 
-        for idx, wsi_info_dict_ in enumerate(wsi_info_dict):
+        for idx, wsi_info_dict_ in enumerate(
+            tqdm_(
+                wsi_info_dict, leave=False, desc="Converting 'info_dict' to dask arrays"
+            )
+        ):
             info_df = pd.DataFrame(wsi_info_dict_["info_dict"]).transpose()
             dict_info_wsi = {}
             for key, col in info_df.items():
