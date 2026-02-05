@@ -41,8 +41,11 @@ def test_functionality(
     pretrained = torch.load(weights_path, map_location=map_location)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, device=map_location)
-    output, _ = model.postproc(output[0])
-    assert np.max(np.unique(output)) == 46
+    output_ = model.postproc(list(output[0]))
+    assert output_[0]["task_type"] == "nuclei_segmentation"
+    assert np.max(np.unique(output_[0]["predictions"])) == 46
+    assert len(output_[0]["info_dict"]["centroid"]) == 27
+    assert len(output_[0]["info_dict"]["contours"]) == 27
     Path(weights_path).unlink()
 
 
