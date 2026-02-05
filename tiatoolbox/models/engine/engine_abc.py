@@ -45,7 +45,7 @@ import numpy as np
 import torch
 import zarr
 from dask import compute
-from dask.diagnostics.progress import ProgressBar
+from dask.diagnostics import ProgressBar
 from numcodecs import Pickle
 from torch import nn
 from typing_extensions import Unpack
@@ -528,7 +528,7 @@ class EngineABC(ABC):  # noqa: B024
             coordinates = []
 
         # Main output dictionary
-        raw_predictions = dict(zip(keys, [[]] * len(keys), strict=False))
+        raw_predictions = {key: [] for key in keys}
 
         # Inference loop
         tqdm = get_tqdm()
@@ -729,7 +729,7 @@ class EngineABC(ABC):  # noqa: B024
             # scale_factor set from kwargs
             scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
             # class_dict set from kwargs
-            class_dict = kwargs.get("class_dict")
+            class_dict = kwargs.get("class_dict", self.model.class_dict)
 
             return dict_to_store_patch_predictions(
                 processed_predictions,
@@ -741,11 +741,54 @@ class EngineABC(ABC):  # noqa: B024
         msg = f"Unsupported output type: {output_type}"
         raise TypeError(msg)
 
+    @staticmethod
+    def _get_tasks_for_saving_zarr(
+        dask_output: da.Array | list,
+        key: str,
+        task_name: str | None,
+        save_path: Path,
+        write_tasks: list,
+    ) -> list:
+        """Helper function to get dask tasks for saving zarr output."""
+        if isinstance(dask_output, da.Array):
+            dask_output_dtype = dask_output.dtype
+            object_codec = Pickle()
+            if dask_output_dtype != "object":
+                dask_output = dask_output.rechunk("auto")
+                object_codec = None
+            component = key if task_name is None else f"{task_name}/{key}"
+            task = dask_output.to_zarr(
+                url=save_path,
+                component=component,
+                compute=False,
+                object_codec=object_codec,  # zarr kwargs
+            )
+            write_tasks.append(task)
+
+        if isinstance(dask_output, list) and all(
+            isinstance(dask_array, da.Array) for dask_array in dask_output
+        ):
+            for i, dask_array in enumerate(dask_output):
+                object_codec = Pickle() if dask_array.dtype == "object" else None
+                component = (
+                    f"{key}/{i}" if task_name is None else f"{task_name}/{key}/{i}"
+                )
+                task = dask_array.to_zarr(
+                    url=save_path,
+                    component=component,
+                    compute=False,
+                    object_codec=object_codec,  # zarr kwargs
+                )
+                write_tasks.append(task)
+
+        return write_tasks
+
     def save_predictions_as_zarr(
         self: EngineABC,
         processed_predictions: dict,
         save_path: Path,
         keys_to_compute: list,
+        task_name: str | None = None,
     ) -> Path:
         """Save model predictions as a zarr file.
 
@@ -759,6 +802,8 @@ class EngineABC(ABC):  # noqa: B024
                 Path to save the zarr file.
             keys_to_compute (list):
                 List of keys in processed_predictions to save.
+            task_name (str):
+                Task Name for Multitask outputs.
 
         Returns:
             save_path (Path):
@@ -768,32 +813,22 @@ class EngineABC(ABC):  # noqa: B024
         if is_zarr(save_path):
             zarr_group = zarr.open(save_path, mode="r")
             keys_to_compute = [k for k in keys_to_compute if k not in zarr_group]
+
+            # If the task group already exists, only compute missing keys
+            if task_name is not None and task_name in zarr_group:
+                task_group = zarr_group[task_name]
+                keys_to_compute = [k for k in keys_to_compute if k not in task_group]
+
         write_tasks = []
         for key in keys_to_compute:
             dask_output = processed_predictions[key]
-            if isinstance(dask_output, da.Array):
-                object_codec = Pickle() if dask_output.dtype == "object" else None
-                dask_output = dask_output.rechunk("auto")
-                task = dask_output.to_zarr(
-                    url=save_path,
-                    component=key,
-                    compute=False,
-                    zarr_array_kwargs={"object_codec": object_codec},
-                )
-                write_tasks.append(task)
-
-            if isinstance(dask_output, list) and all(
-                isinstance(dask_array, da.Array) for dask_array in dask_output
-            ):
-                for i, dask_array in enumerate(dask_output):
-                    object_codec = Pickle() if dask_array.dtype == "object" else None
-                    task = dask_array.to_zarr(
-                        url=save_path,
-                        component=f"{key}/{i}",
-                        compute=False,
-                        zarr_array_kwargs={"object_codec": object_codec},
-                    )
-                    write_tasks.append(task)
+            write_tasks = self._get_tasks_for_saving_zarr(
+                dask_output=dask_output,
+                key=key,
+                task_name=task_name,
+                save_path=save_path,
+                write_tasks=write_tasks,
+            )
 
         msg = f"Saving output to {save_path}."
         logger.info(msg=msg)
@@ -1225,6 +1260,9 @@ class EngineABC(ABC):  # noqa: B024
                 If an unsupported output_type is provided.
             ValueError:
                 If required configuration or input parameters are missing.
+            ValueError:
+                If save_dir is not provided and output_type is "zarr"
+                or "annotationstore".
 
         """
         for key in kwargs:
@@ -1265,6 +1303,10 @@ class EngineABC(ABC):  # noqa: B024
             )
             logger.info(msg)
 
+        if save_dir is None and output_type.lower() in ["zarr", "annotationstore"]:
+            msg = f"Please provide save_dir for output_type={output_type}"
+            raise ValueError(msg)
+
         self.images = self._validate_images_masks(images=images)
 
         if masks is not None:
@@ -1290,7 +1332,7 @@ class EngineABC(ABC):  # noqa: B024
         self: EngineABC,
         output_type: str,
         save_dir: Path,
-        **kwargs: EngineABCRunParams,
+        **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | AnnotationStore | Path:
         """Run the engine in patch mode.
 
@@ -1381,6 +1423,9 @@ class EngineABC(ABC):  # noqa: B024
             save_path=save_path,
             **kwargs,
         )
+
+        if isinstance(out, dict):
+            return out
 
         msg = f"Output file saved at {out}."
         logger.info(msg=msg)
