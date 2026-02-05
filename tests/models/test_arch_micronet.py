@@ -46,6 +46,14 @@ def test_functionality(
     assert np.max(np.unique(output_[0]["predictions"])) == 46
     assert len(output_[0]["info_dict"]["centroid"]) == 27
     assert len(output_[0]["info_dict"]["contours"]) == 27
+
+    # For test coverage pass probability map with
+    # no cell segmentation instance
+    output_ = model.postproc(np.zeros((1, 252, 252, 2)))
+    assert output_[0]["task_type"] == "nuclei_segmentation"
+    assert np.max(np.unique(output_[0]["predictions"])) == 0
+    assert len(output_[0]["info_dict"]["centroid"]) == 0
+
     Path(weights_path).unlink()
 
 
