@@ -526,7 +526,6 @@ class SemanticSegmentor(PatchPredictor):
                     used_percent > memory_threshold
                     or canvas_used_percent > memory_threshold
                 ):
-                    
                     used_percent = (
                         canvas_used_percent
                         if (canvas_used_percent > memory_threshold)
