@@ -939,28 +939,28 @@ def test_channel_color_ui_callbacks(
     assert len(channel_table.source.data["channels"]) == 5
 
     # if no channels selected, check apply button does nothing
-    old_colors = color_table.source.data["colors"]
+    old_colors = color_table.source.data["colors"].copy()
     click = ButtonClick(apply_button)
     apply_button._trigger_event(click)
     assert color_table.source.data["colors"] == old_colors
 
-    # select the first channel and set it to blue
+    # select the first channel and set it to red
     channel_index = 0
     color_table.source.selected.indices = [channel_index]
-    color_picker.color = "#0000ff"
+    color_picker.color = "#ff0000"
     channel_table.source.selected.indices = [channel_index]
     click = ButtonClick(apply_button)
     apply_button._trigger_event(click)
     assert color_table.source.data["colors"] != old_colors
 
-    # check that getting a tile now blue
+    # check that getting a tile now red
     tile = get_tile("slide", 0, 0, 0, show=False).astype(np.float32)
-    sum_b = tile[:, :, 2].sum()
-    sum_rg = tile[:, :, :2].sum()
-    assert sum_b > 0
-    # may be tiny non-zero r and g values due to webp compression
-    # but should be almost pure blue
-    assert sum_rg / (sum_b + 1e-5) < 0.05
+    sum_r = tile[:, :, 0].sum()
+    sum_gb = tile[:, :, 1:].sum()
+    assert sum_r > 0
+    # may be tiny non-zero g and b values due to webp compression
+    # but should be almost pure red
+    assert (sum_gb) / (sum_r + 1e-5) < 0.1
 
 
 def test_enhance_slider_callback(
@@ -979,7 +979,7 @@ def test_enhance_slider_callback(
 
     channel_index = 0
     color_table.source.selected.indices = [channel_index]
-    color_picker.color = "#0000ff"
+    color_picker.color = "#ff0000"
     channel_table.source.selected.indices = [channel_index]
     click = ButtonClick(apply_button)
     apply_button._trigger_event(click)
