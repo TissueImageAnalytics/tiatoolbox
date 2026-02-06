@@ -460,9 +460,9 @@ class SemanticSegmentor(PatchPredictor):
         )
 
         # Inference loop
-        tqdm = get_tqdm()
+        tqdm_ = get_tqdm()
         tqdm_loop = (
-            tqdm(dataloader, leave=False, desc="Inferring patches")
+            tqdm_(dataloader, leave=False, desc="Inferring patches")
             if self.verbose
             else dataloader
         )
@@ -526,7 +526,6 @@ class SemanticSegmentor(PatchPredictor):
                     used_percent > memory_threshold
                     or canvas_used_percent > memory_threshold
                 ):
-                    tqdm_loop.desc = "Spill intermediate data to disk"
                     used_percent = (
                         canvas_used_percent
                         if (canvas_used_percent > memory_threshold)
@@ -537,7 +536,7 @@ class SemanticSegmentor(PatchPredictor):
                         f"exceeds specified threshold: {memory_threshold}. "
                         f"Saving intermediate results to disk."
                     )
-                    tqdm.write(msg)
+                    tqdm_loop.desc = msg
                     # Flush data in Memory and clear dask graph
                     canvas_zarr, count_zarr = save_to_cache(
                         canvas,
@@ -1248,8 +1247,8 @@ def merge_vertical_chunkwise(
     probabilities_zarr, probabilities_da = None, None
     chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)
 
-    tqdm = get_tqdm()
-    tqdm_loop = tqdm(overlaps, leave=False, desc="Merging rows")
+    tqdm_ = get_tqdm()
+    tqdm_loop = tqdm_(overlaps, leave=False, desc="Merging rows")
 
     used_percent = 0
 
@@ -1279,12 +1278,13 @@ def merge_vertical_chunkwise(
             vm = psutil.virtual_memory()
             used_percent = (probabilities_da.nbytes / vm.free) * 100
         if probabilities_zarr is None and used_percent > memory_threshold:
+            desc = tqdm_.desc
             msg = (
                 f"Current Memory usage: {used_percent} %  "
                 f"exceeds specified threshold: {memory_threshold}. "
                 f"Saving intermediate results to disk."
             )
-            tqdm.write(msg)
+            tqdm_.desc = msg
             zarr_group = zarr.open(str(save_path), mode="a")
             probabilities_zarr = zarr_group.create_dataset(
                 name="probabilities",
@@ -1296,6 +1296,7 @@ def merge_vertical_chunkwise(
             probabilities_zarr[:] = probabilities_da.compute()
 
             probabilities_da = None
+            tqdm_.desc = desc
 
         if next_chunk is not None:
             curr_chunk, curr_count = next_chunk[overlap:], next_count[overlap:]

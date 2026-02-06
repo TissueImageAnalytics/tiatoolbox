@@ -2477,12 +2477,13 @@ def _save_multitask_vertical_to_cache(
         total_bytes = sum(0 if arr is None else arr.nbytes for arr in probabilities_da)
         used_percent = (total_bytes / max(vm.available, 1)) * 100
     if probabilities_zarr[idx] is None and used_percent > memory_threshold:
+        desc = tqdm_.desc
         msg = (
             f"Current Memory usage: {used_percent} %  "
             f"exceeds specified threshold: {memory_threshold}. "
             f"Saving intermediate results to disk."
         )
-        tqdm_.write(msg)
+        tqdm_.desc = msg
         zarr_group = zarr.open(str(save_path), mode="a")
         probabilities_zarr[idx] = zarr_group.create_dataset(
             name=f"probabilities/{idx}",
@@ -2492,7 +2493,7 @@ def _save_multitask_vertical_to_cache(
             overwrite=True,
         )
         probabilities_zarr[idx][:] = probabilities_da[idx].compute()
-
+        tqdm_.desc = desc
         probabilities_da[idx] = None
 
     return probabilities_zarr, probabilities_da
@@ -2577,7 +2578,6 @@ def _check_and_update_for_memory_overload(
     if not (used_percent > memory_threshold or canvas_used_percent > memory_threshold):
         return canvas, count, canvas_zarr, count_zarr, tqdm_loop
 
-    tqdm_loop.desc = "Spill intermediate data to disk"
     used_percent = (
         canvas_used_percent
         if (canvas_used_percent > memory_threshold)
@@ -2588,7 +2588,7 @@ def _check_and_update_for_memory_overload(
         f"exceeds specified threshold: {memory_threshold}. "
         f"Saving intermediate results to disk."
     )
-    tqdm_.write(msg)
+    tqdm_.desc = msg
     # Flush data in Memory and clear dask graph
     canvas_zarr, count_zarr = save_multitask_to_cache(
         canvas,

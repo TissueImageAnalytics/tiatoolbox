@@ -325,7 +325,6 @@ class DeepFeatureExtractor(PatchPredictor):
                 used_percent > memory_threshold
                 or probabilities_used_percent > memory_threshold
             ):
-                tqdm_loop.desc = "Spill intermediate data to disk"
                 used_percent = (
                     probabilities_used_percent
                     if (probabilities_used_percent > memory_threshold)
@@ -337,7 +336,7 @@ class DeepFeatureExtractor(PatchPredictor):
                     f"Saving intermediate results to disk."
                 )
 
-                tqdm.write(msg)
+                tqdm_loop.desc = msg
                 # Flush data in Memory and clear dask graph
                 probabilities_zarr, coordinates_zarr = save_to_cache(
                     probabilities,
