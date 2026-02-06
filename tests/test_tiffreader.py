@@ -184,6 +184,7 @@ def test_try_tiff_raises_other_valueerror(
 def test_parse_filtercolor_metadata_with_filter_pair() -> None:
     """Test full parsing including filter pair matching from XML metadata."""
     # We can't possibly test on all the different types of tiff files, so simulate them.
+    # include some scanbands-i with missing info to test fallback logic
     xml_str = """
     <root>
         <FilterColors>
@@ -207,13 +208,97 @@ def test_parse_filtercolor_metadata_with_filter_pair() -> None:
                 </ExcitationFilter>
             </FilterPair>
         </ScanBands-i>
+        <ScanBands-i>
+            <FilterPair>
+                <EmissionFilter>
+                    <FixedFilter>
+                        <PartNumber>EM123</PartNumber>
+                    </FixedFilter>
+                </EmissionFilter>
+                <ExcitationFilter>
+                    <FixedFilter>
+                        <PartNumber>EX456</PartNumber>
+                    </FixedFilter>
+                </ExcitationFilter>
+            </FilterPair>
+        </ScanBands-i>
+        <ScanBands-i>
+            <Bands-i></Bands-i>
+            <FilterPair>
+                <EmissionFilter>
+                    <FixedFilter>
+                        <PartNumber>EM123</PartNumber>
+                    </FixedFilter>
+                </EmissionFilter>
+                <ExcitationFilter>
+                    <FixedFilter>
+                        <PartNumber>EX456</PartNumber>
+                    </FixedFilter>
+                </ExcitationFilter>
+            </FilterPair>
+        </ScanBands-i>
+        <ScanBands-i>
+            <Bands-i>
+                <Name>ChannelWithoutFilterPair</Name>
+            </Bands-i>
+        </ScanBands-i>
+        <ScanBands-i>
+            <Bands-i>
+                <Name>ChannelWithoutEmissionPart</Name>
+            </Bands-i>
+            <FilterPair>
+                <ExcitationFilter>
+                    <FixedFilter>
+                        <PartNumber>EX456</PartNumber>
+                    </FixedFilter>
+                </ExcitationFilter>
+            </FilterPair>
+        </ScanBands-i>
+        <ScanBands-i>
+            <Bands-i>
+                <Name>ChannelWithoutExcitationPart</Name>
+            </Bands-i>
+            <FilterPair>
+                <EmissionFilter>
+                    <FixedFilter>
+                        <PartNumber>EM123</PartNumber>
+                    </FixedFilter>
+                </EmissionFilter>
+            </FilterPair>
+        </ScanBands-i>
     </root>
     """
     root = ElementTree.fromstring(xml_str)
     result = wsireader.TIFFWSIReader._parse_filtercolor_metadata(root)
     assert result is not None
-    assert "Channel1" in result
-    assert result["Channel1"] == (1.0, 128 / 255, 0.0)
+    assert result == {"Channel1": (1.0, 128 / 255, 0.0)}
+
+    xml_without_filtercolors = """
+    <root>
+        <ScanBands-i>
+            <Bands-i>
+                <Name>Channel1</Name>
+            </Bands-i>
+            <FilterPair>
+                <EmissionFilter>
+                    <FixedFilter>
+                        <PartNumber>EM123</PartNumber>
+                    </FixedFilter>
+                </EmissionFilter>
+                <ExcitationFilter>
+                    <FixedFilter>
+                        <PartNumber>EX456</PartNumber>
+                    </FixedFilter>
+                </ExcitationFilter>
+            </FilterPair>
+        </ScanBands-i>
+    </root>
+    """
+    root_without_filtercolors = ElementTree.fromstring(xml_without_filtercolors)
+    assert (
+        wsireader.TIFFWSIReader._parse_filtercolor_metadata(root_without_filtercolors)
+        is None
+    )
 
 
 def test_parse_scancolortable_rgb_and_named_colors() -> None:

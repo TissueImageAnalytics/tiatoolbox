@@ -1329,7 +1329,7 @@ def test_virtual_rgb_mode_postproc_then_composite(
         return img2
 
     v.post_proc = recorder
-    out2 = v.read_rect((0, 0), (8, 8))
+    out2 = v.read_bounds((0, 0, 8, 8))
     assert calls["bg"] == 2  # composite called again
     # background_composite must have received the post-processed content
     assert (calls["last"][..., 0] == 255).all()
