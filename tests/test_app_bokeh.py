@@ -940,6 +940,7 @@ def test_channel_color_ui_callbacks(
 
     # if no channels selected, check apply button does nothing
     old_colors = color_table.source.data["colors"]
+    color_picker.color = "#ff0000"
     click = ButtonClick(apply_button)
     apply_button._trigger_event(click)
     assert color_table.source.data["colors"] == old_colors

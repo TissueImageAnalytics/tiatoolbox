@@ -431,7 +431,9 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
 
     # check automask works if only mpp in metadata
     reader = WSIReader.open(mini_wsi_svs)
-    reader.info.objective_power = None
+    meta = reader.info
+    meta.objective_power = None
+    reader._m_info = meta
     ds = WSIPatchDataset(
         img_path=mini_wsi_svs,
         mode="wsi",

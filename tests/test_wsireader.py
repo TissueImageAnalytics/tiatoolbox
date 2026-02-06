@@ -3104,6 +3104,15 @@ def test_post_proc_applied() -> None:
     assert (result[0, 0] == [255, 0, 0]).all()
 
 
+def test_explicit_none_postproc() -> None:
+    """Test explicit None postproc."""
+    reader = wsireader.VirtualWSIReader(
+        np.ones((100, 100, 3), dtype=np.uint8), post_proc=None
+    )
+    region = reader.read_rect((0, 0), (50, 50))
+    assert np.all(region == 1)
+
+
 def test_fsspec_json_wsi_reader_instantiation() -> None:
     """Test if FsspecJsonWSIReader is instantiated.
 
