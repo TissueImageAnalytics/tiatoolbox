@@ -310,10 +310,14 @@ class AttentionModule(nn.Module):
         """Initialize the Attention module.
 
         Args:
-            name (str | None): Name of the attention mechanism.
+            name (str | None):
+                Name of the attention mechanism.
                 Only "scse" is implemented. If None, identity is used.
-            in_channels (int): Number of input channels.
-            reduction (int): Reduction ratio for channel attention.
+            in_channels (int):
+                Number of input channels.
+            reduction (int):
+                Reduction ratio for channel attention.
+
         """
         super().__init__()
 
@@ -329,10 +333,13 @@ class AttentionModule(nn.Module):
         """Forward pass of the Attention module.
 
         Args:
-            x (torch.Tensor): Input feature map of shape (N, C, H, W).
+            x (torch.Tensor):
+                Input feature map of shape (N, C, H, W).
 
         Returns:
-            torch.Tensor: Output feature map after applying attention.
+            torch.Tensor:
+                Output feature map after applying attention.
+
         """
         return self.attention(x)
 
@@ -344,8 +351,11 @@ class SCSEModule(nn.Module):
         """Initialize the SCSE module.
 
         Args:
-            in_channels (int): Number of input channels.
-            reduction (int): Reduction ratio for channel attention.
+            in_channels (int):
+                Number of input channels.
+            reduction (int):
+                Reduction ratio for channel attention.
+
         """
         super().__init__()
         self.cSE = nn.Sequential(
@@ -361,10 +371,13 @@ class SCSEModule(nn.Module):
         """Forward pass of the SCSE module.
 
         Args:
-            x (torch.Tensor): Input feature map of shape (N, C, H, W).
+            x (torch.Tensor):
+                Input feature map of shape (N, C, H, W).
 
         Returns:
-            torch.Tensor: Output feature map after applying SCSE attention.
+            torch.Tensor:
+                Output feature map after applying SCSE attention.
+
         """
         return x * self.cSE(x) + x * self.sSE(x)
 
@@ -410,21 +423,30 @@ def peak_detection_map_overlap(
     Returns same spatial shape as the input block
 
     Args:
-        block: NumPy array (H, W, C).
-        min_distance: Minimum number of pixels separating peaks.
-        threshold_abs: Minimum intensity of peaks. By default, None.
-        threshold_rel: Minimum relative intensity of peaks. By default, None.
-        block_info: Dask block info dict.
+        block:
+            NumPy array (H, W, C).
+        min_distance:
+            Minimum number of pixels separating peaks.
+        threshold_abs:
+            Minimum intensity of peaks. By default, None.
+        threshold_rel:
+            Minimum relative intensity of peaks. By default, None.
+        block_info:
+            Dask block info dict.
             Only used when called from dask.array.map_overlap.
-        depth_h: Halo size in pixels for height (rows).
+        depth_h:
+            Halo size in pixels for height (rows).
             Only used when called from dask.array.map_overlap.
-        depth_w: Halo size in pixels for width (cols).
+        depth_w:
+            Halo size in pixels for width (cols).
             Only used when it's called from dask.array.map_overlap.
-        return_probability: If True, returns the confidence scores at peak
+        return_probability:
+            If True, returns the confidence scores at peak
             locations instead of binary peak map.
 
     Returns:
-        out: NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere.
+        out:
+            NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere.
 
     """
     block_height, block_width, block_channels = block.shape
@@ -487,10 +509,13 @@ def nms_on_detection_maps(
     Args:
         detection_maps (np.ndarray):
             (H, W, C) where pixels are already local peaks.
-        min_distance (int): Minimum distance required between ANY detections.
+        min_distance (int):
+            Minimum distance required between ANY detections.
 
     Returns:
-        np.ndarray: The filtered maps with cross-channel suppression applied.
+        np.ndarray:
+            The filtered maps with cross-channel suppression applied.
+
     """
     # 1. Collapse channels to find the "Global Best" at every spatial location
     # Contains the highest probability found across all classes at each pixel.

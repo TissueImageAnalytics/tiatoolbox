@@ -297,11 +297,11 @@ class DecoderBlock(nn.Module):
 
         Args:
             in_channels (int):
-                Number of input channels
+                Number of input channels.
             skip_channels (int):
-                Number of channels from skip connection
+                Number of channels from skip connection.
             out_channels (int):
-                Number of output channels
+                Number of output channels.
             attention_type (str):
                 Type of attention mechanism. Default: 'scse'.
 
@@ -399,7 +399,7 @@ class KongNetDecoder(nn.Module):
     attention mechanisms, and optional center block at the bottleneck.
 
     Args:
-        encoder_channels (List[int]):
+        encoder_channels (list[int]):
             Number of channels at each encoder level
         decoder_channels (Tuple[int, ...]):
             Number of channels at each decoder level
@@ -428,7 +428,7 @@ class KongNetDecoder(nn.Module):
         """Initialize KongNetDecoder.
 
         Args:
-            encoder_channels (List[int]):
+            encoder_channels (list[int]):
                 Number of channels at each encoder level.
             decoder_channels (Tuple[int, ...]):
                 Number of channels at each decoder level.
