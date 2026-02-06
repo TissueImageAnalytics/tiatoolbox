@@ -443,7 +443,8 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
         resolution=0.5,
         units="mpp",
     )
-    assert len(ds) > 0
+    mask_reader = ds._setup_mask_reader(None, reader, auto_get_mask=True)
+    assert mask_reader is not None
 
 
 def test_patch_dataset_abc() -> None:

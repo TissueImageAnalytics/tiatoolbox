@@ -299,6 +299,34 @@ def test_parse_filtercolor_metadata_with_filter_pair() -> None:
         wsireader.TIFFWSIReader._parse_filtercolor_metadata(root_without_filtercolors)
         is None
     )
+    xml_with_mismatch_filtercolors = """
+    <root>
+        <FilterColors>
+            <FilterColors-k>mismatched_name</FilterColors-k>
+            <FilterColors-v>255,128,0</FilterColors-v>
+        </FilterColors>
+        <ScanBands-i>
+            <Bands-i>
+                <Name>Channel1</Name>
+            </Bands-i>
+            <FilterPair>
+                <EmissionFilter>
+                    <FixedFilter>
+                        <PartNumber>EM123</PartNumber>
+                    </FixedFilter>
+                </EmissionFilter>
+                <ExcitationFilter>
+                    <FixedFilter>
+                        <PartNumber>EX456</PartNumber>
+                    </FixedFilter>
+                </ExcitationFilter>
+            </FilterPair>
+        </ScanBands-i>
+    </root>
+    """
+    root = ElementTree.fromstring(xml_with_mismatch_filtercolors)
+    result = wsireader.TIFFWSIReader._parse_filtercolor_metadata(root)
+    assert result == {"Channel1": (1.0, 1.0, 1.0)}
 
 
 def test_parse_scancolortable_rgb_and_named_colors() -> None:

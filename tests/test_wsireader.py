@@ -3109,7 +3109,7 @@ def test_explicit_none_postproc() -> None:
     reader = wsireader.VirtualWSIReader(
         np.ones((100, 100, 3), dtype=np.uint8), post_proc=None
     )
-    region = reader.read_rect((0, 0), (50, 50))
+    region = reader.read_bounds((0, 0, 50, 50))
     assert np.all(region == 1)
 
 

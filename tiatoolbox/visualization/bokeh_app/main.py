@@ -262,11 +262,8 @@ def create_channel_color_ui() -> Column:
         new: str,
     ) -> None:
         """Update the color picker when a new channel is selected."""
-        if new:
-            selected_color = color_source.data["colors"][new[0]]
-            color_picker.color = selected_color
-        else:
-            color_picker.color = None
+        selected_color = color_source.data["colors"][new[0]]
+        color_picker.color = selected_color
 
     color_source.selected.on_change("indices", update_color_picker)
 
