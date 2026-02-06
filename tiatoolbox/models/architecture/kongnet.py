@@ -134,6 +134,7 @@ class TimmEncoderFixed(nn.Module):
                 Drop path rate of the encoder. Default is 0.0.
             pretrained (bool):
                 Whether to use pretrained weights. Default is True.
+
         """
         super().__init__()
         if drop_path_rate is None:
@@ -165,11 +166,14 @@ class TimmEncoderFixed(nn.Module):
         """Forward pass through the encoder.
 
         Args:
-            x (torch.Tensor): Input tensor of shape (B, C, H, W)
+            x (torch.Tensor):
+                Input tensor of shape (B, C, H, W)
 
         Returns:
-            List[torch.Tensor]: List of feature tensors at different scales,
+            list[torch.Tensor]:
+                List of feature tensors at different scales,
                 including the input as the first element
+
         """
         features = self.model(x)
         return [x, *features]
@@ -179,7 +183,9 @@ class TimmEncoderFixed(nn.Module):
         """Get output channels for each feature level.
 
         Returns:
-            List[int]: Number of channels at each feature level
+            list[int]:
+                Number of channels at each feature level
+
         """
         return self._out_channels
 
@@ -188,7 +194,9 @@ class TimmEncoderFixed(nn.Module):
         """Get the output stride of the encoder.
 
         Returns:
-            int: Output stride value
+            int:
+                Output stride value
+
         """
         return min(self._output_stride, 2**self._depth)
 
@@ -200,9 +208,13 @@ class SubPixelUpsample(nn.Module):
     which is more efficient than transposed convolution and produces better results.
 
     Args:
-        in_channels (int): Number of input channels
-        out_channels (int): Number of output channels
-        upscale_factor (int): Factor to increase spatial resolution. Default: 2
+        in_channels (int):
+            Number of input channels
+        out_channels (int):
+            Number of output channels
+        upscale_factor (int):
+            Factor to increase spatial resolution. Default: 2
+
     """
 
     def __init__(
@@ -248,6 +260,7 @@ class SubPixelUpsample(nn.Module):
             torch.Tensor:
                 Upsampled tensor of shape
                 (B, out_channels, H*upscale_factor, W*upscale_factor)
+
         """
         x = self.conv1(x)
         x = self.pixel_shuffle(x)
@@ -262,10 +275,15 @@ class DecoderBlock(nn.Module):
     and processes through convolutions.
 
     Args:
-        in_channels (int): Number of input channels
-        skip_channels (int): Number of channels from skip connection
-        out_channels (int): Number of output channels
-        attention_type (str): Type of attention mechanism. Default: 'scse'
+        in_channels (int):
+            Number of input channels
+        skip_channels (int):
+            Number of channels from skip connection
+        out_channels (int):
+            Number of output channels
+        attention_type (str):
+            Type of attention mechanism. Default: 'scse'.
+
     """
 
     def __init__(
@@ -285,7 +303,8 @@ class DecoderBlock(nn.Module):
             out_channels (int):
                 Number of output channels
             attention_type (str):
-                Type of attention mechanism. Default: 'scse'
+                Type of attention mechanism. Default: 'scse'.
+
         """
         super().__init__()
         self.up = SubPixelUpsample(in_channels, in_channels, upscale_factor=2)
@@ -322,7 +341,9 @@ class DecoderBlock(nn.Module):
                 Skip connection tensor from encoder. Default: None
 
         Returns:
-            torch.Tensor: Processed output tensor
+            torch.Tensor:
+                Processed output tensor
+
         """
         x = self.up(x)
         if skip is not None:
@@ -340,14 +361,18 @@ class CenterBlock(nn.Module):
     to enhance feature representation using attention mechanisms.
 
     Args:
-        in_channels (int): Number of input channels
+        in_channels (int):
+            Number of input channels
+
     """
 
     def __init__(self, in_channels: int) -> None:
         """Initialize CenterBlock with attention.
 
         Args:
-            in_channels (int): Number of input channels
+            in_channels (int):
+                Number of input channels.
+
         """
         super().__init__()
         self.attention = AttentionModule(name="scse", in_channels=in_channels)
@@ -356,10 +381,13 @@ class CenterBlock(nn.Module):
         """Forward pass through center block.
 
         Args:
-            x (torch.Tensor): Input tensor
+            x (torch.Tensor):
+                Input tensor.
 
         Returns:
-            torch.Tensor: Output tensor with attention applied
+            torch.Tensor:
+                Output tensor with attention applied.
+
         """
         return self.attention(x)
 
@@ -371,14 +399,21 @@ class KongNetDecoder(nn.Module):
     attention mechanisms, and optional center block at the bottleneck.
 
     Args:
-        encoder_channels (List[int]): Number of channels at each encoder level
-        decoder_channels (Tuple[int, ...]): Number of channels at each decoder level
-        n_blocks (int): Number of decoder blocks. Default: 5
-        attention_type (str): Type of attention mechanism. Default: 'scse'
-        center (bool): Whether to use center block at bottleneck. Default: True
+        encoder_channels (List[int]):
+            Number of channels at each encoder level
+        decoder_channels (Tuple[int, ...]):
+            Number of channels at each decoder level
+        n_blocks (int):
+            Number of decoder blocks. Default: 5
+        attention_type (str):
+            Type of attention mechanism. Default: 'scse'
+        center (bool):
+            Whether to use center block at bottleneck. Default: True
 
     Raises:
-        ValueError: If n_blocks doesn't match length of decoder_channels
+        ValueError:
+            If n_blocks doesn't match length of decoder_channels
+
     """
 
     def __init__(
@@ -404,6 +439,7 @@ class KongNetDecoder(nn.Module):
             center (bool):
                 Whether to include a center block at the bottleneck.
                 Default is True.
+
         """
         super().__init__()
 
@@ -442,10 +478,13 @@ class KongNetDecoder(nn.Module):
         """Forward pass through the decoder.
 
         Args:
-            *features: Feature tensors from encoder at different scales
+            *features:
+                Feature tensors from encoder at different scales
 
         Returns:
-            torch.Tensor: Decoded output tensor
+            torch.Tensor:
+                Decoded output tensor
+
         """
         features = features[1:]  # remove first skip with same spatial resolution
         features = features[::-1]  # reverse channels to start from head of encoder
@@ -471,14 +510,22 @@ class KongNet(ModelABC):
 
 
     Attributes:
-        encoder: Encoder module (e.g., TimmEncoderFixed)
-        decoders: List of decoder modules (KongNetDecoder)
-        heads: List of segmentation head modules (SegmentationHead)
-        min_distance: Minimum distance between peaks in post-processing
-        threshold_abs: Absolute threshold for peak detection in post-processing
-        target_channels: List of target channel indices for post-processing
-        output_class_dict: Optional dictionary mapping class names to indices
-        postproc_tile_shape: Tile shape for post-processing with dask
+        encoder:
+            Encoder module (e.g., TimmEncoderFixed)
+        decoders:
+            List of decoder modules (KongNetDecoder)
+        heads:
+            List of segmentation head modules (SegmentationHead)
+        min_distance:
+            Minimum distance between peaks in post-processing
+        threshold_abs:
+            Absolute threshold for peak detection in post-processing
+        target_channels:
+            List of target channel indices for post-processing
+        output_class_dict:
+            Optional dictionary mapping class names to indices
+        postproc_tile_shape:
+            Tile shape for post-processing with dask
 
     Example:
         >>> from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
@@ -497,6 +544,7 @@ class KongNet(ModelABC):
         and Classification of Nuclei in Histopathology Images.", 2025,
         arXiv preprint arXiv:2510.23559.,
         URL: https://arxiv.org/abs/2510.23559
+
     """
 
     def __init__(
@@ -530,6 +578,7 @@ class KongNet(ModelABC):
                 Whether to use a wider decoder architecture. Defaults to False.
             class_dict (dict | None):
                 Optional dictionary mapping class names to indices. Defaults to None.
+
         """
         super().__init__()
 
@@ -617,7 +666,8 @@ class KongNet(ModelABC):
         """Forward pass through the model.
 
         Args:
-            x (torch.Tensor): Input tensor of shape (B, C, H, W)
+            x (torch.Tensor):
+                Input tensor of shape (B, C, H, W)
             *args (tuple):
                 Additional positional arguments (unused).
             **kwargs (dict):
@@ -626,6 +676,7 @@ class KongNet(ModelABC):
         Returns:
             torch.Tensor: Concatenated output from all heads of shape
                 (B, sum(num_channels_per_head), H, W)
+
         """
         features = self.encoder(x)
         decoder_outputs = [decoder(*features) for decoder in self.decoders]
@@ -720,7 +771,9 @@ class KongNet(ModelABC):
                 when it's called from dask.array.map_overlap.
 
         Returns:
-            out: NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere.
+            out:
+                NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere.
+
         """
         min_distance_to_use = (
             self.min_distance if min_distance is None else min_distance
