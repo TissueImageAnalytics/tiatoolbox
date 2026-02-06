@@ -938,6 +938,12 @@ def test_channel_color_ui_callbacks(
     # check we see 5 channels
     assert len(channel_table.source.data["channels"]) == 5
 
+    # if no channels selected, check apply button does nothing
+    old_colors = color_table.source.data["colors"]
+    click = ButtonClick(apply_button)
+    apply_button._trigger_event(click)
+    assert color_table.source.data["colors"] == old_colors
+
     # select the first channel and set it to blue
     channel_index = 0
     color_table.source.selected.indices = [channel_index]
@@ -945,6 +951,7 @@ def test_channel_color_ui_callbacks(
     channel_table.source.selected.indices = [channel_index]
     click = ButtonClick(apply_button)
     apply_button._trigger_event(click)
+    assert color_table.source.data["colors"] != old_colors
 
     # check that getting a tile now blue
     tile = get_tile("slide", 0, 0, 0, show=False).astype(np.float32)
