@@ -1561,6 +1561,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
             if not return_predictions:
                 processed_predictions.pop("predictions")
             keys_to_compute.remove("predictions")
+        num_workers = (
+            kwargs.get("num_workers", multiprocessing.cpu_count())
+            if self.num_workers == 0
+            else self.num_workers
+        )
         if self.patch_mode:
             for idx, curr_image in enumerate(self.images):
                 values = [processed_predictions[key][idx] for key in keys_to_compute]
@@ -1573,6 +1578,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     save_path=save_path,
                     class_dict=class_dict,
                     scale_factor=scale_factor,
+                    num_workers=num_workers,
                 )
                 save_paths.append(output_path)
 
@@ -1588,6 +1594,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     save_path=save_path,
                     class_dict=class_dict,
                     scale_factor=scale_factor,
+                    num_workers=num_workers,
                 )
                 save_paths.append(output_path)
 
@@ -1936,6 +1943,7 @@ def dict_to_store(
     class_dict: dict | None = None,
     origin: tuple[float, float] = (0, 0),
     scale_factor: tuple[float, float] = (1, 1),
+    num_workers: int = multiprocessing.cpu_count(),
 ) -> AnnotationStore:
     """Write polygonal multitask predictions into an SQLite-backed AnnotationStore.
 
@@ -1974,6 +1982,9 @@ def dict_to_store(
             `(sx, sy)` factors applied to coordinates before translation, used to
             convert from model space to baseline slide resolution (e.g.,
             `model_mpp / slide_mpp`).
+        num_workers (int):
+            Number of parallel worker threads to use. If set to 0 or None,
+            defaults to the number of CPU cores.
 
     Returns:
         AnnotationStore:
@@ -1991,41 +2002,82 @@ def dict_to_store(
         - All annotations are appended in a single batch via `store.append_many(...)`.
 
     """
-    contour = processed_predictions.pop("contours")
+    contours = processed_predictions.pop("contours")
+    n = len(contours)
 
-    ann = []
-    tqdm_ = get_tqdm()
-
-    for i, contour_ in enumerate(
-        tqdm_(contour, leave=False, desc="Converting outputs to AnnotationStore")
-    ):
-        ann_ = Annotation(
-            make_valid_poly(
-                feature2geometry(
-                    {
-                        "type": processed_predictions.get("geom_type", "Polygon"),
-                        "coordinates": scale_factor * np.array([contour_]),
-                    },
-                ),
-                tuple(origin),
-            ),
-            {
-                prop: (
-                    class_dict[processed_predictions[prop][i]]
-                    if prop == "type" and class_dict is not None
-                    # Intention is convert arrays to list
-                    # There might be int or float values which need to be
-                    # converted to arrays first and then apply tolist().
-                    else np.array(processed_predictions[prop][i]).tolist()
-                )
-                for prop in processed_predictions
-            },
+    # Build delayed tasks
+    delayed_tasks = [
+        _build_single_annotation(
+            i,
+            contours[i],
+            processed_predictions,
+            class_dict,
+            origin,
+            scale_factor,
         )
-        ann.append(ann_)
+        for i in range(n)
+    ]
+
+    ann = compute_dask_delayed_with_progress(
+        delayed_tasks, num_workers=num_workers, desc="Saving annotations "
+    )
+
     logger.info("Added %d annotations.", len(ann))
     store.append_many(ann)
 
     return store
+
+
+def compute_dask_delayed_with_progress(
+    delayed_tasks: list,
+    num_workers: int = multiprocessing.cpu_count(),
+    desc: str = "Computing",
+    batch_size: int | None = None,
+) -> list:
+    """Compute a list of Dask delayed tasks in parallel while displaying a progress bar.
+
+    This function batches tasks according to `num_workers`, ensuring that only
+    `num_workers` tasks are computed concurrently. This avoids excessive memory
+    usage when each delayed task returns a large object (e.g., NumPy arrays,
+    geometries, or annotations). A tqdm progress bar is updated after each batch.
+
+    Args:
+        delayed_tasks (list):
+            A list of Dask delayed objects to compute.
+        num_workers (int):
+            Number of parallel worker threads to use. If set to 0 or None,
+            defaults to the number of CPU cores.
+        desc (str):
+            Description string shown in the tqdm progress bar.
+        batch_size (int | None):
+            batch_size to process dask delayed.
+            batch_size is set to num_workers if batch_size is not provided.
+
+    Returns:
+        A list containing the computed results from all delayed tasks, in order.
+
+    """
+    total = len(delayed_tasks)
+    batch_size = num_workers if batch_size is None else batch_size
+    results: list[Any] = []
+
+    tqdm_ = get_tqdm()
+
+    with tqdm_(total=total, desc=desc, leave=False) as pbar:
+        for i in range(0, total, batch_size):
+            batch = delayed_tasks[i : i + batch_size]
+
+            # Compute this batch in parallel
+            batch_results = compute(
+                *batch,
+                scheduler="threads",
+                num_workers=num_workers,
+            )
+
+            results.extend(batch_results)
+            pbar.update(len(batch))
+
+    return results
 
 
 def prepare_multitask_full_batch(
@@ -2614,6 +2666,7 @@ def _save_annotation_store(
     save_path: Path,
     class_dict: dict,
     scale_factor: tuple[float, float],
+    num_workers: int,
 ) -> Path:
     """Helper function to save to annotation store."""
     if isinstance(curr_image, Path):
@@ -2640,6 +2693,7 @@ def _save_annotation_store(
         class_dict=class_dict,
         scale_factor=scale_factor,
         origin=origin,
+        num_workers=num_workers,
     )
 
     store.commit()
@@ -3075,3 +3129,48 @@ def _build_delayed_tile_tasks(
             tile_metadata.append((tile_bounds, tile_flag, set_idx))
 
     return delayed_results, tile_metadata
+
+
+@delayed
+def _build_single_annotation(
+    i: int,
+    contour: np.ndarray,
+    processed_predictions: dict[str, Any],
+    class_dict: dict[int, str] | None,
+    origin: tuple[float, float],
+    scale_factor: tuple[float, float],
+) -> Annotation:
+    """Creates a delayed annotation to run with dask.
+
+    Build a single Annotation object for index `i`.
+
+    This function performs:
+      - geometry creation
+      - coordinate scaling + translation
+      - per-object property extraction
+      - class_dict mapping (if provided)
+
+    Returns:
+        A single Annotation instance.
+
+    """
+    geom = make_valid_poly(
+        feature2geometry(
+            {
+                "type": processed_predictions.get("geom_type", "Polygon"),
+                "coordinates": scale_factor * np.array([contour]),
+            }
+        ),
+        tuple(origin),
+    )
+
+    properties = {
+        prop: (
+            class_dict[processed_predictions[prop][i]]
+            if prop == "type" and class_dict is not None
+            else np.array(processed_predictions[prop][i]).tolist()
+        )
+        for prop in processed_predictions
+    }
+
+    return Annotation(geom, properties)
