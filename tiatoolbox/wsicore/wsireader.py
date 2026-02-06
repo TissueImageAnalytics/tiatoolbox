@@ -5911,8 +5911,6 @@ class NGFFWSIReader(WSIReader):
                 pad_mode=pad_mode,
                 pad_constant_values=pad_constant_values,
             )
-            if self.post_proc is not None:
-                return self.post_proc(im_region)
             return utils.transforms.background_composite(image=im_region, alpha=False)
 
         # Find parameters for optimal read
@@ -6120,6 +6118,8 @@ class NGFFWSIReader(WSIReader):
                 scale_factor=post_read_scale,
                 output_size=size_at_requested,
             )
+        if self.post_proc is not None:
+            im_region = self.post_proc(im_region)
 
         return im_region
 
