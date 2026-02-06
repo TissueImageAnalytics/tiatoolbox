@@ -320,7 +320,7 @@ def populate_table() -> None:
     tables = UI["channel_select"].children[1].children[0].children
     colors, active_channels = get_channel_info()
 
-    if colors is not None:
+    if colors:
         if active_channels:
             tables[0].source.selected.indices = active_channels
         tables[0].source.data = {

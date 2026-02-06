@@ -2959,27 +2959,17 @@ def _should_patch_background_composite(wsi: WSIReader) -> bool:
     )
 
 
-def _apply_post_proc(
-    wsi: WSIReader, mock_post_proc: Callable[[np.ndarray], np.ndarray]
-) -> WSIReader:
-    """Apply post_proc to the appropriate reader or delegate."""
-    if isinstance(wsi, TIFFWSIReader):
-        return TIFFWSIReader(wsi.input_path, post_proc=mock_post_proc)
-    wsi.post_proc = mock_post_proc
-    if isinstance(wsi, AnnotationStoreReader) and wsi.base_wsi is not None:
-        wsi.base_wsi.post_proc = mock_post_proc
-    return wsi
-
-
 def _inject_post_proc_recursive(
     wsi: object, post_proc: Callable[[np.ndarray], np.ndarray]
 ) -> None:
-    """Recursively inject post_proc into the deepest base_wsi that supports it."""
+    """Recursively inject post_proc into all wsi that supports it."""
     current = wsi
-    while hasattr(current, "base_wsi") and current.base_wsi is not None:
-        current = current.base_wsi
     if hasattr(current, "post_proc"):
         current.post_proc = post_proc
+    while hasattr(current, "base_wsi") and current.base_wsi is not None:
+        current = current.base_wsi
+        if hasattr(current, "post_proc"):
+            current.post_proc = post_proc
 
 
 def test_post_proc_logic_across_readers(wsi: WSIReader) -> None:
@@ -3107,6 +3097,12 @@ def test_post_proc_applied() -> None:
 def test_explicit_none_postproc() -> None:
     """Test explicit None postproc."""
     reader = wsireader.VirtualWSIReader(
+        np.ones((100, 100, 3), dtype=np.uint8), post_proc=None
+    )
+    region = reader.read_bounds((0, 0, 50, 50))
+    assert np.all(region == 1)
+
+    reader = wsireader.TIFFWSIReader(
         np.ones((100, 100, 3), dtype=np.uint8), post_proc=None
     )
     region = reader.read_bounds((0, 0, 50, 50))
