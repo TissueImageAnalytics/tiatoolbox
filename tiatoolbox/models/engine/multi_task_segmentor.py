@@ -2005,6 +2005,8 @@ def dict_to_store(
     contours = processed_predictions.pop("contours")
     n = len(contours)
 
+    tqdm_ = get_tqdm()
+
     # Build delayed tasks
     delayed_tasks = [
         _build_single_annotation(
@@ -2015,7 +2017,11 @@ def dict_to_store(
             origin,
             scale_factor,
         )
-        for i in range(n)
+        for i in tqdm_(
+            range(n),
+            leave=False,
+            desc="Creating list of delayed tasks for writing annotations.",
+        )
     ]
 
     ann = compute_dask_delayed_with_progress(
