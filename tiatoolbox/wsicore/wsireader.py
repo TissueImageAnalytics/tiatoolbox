@@ -6486,8 +6486,6 @@ class AnnotationStoreReader(WSIReader):
                 coord_space=coord_space,
                 **kwargs,
             )
-            if self.post_proc is not None:
-                base_region = self.post_proc(base_region)
             base_region = Image.fromarray(
                 utils.transforms.background_composite(base_region, alpha=True),
             )
@@ -6498,7 +6496,12 @@ class AnnotationStoreReader(WSIReader):
                 )
             base_region = Image.alpha_composite(base_region, im_region)
             base_region = base_region.convert("RGB")
-            return np.array(base_region)
+            base_region = np.array(base_region)
+            if self.post_proc is not None:
+                base_region = self.post_proc(base_region)
+            return base_region
+        if self.post_proc is not None:
+            im_region = self.post_proc(im_region)
         return utils.transforms.background_composite(im_region, alpha=False)
 
     def read_bounds(
@@ -6681,8 +6684,6 @@ class AnnotationStoreReader(WSIReader):
                 coord_space=coord_space,
                 **kwargs,
             )
-            if self.post_proc is not None:
-                base_region = self.post_proc(base_region)
             base_region = Image.fromarray(
                 utils.transforms.background_composite(base_region, alpha=True),
             )
@@ -6693,7 +6694,12 @@ class AnnotationStoreReader(WSIReader):
                 )
             base_region = Image.alpha_composite(base_region, im_region)
             base_region = base_region.convert("RGB")
-            return np.array(base_region)
+            base_region = np.array(base_region)
+            if self.post_proc is not None:
+                base_region = self.post_proc(base_region)
+            return base_region
+        if self.post_proc is not None:
+            im_region = self.post_proc(im_region)
         return utils.transforms.background_composite(im_region, alpha=False)
 
 
