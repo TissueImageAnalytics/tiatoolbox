@@ -63,7 +63,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
 )
-from tiatoolbox.utils.misc import get_tqdm
+from tiatoolbox.utils.misc import get_tqdm_full
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
@@ -471,7 +471,9 @@ class NucleusDetector(SemanticSegmentor):
         zarr_group = zarr.open(zarr_file, mode="r+")
         centroid_maps = da.from_zarr(zarr_group["centroid_maps"])
 
-        return self._centroid_maps_to_detection_arrays(centroid_maps)
+        return self._centroid_maps_to_detection_arrays(
+            centroid_maps, verbose=self.verbose
+        )
 
     def save_predictions(
         self: NucleusDetector,
@@ -710,6 +712,8 @@ class NucleusDetector(SemanticSegmentor):
     @staticmethod
     def _centroid_maps_to_detection_arrays(
         detection_maps: da.Array,
+        *,
+        verbose: bool = True,
     ) -> dict[str, da.Array]:
         """Convert centroid maps into 1-D detection arrays.
 
@@ -727,6 +731,8 @@ class NucleusDetector(SemanticSegmentor):
                 detections. Each non-zero entry encodes both the class channel
                 and its associated probability. This array is expected to be
                 already computed.
+            verbose (bool):
+                Whether to display logs and progress bar.
 
         Returns:
             dict[str, da.Array]:
@@ -763,8 +769,12 @@ class NucleusDetector(SemanticSegmentor):
         classes_list = []
         probs_list = []
 
-        tqdm = get_tqdm()
-        for i in tqdm(range(num_blocks_h), desc="Processing detection blocks"):
+        tqdm_loop = get_tqdm_full(
+            range(num_blocks_h),
+            desc="Processing detection blocks",
+            verbose=verbose,
+        )
+        for i in tqdm_loop:
             for j in range(num_blocks_w):
                 # Get block offsets
                 y_offset = sum(detection_maps.chunks[0][:i]) if i > 0 else 0
@@ -814,6 +824,8 @@ class NucleusDetector(SemanticSegmentor):
         scale_factor: tuple[float, float],
         class_dict: dict[int, str | int] | None,
         batch_size: int = 5000,
+        *,
+        verbose: bool = True,
     ) -> int:
         """Write detection arrays to an AnnotationStore in batches.
 
@@ -839,6 +851,8 @@ class NucleusDetector(SemanticSegmentor):
                 If `None`, an identity mapping is used for the set of present classes.
             batch_size (int):
                 Number of records to write per batch. Default is `5000`.
+            verbose (bool):
+                Whether to display logs and progress bar.
 
         Returns:
             int:
@@ -878,8 +892,11 @@ class NucleusDetector(SemanticSegmentor):
                 for xx, yy in zip(xs_batch, ys_batch, strict=True)
             ]
 
-        tqdm = get_tqdm()
-        tqdm_loop = tqdm(range(0, n, batch_size), desc="Writing detections to store")
+        tqdm_loop = get_tqdm_full(
+            range(0, n, batch_size),
+            desc="Writing detections to store",
+            verbose=verbose,
+        )
         written = 0
         for i in tqdm_loop:
             j = min(i + batch_size, n)

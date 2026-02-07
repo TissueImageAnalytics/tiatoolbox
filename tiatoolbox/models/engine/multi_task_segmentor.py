@@ -1098,7 +1098,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         wsi_info_dict = None
         merge_idx = 0
-        self._probabilities = probabilities
+        # Only used for delayed processing.
+        self._probabilities = probabilities  # skipcq: PYL-W0201
         for i in tqdm_(
             range(0, len(tile_metadata), num_workers),
             leave=False,
@@ -1184,7 +1185,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     chunks=(len(col),),
                 )
             wsi_info_dict[idx]["info_dict"] = dict_info_wsi
-
+        delattr(self, "_probabilities")
         return wsi_info_dict
 
     @delayed
