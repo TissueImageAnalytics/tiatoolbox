@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import warnings
 from collections import OrderedDict
 
 import cv2
@@ -603,7 +604,12 @@ class HoVerNet(ModelABC):
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         marker = cv2.morphologyEx(marker, cv2.MORPH_OPEN, kernel)
         marker = ndimage.label(marker)[0]
-        marker = remove_small_objects(marker, min_size=obj_size)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="Only one label was provided to `remove_small_objects`",
+            )
+            marker = remove_small_objects(marker, min_size=obj_size)
 
         return watershed(dist, markers=marker, mask=blb)
 

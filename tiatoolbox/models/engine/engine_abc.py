@@ -35,6 +35,7 @@ Example:
 from __future__ import annotations
 
 import copy
+import shutil
 from abc import ABC
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
@@ -1785,6 +1786,8 @@ def prepare_engines_save_dir(
     if patch_mode:
         if save_dir is not None:
             save_dir = Path(save_dir)
+            if save_dir.exists() and overwrite:
+                shutil.rmtree(save_dir)
             save_dir.mkdir(parents=True, exist_ok=overwrite)
             return save_dir
         return None
@@ -1804,6 +1807,8 @@ def prepare_engines_save_dir(
     )
 
     save_dir = Path(save_dir)
+    if save_dir.exists() and overwrite:
+        shutil.rmtree(save_dir)
     save_dir.mkdir(parents=True, exist_ok=overwrite)
 
     return save_dir

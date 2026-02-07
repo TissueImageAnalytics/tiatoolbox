@@ -1148,6 +1148,8 @@ def save_to_cache(
     """
     chunk0 = canvas.chunks[0][0]
 
+    tqdm_ = get_tqdm()
+
     if canvas_zarr is None:
         zarr_group = zarr.open(str(save_path), mode="a")
 
@@ -1186,7 +1188,11 @@ def save_to_cache(
 
     # Append remaining blocks one-at-a-time to limit peak memory.
     num_blocks = canvas.numblocks[0]
-    for block_idx in range(start_idx, num_blocks):
+    for block_idx in tqdm_(
+        range(start_idx, num_blocks),
+        leave=False,
+        desc="Memory Overload, Spilling to disk",
+    ):
         canvas_block = canvas.blocks[block_idx, 0, 0].compute()
         count_block = count.blocks[block_idx, 0, 0].compute()
 
@@ -1462,17 +1468,6 @@ def prepare_full_batch(
             dtype=batch_output.dtype,
         )
     else:
-        # Array too large, use zarr backed by disk to avoid RAM spikes
-        # Use a unique temp subdirectory per call to avoid chunk-shape clashes
-        msg = (
-            f"Estimated peak memory usage for full batch output: "
-            f"{peak_bytes / (1024**3):.2f} GB exceeds threshold of "
-            f"{memory_available / (1024**3):.2f} GB."
-            f"Allocating full batch output of size "
-            f"{final_size}x{sample_shape} using Zarr on disk."
-        )
-        logger.info(msg)
-
         save_path_dir = Path(save_path)
         save_path_dir.mkdir(parents=True, exist_ok=True)
         temp_dir = Path(

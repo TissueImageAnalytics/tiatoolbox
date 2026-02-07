@@ -3123,9 +3123,22 @@ def _build_delayed_tile_tasks(
     """
     delayed_results: list = []
     tile_metadata: list = []
+    tqdm_ = get_tqdm()
 
-    for set_idx, (set_bounds, set_flags) in enumerate(tile_info_sets):
-        for tile_idx, tile_bounds in enumerate(set_bounds):
+    for set_idx, (set_bounds, set_flags) in enumerate(
+        tqdm_(
+            tile_info_sets,
+            leave=False,
+            desc="Building delayed tile-processing tasks",
+        )
+    ):
+        for tile_idx, tile_bounds in enumerate(
+            tqdm_(
+                set_bounds,
+                leave=False,
+                desc=f"Building delayed tile-processing tasks for tile set {set_idx}",
+            )
+        ):
             tile_flag = set_flags[tile_idx]
 
             # Create delayed tile compute task
