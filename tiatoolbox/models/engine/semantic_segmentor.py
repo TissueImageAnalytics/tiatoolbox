@@ -67,7 +67,6 @@ from tiatoolbox import logger
 from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
 from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
-    get_tqdm,
     get_tqdm_full,
 )
 from tiatoolbox.wsicore.wsireader import is_zarr
@@ -461,11 +460,11 @@ class SemanticSegmentor(PatchPredictor):
         )
 
         # Inference loop
-        tqdm_ = get_tqdm()
-        tqdm_loop = (
-            tqdm_(dataloader, leave=False, desc="Inferring patches")
-            if self.verbose
-            else dataloader
+        tqdm_loop = get_tqdm_full(
+            dataloader,
+            leave=False,
+            desc="Inferring patches",
+            verbose=self.verbose,
         )
 
         canvas_np, output_locs_y_ = None, None
