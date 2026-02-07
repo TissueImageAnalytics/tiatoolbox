@@ -48,7 +48,7 @@ import zarr
 from dask import compute
 from typing_extensions import Unpack
 
-from tiatoolbox.utils.misc import get_tqdm
+from tiatoolbox.utils.misc import get_tqdm_full
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
 
@@ -292,11 +292,11 @@ class DeepFeatureExtractor(PatchPredictor):
         )
 
         # Inference loop
-        tqdm = get_tqdm()
-        tqdm_loop = (
-            tqdm(dataloader, leave=False, desc="Inferring patches")
-            if self.verbose
-            else dataloader
+        tqdm_loop = get_tqdm_full(
+            dataloader,
+            leave=False,
+            desc="Inferring Patches",
+            verbose=self.verbose,
         )
 
         probabilities_zarr, coordinates_zarr = None, None

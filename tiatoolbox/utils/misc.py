@@ -34,7 +34,7 @@ from tiatoolbox.utils.env_detection import is_notebook
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Iterator
+    from collections.abc import Iterable, Iterator
     from os import PathLike
 
     from shapely import geometry
@@ -1656,6 +1656,34 @@ def get_tqdm() -> type[tqdm_notebook | tqdm]:
     if is_notebook():  # pragma: no cover
         return tqdm_notebook.tqdm
     return tqdm
+
+
+def get_tqdm_full(
+    iterable_input: Iterable,
+    desc: str = "Processing input",
+    *,
+    leave: bool = False,
+    verbose: bool = True,
+) -> type[tqdm_notebook | tqdm] | Iterable:
+    """Helper function to get appropriate tqdm progress bar.
+
+    Args:
+        iterable_input (Iterable):
+            Any iterable input.
+        desc (str):
+            tqdm progress bar description.
+        leave (bool):
+            Whether to leave progress bar after completion.
+        verbose (bool):
+            Whether to return progress bar or the input iterator.
+
+    Returns:
+        Iterable:
+            Iterable of tqdm progress bar if self.verbose is True else input Iterable.
+
+    """
+    tqdm_ = tqdm_notebook.tqdm if is_notebook() else tqdm
+    return tqdm_(iterable_input, leave=leave, desc=desc) if verbose else iterable_input
 
 
 def cast_to_min_dtype(array: np.ndarray | da.Array) -> np.ndarray | da.Array:
