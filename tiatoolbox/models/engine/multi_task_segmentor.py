@@ -1085,24 +1085,36 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         tqdm_ = get_tqdm()
 
-        delayed_results, tile_metadata = _build_delayed_tile_tasks(
-            probabilities=probabilities,
+        tile_metadata = _build_tile_tasks(
             tile_info_sets=tile_info_sets,
-            model=self.model,
         )
 
         wsi_info_dict = None
         merge_idx = 0
         for i in tqdm_(
-            range(0, len(delayed_results), num_workers),
+            range(0, len(tile_metadata), num_workers),
             leave=False,
             desc="Post-Processing WSI to generate predictions and contours",
         ):
-            batch = delayed_results[i : i + num_workers]
+            tile_metadata_ = tile_metadata[i : i + num_workers]
+
+            # Build delayed tasks
+            delayed_tasks = [
+                _compute_tile(
+                    probabilities,
+                    _tile_meta[0],
+                    self.model,
+                )
+                for _tile_meta in tqdm_(
+                    tile_metadata_,
+                    leave=False,
+                    desc="Creating list of delayed tasks for writing annotations",
+                )
+            ]
 
             # Compute only this batch in parallel to avoid memory overload.
             batch_outputs = compute(
-                *batch, scheduler="threads", num_workers=num_workers
+                *delayed_tasks, scheduler="threads", num_workers=num_workers
             )
 
             # Merge each tile result immediately
@@ -3086,42 +3098,30 @@ def _compute_tile(
     return model.postproc_func(head_raws)
 
 
-def _build_delayed_tile_tasks(
-    probabilities: list[da.Array | np.ndarray],
+def _build_tile_tasks(
     tile_info_sets: list,
-    model: ModelABC,
-) -> tuple[
-    list[Any],  # delayed results
-    list,  # metadata
+) -> list[
+    tuple,  # metadata
 ]:
-    """Build delayed tile-processing tasks and associated metadata.
+    """Build tasks for delayed tile-processing using associated metadata.
 
-    This function iterates over all tile sets and constructs:
-      - a list of delayed tasks (each calling `_compute_tile`)
-      - a parallel list of metadata entries describing each tile
-
-    Metadata entries contain:
+    This function iterates over all tile sets and constructs
+    and Metadata entries containing:
         (tile_bounds, tile_flag, tile_mode)
 
     Args:
-        probabilities:
-            List of WSI-scale probability maps, one per model head.
-            Each element is a Dask array or NumPy array with shape (H, W, C).
         tile_info_sets:
             A list where each element is a tuple:
                 (set_bounds, set_flags)
             - set_bounds: list of tile bounds (x0, y0, x1, y1)
             - set_flags: list of per-tile flags used for instance merging
-        model:
-            The multitask model containing a `postproc_func` method.
 
     Returns:
-        A tuple:
-            - delayed_results: list of delayed `_compute_tile` tasks
-            - tile_metadata: list of metadata tuples
+        list:
+            tile_metadata: list of metadata tuples
               (tile_bounds, tile_flag, tile_mode)
+
     """
-    delayed_results: list = []
     tile_metadata: list = []
     tqdm_ = get_tqdm()
 
@@ -3141,13 +3141,10 @@ def _build_delayed_tile_tasks(
         ):
             tile_flag = set_flags[tile_idx]
 
-            # Create delayed tile compute task
-            delayed_results.append(_compute_tile(probabilities, tile_bounds, model))
-
             # Store metadata for merging
             tile_metadata.append((tile_bounds, tile_flag, set_idx))
 
-    return delayed_results, tile_metadata
+    return tile_metadata
 
 
 @delayed
