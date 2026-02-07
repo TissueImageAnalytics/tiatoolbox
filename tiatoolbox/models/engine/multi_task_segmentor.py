@@ -1091,6 +1091,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         wsi_info_dict = None
         merge_idx = 0
+        self._probabilities = probabilities
         for i in tqdm_(
             range(0, len(tile_metadata), num_workers),
             leave=False,
@@ -1098,29 +1099,13 @@ class MultiTaskSegmentor(SemanticSegmentor):
         ):
             tile_metadata_ = tile_metadata[i : i + num_workers]
 
-            head_raws = []
-            for _tile_meta in tqdm_(
-                tile_metadata_,
-                leave=False,
-                desc="Computing tiles for post processing",
-            ):
-                tile_bounds = _tile_meta[0]
-                head_raws.append(
-                    [
-                        p[
-                            tile_bounds[1] : tile_bounds[3],
-                            tile_bounds[0] : tile_bounds[2],
-                            :,
-                        ].compute()
-                        for p in probabilities
-                    ]
-                )
-
             # Build delayed tasks
             delayed_tasks = [
-                delayed(self.model.postproc_func)(head_raw)
-                for head_raw in tqdm_(
-                    head_raws,
+                self._compute_tile(
+                    _tile_meta[0],
+                )
+                for _tile_meta in tqdm_(
+                    tile_metadata_,
                     leave=False,
                     desc="Creating list of delayed tasks for writing annotations",
                 )
@@ -1194,6 +1179,37 @@ class MultiTaskSegmentor(SemanticSegmentor):
             wsi_info_dict[idx]["info_dict"] = dict_info_wsi
 
         return wsi_info_dict
+
+    @delayed
+    def _compute_tile(
+        self: MultiTaskSegmentor,
+        tile_bounds: tuple[int, int, int, int],
+    ) -> tuple:
+        """Compute post-processing outputs for a single WSI tile.
+
+        This function performs lazy slicing of the probability maps for the given
+        tile bounds and applies the model's `postproc_func` to produce per-task
+        outputs (semantic, instance, etc.).
+
+        Args:
+            tile_bounds:
+                A 4-tuple (x_start, y_start, x_end, y_end) defining the tile region
+                in WSI coordinates.
+
+        Returns:
+            A tuple of dictionaries, one per task, as produced by `postproc_func`.
+            Each dictionary typically contains:
+                - "task_type": str
+                - "predictions": np.ndarray
+                - "info_dict": dict
+        """
+        head_raws = [
+            p[
+                tile_bounds[1] : tile_bounds[3], tile_bounds[0] : tile_bounds[2], :
+            ].compute()
+            for p in self._probabilities
+        ]
+        return self.model.postproc_func(head_raws)
 
     @staticmethod
     def _get_tile_info(
