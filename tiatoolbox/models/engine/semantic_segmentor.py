@@ -588,6 +588,7 @@ class SemanticSegmentor(PatchPredictor):
             zarr_group,
             save_path,
             memory_threshold,
+            verbose=self.verbose,
         )
         raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
 
@@ -1226,6 +1227,8 @@ def merge_vertical_chunkwise(
     zarr_group: zarr.Group,
     save_path: Path,
     memory_threshold: int = 80,
+    *,
+    verbose: bool = True,
 ) -> da.Array:
     """Merge vertically chunked canvas and count arrays into a single probability map.
 
@@ -1249,6 +1252,8 @@ def merge_vertical_chunkwise(
             is saved in a Zarr file.
         memory_threshold (int):
             Memory usage threshold (in percentage) to trigger caching behavior.
+        verbose (bool):
+            Whether to display progress bar.
 
     Returns:
         da.Array:
@@ -1263,8 +1268,12 @@ def merge_vertical_chunkwise(
     probabilities_zarr, probabilities_da = None, None
     chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)
 
-    tqdm_ = get_tqdm()
-    tqdm_loop = tqdm_(overlaps, leave=False, desc="Merging rows")
+    tqdm_loop = get_tqdm_full(
+        overlaps,
+        leave=False,
+        desc="Merging rows",
+        verbose=verbose,
+    )
 
     used_percent = 0
 
@@ -1294,13 +1303,13 @@ def merge_vertical_chunkwise(
             vm = psutil.virtual_memory()
             used_percent = (probabilities_da.nbytes / vm.free) * 100
         if probabilities_zarr is None and used_percent > memory_threshold:
-            desc = tqdm_.desc
+            desc = tqdm_loop.desc
             msg = (
                 f"Current Memory usage: {used_percent} %  "
                 f"exceeds specified threshold: {memory_threshold}. "
                 f"Saving intermediate results to disk."
             )
-            tqdm_.desc = msg
+            tqdm_loop.desc = msg
             zarr_group = zarr.open(str(save_path), mode="a")
             probabilities_zarr = zarr_group.create_dataset(
                 name="probabilities",
@@ -1312,7 +1321,7 @@ def merge_vertical_chunkwise(
             probabilities_zarr[:] = probabilities_da.compute()
 
             probabilities_da = None
-            tqdm_.desc = desc
+            tqdm_loop.desc = desc
 
         if next_chunk is not None:
             curr_chunk, curr_count = next_chunk[overlap:], next_count[overlap:]
