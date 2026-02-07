@@ -68,6 +68,7 @@ from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
 from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
     get_tqdm,
+    get_tqdm_full,
 )
 from tiatoolbox.wsicore.wsireader import is_zarr
 
@@ -544,6 +545,7 @@ class SemanticSegmentor(PatchPredictor):
                         canvas_zarr,
                         count_zarr,
                         save_path=save_path,
+                        verbose=self.verbose,
                     )
                     canvas, count = None, None
                     gc.collect()
@@ -567,7 +569,11 @@ class SemanticSegmentor(PatchPredictor):
         zarr_group = None
         if canvas_zarr is not None:
             canvas_zarr, count_zarr = save_to_cache(
-                canvas, count, canvas_zarr, count_zarr
+                canvas,
+                count,
+                canvas_zarr,
+                count_zarr,
+                verbose=self.verbose,
             )
             # Wrap zarr in dask array
             canvas = da.from_zarr(canvas_zarr, chunks=canvas_zarr.chunks)
@@ -1119,6 +1125,8 @@ def save_to_cache(
     count_zarr: zarr.Array,
     save_path: str | Path = "temp.zarr",
     zarr_dataset_name: tuple[str, str] = ("canvas", "count"),
+    *,
+    verbose: bool = True,
 ) -> tuple[zarr.Array, zarr.Array]:
     """Incrementally save computed canvas and count arrays to Zarr cache.
 
@@ -1141,14 +1149,14 @@ def save_to_cache(
         zarr_dataset_name (tuple[str, str]):
             Tuple of name for zarr dataset to save canvas and count.
             Defaults to ("canvas", "count").
+        verbose (bool):
+            Whether to display progress bar.
 
     Returns:
         tuple[zarr.Array, zarr.Array]:
             Updated Zarr datasets for canvas and count arrays.
     """
     chunk0 = canvas.chunks[0][0]
-
-    tqdm_ = get_tqdm()
 
     if canvas_zarr is None:
         zarr_group = zarr.open(str(save_path), mode="a")
@@ -1188,11 +1196,13 @@ def save_to_cache(
 
     # Append remaining blocks one-at-a-time to limit peak memory.
     num_blocks = canvas.numblocks[0]
-    for block_idx in tqdm_(
+    tqdm_loop = get_tqdm_full(
         range(start_idx, num_blocks),
         leave=False,
         desc="Memory Overload, Spilling to disk",
-    ):
+        verbose=verbose,
+    )
+    for block_idx in tqdm_loop:
         canvas_block = canvas.blocks[block_idx, 0, 0].compute()
         count_block = count.blocks[block_idx, 0, 0].compute()
 

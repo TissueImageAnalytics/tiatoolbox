@@ -137,7 +137,12 @@ from tiatoolbox import logger
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.annotation.storage import Annotation
 from tiatoolbox.tools.patchextraction import PatchExtractor
-from tiatoolbox.utils.misc import create_smart_array, get_tqdm, make_valid_poly
+from tiatoolbox.utils.misc import (
+    create_smart_array,
+    get_tqdm,
+    get_tqdm_full,
+    make_valid_poly,
+)
 from tiatoolbox.wsicore.wsireader import is_zarr
 
 from .semantic_segmentor import (
@@ -652,6 +657,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         tqdm_=tqdm_,
                         save_path=save_path,
                         num_expected_output=num_expected_output,
+                        verbose=self.verbose,
                     )
                 )
 
@@ -678,6 +684,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             output_locs_y_=output_locs_y_,
             save_path=save_path,
             memory_threshold=memory_threshold,
+            verbose=self.verbose,
         )
 
         raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
@@ -2348,6 +2355,8 @@ def save_multitask_to_cache(
     canvas_zarr: list[zarr.Array | None],
     count_zarr: list[zarr.Array | None],
     save_path: str | Path = "temp.zarr",
+    *,
+    verbose: bool = True,
 ) -> tuple[list[zarr.Array], list[zarr.Array]]:
     """Write accumulated horizontal row blocks to a Zarr cache on disk.
 
@@ -2386,6 +2395,8 @@ def save_multitask_to_cache(
         save_path (str | Path):
             Path to the Zarr group used for caching. A new group is created
             if needed on the first spill.
+        verbose (bool):
+            Whether to display progress bar.
 
     Returns:
         tuple[list[zarr.Array], list[zarr.Array]]:
@@ -2403,7 +2414,12 @@ def save_multitask_to_cache(
           and ``count`` to free RAM and continue populating new entries.
 
     """
-    for idx, canvas_ in enumerate(canvas):
+    tqdm_loop = get_tqdm_full(
+        canvas,
+        desc="Memory Overload, Spilling to disk",
+        verbose=verbose,
+    )
+    for idx, canvas_ in enumerate(tqdm_loop):
         canvas_zarr[idx], count_zarr[idx] = save_to_cache(
             canvas=canvas_,
             count=count[idx],
@@ -2411,6 +2427,7 @@ def save_multitask_to_cache(
             count_zarr=count_zarr[idx],
             save_path=save_path,
             zarr_dataset_name=(f"canvas/{idx}", f"count/{idx}"),
+            verbose=verbose,
         )
 
     return canvas_zarr, count_zarr
@@ -2627,12 +2644,18 @@ def _calculate_probabilities(
     output_locs_y_: np.ndarray,
     save_path: Path,
     memory_threshold: int,
+    *,
+    verbose: bool,
 ) -> list[da.Array]:
     """Helper function to calculate probabilities for MultiTaskSegmentor."""
     zarr_group = None
     if canvas_zarr[0] is not None:
         canvas_zarr, count_zarr = save_multitask_to_cache(
-            canvas, count, canvas_zarr, count_zarr
+            canvas,
+            count,
+            canvas_zarr,
+            count_zarr,
+            verbose=verbose,
         )
         # Wrap zarr in dask array
         for idx, canvas_zarr_ in enumerate(canvas_zarr):
@@ -2662,6 +2685,8 @@ def _check_and_update_for_memory_overload(
     tqdm_: type[tqdm_notebook | tqdm],
     save_path: Path,
     num_expected_output: int,
+    *,
+    verbose: bool = True,
 ) -> tuple[
     list[da.Array | None],
     list[da.Array | None],
@@ -2696,6 +2721,7 @@ def _check_and_update_for_memory_overload(
         canvas_zarr,
         count_zarr,
         save_path=save_path,
+        verbose=verbose,
     )
     canvas = [None for _ in range(num_expected_output)]
     count = [None for _ in range(num_expected_output)]
