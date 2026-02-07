@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Final
+from typing import TYPE_CHECKING, Any, Final
 
 import dask.array as da
 import numpy as np
@@ -25,6 +25,7 @@ from tiatoolbox.models.engine.multi_task_segmentor import (
 )
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils import imwrite
+from tiatoolbox.utils.misc import get_tqdm_full
 from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
@@ -594,16 +595,9 @@ def test_vertical_save_branch_without_patch(
     # --- Real numpy array for shape/dtype ---
     probabilities = np.zeros((1, 3))
 
-    class DummyTqdm:
-        """Dummy tqdm with a write() method."""
-
-        messages: ClassVar[list[str]] = []
-        desc: str = "Test Method"
-
-        @classmethod
-        def write(cls: DummyTqdm, msg: str) -> None:
-            """Append a message to the messages list."""
-            cls.messages.append(msg)
+    tqdm_loop = get_tqdm_full(
+        range(1),
+    )
 
     # --- Call function ---
     new_zarr, new_da = _save_multitask_vertical_to_cache(
@@ -611,7 +605,7 @@ def test_vertical_save_branch_without_patch(
         probabilities_da=probabilities_da,
         probabilities=probabilities,
         idx=idx,
-        tqdm_=DummyTqdm,
+        tqdm_loop=tqdm_loop,
         save_path=tmp_path / "cache.zarr",
         chunk_shape=(1,),
         memory_threshold=0,  # ensure branch triggers

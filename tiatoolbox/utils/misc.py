@@ -1674,7 +1674,7 @@ def get_tqdm_full(
     *,
     leave: bool = False,
     verbose: bool = True,
-) -> type[tqdm_notebook | tqdm] | Iterable:
+) -> Iterable:
     """Helper function to get appropriate tqdm progress bar.
 
     Args:
