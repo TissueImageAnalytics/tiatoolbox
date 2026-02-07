@@ -1106,16 +1106,14 @@ class MultiTaskSegmentor(SemanticSegmentor):
             ):
                 tile_bounds = _tile_meta[0]
                 head_raws.append(
-                    tuple(
-                        [
-                            p[
-                                tile_bounds[1] : tile_bounds[3],
-                                tile_bounds[0] : tile_bounds[2],
-                                :,
-                            ].compute()
-                            for p in probabilities
-                        ]
-                    )
+                    [
+                        p[
+                            tile_bounds[1] : tile_bounds[3],
+                            tile_bounds[0] : tile_bounds[2],
+                            :,
+                        ].compute()
+                        for p in probabilities
+                    ]
                 )
 
             # Build delayed tasks
