@@ -2020,7 +2020,7 @@ def dict_to_store(
         for i in tqdm_(
             range(n),
             leave=False,
-            desc="Creating list of delayed tasks for writing annotations.",
+            desc="Creating list of delayed tasks for writing annotations",
         )
     ]
 
