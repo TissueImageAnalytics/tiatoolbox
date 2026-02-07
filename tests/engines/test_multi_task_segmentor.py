@@ -338,6 +338,7 @@ def test_wsi_mtsegmentor_zarr(
         # Prediction masks can be tracked and saved as for layer segmentation in
         # HoVerNet Plus.
         return_predictions=(False, True),
+        verbose=False,
     )
 
     output_tile_ = zarr.open(output_tile[wsi4_1k_1k_svs], mode="r")

@@ -1668,13 +1668,6 @@ def write_probability_heatmap_as_ome_tiff(
     logger.info(msg)
 
 
-def get_tqdm() -> type[tqdm_notebook | tqdm]:
-    """Returns appropriate tqdm tqdm object."""
-    if is_notebook():  # pragma: no cover
-        return tqdm_notebook.tqdm
-    return tqdm
-
-
 def get_tqdm_full(
     iterable_input: Iterable,
     desc: str = "Processing input",

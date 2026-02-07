@@ -139,7 +139,6 @@ from tiatoolbox.annotation.storage import Annotation
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.misc import (
     create_smart_array,
-    get_tqdm,
     get_tqdm_full,
     make_valid_poly,
 )
@@ -426,11 +425,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
         raw_predictions["probabilities"] = [[] for _ in range(num_expected_output)]
 
         # Inference loop
-        tqdm_ = get_tqdm()
-        tqdm_loop = (
-            tqdm_(dataloader, leave=False, desc="Inferring patches")
-            if self.verbose
-            else dataloader
+        tqdm_loop = get_tqdm_full(
+            dataloader,
+            leave=False,
+            desc="Inferring patches",
+            verbose=self.verbose,
         )
 
         for batch_data in tqdm_loop:
@@ -572,11 +571,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
         )
 
         # Inference loop
-        tqdm_ = get_tqdm()
-        tqdm_loop = (
-            tqdm_(dataloader, leave=False, desc="Inferring patches")
-            if self.verbose
-            else dataloader
+        tqdm_loop = get_tqdm_full(
+            dataloader,
+            leave=False,
+            desc="Inferring patches",
+            verbose=self.verbose,
         )
 
         # Expected number of outputs from the model
@@ -654,7 +653,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         count_zarr=count_zarr,
                         memory_threshold=memory_threshold,
                         tqdm_loop=tqdm_loop,
-                        tqdm_=tqdm_,
                         save_path=save_path,
                         num_expected_output=num_expected_output,
                         verbose=self.verbose,
@@ -1090,20 +1088,20 @@ class MultiTaskSegmentor(SemanticSegmentor):
         tile_info_sets = self._get_tile_info(wsi_proc_shape, self.ioconfig)
         ioconfig = self.ioconfig.to_baseline()
 
-        tqdm_ = get_tqdm()
-
         tile_metadata = _build_tile_tasks(
             tile_info_sets=tile_info_sets,
+            verbose=self.verbose,
         )
 
         wsi_info_dict = None
         merge_idx = 0
         # Only used for delayed processing.
         self._probabilities = probabilities  # skipcq: PYL-W0201
-        for i in tqdm_(
+        for i in get_tqdm_full(
             range(0, len(tile_metadata), num_workers),
             leave=False,
             desc="Post-Processing WSI to generate predictions and contours",
+            verbose=self.verbose,
         ):
             tile_metadata_ = tile_metadata[i : i + num_workers]
 
@@ -1112,10 +1110,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 self._compute_tile(
                     _tile_meta[0],
                 )
-                for _tile_meta in tqdm_(
+                for _tile_meta in get_tqdm_full(
                     tile_metadata_,
                     leave=False,
                     desc="Creating list of delayed tasks for writing annotations",
+                    verbose=self.verbose,
                 )
             ]
 
@@ -1172,8 +1171,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         wsi_info_dict[inst_id]["info_dict"].pop(inst_uuid, None)
 
         for idx, wsi_info_dict_ in enumerate(
-            tqdm_(
-                wsi_info_dict, leave=False, desc="Converting 'info_dict' to dask arrays"
+            get_tqdm_full(
+                wsi_info_dict,
+                leave=False,
+                desc="Converting 'info_dict' to dask arrays",
+                verbose=self.verbose,
             )
         ):
             info_df = pd.DataFrame(wsi_info_dict_["info_dict"]).transpose()
@@ -1629,6 +1631,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     class_dict=class_dict,
                     scale_factor=scale_factor,
                     num_workers=num_workers,
+                    verbose=self.verbose,
                 )
                 save_paths.append(output_path)
 
@@ -1645,6 +1648,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     class_dict=class_dict,
                     scale_factor=scale_factor,
                     num_workers=num_workers,
+                    verbose=self.verbose,
                 )
                 save_paths.append(output_path)
 
@@ -1994,6 +1998,8 @@ def dict_to_store(
     origin: tuple[float, float] = (0, 0),
     scale_factor: tuple[float, float] = (1, 1),
     num_workers: int = multiprocessing.cpu_count(),
+    *,
+    verbose: bool = True,
 ) -> AnnotationStore:
     """Write polygonal multitask predictions into an SQLite-backed AnnotationStore.
 
@@ -2035,6 +2041,8 @@ def dict_to_store(
         num_workers (int):
             Number of parallel worker threads to use. If set to 0 or None,
             defaults to the number of CPU cores.
+        verbose (bool):
+            Whether to display logs and progress bar.
 
     Returns:
         AnnotationStore:
@@ -2055,8 +2063,6 @@ def dict_to_store(
     contours = processed_predictions.pop("contours")
     n = len(contours)
 
-    tqdm_ = get_tqdm()
-
     # Build delayed tasks
     delayed_tasks = [
         _build_single_annotation(
@@ -2067,15 +2073,19 @@ def dict_to_store(
             origin,
             scale_factor,
         )
-        for i in tqdm_(
+        for i in get_tqdm_full(
             range(n),
             leave=False,
             desc="Creating list of delayed tasks for writing annotations",
+            verbose=verbose,
         )
     ]
 
     ann = compute_dask_delayed_with_progress(
-        delayed_tasks, num_workers=num_workers, desc="Saving annotations "
+        delayed_tasks,
+        num_workers=num_workers,
+        desc="Saving annotations ",
+        verbose=verbose,
     )
 
     logger.info("Added %d annotations.", len(ann))
@@ -2089,6 +2099,8 @@ def compute_dask_delayed_with_progress(
     num_workers: int = multiprocessing.cpu_count(),
     desc: str = "Computing",
     batch_size: int | None = None,
+    *,
+    verbose: bool = True,
 ) -> list:
     """Compute a list of Dask delayed tasks in parallel while displaying a progress bar.
 
@@ -2108,6 +2120,8 @@ def compute_dask_delayed_with_progress(
         batch_size (int | None):
             batch_size to process dask delayed.
             batch_size is set to num_workers if batch_size is not provided.
+        verbose (bool):
+            Whether to display logs and progress bar.
 
     Returns:
         A list containing the computed results from all delayed tasks, in order.
@@ -2117,21 +2131,22 @@ def compute_dask_delayed_with_progress(
     batch_size = num_workers if batch_size is None else batch_size
     results: list[Any] = []
 
-    tqdm_ = get_tqdm()
+    for i in get_tqdm_full(
+        range(0, total, batch_size),
+        desc=desc,
+        leave=False,
+        verbose=verbose,
+    ):
+        batch = delayed_tasks[i : i + batch_size]
 
-    with tqdm_(total=total, desc=desc, leave=False) as pbar:
-        for i in range(0, total, batch_size):
-            batch = delayed_tasks[i : i + batch_size]
+        # Compute this batch in parallel
+        batch_results = compute(
+            *batch,
+            scheduler="threads",
+            num_workers=num_workers,
+        )
 
-            # Compute this batch in parallel
-            batch_results = compute(
-                *batch,
-                scheduler="threads",
-                num_workers=num_workers,
-            )
-
-            results.extend(batch_results)
-            pbar.update(len(batch))
+        results.extend(batch_results)
 
     return results
 
@@ -2441,6 +2456,8 @@ def merge_multitask_vertical_chunkwise(
     zarr_group: zarr.Group,
     save_path: Path,
     memory_threshold: int = 80,
+    *,
+    verbose: bool = True,
 ) -> list[da.Array]:
     """Merge horizontally stitched row blocks into final WSI probability maps.
 
@@ -2484,6 +2501,8 @@ def merge_multitask_vertical_chunkwise(
         memory_threshold (int):
             Maximum allowed RAM usage (percentage) before converting in-memory
             probability accumulators to Zarr-backed arrays. Default is 80.
+        verbose (bool):
+            Whether to display logs and progress bar.
 
     Returns:
         list[da.Array]:
@@ -2517,16 +2536,17 @@ def merge_multitask_vertical_chunkwise(
         num_chunks = canvas_.numblocks[0]
         chunk_shape = tuple(chunk[0] for chunk in canvas_.chunks)
 
-        tqdm_ = get_tqdm()
-        tqdm_loop = tqdm_(
-            overlaps, leave=False, desc=f"Merging rows for probability map {idx}"
-        )
-
         curr_chunk = canvas_.blocks[0, 0].compute()
         curr_count = count[idx].blocks[0, 0].compute()
         next_chunk = canvas_.blocks[1, 0].compute() if num_chunks > 1 else None
         next_count = count[idx].blocks[1, 0].compute() if num_chunks > 1 else None
 
+        tqdm_loop = get_tqdm_full(
+            overlaps,
+            leave=False,
+            desc=f"Merging rows for probability map {idx}",
+            verbose=verbose,
+        )
         for i, overlap in enumerate(tqdm_loop):
             if next_chunk is not None and overlap > 0:
                 curr_chunk[-overlap:] += next_chunk[:overlap]
@@ -2550,7 +2570,7 @@ def merge_multitask_vertical_chunkwise(
                 probabilities_da=probabilities_da,
                 probabilities=probabilities,
                 idx=idx,
-                tqdm_=tqdm_,
+                tqdm_loop=tqdm_loop,
                 save_path=save_path,
                 chunk_shape=chunk_shape,
                 memory_threshold=memory_threshold,
@@ -2582,7 +2602,7 @@ def _save_multitask_vertical_to_cache(
     probabilities_da: list[da.Array] | list[None],
     probabilities: np.ndarray,
     idx: int,
-    tqdm_: type[tqdm_notebook | tqdm],
+    tqdm_loop: type[tqdm_notebook | tqdm],
     save_path: Path,
     chunk_shape: tuple,
     memory_threshold: int = 80,
@@ -2595,13 +2615,13 @@ def _save_multitask_vertical_to_cache(
         total_bytes = sum(0 if arr is None else arr.nbytes for arr in probabilities_da)
         used_percent = (total_bytes / max(vm.available, 1)) * 100
     if probabilities_zarr[idx] is None and used_percent > memory_threshold:
-        desc = tqdm_.desc
+        desc = tqdm_loop.desc
         msg = (
             f"Current Memory usage: {used_percent} %  "
             f"exceeds specified threshold: {memory_threshold}. "
             f"Saving intermediate results to disk."
         )
-        tqdm_.desc = msg
+        tqdm_loop.desc = msg
         zarr_group = zarr.open(str(save_path), mode="a")
         probabilities_zarr[idx] = zarr_group.create_dataset(
             name=f"probabilities/{idx}",
@@ -2611,7 +2631,7 @@ def _save_multitask_vertical_to_cache(
             overwrite=True,
         )
         probabilities_zarr[idx][:] = probabilities_da[idx].compute()
-        tqdm_.desc = desc
+        tqdm_loop.desc = desc
         probabilities_da[idx] = None
 
     return probabilities_zarr, probabilities_da
@@ -2683,7 +2703,6 @@ def _check_and_update_for_memory_overload(
     count_zarr: list[zarr.Array | None],
     memory_threshold: int,
     tqdm_loop: DataLoader | tqdm,
-    tqdm_: type[tqdm_notebook | tqdm],
     save_path: Path,
     num_expected_output: int,
     *,
@@ -2714,7 +2733,7 @@ def _check_and_update_for_memory_overload(
         f"exceeds specified threshold: {memory_threshold}. "
         f"Saving intermediate results to disk."
     )
-    tqdm_.desc = msg
+    tqdm_loop.desc = msg
     # Flush data in Memory and clear dask graph
     canvas_zarr, count_zarr = save_multitask_to_cache(
         canvas,
@@ -2742,6 +2761,8 @@ def _save_annotation_store(
     class_dict: dict,
     scale_factor: tuple[float, float],
     num_workers: int,
+    *,
+    verbose: bool = True,
 ) -> Path:
     """Helper function to save to annotation store."""
     if isinstance(curr_image, Path):
@@ -2769,6 +2790,7 @@ def _save_annotation_store(
         scale_factor=scale_factor,
         origin=origin,
         num_workers=num_workers,
+        verbose=verbose,
     )
 
     store.commit()
@@ -3120,6 +3142,8 @@ def _update_tile_based_predictions_array(
 
 def _build_tile_tasks(
     tile_info_sets: list,
+    *,
+    verbose: bool = True,
 ) -> list[
     tuple,  # metadata
 ]:
@@ -3135,6 +3159,8 @@ def _build_tile_tasks(
                 (set_bounds, set_flags)
             - set_bounds: list of tile bounds (x0, y0, x1, y1)
             - set_flags: list of per-tile flags used for instance merging
+        verbose (bool):
+            Whether to display logs and progress bar.
 
     Returns:
         list:
@@ -3143,20 +3169,21 @@ def _build_tile_tasks(
 
     """
     tile_metadata: list = []
-    tqdm_ = get_tqdm()
 
     for set_idx, (set_bounds, set_flags) in enumerate(
-        tqdm_(
+        get_tqdm_full(
             tile_info_sets,
             leave=False,
             desc="Building delayed tile-processing tasks",
+            verbose=verbose,
         )
     ):
         for tile_idx, tile_bounds in enumerate(
-            tqdm_(
+            get_tqdm_full(
                 set_bounds,
                 leave=False,
                 desc=f"Building delayed tile-processing tasks for tile set {set_idx}",
+                verbose=verbose,
             )
         ):
             tile_flag = set_flags[tile_idx]
