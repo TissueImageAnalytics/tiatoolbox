@@ -1098,15 +1098,31 @@ class MultiTaskSegmentor(SemanticSegmentor):
         ):
             tile_metadata_ = tile_metadata[i : i + num_workers]
 
+            head_raws = []
+            for _tile_meta in tqdm_(
+                tile_metadata_,
+                leave=False,
+                desc="Computing tiles for post processing",
+            ):
+                tile_bounds = _tile_meta[0]
+                head_raws.append(
+                    tuple(
+                        [
+                            p[
+                                tile_bounds[1] : tile_bounds[3],
+                                tile_bounds[0] : tile_bounds[2],
+                                :,
+                            ].compute()
+                            for p in probabilities
+                        ]
+                    )
+                )
+
             # Build delayed tasks
             delayed_tasks = [
-                _compute_tile(
-                    probabilities,
-                    _tile_meta[0],
-                    self.model,
-                )
-                for _tile_meta in tqdm_(
-                    tile_metadata_,
+                delayed(self.model.postproc_func)(head_raw)
+                for head_raw in tqdm_(
+                    head_raws,
                     leave=False,
                     desc="Creating list of delayed tasks for writing annotations",
                 )
@@ -3059,43 +3075,6 @@ def _update_tile_based_predictions_array(
         )
 
     return wsi_info_dict
-
-
-@delayed
-def _compute_tile(
-    probabilities: list[da.Array | np.ndarray],
-    tile_bounds: tuple[int, int, int, int],
-    model: ModelABC,
-) -> tuple:
-    """Compute post-processing outputs for a single WSI tile.
-
-    This function performs lazy slicing of the probability maps for the given
-    tile bounds and applies the model's `postproc_func` to produce per-task
-    outputs (semantic, instance, etc.).
-
-    Args:
-        probabilities:
-            List of WSI-scale probability maps, one per model head. Each element
-            is either a Dask array or NumPy array with shape (H, W, C).
-        tile_bounds:
-            A 4-tuple (x_start, y_start, x_end, y_end) defining the tile region
-            in WSI coordinates.
-        model:
-            The multitask model containing a `postproc_func` method that accepts
-            a list of tile-level arrays and returns a tuple of task dictionaries.
-
-    Returns:
-        A tuple of dictionaries, one per task, as produced by `postproc_func`.
-        Each dictionary typically contains:
-            - "task_type": str
-            - "predictions": np.ndarray
-            - "info_dict": dict
-    """
-    head_raws = [
-        p[tile_bounds[1] : tile_bounds[3], tile_bounds[0] : tile_bounds[2], :]
-        for p in probabilities
-    ]
-    return model.postproc_func(head_raws)
 
 
 def _build_tile_tasks(
