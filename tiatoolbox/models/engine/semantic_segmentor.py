@@ -711,6 +711,7 @@ class SemanticSegmentor(PatchPredictor):
                     scale_factor=scale_factor,
                     class_dict=class_dict,
                     save_path=output_path,
+                    verbose=self.verbose,
                 )
 
                 save_paths.append(out_file)
@@ -720,6 +721,7 @@ class SemanticSegmentor(PatchPredictor):
                 scale_factor=scale_factor,
                 class_dict=class_dict,
                 save_path=save_path.with_suffix(".db"),
+                verbose=self.verbose,
             )
             save_paths = out_file
 

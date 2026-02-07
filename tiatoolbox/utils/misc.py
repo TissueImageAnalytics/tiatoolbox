@@ -1217,14 +1217,19 @@ def patch_predictions_as_annotations(
     patch_coords: list,
     classes_predicted: list,
     labels: list,
+    *,
+    verbose: bool = True,
 ) -> list:
     """Helper function to generate annotation per patch predictions."""
     annotations = []
-    tqdm_ = get_tqdm()
+    tqdm_loop = get_tqdm_full(
+        patch_coords,
+        leave=False,
+        desc="Converting outputs to AnnotationStore.",
+        verbose=verbose,
+    )
 
-    for i, _ in enumerate(
-        tqdm_(patch_coords, leave=False, desc="Converting outputs to AnnotationStore.")
-    ):
+    for i, _ in enumerate(tqdm_loop):
         if "probabilities" in keys:
             props = {
                 f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
@@ -1358,6 +1363,8 @@ def dict_to_store_semantic_segmentor(
     scale_factor: tuple[float, float],
     class_dict: dict | None = None,
     save_path: Path | None = None,
+    *,
+    verbose: bool = True,
 ) -> AnnotationStore | Path:
     """Converts output of TIAToolbox SemanticSegmentor engine to AnnotationStore.
 
@@ -1374,6 +1381,8 @@ def dict_to_store_semantic_segmentor(
         save_path (str or Path):
             Optional Output directory to save the Annotation
             Store results.
+        verbose (bool):
+            Whether to display logs and progress bar.
 
     Returns:
         (SQLiteStore or Path):
@@ -1394,11 +1403,14 @@ def dict_to_store_semantic_segmentor(
 
     annotations_list: list[Annotation] = []
 
-    tqdm_ = get_tqdm()
+    tqdm_loop = get_tqdm_full(
+        layer_list,
+        leave=False,
+        desc="Converting outputs to AnnotationStore.",
+        verbose=verbose,
+    )
 
-    for type_class in tqdm_(
-        layer_list, leave=False, desc="Converting outputs to AnnotationStore."
-    ):
+    for type_class in tqdm_loop:
         class_id = int(type_class)
         class_label = class_dict.get(class_id, class_id)
         layer = da.where(preds == type_class, 1, 0).astype("uint8").compute()
@@ -1437,6 +1449,8 @@ def dict_to_store_patch_predictions(
     scale_factor: tuple[float, float],
     class_dict: dict | None = None,
     save_path: Path | None = None,
+    *,
+    verbose: bool = True,
 ) -> AnnotationStore | Path:
     """Converts output of TIAToolbox PatchPredictor engine to AnnotationStore.
 
@@ -1454,6 +1468,8 @@ def dict_to_store_patch_predictions(
         save_path (str or Path):
             Optional Output directory to save the Annotation
             Store results.
+        verbose (bool):
+            Whether to display logs and progress bar.
 
     Returns:
         (SQLiteStore or Path):
@@ -1502,6 +1518,7 @@ def dict_to_store_patch_predictions(
         patch_coords.astype(float),
         classes_predicted,
         labels,
+        verbose=verbose,
     )
 
     store = SQLiteStore()

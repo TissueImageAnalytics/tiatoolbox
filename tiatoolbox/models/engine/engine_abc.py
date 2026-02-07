@@ -737,6 +737,7 @@ class EngineABC(ABC):  # noqa: B024
                 scale_factor,
                 class_dict,
                 save_path,
+                verbose=self.verbose,
             )
 
         msg = f"Unsupported output type: {output_type}"
