@@ -1114,7 +1114,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         with TqdmCallback(desc="Post processing inference output", leave=False):
             # Compute only this batch in parallel to avoid memory overload.
             batch_outputs = compute(
-                *delayed_tasks, scheduler="processes", num_workers=num_workers
+                *delayed_tasks, scheduler="threads", num_workers=num_workers
             )
 
         tqdm_loop = get_tqdm_full(
