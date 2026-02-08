@@ -1094,81 +1094,69 @@ class MultiTaskSegmentor(SemanticSegmentor):
         )
 
         wsi_info_dict = None
-        merge_idx = 0
         # Only used for delayed processing.
         self._probabilities = probabilities  # skipcq: PYL-W0201
-        for i in get_tqdm_full(
-            range(0, len(tile_metadata), num_workers),
-            leave=False,
-            desc="Post-Processing WSI to generate predictions and contours",
-            verbose=self.verbose,
-        ):
-            tile_metadata_ = tile_metadata[i : i + num_workers]
 
-            # Build delayed tasks
-            delayed_tasks = [
-                self._compute_tile(
-                    _tile_meta[0],
-                )
-                for _tile_meta in get_tqdm_full(
-                    tile_metadata_,
-                    leave=False,
-                    desc="Creating list of delayed tasks for writing annotations",
-                    verbose=self.verbose,
-                )
-            ]
+        # Build delayed tasks
+        delayed_tasks = [
+            self._compute_tile(
+                _tile_meta[0],
+            )
+            for _tile_meta in get_tqdm_full(
+                tile_metadata,
+                leave=False,
+                desc="Creating list of delayed tasks for writing annotations",
+                verbose=self.verbose,
+            )
+        ]
 
-            # Compute only this batch in parallel to avoid memory overload.
-            batch_outputs = compute(
-                *delayed_tasks, scheduler="threads", num_workers=num_workers
+        # Compute only this batch in parallel to avoid memory overload.
+        batch_outputs = compute(
+            *delayed_tasks, scheduler="threads", num_workers=num_workers
+        )
+
+        # Merge each tile result immediately
+        for merge_idx, post_process_output in enumerate(batch_outputs):
+            tile_bounds, tile_flag, tile_mode = tile_metadata[merge_idx]
+            # create a list of info dict for each task
+            wsi_info_dict = _create_wsi_info_dict(
+                post_process_output=post_process_output,
+                wsi_info_dict=wsi_info_dict,
+                wsi_proc_shape=wsi_proc_shape,
+                save_path=save_path,
+                memory_threshold=memory_threshold,
+                return_predictions=return_predictions,
             )
 
-            # Merge each tile result immediately
-            for post_process_output in batch_outputs:
-                tile_bounds, tile_flag, tile_mode = tile_metadata[merge_idx]
-                merge_idx += 1
+            wsi_info_dict = _update_tile_based_predictions_array(
+                post_process_output=post_process_output,
+                wsi_info_dict=wsi_info_dict,
+                bounds=tile_bounds,
+            )
 
-                # create a list of info dict for each task
-                wsi_info_dict = _create_wsi_info_dict(
-                    post_process_output=post_process_output,
-                    wsi_info_dict=wsi_info_dict,
-                    wsi_proc_shape=wsi_proc_shape,
-                    save_path=save_path,
-                    memory_threshold=memory_threshold,
-                    return_predictions=return_predictions,
+            inst_dicts = _get_inst_info_dicts(post_process_output=post_process_output)
+            tile_tl = tile_bounds[:2]
+            tile_br = tile_bounds[2:]
+            tile_shape = tile_br - tile_tl
+
+            new_inst_dicts, remove_insts_in_origs = [], []
+            for inst_id, inst_dict in enumerate(inst_dicts):
+                new_inst_dict, remove_insts_in_orig = _process_instance_predictions(
+                    inst_dict,
+                    ioconfig,
+                    tile_shape,
+                    tile_flag,
+                    tile_mode,
+                    tile_tl,
+                    wsi_info_dict[inst_id]["info_dict"],
                 )
+                new_inst_dicts.append(new_inst_dict)
+                remove_insts_in_origs.append(remove_insts_in_orig)
 
-                wsi_info_dict = _update_tile_based_predictions_array(
-                    post_process_output=post_process_output,
-                    wsi_info_dict=wsi_info_dict,
-                    bounds=tile_bounds,
-                )
-
-                inst_dicts = _get_inst_info_dicts(
-                    post_process_output=post_process_output
-                )
-                tile_tl = tile_bounds[:2]
-                tile_br = tile_bounds[2:]
-                tile_shape = tile_br - tile_tl
-
-                new_inst_dicts, remove_insts_in_origs = [], []
-                for inst_id, inst_dict in enumerate(inst_dicts):
-                    new_inst_dict, remove_insts_in_orig = _process_instance_predictions(
-                        inst_dict,
-                        ioconfig,
-                        tile_shape,
-                        tile_flag,
-                        tile_mode,
-                        tile_tl,
-                        wsi_info_dict[inst_id]["info_dict"],
-                    )
-                    new_inst_dicts.append(new_inst_dict)
-                    remove_insts_in_origs.append(remove_insts_in_orig)
-
-                for inst_id, new_inst_dict in enumerate(new_inst_dicts):
-                    wsi_info_dict[inst_id]["info_dict"].update(new_inst_dict)
-                    for inst_uuid in remove_insts_in_origs[inst_id]:
-                        wsi_info_dict[inst_id]["info_dict"].pop(inst_uuid, None)
+            for inst_id, new_inst_dict in enumerate(new_inst_dicts):
+                wsi_info_dict[inst_id]["info_dict"].update(new_inst_dict)
+                for inst_uuid in remove_insts_in_origs[inst_id]:
+                    wsi_info_dict[inst_id]["info_dict"].pop(inst_uuid, None)
 
         for idx, wsi_info_dict_ in enumerate(
             get_tqdm_full(
