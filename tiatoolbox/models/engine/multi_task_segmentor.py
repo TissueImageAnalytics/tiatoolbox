@@ -131,6 +131,7 @@ from dask import compute, delayed
 from shapely.geometry import box as shapely_box
 from shapely.geometry import shape as feature2geometry
 from shapely.strtree import STRtree
+from tqdm.dask import TqdmCallback
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
@@ -144,7 +145,6 @@ from tiatoolbox.utils.misc import (
 )
 from tiatoolbox.wsicore.wsireader import is_zarr
 
-from .engine_abc import TqdmProgressBar
 from .semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
@@ -1111,17 +1111,10 @@ class MultiTaskSegmentor(SemanticSegmentor):
             )
         ]
 
-        progressbar = TqdmProgressBar(
-            total=len(delayed_tasks),
-            desc="Post processing inference output",
-            leave=False,
-            verbose=self.verbose,
-        )
-
-        with progressbar:
+        with TqdmCallback(desc="Post processing inference output", leave=False):
             # Compute only this batch in parallel to avoid memory overload.
             batch_outputs = compute(
-                *delayed_tasks, scheduler="threads", num_workers=num_workers
+                *delayed_tasks, scheduler="processes", num_workers=num_workers
             )
 
         tqdm_loop = get_tqdm_full(
