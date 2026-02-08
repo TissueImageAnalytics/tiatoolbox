@@ -49,6 +49,7 @@ from dask import compute
 from dask.diagnostics import ProgressBar
 from numcodecs import Pickle
 from torch import nn
+from tqdm.auto import tqdm
 from typing_extensions import Unpack
 
 from tiatoolbox import DuplicateFilter, logger, rcParam
@@ -833,8 +834,13 @@ class EngineABC(ABC):  # noqa: B024
             )
 
         msg = f"Saving output to {save_path}."
-        logger.info(msg=msg)
-        with ProgressBar():
+        progressbar = TqdmProgressBar(
+            total=len(write_tasks),
+            desc=msg,
+            leave=False,
+            verbose=self.verbose,
+        )
+        with progressbar:
             compute(*write_tasks)
 
         zarr_group = zarr.open(save_path, mode="r+")
@@ -1750,6 +1756,96 @@ class EngineABC(ABC):  # noqa: B024
             save_dir=save_dir,
             **kwargs,
         )
+
+
+class TqdmProgressBar(ProgressBar):
+    """A Dask progress bar that forwards progress updates to a ``tqdm`` bar.
+
+    This class integrates Dask's diagnostic progress reporting with a
+    ``tqdm`` progress bar, providing a familiar and visually rich progress
+    indicator during ``dask.compute()`` calls.
+
+    The bar updates based on Dask's internal progress fraction and
+    automatically closes when computation finishes.
+
+    Args:
+        total (int):
+            Total number of tasks expected to be computed. Typically, the
+            number of delayed objects passed to ``dask.compute()``.
+        desc (str, optional):
+            Description text displayed to the left of the tqdm bar.
+            Defaults to ``"Computing"``.
+        leave (bool, optional):
+            Whether to leave the tqdm bar visible after completion.
+            Defaults to ``False``.
+        verbose (bool, optional):
+            If ``True``, prints Dask's diagnostic messages in addition to
+            updating the tqdm bar. Defaults to ``False``.
+
+    Attributes:
+        pbar (tqdm):
+            The underlying tqdm progress bar instance.
+
+    """
+
+    def __init__(
+        self,
+        total: int,
+        desc: str = "Computing",
+        *,
+        leave: bool = False,
+        verbose: bool = True,
+    ) -> None:
+        """TqdmProgressBar constructor.
+
+        Args:
+        total (int):
+            Total number of tasks expected to be computed. Typically, the
+            number of delayed objects passed to ``dask.compute()``.
+        desc (str, optional):
+            Description text displayed to the left of the tqdm bar.
+            Defaults to ``"Computing"``.
+        leave (bool, optional):
+            Whether to leave the tqdm bar visible after completion.
+            Defaults to ``False``.
+        verbose (bool, optional):
+            If ``True``, prints Dask's diagnostic messages in addition to
+            updating the tqdm bar. Defaults to ``False``.
+
+        """
+        super().__init__(dt=0.1, out=_SilentFile())
+        self.verbose = verbose
+        self.pbar = tqdm(total=total, desc=desc, leave=leave)
+
+    def _draw_bar(self, *args: object, **kwargs: object) -> None:
+        """Update the tqdm bar based on Dask's reported completion fraction."""
+        fraction = getattr(self, "_last_fraction", None)
+
+        if fraction is not None:
+            new_value = int(fraction * self.pbar.total)
+            self.pbar.n = new_value
+            self.pbar.refresh()
+
+        if self.verbose:
+            super()._draw_bar(*args, **kwargs)
+
+    def _finish(self, *args: object, **kwargs: object) -> None:
+        """Finalize and close the tqdm bar when computation completes."""
+        self.pbar.n = self.pbar.total
+        self.pbar.close()
+
+        if self.verbose:
+            super()._finish(*args, **kwargs)
+
+
+class _SilentFile:
+    """A file-like object that discards all writes."""
+
+    def write(self, s: str) -> None:
+        """Dummy write function."""
+
+    def flush(self) -> None:
+        """Dummy flush function."""
 
 
 def prepare_engines_save_dir(

@@ -54,7 +54,6 @@ import dask.array as da
 import numpy as np
 import zarr
 from dask import compute
-from dask.diagnostics.progress import ProgressBar
 from shapely.geometry import Point
 
 from tiatoolbox import logger
@@ -64,6 +63,8 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentorRunParams,
 )
 from tiatoolbox.utils.misc import get_tqdm_full
+
+from .engine_abc import TqdmProgressBar
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
@@ -464,7 +465,13 @@ class NucleusDetector(SemanticSegmentor):
         task = centroid_maps.to_zarr(
             url=zarr_file, component="centroid_maps", compute=False, object_codec=None
         )
-        with ProgressBar():
+        progressbar = TqdmProgressBar(
+            total=len(task),
+            desc="Computing Centroids",
+            leave=False,
+            verbose=self.verbose,
+        )
+        with progressbar:
             compute(task)
 
         self.drop_keys.append("centroid_maps")

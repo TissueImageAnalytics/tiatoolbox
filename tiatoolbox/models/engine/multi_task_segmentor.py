@@ -144,6 +144,7 @@ from tiatoolbox.utils.misc import (
 )
 from tiatoolbox.wsicore.wsireader import is_zarr
 
+from .engine_abc import TqdmProgressBar
 from .semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
@@ -1110,13 +1111,28 @@ class MultiTaskSegmentor(SemanticSegmentor):
             )
         ]
 
-        # Compute only this batch in parallel to avoid memory overload.
-        batch_outputs = compute(
-            *delayed_tasks, scheduler="threads", num_workers=num_workers
+        progressbar = TqdmProgressBar(
+            total=len(delayed_tasks),
+            desc="Post processing inference output",
+            leave=False,
+            verbose=self.verbose,
+        )
+
+        with progressbar:
+            # Compute only this batch in parallel to avoid memory overload.
+            batch_outputs = compute(
+                *delayed_tasks, scheduler="threads", num_workers=num_workers
+            )
+
+        tqdm_loop = get_tqdm_full(
+            batch_outputs,
+            leave=False,
+            verbose=self.verbose,
+            desc="Merging Output Predictions",
         )
 
         # Merge each tile result immediately
-        for merge_idx, post_process_output in enumerate(batch_outputs):
+        for merge_idx, post_process_output in enumerate(tqdm_loop):
             tile_bounds, tile_flag, tile_mode = tile_metadata[merge_idx]
             # create a list of info dict for each task
             wsi_info_dict = _create_wsi_info_dict(
