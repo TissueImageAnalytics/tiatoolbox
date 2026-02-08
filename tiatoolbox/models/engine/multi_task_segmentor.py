@@ -127,11 +127,10 @@ import pandas as pd
 import psutil
 import torch
 import zarr
-from dask import compute, delayed
+from dask import delayed
 from shapely.geometry import box as shapely_box
 from shapely.geometry import shape as feature2geometry
 from shapely.strtree import STRtree
-from tqdm.dask import TqdmCallback
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
@@ -145,6 +144,7 @@ from tiatoolbox.utils.misc import (
 )
 from tiatoolbox.wsicore.wsireader import is_zarr
 
+from .engine_abc import tqdm_dask_progress_bar
 from .semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
@@ -905,7 +905,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 return_predictions=return_predictions,
             )
         else:
-            num_workers = (
+            self.num_workers = (
                 kwargs.get("num_workers", multiprocessing.cpu_count())
                 if self.num_workers == 0
                 else self.num_workers
@@ -914,7 +914,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 probabilities=probabilities,
                 save_path=save_path.with_suffix(".zarr"),
                 memory_threshold=kwargs.get("memory_threshold", 80),
-                num_workers=num_workers,
                 return_predictions=kwargs.get("return_predictions"),
             )
 
@@ -1005,7 +1004,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
         probabilities: list[da.Array | np.ndarray],
         save_path: Path,
         memory_threshold: float = 80,
-        num_workers: int = multiprocessing.cpu_count(),
         *,
         return_predictions: tuple[bool, ...] | None = None,
     ) -> list[dict] | None:
@@ -1111,11 +1109,14 @@ class MultiTaskSegmentor(SemanticSegmentor):
             )
         ]
 
-        with TqdmCallback(desc="Post processing inference output", leave=False):
-            # Compute only this batch in parallel to avoid memory overload.
-            batch_outputs = compute(
-                *delayed_tasks, scheduler="threads", num_workers=num_workers
-            )
+        batch_outputs = tqdm_dask_progress_bar(
+            msg="Post processing inference output",
+            write_tasks=delayed_tasks,
+            num_workers=self.num_workers,
+            scheduler="threads",
+            leave=False,
+            verbose=self.verbose,
+        )
 
         tqdm_loop = get_tqdm_full(
             batch_outputs,
@@ -2078,10 +2079,12 @@ def dict_to_store(
         )
     ]
 
-    ann = compute_dask_delayed_with_progress(
-        delayed_tasks,
+    ann = tqdm_dask_progress_bar(
+        msg="Saving annotations",
+        write_tasks=delayed_tasks,
         num_workers=num_workers,
-        desc="Saving annotations ",
+        scheduler="threads",
+        leave=False,
         verbose=verbose,
     )
 
@@ -2089,63 +2092,6 @@ def dict_to_store(
     store.append_many(ann)
 
     return store
-
-
-def compute_dask_delayed_with_progress(
-    delayed_tasks: list,
-    num_workers: int = multiprocessing.cpu_count(),
-    desc: str = "Computing",
-    batch_size: int | None = None,
-    *,
-    verbose: bool = True,
-) -> list:
-    """Compute a list of Dask delayed tasks in parallel while displaying a progress bar.
-
-    This function batches tasks according to `num_workers`, ensuring that only
-    `num_workers` tasks are computed concurrently. This avoids excessive memory
-    usage when each delayed task returns a large object (e.g., NumPy arrays,
-    geometries, or annotations). A tqdm progress bar is updated after each batch.
-
-    Args:
-        delayed_tasks (list):
-            A list of Dask delayed objects to compute.
-        num_workers (int):
-            Number of parallel worker threads to use. If set to 0 or None,
-            defaults to the number of CPU cores.
-        desc (str):
-            Description string shown in the tqdm progress bar.
-        batch_size (int | None):
-            batch_size to process dask delayed.
-            batch_size is set to num_workers if batch_size is not provided.
-        verbose (bool):
-            Whether to display logs and progress bar.
-
-    Returns:
-        A list containing the computed results from all delayed tasks, in order.
-
-    """
-    total = len(delayed_tasks)
-    batch_size = num_workers if batch_size is None else batch_size
-    results: list[Any] = []
-
-    for i in get_tqdm_full(
-        range(0, total, batch_size),
-        desc=desc,
-        leave=False,
-        verbose=verbose,
-    ):
-        batch = delayed_tasks[i : i + batch_size]
-
-        # Compute this batch in parallel
-        batch_results = compute(
-            *batch,
-            scheduler="threads",
-            num_workers=num_workers,
-        )
-
-        results.extend(batch_results)
-
-    return results
 
 
 def prepare_multitask_full_batch(

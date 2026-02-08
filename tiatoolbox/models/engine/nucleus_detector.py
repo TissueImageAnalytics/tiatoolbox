@@ -53,9 +53,7 @@ from typing import TYPE_CHECKING
 import dask.array as da
 import numpy as np
 import zarr
-from dask import compute
 from shapely.geometry import Point
-from tqdm.dask import TqdmCallback
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, SQLiteStore
@@ -64,6 +62,8 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentorRunParams,
 )
 from tiatoolbox.utils.misc import get_tqdm_full
+
+from .engine_abc import tqdm_dask_progress_bar
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
@@ -464,9 +464,14 @@ class NucleusDetector(SemanticSegmentor):
         task = centroid_maps.to_zarr(
             url=zarr_file, component="centroid_maps", compute=False, object_codec=None
         )
-
-        with TqdmCallback(desc="Computing Centroids", leave=False):
-            compute(task, scheduler="processes", num_workers=self.num_workers)
+        _ = tqdm_dask_progress_bar(
+            msg="Computing Centroids",
+            write_tasks=[task],
+            num_workers=self.num_workers,
+            scheduler="processes",
+            leave=False,
+            verbose=self.verbose,
+        )
 
         self.drop_keys.append("centroid_maps")
         zarr_group = zarr.open(zarr_file, mode="r+")

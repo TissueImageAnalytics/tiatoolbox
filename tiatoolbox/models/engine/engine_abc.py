@@ -833,9 +833,14 @@ class EngineABC(ABC):  # noqa: B024
             )
 
         msg = f"Saving output to {save_path}."
-
-        with TqdmCallback(desc=msg, leave=False):
-            compute(*write_tasks, scheduler="processes", num_workers=self.num_workers)
+        _ = tqdm_dask_progress_bar(
+            msg=msg,
+            write_tasks=write_tasks,
+            num_workers=self.num_workers,
+            scheduler="threads",  # tasks are I/O-bound and shared memory use threads
+            leave=False,
+            verbose=self.verbose,
+        )
 
         zarr_group = zarr.open(save_path, mode="r+")
         for key in self.drop_keys:
@@ -1806,3 +1811,40 @@ def prepare_engines_save_dir(
     save_dir.mkdir(parents=True)
 
     return save_dir
+
+
+def tqdm_dask_progress_bar(
+    msg: str,
+    write_tasks: list,
+    num_workers: int,
+    scheduler: str = "threads",
+    *,
+    leave: bool = False,
+    verbose: bool = True,
+) -> list:
+    """Helper function for tqdm_dask_progress_bar.
+
+    Args:
+        msg (str):
+            Message to display for the progress bar.
+        write_tasks (list):
+            List of dask tasks to compute.
+        num_workers (int):
+            Number of workers to use.
+        scheduler (str):
+            dask compute scheduler to use e.g., "threads" or "processes".
+        leave (bool):
+            Whether to leave progress bar after completion.
+        verbose (bool):
+            Whether to display progress bar.
+
+    Returns:
+        List:
+            list of outputs from dask compute.
+
+    """
+    if verbose:
+        with TqdmCallback(desc=msg, leave=leave):
+            return compute(*write_tasks, scheduler=scheduler, num_workers=num_workers)
+
+    return compute(*write_tasks, scheduler=scheduler, num_workers=num_workers)
