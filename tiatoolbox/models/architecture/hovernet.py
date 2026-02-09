@@ -27,6 +27,7 @@ from tiatoolbox.models.architecture.utils import (
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils.misc import (
     get_bounding_box,
+    get_tqdm_full,
     tqdm_dask_progress_bar,
 )
 
@@ -668,7 +669,15 @@ class HoVerNet(ModelABC):
         """
         inst_id_list = np.unique(pred_inst)[1:]  # exclude background
 
-        tasks = [compute_inst_info(inst_id, pred_inst) for inst_id in inst_id_list]
+        tasks = [
+            compute_inst_info(inst_id, pred_inst)
+            for inst_id in get_tqdm_full(
+                inst_id_list,
+                desc="Creating list of tasks for computing instance info",
+                leave=False,
+                verbose=verbose,
+            )
+        ]
 
         inst_info_dict = dict(
             result

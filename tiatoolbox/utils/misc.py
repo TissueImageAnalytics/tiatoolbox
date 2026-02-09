@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import multiprocessing
 import shutil
 import tempfile
 import zipfile
@@ -1796,10 +1797,10 @@ def create_smart_array(
 
 
 def tqdm_dask_progress_bar(
-    desc: str,
     write_tasks: list,
-    num_workers: int,
+    num_workers: int = multiprocessing.cpu_count(),
     scheduler: str = "threads",
+    desc: str = "Processing data",
     *,
     leave: bool = False,
     verbose: bool = True,
@@ -1807,14 +1808,14 @@ def tqdm_dask_progress_bar(
     """Helper function for tqdm_dask_progress_bar.
 
     Args:
-        desc (str):
-            Message to display for the progress bar.
         write_tasks (list):
             List of dask tasks to compute.
         num_workers (int):
             Number of workers to use.
         scheduler (str):
             dask compute scheduler to use e.g., "threads" or "processes".
+        desc (str):
+            Message to display for the progress bar.
         leave (bool):
             Whether to leave progress bar after completion.
         verbose (bool):

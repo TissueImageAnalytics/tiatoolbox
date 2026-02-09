@@ -891,21 +891,17 @@ class MultiTaskSegmentor(SemanticSegmentor):
         """
         probabilities = raw_predictions["probabilities"]
 
-        probabilities_is_zarr = False
-        for probabilities_ in probabilities:
-            if any("from-zarr" in str(key) for key in probabilities_.dask.layers):
-                probabilities_is_zarr = True
-                break
+        tile_h, tile_w = self.ioconfig.tile_shape
+
+        trigger_tile_proc = any(
+            p.shape[0] > tile_h or p.shape[1] > tile_w for p in probabilities
+        )
 
         return_predictions = kwargs.get("return_predictions")
         # If dask array can fit in memory process without tiling.
         # This ignores post-processing tile size even if it is smaller.
-        if not probabilities_is_zarr:
-            post_process_predictions = self._process_full_wsi(
-                probabilities=probabilities,
-                return_predictions=return_predictions,
-            )
-        else:
+        if trigger_tile_proc:
+            logger.info("Processing tiles")
             self.num_workers = (
                 kwargs.get("num_workers", multiprocessing.cpu_count())
                 if self.num_workers == 0
@@ -916,6 +912,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 save_path=save_path.with_suffix(".zarr"),
                 memory_threshold=kwargs.get("memory_threshold", 80),
                 return_predictions=kwargs.get("return_predictions"),
+            )
+        else:
+            post_process_predictions = self._process_full_wsi(
+                probabilities=probabilities,
+                return_predictions=return_predictions,
             )
 
         tasks = set()
@@ -1106,7 +1107,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         prod_dim2 = math.prod(p.shape[2] for p in probabilities if len(p.shape) > 2)  # noqa: PLR2004
         tile_memory = len(probabilities) * tile_elements * prod_dim2 * bytes_per_element
         # available memory
-        available_memory = vm.available * (memory_threshold / 100)
+        available_memory = vm.available * (80 / 100)
         # batch size for dask compute should be greater than 0
         batch_size = max(int(available_memory // tile_memory), 1)
 
