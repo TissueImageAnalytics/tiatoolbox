@@ -1177,18 +1177,31 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 tile_br = tile_bounds[2:]
                 tile_shape = tile_br - tile_tl
 
-                processed_inst_predicts = [
-                    _process_instance_predictions(
-                        inst_dict=inst_dict,
-                        ioconfig=ioconfig,
-                        tile_shape=tile_shape,
-                        tile_flag=tile_flag,
-                        tile_mode=tile_mode,
-                        tile_tl=tile_tl,
-                        ref_inst_dict=wsi_info_dict[inst_id]["info_dict"],
+                processed_inst_predicts = []
+                for inst_id, inst_dict in enumerate(inst_dicts):
+                    ref_inst_rtree = STRtree([])
+                    if tile_mode == 3:  # noqa: PLR2004
+                        inst_boxes = [
+                            v["box"]
+                            for v in wsi_info_dict[inst_id]["info_dict"].values()
+                        ]
+                        inst_boxes = np.array(inst_boxes)
+
+                        geometries = [shapely_box(*bounds) for bounds in inst_boxes]
+                        ref_inst_rtree = STRtree(geometries)
+
+                    processed_inst_predicts.append(
+                        _process_instance_predictions(
+                            inst_dict=inst_dict,
+                            ioconfig=ioconfig,
+                            tile_shape=tile_shape,
+                            tile_flag=tile_flag,
+                            tile_mode=tile_mode,
+                            tile_tl=tile_tl,
+                            ref_inst_dict=wsi_info_dict[inst_id]["info_dict"],
+                            ref_inst_rtree=ref_inst_rtree,
+                        )
                     )
-                    for inst_id, inst_dict in enumerate(inst_dicts)
-                ]
 
                 for inst_id, processed_inst_predict in enumerate(
                     processed_inst_predicts
@@ -2778,6 +2791,7 @@ def _process_instance_predictions(
     tile_mode: int,
     tile_tl: tuple[int, int],
     ref_inst_dict: dict,
+    ref_inst_rtree: STRtree,
 ) -> list | tuple:
     """Function to merge new tile prediction with existing prediction.
 
@@ -2859,12 +2873,6 @@ def _process_instance_predictions(
     # this one should contain UUID with the reference database
     remove_insts_in_orig = []
     if tile_mode == 3:  # noqa: PLR2004
-        inst_boxes = [v["box"] for v in ref_inst_dict.values()]
-        inst_boxes = np.array(inst_boxes)
-
-        geometries = [shapely_box(*bounds) for bounds in inst_boxes]
-        ref_inst_rtree = STRtree(geometries)
-
         sel_indices_remove = [
             geo for bounds in margin_lines for geo in ref_inst_rtree.query(bounds)
         ]

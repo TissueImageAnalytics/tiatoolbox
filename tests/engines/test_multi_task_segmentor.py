@@ -318,7 +318,8 @@ def test_wsi_mtsegmentor_zarr(
     assert "count" not in output_full_["layer_segmentation"]
 
     # Redefine tile size to force tile-based processing.
-    ioconfig.tile_shape = (512, 512)
+    # 350 x 350 forces tile mode 3 (overlap)
+    ioconfig.tile_shape = (350, 350)
     mtsegmentor.drop_keys = []
 
     # Return Probabilities is False
