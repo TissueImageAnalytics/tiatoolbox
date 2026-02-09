@@ -20,6 +20,7 @@ import requests
 import tifffile
 import yaml
 import zarr
+from dask import compute
 from filelock import FileLock
 from shapely.affinity import translate
 from shapely.geometry import Polygon
@@ -27,6 +28,7 @@ from shapely.geometry import shape as feature2geometry
 from skimage import exposure
 from tqdm import trange
 from tqdm.auto import tqdm
+from tqdm.dask import TqdmCallback
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
@@ -1791,3 +1793,40 @@ def create_smart_array(
         chunks=chunks,
         dtype=dtype,
     )
+
+
+def tqdm_dask_progress_bar(
+    desc: str,
+    write_tasks: list,
+    num_workers: int,
+    scheduler: str = "threads",
+    *,
+    leave: bool = False,
+    verbose: bool = True,
+) -> list:
+    """Helper function for tqdm_dask_progress_bar.
+
+    Args:
+        desc (str):
+            Message to display for the progress bar.
+        write_tasks (list):
+            List of dask tasks to compute.
+        num_workers (int):
+            Number of workers to use.
+        scheduler (str):
+            dask compute scheduler to use e.g., "threads" or "processes".
+        leave (bool):
+            Whether to leave progress bar after completion.
+        verbose (bool):
+            Whether to display progress bar.
+
+    Returns:
+        List:
+            list of outputs from dask compute.
+
+    """
+    if verbose:
+        with TqdmCallback(desc=desc, leave=leave):
+            return compute(*write_tasks, scheduler=scheduler, num_workers=num_workers)
+
+    return compute(*write_tasks, scheduler=scheduler, num_workers=num_workers)

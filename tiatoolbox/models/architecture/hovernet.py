@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import multiprocessing
 import warnings
 from collections import OrderedDict
 
@@ -12,6 +13,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F  # noqa: N812
+from dask import delayed
 from scipy import ndimage
 from skimage.morphology import remove_small_objects
 from skimage.segmentation import watershed
@@ -23,7 +25,10 @@ from tiatoolbox.models.architecture.utils import (
     centre_crop_to_shape,
 )
 from tiatoolbox.models.models_abc import ModelABC
-from tiatoolbox.utils.misc import get_bounding_box, get_tqdm_full
+from tiatoolbox.utils.misc import (
+    get_bounding_box,
+    tqdm_dask_progress_bar,
+)
 
 
 class TFSamepaddingLayer(nn.Module):
@@ -662,51 +667,22 @@ class HoVerNet(ModelABC):
 
         """
         inst_id_list = np.unique(pred_inst)[1:]  # exclude background
-        inst_info_dict = {}
-        tqdm_loop = get_tqdm_full(
-            inst_id_list,
-            leave=False,
-            desc="Generating 'info_dict' for instances",
-            verbose=verbose,
-        )
-        for inst_id in tqdm_loop:
-            inst_map = pred_inst == inst_id
-            inst_box = get_bounding_box(inst_map)
-            inst_box_tl = inst_box[:2]
-            inst_map = inst_map[inst_box[1] : inst_box[3], inst_box[0] : inst_box[2]]
-            inst_map = inst_map.astype(np.uint8)
-            inst_moment = cv2.moments(inst_map)
-            inst_contour = cv2.findContours(
-                inst_map,
-                cv2.RETR_TREE,
-                cv2.CHAIN_APPROX_SIMPLE,
+
+        tasks = [compute_inst_info(inst_id, pred_inst) for inst_id in inst_id_list]
+
+        inst_info_dict = dict(
+            result
+            for result in tqdm_dask_progress_bar(
+                desc="Generating 'info_dict' for instances",
+                write_tasks=tasks,
+                num_workers=multiprocessing.cpu_count(),
+                scheduler="threads",
+                leave=False,
+                verbose=verbose,
             )
-            # * opencv protocol format may break
-            inst_contour = inst_contour[0][0].astype(np.int32)
-            inst_contour = np.squeeze(inst_contour)
+        )
 
-            # < 3 points does not make a contour, so skip, likely artifact too
-            # as the contours obtained via approximation => too small
-            if inst_contour.shape[0] < 3:  # pragma: no cover  # noqa: PLR2004
-                continue
-            # ! check for trickery shape
-            if len(inst_contour.shape) != 2:  # pragma: no cover  # noqa: PLR2004
-                continue
-
-            inst_centroid = [
-                (inst_moment["m10"] / inst_moment["m00"]),
-                (inst_moment["m01"] / inst_moment["m00"]),
-            ]
-            inst_centroid = np.array(inst_centroid)
-            inst_contour += inst_box_tl[None]
-            inst_centroid += inst_box_tl  # X
-            inst_info_dict[inst_id] = {  # inst_id should start at 1
-                "box": inst_box,
-                "centroid": inst_centroid,
-                "contours": inst_contour,
-                "prob": None,
-                "type": None,
-            }
+        inst_info_dict = {k: v for k, v in inst_info_dict.items() if v is not None}
 
         if pred_type is not None:
             # * Get class of each instance id, stored at index id-1
@@ -910,3 +886,45 @@ def _inst_dict_for_dask_processing(
             else col_np
         )
     return inst_info_dict_
+
+
+@delayed
+def compute_inst_info(inst_id: int, pred_inst: np.ndarray) -> tuple[int, dict]:
+    """Helper function to compute instance info with dask delayed."""
+    inst_map = pred_inst == inst_id
+    inst_box = get_bounding_box(inst_map)
+    inst_box_tl = inst_box[:2]
+    inst_map = inst_map[inst_box[1] : inst_box[3], inst_box[0] : inst_box[2]]
+    inst_map = inst_map.astype(np.uint8)
+    inst_moment = cv2.moments(inst_map)
+    inst_contour = cv2.findContours(
+        inst_map,
+        cv2.RETR_TREE,
+        cv2.CHAIN_APPROX_SIMPLE,
+    )
+    # * opencv protocol format may break
+    inst_contour = inst_contour[0][0].astype(np.int32)
+    inst_contour = np.squeeze(inst_contour)
+
+    # < 3 points does not make a contour, so skip, likely artifact too
+    # as the contours obtained via approximation => too small
+    # ! check for trickery shape
+    if (
+        inst_contour.shape[0] < 3 or inst_contour.ndim != 2  # noqa: PLR2004
+    ):  # pragma: no cover
+        return inst_id, None
+
+    inst_centroid = [
+        (inst_moment["m10"] / inst_moment["m00"]),
+        (inst_moment["m01"] / inst_moment["m00"]),
+    ]
+    inst_centroid = np.array(inst_centroid)
+    inst_contour += inst_box_tl[None]
+    inst_centroid += inst_box_tl  # X
+    return inst_id, {
+        "box": inst_box,
+        "centroid": inst_centroid,
+        "contours": inst_contour,
+        "prob": None,
+        "type": None,
+    }

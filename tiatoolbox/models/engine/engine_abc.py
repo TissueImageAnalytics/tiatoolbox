@@ -48,7 +48,6 @@ import zarr
 from dask import compute
 from numcodecs import Pickle
 from torch import nn
-from tqdm.dask import TqdmCallback
 from typing_extensions import Unpack
 
 from tiatoolbox import DuplicateFilter, logger, rcParam
@@ -59,6 +58,7 @@ from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.utils.misc import (
     dict_to_store_patch_predictions,
     get_tqdm_full,
+    tqdm_dask_progress_bar,
 )
 from tiatoolbox.wsicore.wsireader import WSIReader, is_zarr
 
@@ -834,7 +834,7 @@ class EngineABC(ABC):  # noqa: B024
 
         msg = f"Saving output to {save_path}."
         _ = tqdm_dask_progress_bar(
-            msg=msg,
+            desc=msg,
             write_tasks=write_tasks,
             num_workers=self.num_workers,
             scheduler="threads",  # tasks are I/O-bound and shared memory use threads
@@ -1811,40 +1811,3 @@ def prepare_engines_save_dir(
     save_dir.mkdir(parents=True)
 
     return save_dir
-
-
-def tqdm_dask_progress_bar(
-    msg: str,
-    write_tasks: list,
-    num_workers: int,
-    scheduler: str = "threads",
-    *,
-    leave: bool = False,
-    verbose: bool = True,
-) -> list:
-    """Helper function for tqdm_dask_progress_bar.
-
-    Args:
-        msg (str):
-            Message to display for the progress bar.
-        write_tasks (list):
-            List of dask tasks to compute.
-        num_workers (int):
-            Number of workers to use.
-        scheduler (str):
-            dask compute scheduler to use e.g., "threads" or "processes".
-        leave (bool):
-            Whether to leave progress bar after completion.
-        verbose (bool):
-            Whether to display progress bar.
-
-    Returns:
-        List:
-            list of outputs from dask compute.
-
-    """
-    if verbose:
-        with TqdmCallback(desc=msg, leave=leave):
-            return compute(*write_tasks, scheduler=scheduler, num_workers=num_workers)
-
-    return compute(*write_tasks, scheduler=scheduler, num_workers=num_workers)

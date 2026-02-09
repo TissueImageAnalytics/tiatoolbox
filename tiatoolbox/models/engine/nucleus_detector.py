@@ -61,9 +61,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
 )
-from tiatoolbox.utils.misc import get_tqdm_full
-
-from .engine_abc import tqdm_dask_progress_bar
+from tiatoolbox.utils.misc import get_tqdm_full, tqdm_dask_progress_bar
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
@@ -465,10 +463,10 @@ class NucleusDetector(SemanticSegmentor):
             url=zarr_file, component="centroid_maps", compute=False, object_codec=None
         )
         _ = tqdm_dask_progress_bar(
-            msg="Computing Centroids",
+            desc="Computing Centroids",
             write_tasks=[task],
             num_workers=self.num_workers,
-            scheduler="processes",
+            scheduler="threads",
             leave=False,
             verbose=self.verbose,
         )

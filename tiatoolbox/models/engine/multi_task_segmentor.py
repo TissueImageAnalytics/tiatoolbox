@@ -114,6 +114,7 @@ Notes:
 from __future__ import annotations
 
 import gc
+import math
 import multiprocessing
 import shutil
 import uuid
@@ -141,10 +142,10 @@ from tiatoolbox.utils.misc import (
     create_smart_array,
     get_tqdm_full,
     make_valid_poly,
+    tqdm_dask_progress_bar,
 )
 from tiatoolbox.wsicore.wsireader import is_zarr
 
-from .engine_abc import tqdm_dask_progress_bar
 from .semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
@@ -1093,80 +1094,121 @@ class MultiTaskSegmentor(SemanticSegmentor):
         )
 
         wsi_info_dict = None
-        # Only used for delayed processing.
-        self._probabilities = probabilities  # skipcq: PYL-W0201
+        merge_idx = 0
 
-        # Build delayed tasks
-        delayed_tasks = [
-            self._compute_tile(
-                _tile_meta[0],
-            )
-            for _tile_meta in get_tqdm_full(
-                tile_metadata,
+        # Only used for delayed processing.
+        self._probabilities = probabilities  # skipcq: PYL-W0201  # skipcq: PYL-W0201
+
+        # Calculate batch size for dask compute
+        vm = psutil.virtual_memory()
+        bytes_per_element = np.dtype(probabilities[0].dtype).itemsize
+        tile_elements = np.prod(self.ioconfig.tile_shape)
+        prod_dim2 = math.prod(p.shape[2] for p in probabilities if len(p.shape) > 2)  # noqa: PLR2004
+        tile_memory = len(probabilities) * tile_elements * prod_dim2 * bytes_per_element
+        # available memory
+        available_memory = vm.available * (memory_threshold / 100)
+        # batch size for dask compute should be greater than 0
+        batch_size = max(int(available_memory // tile_memory), 1)
+
+        for i in get_tqdm_full(
+            range(0, len(tile_metadata), batch_size),
+            leave=False,
+            desc="Post-Processing WSI to generate predictions and contours",
+            verbose=self.verbose,
+        ):
+            tile_metadata_ = tile_metadata[i : i + batch_size]
+
+            # Build delayed tasks
+            delayed_tasks = [
+                self._compute_tile(
+                    _tile_meta[0],
+                )
+                for _tile_meta in get_tqdm_full(
+                    tile_metadata_,
+                    leave=False,
+                    desc="Creating list of delayed tasks for post-processing",
+                    verbose=self.verbose,
+                )
+            ]
+
+            # Compute only this batch in parallel to avoid memory overload.
+            batch_outputs = tqdm_dask_progress_bar(
+                desc="Running tile-based post-processing",
+                write_tasks=delayed_tasks,
+                num_workers=self.num_workers,
+                scheduler="threads",
                 leave=False,
-                desc="Creating list of delayed tasks for writing annotations",
                 verbose=self.verbose,
             )
-        ]
 
-        batch_outputs = tqdm_dask_progress_bar(
-            msg="Post processing inference output",
-            write_tasks=delayed_tasks,
-            num_workers=self.num_workers,
-            scheduler="threads",
-            leave=False,
-            verbose=self.verbose,
-        )
-
-        tqdm_loop = get_tqdm_full(
-            batch_outputs,
-            leave=False,
-            verbose=self.verbose,
-            desc="Merging Output Predictions",
-        )
-
-        # Merge each tile result immediately
-        for merge_idx, post_process_output in enumerate(tqdm_loop):
-            tile_bounds, tile_flag, tile_mode = tile_metadata[merge_idx]
-            # create a list of info dict for each task
-            wsi_info_dict = _create_wsi_info_dict(
-                post_process_output=post_process_output,
-                wsi_info_dict=wsi_info_dict,
-                wsi_proc_shape=wsi_proc_shape,
-                save_path=save_path,
-                memory_threshold=memory_threshold,
-                return_predictions=return_predictions,
+            tqdm_loop = get_tqdm_full(
+                batch_outputs,
+                leave=False,
+                verbose=self.verbose,
+                desc="Merging Output Predictions",
             )
 
-            wsi_info_dict = _update_tile_based_predictions_array(
-                post_process_output=post_process_output,
-                wsi_info_dict=wsi_info_dict,
-                bounds=tile_bounds,
-            )
+            # Merge each tile result
+            for post_process_output in tqdm_loop:
+                tile_bounds, tile_flag, tile_mode = tile_metadata[merge_idx]
+                merge_idx += 1
 
-            inst_dicts = _get_inst_info_dicts(post_process_output=post_process_output)
-            tile_tl = tile_bounds[:2]
-            tile_br = tile_bounds[2:]
-            tile_shape = tile_br - tile_tl
-
-            new_inst_dicts, remove_insts_in_origs = [], []
-            for inst_id, inst_dict in enumerate(inst_dicts):
-                new_inst_dict, remove_insts_in_orig = _process_instance_predictions(
-                    inst_dict,
-                    ioconfig,
-                    tile_shape,
-                    tile_flag,
-                    tile_mode,
-                    tile_tl,
-                    wsi_info_dict[inst_id]["info_dict"],
+                # create a list of info dict for each task
+                wsi_info_dict = _create_wsi_info_dict(
+                    post_process_output=post_process_output,
+                    wsi_info_dict=wsi_info_dict,
+                    wsi_proc_shape=wsi_proc_shape,
+                    save_path=save_path,
+                    memory_threshold=memory_threshold,
+                    return_predictions=return_predictions,
                 )
-                new_inst_dicts.append(new_inst_dict)
-                remove_insts_in_origs.append(remove_insts_in_orig)
 
-            for inst_id, new_inst_dict in enumerate(new_inst_dicts):
-                wsi_info_dict[inst_id]["info_dict"].update(new_inst_dict)
-                for inst_uuid in remove_insts_in_origs[inst_id]:
-                    wsi_info_dict[inst_id]["info_dict"].pop(inst_uuid, None)
+                wsi_info_dict = _update_tile_based_predictions_array(
+                    post_process_output=post_process_output,
+                    wsi_info_dict=wsi_info_dict,
+                    bounds=tile_bounds,
+                )
+
+                inst_dicts = _get_inst_info_dicts(
+                    post_process_output=post_process_output
+                )
+                tile_tl = tile_bounds[:2]
+                tile_br = tile_bounds[2:]
+                tile_shape = tile_br - tile_tl
+
+                ref_inst_rtree = STRtree([])
+                processed_inst_predicts = []
+                for inst_id, inst_dict in enumerate(inst_dicts):
+                    if tile_mode == 3:  # noqa: PLR2004
+                        inst_boxes = [
+                            v["box"]
+                            for v in wsi_info_dict[inst_id]["info_dict"].values()
+                        ]
+                        inst_boxes = np.array(inst_boxes)
+
+                        geometries = [shapely_box(*bounds) for bounds in inst_boxes]
+                        ref_inst_rtree = STRtree(geometries)
+
+                    processed_inst_predicts.append(
+                        _process_instance_predictions(
+                            inst_dict=inst_dict,
+                            ioconfig=ioconfig,
+                            tile_shape=tile_shape,
+                            tile_flag=tile_flag,
+                            tile_mode=tile_mode,
+                            tile_tl=tile_tl,
+                            ref_inst_dict=wsi_info_dict[inst_id]["info_dict"],
+                            ref_inst_rtree=ref_inst_rtree,
+                        )
+                    )
+
+                for inst_id, processed_inst_predict in enumerate(
+                    processed_inst_predicts
+                ):
+                    new_inst_dict, remove_insts_in_origs = processed_inst_predict
+                    wsi_info_dict[inst_id]["info_dict"].update(new_inst_dict)
+                    for inst_uuid in remove_insts_in_origs:
+                        wsi_info_dict[inst_id]["info_dict"].pop(inst_uuid, None)
 
         for idx, wsi_info_dict_ in enumerate(
             get_tqdm_full(
@@ -2080,11 +2122,9 @@ def dict_to_store(
     ]
 
     ann = tqdm_dask_progress_bar(
-        msg="Saving annotations",
         write_tasks=delayed_tasks,
+        desc="Saving annotations",
         num_workers=num_workers,
-        scheduler="threads",
-        leave=False,
         verbose=verbose,
     )
 
@@ -2750,6 +2790,7 @@ def _process_instance_predictions(
     tile_mode: int,
     tile_tl: tuple[int, int],
     ref_inst_dict: dict,
+    ref_inst_rtree: STRtree,
 ) -> list | tuple:
     """Function to merge new tile prediction with existing prediction.
 
@@ -2789,6 +2830,8 @@ def _process_instance_predictions(
             Dictionary contains accumulated output. The
             expected format is {instance_id: {type: int,
             contour: List[List[int]], centroid:List[float], box:List[int]}.
+        ref_inst_rtree (STRtree):
+            A query-only R-tree spatial index for a list of geometries.
 
     Returns:
         new_inst_dict (dict):
@@ -2814,29 +2857,16 @@ def _process_instance_predictions(
         tile_flag=tile_flag,
     )
 
-    def retrieve_sel_uids(sel_indices: list, inst_dict: dict) -> list:
-        """Helper to retrieved selected instance uids."""
-        if len(sel_indices) > 0:
-            # not sure how costly this is in large dict
-            inst_uids = list(inst_dict.keys())
-        return [inst_uids[idx] for idx in sel_indices]
-
     remove_insts_in_tile = retrieve_sel_uids(sel_indices, inst_dict)
 
     # external removal only for tile at cross-sections
     # this one should contain UUID with the reference database
     remove_insts_in_orig = []
     if tile_mode == 3:  # noqa: PLR2004
-        inst_boxes = [v["box"] for v in ref_inst_dict.values()]
-        inst_boxes = np.array(inst_boxes)
-
-        geometries = [shapely_box(*bounds) for bounds in inst_boxes]
-        ref_inst_rtree = STRtree(geometries)
-        sel_indices = [
+        sel_indices_remove = [
             geo for bounds in margin_lines for geo in ref_inst_rtree.query(bounds)
         ]
-
-        remove_insts_in_orig = retrieve_sel_uids(sel_indices, ref_inst_dict)
+        remove_insts_in_orig = retrieve_sel_uids(sel_indices_remove, ref_inst_dict)
 
     new_inst_dict = _move_tile_space_to_wsi_space(
         inst_dict=inst_dict,
@@ -2845,6 +2875,14 @@ def _process_instance_predictions(
     )
 
     return new_inst_dict, remove_insts_in_orig
+
+
+def retrieve_sel_uids(sel_indices_: list, inst_dict_: dict) -> list:
+    """Helper to retrieved selected instance uids."""
+    if len(sel_indices_) > 0:
+        # not sure how costly this is in large dict
+        inst_uids = list(inst_dict_.keys())
+    return [inst_uids[idx] for idx in sel_indices_]
 
 
 def _get_sel_indices_margin_lines(
@@ -2991,7 +3029,7 @@ def _get_inst_info_dicts(post_process_output: tuple[dict]) -> list:
 
 def _create_wsi_info_dict(
     post_process_output: tuple[dict],
-    wsi_info_dict: tuple[dict] | None,
+    wsi_info_dict: tuple[dict, ...] | None,
     wsi_proc_shape: tuple[int, ...],
     save_path: Path,
     return_predictions: tuple[bool, ...] | None,
@@ -3063,7 +3101,7 @@ def _create_wsi_info_dict(
 
 def _update_tile_based_predictions_array(
     post_process_output: tuple[dict],
-    wsi_info_dict: tuple[dict],
+    wsi_info_dict: tuple[dict, ...],
     bounds: tuple[int, int, int, int],
 ) -> tuple[dict, ...]:
     """Helper function to update tile based predictions array."""
