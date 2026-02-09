@@ -1094,9 +1094,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
             verbose=self.verbose,
         )
 
-        wsi_info_dict = None
-        merge_idx = 0
-
         # Only used for delayed processing.
         self._probabilities = probabilities  # skipcq: PYL-W0201  # skipcq: PYL-W0201
 
@@ -1111,6 +1108,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         # batch size for dask compute should be greater than 0
         batch_size = max(int(available_memory // tile_memory), 1)
 
+        wsi_info_dict = None
         for i in get_tqdm_full(
             range(0, len(tile_metadata), batch_size),
             leave=False,
@@ -1150,9 +1148,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
             )
 
             # Merge each tile result
-            for post_process_output in tqdm_loop:
-                tile_bounds, tile_flag, tile_mode = tile_metadata[merge_idx]
-                merge_idx += 1
+            for _tile_id, post_process_output in enumerate(tqdm_loop):
+                tile_bounds, tile_flag, tile_mode = tile_metadata_[_tile_id]
 
                 # create a list of info dict for each task
                 wsi_info_dict = _create_wsi_info_dict(
