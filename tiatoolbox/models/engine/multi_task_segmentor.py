@@ -1664,21 +1664,21 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 save_paths.append(output_path)
 
         else:
-            for idx, curr_image in enumerate(self.images):
-                values = [processed_predictions[key] for key in keys_to_compute]
-                output_path = _save_annotation_store(
-                    curr_image=curr_image,
+            values = [processed_predictions[key] for key in keys_to_compute]
+            save_paths = [
+                _save_annotation_store(
+                    curr_image=save_path,
                     keys_to_compute=keys_to_compute,
                     values=values,
                     task_name=task_name,
-                    idx=idx,
+                    idx=0,
                     save_path=save_path,
                     class_dict=class_dict,
                     scale_factor=scale_factor,
                     num_workers=num_workers,
                     verbose=self.verbose,
                 )
-                save_paths.append(output_path)
+            ]
 
         for key in keys_to_compute:
             del processed_predictions[key]
