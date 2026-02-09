@@ -1177,31 +1177,18 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 tile_br = tile_bounds[2:]
                 tile_shape = tile_br - tile_tl
 
-                processed_inst_predicts = []
-                for inst_id, inst_dict in enumerate(inst_dicts):
-                    ref_inst_rtree = STRtree([])
-                    if tile_mode == 3:  # noqa: PLR2004
-                        inst_boxes = [
-                            v["box"]
-                            for v in wsi_info_dict[inst_id]["info_dict"].values()
-                        ]
-                        inst_boxes = np.array(inst_boxes)
-
-                        geometries = [shapely_box(*bounds) for bounds in inst_boxes]
-                        ref_inst_rtree = STRtree(geometries)
-
-                    processed_inst_predicts.append(
-                        _process_instance_predictions(
-                            inst_dict=inst_dict,
-                            ioconfig=ioconfig,
-                            tile_shape=tile_shape,
-                            tile_flag=tile_flag,
-                            tile_mode=tile_mode,
-                            tile_tl=tile_tl,
-                            ref_inst_dict=wsi_info_dict[inst_id]["info_dict"],
-                            ref_inst_rtree=ref_inst_rtree,
-                        )
+                processed_inst_predicts = [
+                    _compute_info_dict_for_merge(
+                        inst_dict=inst_dict,
+                        tile_mode=tile_mode,
+                        ref_inst_info_dict=wsi_info_dict[inst_id]["info_dict"],
+                        ioconfig=ioconfig,
+                        tile_shape=tile_shape,
+                        tile_tl=tile_tl,
+                        tile_flag=tile_flag,
                     )
+                    for inst_id, inst_dict in enumerate(inst_dicts)
+                ]
 
                 for inst_id, processed_inst_predict in enumerate(
                     processed_inst_predicts
@@ -2871,12 +2858,10 @@ def _process_instance_predictions(
         )
     # external removal only for tile at cross-sections
     # this one should contain UUID with the reference database
-    remove_insts_in_orig = []
-    if tile_mode == 3:  # noqa: PLR2004
-        sel_indices_remove = [
-            geo for bounds in margin_lines for geo in ref_inst_rtree.query(bounds)
-        ]
-        remove_insts_in_orig = retrieve_sel_uids(sel_indices_remove, ref_inst_dict)
+    sel_indices_remove = [
+        geo for bounds in margin_lines for geo in ref_inst_rtree.query(bounds)
+    ]
+    remove_insts_in_orig = retrieve_sel_uids(sel_indices_remove, ref_inst_dict)
 
     return (
         _move_tile_space_to_wsi_space(
@@ -3229,3 +3214,33 @@ def _build_single_annotation(
     }
 
     return Annotation(geom, properties)
+
+
+def _compute_info_dict_for_merge(
+    inst_dict: dict,
+    tile_mode: int,
+    ref_inst_info_dict: dict,
+    ioconfig: IOSegmentorConfig,
+    tile_shape: tuple[int, int],
+    tile_tl: tuple[int, int],
+    tile_flag: tuple[int, int, int, int],
+) -> list | tuple:
+    """Helper function to compute info dict with remove inst ids."""
+    ref_inst_rtree = STRtree([])
+    if tile_mode == 3:  # noqa: PLR2004
+        inst_boxes = [v["box"] for v in ref_inst_info_dict.values()]
+        inst_boxes = np.array(inst_boxes)
+
+        geometries = [shapely_box(*bounds) for bounds in inst_boxes]
+        ref_inst_rtree = STRtree(geometries)
+
+    return _process_instance_predictions(
+        inst_dict=inst_dict,
+        ioconfig=ioconfig,
+        tile_shape=tile_shape,
+        tile_flag=tile_flag,
+        tile_mode=tile_mode,
+        tile_tl=tile_tl,
+        ref_inst_dict=ref_inst_info_dict,
+        ref_inst_rtree=ref_inst_rtree,
+    )
