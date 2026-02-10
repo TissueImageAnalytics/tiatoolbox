@@ -23,7 +23,7 @@ from tiatoolbox.models.architecture.hovernet import (
     _inst_dict_for_dask_processing,
 )
 from tiatoolbox.models.models_abc import ModelABC
-from tiatoolbox.utils.misc import get_tqdm
+from tiatoolbox.utils.misc import get_tqdm_full
 
 
 def group1_forward_branch(
@@ -575,12 +575,19 @@ class MicroNet(ModelABC):
         return [out, aux1, aux2, aux3]
 
     # skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(self: MicroNet, raw_maps: list[np.ndarray | da.Array]) -> tuple[dict]:
+    def postproc(
+        self: MicroNet,
+        raw_maps: list[np.ndarray | da.Array],
+        *,
+        verbose: bool = True,
+    ) -> tuple[dict]:
         """Post-processing script for MicroNet.
 
         Args:
             raw_maps (list[ndarray | da.Array]):
                 A list of prediction outputs of each head from inference model.
+            verbose (bool):
+                Whether to display progress bar.
 
         Returns:
             :class:`numpy.ndarray`:
@@ -594,12 +601,13 @@ class MicroNet(ModelABC):
         pred_inst = ndimage.label(pred_bin)[0]
         pred_inst = morphology.remove_small_objects(pred_inst, min_size=50)
         canvas = np.zeros(pred_inst.shape[:2], dtype=np.int32)
-        tqdm_ = get_tqdm()
-        for inst_id in tqdm_(
+        tqdm_loop = get_tqdm_full(
             range(1, np.max(pred_inst) + 1),
             leave=False,
             desc="Performing morphological operations to improve segmentation quality.",
-        ):
+            verbose=verbose,
+        )
+        for inst_id in tqdm_loop:
             # Get coordinates of this instance
             ys, xs = np.where(pred_inst == inst_id)
             if len(xs) == 0:

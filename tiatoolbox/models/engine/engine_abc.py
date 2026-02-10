@@ -35,6 +35,7 @@ Example:
 from __future__ import annotations
 
 import copy
+import shutil
 from abc import ABC
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
@@ -45,7 +46,6 @@ import numpy as np
 import torch
 import zarr
 from dask import compute
-from dask.diagnostics import ProgressBar
 from numcodecs import Pickle
 from torch import nn
 from typing_extensions import Unpack
@@ -57,7 +57,8 @@ from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.utils.misc import (
     dict_to_store_patch_predictions,
-    get_tqdm,
+    get_tqdm_full,
+    tqdm_dask_progress_bar,
 )
 from tiatoolbox.wsicore.wsireader import WSIReader, is_zarr
 
@@ -531,11 +532,11 @@ class EngineABC(ABC):  # noqa: B024
         raw_predictions = {key: [] for key in keys}
 
         # Inference loop
-        tqdm = get_tqdm()
-        tqdm_loop = (
-            tqdm(dataloader, leave=False, desc="Inferring patches")
-            if self.verbose
-            else self.dataloader
+        tqdm_loop = get_tqdm_full(
+            dataloader,
+            leave=False,
+            desc="Inferring patches",
+            verbose=self.verbose,
         )
 
         infer_batch = self._get_model_attr("infer_batch")
@@ -736,6 +737,7 @@ class EngineABC(ABC):  # noqa: B024
                 scale_factor,
                 class_dict,
                 save_path,
+                verbose=self.verbose,
             )
 
         msg = f"Unsupported output type: {output_type}"
@@ -831,9 +833,14 @@ class EngineABC(ABC):  # noqa: B024
             )
 
         msg = f"Saving output to {save_path}."
-        logger.info(msg=msg)
-        with ProgressBar():
-            compute(*write_tasks)
+        _ = tqdm_dask_progress_bar(
+            desc=msg,
+            write_tasks=write_tasks,
+            num_workers=self.num_workers,
+            scheduler="threads",  # tasks are I/O-bound and shared memory use threads
+            leave=False,
+            verbose=self.verbose,
+        )
 
         zarr_group = zarr.open(save_path, mode="r+")
         for key in self.drop_keys:
@@ -1541,14 +1548,6 @@ class EngineABC(ABC):  # noqa: B024
                 Output may be a zarr file, SQLite database, or in-memory dictionary.
 
         """
-        progress_bar = None
-        tqdm = get_tqdm()
-
-        if self.verbose:
-            progress_bar = tqdm(
-                total=len(self.images),
-                desc="Processing WSIs",
-            )
         suffix = ".zarr"
         if output_type == "AnnotationStore":
             suffix = ".db"
@@ -1567,7 +1566,14 @@ class EngineABC(ABC):  # noqa: B024
             for image in self.images
         }
 
-        for image_num, image in enumerate(self.images):
+        tqdm_loop = get_tqdm_full(
+            self.images,
+            leave=False,
+            desc="Processing WSIs",
+            verbose=self.verbose,
+        )
+
+        for image_num, image in enumerate(tqdm_loop):
             duplicate_filter = DuplicateFilter()
             logger.addFilter(duplicate_filter)
             mask = self.masks[image_num] if self.masks is not None else None
@@ -1604,12 +1610,6 @@ class EngineABC(ABC):  # noqa: B024
             logger.removeFilter(duplicate_filter)
             msg = f"Output file saved at {out[get_path(image)]}."
             logger.info(msg=msg)
-
-            if progress_bar:
-                progress_bar.update()
-
-        if progress_bar:
-            progress_bar.close()
 
         return out
 
@@ -1785,7 +1785,9 @@ def prepare_engines_save_dir(
     if patch_mode:
         if save_dir is not None:
             save_dir = Path(save_dir)
-            save_dir.mkdir(parents=True, exist_ok=overwrite)
+            if save_dir.exists() and overwrite:
+                shutil.rmtree(save_dir)
+            save_dir.mkdir(parents=True)
             return save_dir
         return None
 
@@ -1804,6 +1806,8 @@ def prepare_engines_save_dir(
     )
 
     save_dir = Path(save_dir)
-    save_dir.mkdir(parents=True, exist_ok=overwrite)
+    if save_dir.exists() and overwrite:
+        shutil.rmtree(save_dir)
+    save_dir.mkdir(parents=True)
 
     return save_dir

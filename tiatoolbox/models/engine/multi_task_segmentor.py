@@ -114,6 +114,8 @@ Notes:
 from __future__ import annotations
 
 import gc
+import math
+import multiprocessing
 import shutil
 import uuid
 from collections import deque
@@ -126,16 +128,22 @@ import pandas as pd
 import psutil
 import torch
 import zarr
+from dask import delayed
 from shapely.geometry import box as shapely_box
 from shapely.geometry import shape as feature2geometry
 from shapely.strtree import STRtree
 from typing_extensions import Unpack
 
-from tiatoolbox import DuplicateFilter, logger
+from tiatoolbox import logger
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.annotation.storage import Annotation
 from tiatoolbox.tools.patchextraction import PatchExtractor
-from tiatoolbox.utils.misc import create_smart_array, get_tqdm, make_valid_poly
+from tiatoolbox.utils.misc import (
+    create_smart_array,
+    get_tqdm_full,
+    make_valid_poly,
+    tqdm_dask_progress_bar,
+)
 from tiatoolbox.wsicore.wsireader import is_zarr
 
 from .semantic_segmentor import (
@@ -419,11 +427,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
         raw_predictions["probabilities"] = [[] for _ in range(num_expected_output)]
 
         # Inference loop
-        tqdm_ = get_tqdm()
-        tqdm_loop = (
-            tqdm_(dataloader, leave=False, desc="Inferring patches")
-            if self.verbose
-            else dataloader
+        tqdm_loop = get_tqdm_full(
+            dataloader,
+            leave=False,
+            desc="Inferring patches",
+            verbose=self.verbose,
         )
 
         for batch_data in tqdm_loop:
@@ -565,11 +573,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
         )
 
         # Inference loop
-        tqdm_ = get_tqdm()
-        tqdm_loop = (
-            tqdm_(dataloader, leave=False, desc="Inferring patches")
-            if self.verbose
-            else dataloader
+        tqdm_loop = get_tqdm_full(
+            dataloader,
+            leave=False,
+            desc="Inferring patches",
+            verbose=self.verbose,
         )
 
         # Expected number of outputs from the model
@@ -647,9 +655,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         count_zarr=count_zarr,
                         memory_threshold=memory_threshold,
                         tqdm_loop=tqdm_loop,
-                        tqdm_=tqdm_,
                         save_path=save_path,
                         num_expected_output=num_expected_output,
+                        verbose=self.verbose,
                     )
                 )
 
@@ -676,6 +684,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             output_locs_y_=output_locs_y_,
             save_path=save_path,
             memory_threshold=memory_threshold,
+            verbose=self.verbose,
         )
 
         raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
@@ -882,26 +891,32 @@ class MultiTaskSegmentor(SemanticSegmentor):
         """
         probabilities = raw_predictions["probabilities"]
 
-        probabilities_is_zarr = False
-        for probabilities_ in probabilities:
-            if any("from-zarr" in str(key) for key in probabilities_.dask.layers):
-                probabilities_is_zarr = True
-                break
+        tile_h, tile_w = self.ioconfig.tile_shape
+
+        trigger_tile_proc = any(
+            p.shape[0] > tile_h or p.shape[1] > tile_w for p in probabilities
+        )
 
         return_predictions = kwargs.get("return_predictions")
         # If dask array can fit in memory process without tiling.
         # This ignores post-processing tile size even if it is smaller.
-        if not probabilities_is_zarr:
-            post_process_predictions = self._process_full_wsi(
-                probabilities=probabilities,
-                return_predictions=return_predictions,
+        if trigger_tile_proc:
+            logger.info("Processing tiles")
+            self.num_workers = (
+                kwargs.get("num_workers", multiprocessing.cpu_count())
+                if self.num_workers == 0
+                else self.num_workers
             )
-        else:
             post_process_predictions = self._process_tile_mode(
                 probabilities=probabilities,
                 save_path=save_path.with_suffix(".zarr"),
                 memory_threshold=kwargs.get("memory_threshold", 80),
                 return_predictions=kwargs.get("return_predictions"),
+            )
+        else:
+            post_process_predictions = self._process_full_wsi(
+                probabilities=probabilities,
+                return_predictions=return_predictions,
             )
 
         tasks = set()
@@ -1021,6 +1036,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
             memory_threshold (float):
                 Maximum allowed RAM usage (percentage) for in-memory arrays before
                 switching to or continuing with Zarr-backed allocation. Defaults to 80.
+            num_workers (int):
+                Number of workers for data loading.
+                Default is multiprocessing.cpu_count().
             return_predictions (tuple[bool, ...] | None):
                 Per-task flags indicating whether to retain a full-resolution
                 ``"predictions"`` array for each task. If ``None``, no task-level
@@ -1071,32 +1089,67 @@ class MultiTaskSegmentor(SemanticSegmentor):
         tile_info_sets = self._get_tile_info(wsi_proc_shape, self.ioconfig)
         ioconfig = self.ioconfig.to_baseline()
 
-        merged = []
+        tile_metadata = _build_tile_tasks(
+            tile_info_sets=tile_info_sets,
+            verbose=self.verbose,
+        )
+
+        # Only used for delayed processing.
+        self._probabilities = probabilities  # skipcq: PYL-W0201  # skipcq: PYL-W0201
+
+        # Calculate batch size for dask compute
+        vm = psutil.virtual_memory()
+        bytes_per_element = np.dtype(probabilities[0].dtype).itemsize
+        tile_elements = np.prod(self.ioconfig.tile_shape)
+        prod_dim2 = math.prod(p.shape[2] for p in probabilities if len(p.shape) > 2)  # noqa: PLR2004
+        tile_memory = len(probabilities) * tile_elements * prod_dim2 * bytes_per_element
+        # available memory
+        available_memory = vm.available * (memory_threshold / 100)
+        # batch size for dask compute should be greater than 0
+        batch_size = max(int(available_memory // tile_memory), 1)
+
         wsi_info_dict = None
-        duplicate_filter = DuplicateFilter()
-        logger.addFilter(duplicate_filter)
-        tqdm_ = get_tqdm()
-        for set_idx, (set_bounds, set_flags) in enumerate(
-            tqdm_(
-                tile_info_sets,
-                leave=False,
-                desc="Post-Processing WSI to generate predictions and contours",
-            )
+        for i in get_tqdm_full(
+            range(0, len(tile_metadata), batch_size),
+            leave=False,
+            desc="Post-Processing WSI to generate predictions and contours",
+            verbose=self.verbose,
         ):
-            for tile_idx, tile_bounds in enumerate(set_bounds):
-                tile_flag = set_flags[tile_idx]
-                tile_tl = tile_bounds[:2]
-                tile_br = tile_bounds[2:]
-                tile_shape = tile_br - tile_tl  # in width height
-                head_raws = [
-                    probabilities_[
-                        tile_bounds[1] : tile_bounds[3],
-                        tile_bounds[0] : tile_bounds[2],
-                        :,
-                    ].compute()
-                    for probabilities_ in probabilities
-                ]
-                post_process_output = self.model.postproc_func(head_raws)
+            tile_metadata_ = tile_metadata[i : i + batch_size]
+
+            # Build delayed tasks
+            delayed_tasks = [
+                self._compute_tile(
+                    _tile_meta[0],
+                )
+                for _tile_meta in get_tqdm_full(
+                    tile_metadata_,
+                    leave=False,
+                    desc="Creating list of delayed tasks for post-processing",
+                    verbose=self.verbose,
+                )
+            ]
+
+            # Compute only this batch in parallel to avoid memory overload.
+            batch_outputs = tqdm_dask_progress_bar(
+                desc="Running tile-based post-processing",
+                write_tasks=delayed_tasks,
+                num_workers=self.num_workers,
+                scheduler="threads",
+                leave=False,
+                verbose=self.verbose,
+            )
+
+            tqdm_loop = get_tqdm_full(
+                batch_outputs,
+                leave=False,
+                verbose=self.verbose,
+                desc="Merging Output Predictions",
+            )
+
+            # Merge each tile result
+            for _tile_id, post_process_output in enumerate(tqdm_loop):
+                tile_bounds, tile_flag, tile_mode = tile_metadata_[_tile_id]
 
                 # create a list of info dict for each task
                 wsi_info_dict = _create_wsi_info_dict(
@@ -1117,34 +1170,37 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 inst_dicts = _get_inst_info_dicts(
                     post_process_output=post_process_output
                 )
+                tile_tl = tile_bounds[:2]
+                tile_br = tile_bounds[2:]
+                tile_shape = tile_br - tile_tl
 
-                tile_mode = set_idx
-                new_inst_dicts, remove_insts_in_origs = [], []
-                for inst_id, inst_dict in enumerate(inst_dicts):
-                    new_inst_dict, remove_insts_in_orig = _process_instance_predictions(
-                        inst_dict,
-                        ioconfig,
-                        tile_shape,
-                        tile_flag,
-                        tile_mode,
-                        tile_tl,
-                        wsi_info_dict[inst_id]["info_dict"],
+                processed_inst_predicts = [
+                    _compute_info_dict_for_merge(
+                        inst_dict=inst_dict,
+                        tile_mode=tile_mode,
+                        ref_inst_info_dict=wsi_info_dict[inst_id]["info_dict"],
+                        ioconfig=ioconfig,
+                        tile_shape=tile_shape,
+                        tile_tl=tile_tl,
+                        tile_flag=tile_flag,
                     )
-                    new_inst_dicts.append(new_inst_dict)
-                    remove_insts_in_origs.append(remove_insts_in_orig)
+                    for inst_id, inst_dict in enumerate(inst_dicts)
+                ]
 
-                merged.append((new_inst_dicts, remove_insts_in_origs))
-
-            for new_inst_dicts, remove_uuid_lists in merged:
-                for inst_id, new_inst_dict in enumerate(new_inst_dicts):
+                for inst_id, processed_inst_predict in enumerate(
+                    processed_inst_predicts
+                ):
+                    new_inst_dict, remove_insts_in_origs = processed_inst_predict
                     wsi_info_dict[inst_id]["info_dict"].update(new_inst_dict)
-                    for inst_uuid in remove_uuid_lists[inst_id]:
+                    for inst_uuid in remove_insts_in_origs:
                         wsi_info_dict[inst_id]["info_dict"].pop(inst_uuid, None)
-        logger.removeFilter(duplicate_filter)
 
         for idx, wsi_info_dict_ in enumerate(
-            tqdm_(
-                wsi_info_dict, leave=False, desc="Converting 'info_dict' to dask arrays"
+            get_tqdm_full(
+                wsi_info_dict,
+                leave=False,
+                desc="Converting 'info_dict' to dask arrays",
+                verbose=self.verbose,
             )
         ):
             info_df = pd.DataFrame(wsi_info_dict_["info_dict"]).transpose()
@@ -1156,8 +1212,39 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     chunks=(len(col),),
                 )
             wsi_info_dict[idx]["info_dict"] = dict_info_wsi
-
+        delattr(self, "_probabilities")
         return wsi_info_dict
+
+    @delayed
+    def _compute_tile(
+        self: MultiTaskSegmentor,
+        tile_bounds: tuple[int, int, int, int],
+    ) -> tuple:
+        """Compute post-processing outputs for a single WSI tile.
+
+        This function performs lazy slicing of the probability maps for the given
+        tile bounds and applies the model's `postproc_func` to produce per-task
+        outputs (semantic, instance, etc.).
+
+        Args:
+            tile_bounds:
+                A 4-tuple (x_start, y_start, x_end, y_end) defining the tile region
+                in WSI coordinates.
+
+        Returns:
+            A tuple of dictionaries, one per task, as produced by `postproc_func`.
+            Each dictionary typically contains:
+                - "task_type": str
+                - "predictions": np.ndarray
+                - "info_dict": dict
+        """
+        head_raws = [
+            p[
+                tile_bounds[1] : tile_bounds[3], tile_bounds[0] : tile_bounds[2], :
+            ].compute()
+            for p in self._probabilities
+        ]
+        return self.model.postproc_func(head_raws)
 
     @staticmethod
     def _get_tile_info(
@@ -1551,6 +1638,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
             if not return_predictions:
                 processed_predictions.pop("predictions")
             keys_to_compute.remove("predictions")
+        num_workers = (
+            kwargs.get("num_workers", multiprocessing.cpu_count())
+            if self.num_workers == 0
+            else self.num_workers
+        )
         if self.patch_mode:
             for idx, curr_image in enumerate(self.images):
                 values = [processed_predictions[key][idx] for key in keys_to_compute]
@@ -1563,23 +1655,27 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     save_path=save_path,
                     class_dict=class_dict,
                     scale_factor=scale_factor,
+                    num_workers=num_workers,
+                    verbose=self.verbose,
                 )
                 save_paths.append(output_path)
 
         else:
-            for idx, curr_image in enumerate(self.images):
-                values = [processed_predictions[key] for key in keys_to_compute]
-                output_path = _save_annotation_store(
-                    curr_image=curr_image,
+            values = [processed_predictions[key] for key in keys_to_compute]
+            save_paths = [
+                _save_annotation_store(
+                    curr_image=save_path,
                     keys_to_compute=keys_to_compute,
                     values=values,
                     task_name=task_name,
-                    idx=idx,
+                    idx=0,
                     save_path=save_path,
                     class_dict=class_dict,
                     scale_factor=scale_factor,
+                    num_workers=num_workers,
+                    verbose=self.verbose,
                 )
-                save_paths.append(output_path)
+            ]
 
         for key in keys_to_compute:
             del processed_predictions[key]
@@ -1926,6 +2022,9 @@ def dict_to_store(
     class_dict: dict | None = None,
     origin: tuple[float, float] = (0, 0),
     scale_factor: tuple[float, float] = (1, 1),
+    num_workers: int = multiprocessing.cpu_count(),
+    *,
+    verbose: bool = True,
 ) -> AnnotationStore:
     """Write polygonal multitask predictions into an SQLite-backed AnnotationStore.
 
@@ -1964,6 +2063,11 @@ def dict_to_store(
             `(sx, sy)` factors applied to coordinates before translation, used to
             convert from model space to baseline slide resolution (e.g.,
             `model_mpp / slide_mpp`).
+        num_workers (int):
+            Number of parallel worker threads to use. If set to 0 or None,
+            defaults to the number of CPU cores.
+        verbose (bool):
+            Whether to display logs and progress bar.
 
     Returns:
         AnnotationStore:
@@ -1981,37 +2085,34 @@ def dict_to_store(
         - All annotations are appended in a single batch via `store.append_many(...)`.
 
     """
-    contour = processed_predictions.pop("contours")
+    contours = processed_predictions.pop("contours")
+    n = len(contours)
 
-    ann = []
-    tqdm_ = get_tqdm()
-
-    for i, contour_ in enumerate(
-        tqdm_(contour, leave=False, desc="Converting outputs to AnnotationStore")
-    ):
-        ann_ = Annotation(
-            make_valid_poly(
-                feature2geometry(
-                    {
-                        "type": processed_predictions.get("geom_type", "Polygon"),
-                        "coordinates": scale_factor * np.array([contour_]),
-                    },
-                ),
-                tuple(origin),
-            ),
-            {
-                prop: (
-                    class_dict[processed_predictions[prop][i]]
-                    if prop == "type" and class_dict is not None
-                    # Intention is convert arrays to list
-                    # There might be int or float values which need to be
-                    # converted to arrays first and then apply tolist().
-                    else np.array(processed_predictions[prop][i]).tolist()
-                )
-                for prop in processed_predictions
-            },
+    # Build delayed tasks
+    delayed_tasks = [
+        _build_single_annotation(
+            i,
+            contours[i],
+            processed_predictions,
+            class_dict,
+            origin,
+            scale_factor,
         )
-        ann.append(ann_)
+        for i in get_tqdm_full(
+            range(n),
+            leave=False,
+            desc="Creating list of delayed tasks for writing annotations",
+            verbose=verbose,
+        )
+    ]
+
+    ann = tqdm_dask_progress_bar(
+        write_tasks=delayed_tasks,
+        desc="Saving annotations",
+        num_workers=num_workers,
+        verbose=verbose,
+    )
+
     logger.info("Added %d annotations.", len(ann))
     store.append_many(ann)
 
@@ -2238,6 +2339,8 @@ def save_multitask_to_cache(
     canvas_zarr: list[zarr.Array | None],
     count_zarr: list[zarr.Array | None],
     save_path: str | Path = "temp.zarr",
+    *,
+    verbose: bool = True,
 ) -> tuple[list[zarr.Array], list[zarr.Array]]:
     """Write accumulated horizontal row blocks to a Zarr cache on disk.
 
@@ -2276,6 +2379,8 @@ def save_multitask_to_cache(
         save_path (str | Path):
             Path to the Zarr group used for caching. A new group is created
             if needed on the first spill.
+        verbose (bool):
+            Whether to display progress bar.
 
     Returns:
         tuple[list[zarr.Array], list[zarr.Array]]:
@@ -2293,7 +2398,12 @@ def save_multitask_to_cache(
           and ``count`` to free RAM and continue populating new entries.
 
     """
-    for idx, canvas_ in enumerate(canvas):
+    tqdm_loop = get_tqdm_full(
+        canvas,
+        desc="Memory Overload, Spilling to disk",
+        verbose=verbose,
+    )
+    for idx, canvas_ in enumerate(tqdm_loop):
         canvas_zarr[idx], count_zarr[idx] = save_to_cache(
             canvas=canvas_,
             count=count[idx],
@@ -2301,6 +2411,7 @@ def save_multitask_to_cache(
             count_zarr=count_zarr[idx],
             save_path=save_path,
             zarr_dataset_name=(f"canvas/{idx}", f"count/{idx}"),
+            verbose=verbose,
         )
 
     return canvas_zarr, count_zarr
@@ -2313,6 +2424,8 @@ def merge_multitask_vertical_chunkwise(
     zarr_group: zarr.Group,
     save_path: Path,
     memory_threshold: int = 80,
+    *,
+    verbose: bool = True,
 ) -> list[da.Array]:
     """Merge horizontally stitched row blocks into final WSI probability maps.
 
@@ -2356,6 +2469,8 @@ def merge_multitask_vertical_chunkwise(
         memory_threshold (int):
             Maximum allowed RAM usage (percentage) before converting in-memory
             probability accumulators to Zarr-backed arrays. Default is 80.
+        verbose (bool):
+            Whether to display logs and progress bar.
 
     Returns:
         list[da.Array]:
@@ -2389,16 +2504,17 @@ def merge_multitask_vertical_chunkwise(
         num_chunks = canvas_.numblocks[0]
         chunk_shape = tuple(chunk[0] for chunk in canvas_.chunks)
 
-        tqdm_ = get_tqdm()
-        tqdm_loop = tqdm_(
-            overlaps, leave=False, desc=f"Merging rows for probability map {idx}"
-        )
-
         curr_chunk = canvas_.blocks[0, 0].compute()
         curr_count = count[idx].blocks[0, 0].compute()
         next_chunk = canvas_.blocks[1, 0].compute() if num_chunks > 1 else None
         next_count = count[idx].blocks[1, 0].compute() if num_chunks > 1 else None
 
+        tqdm_loop = get_tqdm_full(
+            overlaps,
+            leave=False,
+            desc=f"Merging rows for probability map {idx}",
+            verbose=verbose,
+        )
         for i, overlap in enumerate(tqdm_loop):
             if next_chunk is not None and overlap > 0:
                 curr_chunk[-overlap:] += next_chunk[:overlap]
@@ -2422,7 +2538,7 @@ def merge_multitask_vertical_chunkwise(
                 probabilities_da=probabilities_da,
                 probabilities=probabilities,
                 idx=idx,
-                tqdm_=tqdm_,
+                tqdm_loop=tqdm_loop,
                 save_path=save_path,
                 chunk_shape=chunk_shape,
                 memory_threshold=memory_threshold,
@@ -2454,7 +2570,7 @@ def _save_multitask_vertical_to_cache(
     probabilities_da: list[da.Array] | list[None],
     probabilities: np.ndarray,
     idx: int,
-    tqdm_: type[tqdm_notebook | tqdm],
+    tqdm_loop: type[tqdm_notebook | tqdm],
     save_path: Path,
     chunk_shape: tuple,
     memory_threshold: int = 80,
@@ -2467,12 +2583,13 @@ def _save_multitask_vertical_to_cache(
         total_bytes = sum(0 if arr is None else arr.nbytes for arr in probabilities_da)
         used_percent = (total_bytes / max(vm.available, 1)) * 100
     if probabilities_zarr[idx] is None and used_percent > memory_threshold:
+        desc = tqdm_loop.desc
         msg = (
             f"Current Memory usage: {used_percent} %  "
             f"exceeds specified threshold: {memory_threshold}. "
             f"Saving intermediate results to disk."
         )
-        tqdm_.write(msg)
+        tqdm_loop.desc = msg
         zarr_group = zarr.open(str(save_path), mode="a")
         probabilities_zarr[idx] = zarr_group.create_dataset(
             name=f"probabilities/{idx}",
@@ -2482,7 +2599,7 @@ def _save_multitask_vertical_to_cache(
             overwrite=True,
         )
         probabilities_zarr[idx][:] = probabilities_da[idx].compute()
-
+        tqdm_loop.desc = desc
         probabilities_da[idx] = None
 
     return probabilities_zarr, probabilities_da
@@ -2516,12 +2633,18 @@ def _calculate_probabilities(
     output_locs_y_: np.ndarray,
     save_path: Path,
     memory_threshold: int,
+    *,
+    verbose: bool,
 ) -> list[da.Array]:
     """Helper function to calculate probabilities for MultiTaskSegmentor."""
     zarr_group = None
     if canvas_zarr[0] is not None:
         canvas_zarr, count_zarr = save_multitask_to_cache(
-            canvas, count, canvas_zarr, count_zarr
+            canvas,
+            count,
+            canvas_zarr,
+            count_zarr,
+            verbose=verbose,
         )
         # Wrap zarr in dask array
         for idx, canvas_zarr_ in enumerate(canvas_zarr):
@@ -2548,9 +2671,10 @@ def _check_and_update_for_memory_overload(
     count_zarr: list[zarr.Array | None],
     memory_threshold: int,
     tqdm_loop: DataLoader | tqdm,
-    tqdm_: type[tqdm_notebook | tqdm],
     save_path: Path,
     num_expected_output: int,
+    *,
+    verbose: bool = True,
 ) -> tuple[
     list[da.Array | None],
     list[da.Array | None],
@@ -2567,7 +2691,6 @@ def _check_and_update_for_memory_overload(
     if not (used_percent > memory_threshold or canvas_used_percent > memory_threshold):
         return canvas, count, canvas_zarr, count_zarr, tqdm_loop
 
-    tqdm_loop.desc = "Spill intermediate data to disk"
     used_percent = (
         canvas_used_percent
         if (canvas_used_percent > memory_threshold)
@@ -2578,7 +2701,7 @@ def _check_and_update_for_memory_overload(
         f"exceeds specified threshold: {memory_threshold}. "
         f"Saving intermediate results to disk."
     )
-    tqdm_.write(msg)
+    tqdm_loop.desc = msg
     # Flush data in Memory and clear dask graph
     canvas_zarr, count_zarr = save_multitask_to_cache(
         canvas,
@@ -2586,6 +2709,7 @@ def _check_and_update_for_memory_overload(
         canvas_zarr,
         count_zarr,
         save_path=save_path,
+        verbose=verbose,
     )
     canvas = [None for _ in range(num_expected_output)]
     count = [None for _ in range(num_expected_output)]
@@ -2604,6 +2728,9 @@ def _save_annotation_store(
     save_path: Path,
     class_dict: dict,
     scale_factor: tuple[float, float],
+    num_workers: int,
+    *,
+    verbose: bool = True,
 ) -> Path:
     """Helper function to save to annotation store."""
     if isinstance(curr_image, Path):
@@ -2630,6 +2757,8 @@ def _save_annotation_store(
         class_dict=class_dict,
         scale_factor=scale_factor,
         origin=origin,
+        num_workers=num_workers,
+        verbose=verbose,
     )
 
     store.commit()
@@ -2646,6 +2775,7 @@ def _process_instance_predictions(
     tile_mode: int,
     tile_tl: tuple[int, int],
     ref_inst_dict: dict,
+    ref_inst_rtree: STRtree,
 ) -> list | tuple:
     """Function to merge new tile prediction with existing prediction.
 
@@ -2685,6 +2815,8 @@ def _process_instance_predictions(
             Dictionary contains accumulated output. The
             expected format is {instance_id: {type: int,
             contour: List[List[int]], centroid:List[float], box:List[int]}.
+        ref_inst_rtree (STRtree):
+            A query-only R-tree spatial index for a list of geometries.
 
     Returns:
         new_inst_dict (dict):
@@ -2710,37 +2842,40 @@ def _process_instance_predictions(
         tile_flag=tile_flag,
     )
 
-    def retrieve_sel_uids(sel_indices: list, inst_dict: dict) -> list:
-        """Helper to retrieved selected instance uids."""
-        if len(sel_indices) > 0:
-            # not sure how costly this is in large dict
-            inst_uids = list(inst_dict.keys())
-        return [inst_uids[idx] for idx in sel_indices]
-
     remove_insts_in_tile = retrieve_sel_uids(sel_indices, inst_dict)
 
+    if tile_mode != 3:  # noqa: PLR2004
+        return (
+            _move_tile_space_to_wsi_space(
+                inst_dict=inst_dict,
+                tile_tl=tile_tl,
+                remove_insts_in_tile=remove_insts_in_tile,
+            ),
+            [],
+        )
     # external removal only for tile at cross-sections
     # this one should contain UUID with the reference database
-    remove_insts_in_orig = []
-    if tile_mode == 3:  # noqa: PLR2004
-        inst_boxes = [v["box"] for v in ref_inst_dict.values()]
-        inst_boxes = np.array(inst_boxes)
+    sel_indices_remove = [
+        geo for bounds in margin_lines for geo in ref_inst_rtree.query(bounds)
+    ]
+    remove_insts_in_orig = retrieve_sel_uids(sel_indices_remove, ref_inst_dict)
 
-        geometries = [shapely_box(*bounds) for bounds in inst_boxes]
-        ref_inst_rtree = STRtree(geometries)
-        sel_indices = [
-            geo for bounds in margin_lines for geo in ref_inst_rtree.query(bounds)
-        ]
-
-        remove_insts_in_orig = retrieve_sel_uids(sel_indices, ref_inst_dict)
-
-    new_inst_dict = _move_tile_space_to_wsi_space(
-        inst_dict=inst_dict,
-        tile_tl=tile_tl,
-        remove_insts_in_tile=remove_insts_in_tile,
+    return (
+        _move_tile_space_to_wsi_space(
+            inst_dict=inst_dict,
+            tile_tl=tile_tl,
+            remove_insts_in_tile=remove_insts_in_tile,
+        ),
+        remove_insts_in_orig,
     )
 
-    return new_inst_dict, remove_insts_in_orig
+
+def retrieve_sel_uids(sel_indices_: list, inst_dict_: dict) -> list:
+    """Helper to retrieved selected instance uids."""
+    if len(sel_indices_) > 0:
+        # not sure how costly this is in large dict
+        inst_uids = list(inst_dict_.keys())
+    return [inst_uids[idx] for idx in sel_indices_]
 
 
 def _get_sel_indices_margin_lines(
@@ -2887,12 +3022,12 @@ def _get_inst_info_dicts(post_process_output: tuple[dict]) -> list:
 
 def _create_wsi_info_dict(
     post_process_output: tuple[dict],
-    wsi_info_dict: tuple[dict] | None,
+    wsi_info_dict: tuple[dict, ...] | None,
     wsi_proc_shape: tuple[int, ...],
     save_path: Path,
     return_predictions: tuple[bool, ...] | None,
     memory_threshold: float = 80,
-) -> tuple[dict[str, dict[Any, Any] | list[Any] | Any], ...]:
+) -> tuple[dict, ...]:
     """Create or reuse WSI info dictionaries for post-processed outputs.
 
     This function constructs a tuple of WSI information dictionaries, one for each
@@ -2959,9 +3094,9 @@ def _create_wsi_info_dict(
 
 def _update_tile_based_predictions_array(
     post_process_output: tuple[dict],
-    wsi_info_dict: tuple[dict],
+    wsi_info_dict: tuple[dict, ...],
     bounds: tuple[int, int, int, int],
-) -> tuple[dict]:
+) -> tuple[dict, ...]:
     """Helper function to update tile based predictions array."""
     x_start, y_start, x_end, y_end = bounds
 
@@ -2977,3 +3112,132 @@ def _update_tile_based_predictions_array(
         )
 
     return wsi_info_dict
+
+
+def _build_tile_tasks(
+    tile_info_sets: list,
+    *,
+    verbose: bool = True,
+) -> list[
+    tuple,  # metadata
+]:
+    """Build tasks for delayed tile-processing using associated metadata.
+
+    This function iterates over all tile sets and constructs
+    and Metadata entries containing:
+        (tile_bounds, tile_flag, tile_mode)
+
+    Args:
+        tile_info_sets:
+            A list where each element is a tuple:
+                (set_bounds, set_flags)
+            - set_bounds: list of tile bounds (x0, y0, x1, y1)
+            - set_flags: list of per-tile flags used for instance merging
+        verbose (bool):
+            Whether to display logs and progress bar.
+
+    Returns:
+        list:
+            tile_metadata: list of metadata tuples
+              (tile_bounds, tile_flag, tile_mode)
+
+    """
+    tile_metadata: list = []
+
+    for set_idx, (set_bounds, set_flags) in enumerate(
+        get_tqdm_full(
+            tile_info_sets,
+            leave=False,
+            desc="Building delayed tile-processing tasks",
+            verbose=verbose,
+        )
+    ):
+        for tile_idx, tile_bounds in enumerate(
+            get_tqdm_full(
+                set_bounds,
+                leave=False,
+                desc=f"Building delayed tile-processing tasks for tile set {set_idx}",
+                verbose=verbose,
+            )
+        ):
+            tile_flag = set_flags[tile_idx]
+
+            # Store metadata for merging
+            tile_metadata.append((tile_bounds, tile_flag, set_idx))
+
+    return tile_metadata
+
+
+@delayed
+def _build_single_annotation(
+    i: int,
+    contour: np.ndarray,
+    processed_predictions: dict[str, Any],
+    class_dict: dict[int, str] | None,
+    origin: tuple[float, float],
+    scale_factor: tuple[float, float],
+) -> Annotation:
+    """Creates a delayed annotation to run with dask.
+
+    Build a single Annotation object for index `i`.
+
+    This function performs:
+      - geometry creation
+      - coordinate scaling + translation
+      - per-object property extraction
+      - class_dict mapping (if provided)
+
+    Returns:
+        A single Annotation instance.
+
+    """
+    geom = make_valid_poly(
+        feature2geometry(
+            {
+                "type": processed_predictions.get("geom_type", "Polygon"),
+                "coordinates": scale_factor * np.array([contour]),
+            }
+        ),
+        tuple(origin),
+    )
+
+    properties = {
+        prop: (
+            class_dict[processed_predictions[prop][i]]
+            if prop == "type" and class_dict is not None
+            else np.array(processed_predictions[prop][i]).tolist()
+        )
+        for prop in processed_predictions
+    }
+
+    return Annotation(geom, properties)
+
+
+def _compute_info_dict_for_merge(
+    inst_dict: dict,
+    tile_mode: int,
+    ref_inst_info_dict: dict,
+    ioconfig: IOSegmentorConfig,
+    tile_shape: tuple[int, int],
+    tile_tl: tuple[int, int],
+    tile_flag: tuple[int, int, int, int],
+) -> list | tuple:
+    """Helper function to compute info dict with remove inst ids."""
+    ref_inst_rtree = STRtree([])
+    if tile_mode == 3:  # noqa: PLR2004
+        inst_boxes = [v["box"] for v in ref_inst_info_dict.values()]
+        inst_boxes = np.array(inst_boxes)
+
+        geometries = [shapely_box(*bounds) for bounds in inst_boxes]
+        ref_inst_rtree = STRtree(geometries)
+
+    return _process_instance_predictions(
+        inst_dict=inst_dict,
+        ioconfig=ioconfig,
+        tile_shape=tile_shape,
+        tile_flag=tile_flag,
+        tile_mode=tile_mode,
+        tile_tl=tile_tl,
+        ref_inst_dict=ref_inst_info_dict,
+        ref_inst_rtree=ref_inst_rtree,
+    )

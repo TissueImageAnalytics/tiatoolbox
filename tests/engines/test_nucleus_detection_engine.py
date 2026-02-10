@@ -105,7 +105,7 @@ def test_nucleus_detector_patch_annotation_store_output(
 
     pretrained_model = "sccnn-conic"
 
-    save_dir = track_tmp_path
+    save_dir = track_tmp_path / "output"
 
     nucleus_detector = NucleusDetector(model=pretrained_model)
     _ = nucleus_detector.run(
@@ -127,14 +127,16 @@ def test_nucleus_detector_patch_annotation_store_output(
     assert len(store_2.values()) == 0
     store_2.close()
 
-    imwrite(save_dir / "patch_0.png", patch_1)
-    imwrite(save_dir / "patch_1.png", patch_2)
+    image_dir = track_tmp_path / "inputs"
+    image_dir.mkdir()
+    imwrite(image_dir / "patch_0.png", patch_1)
+    imwrite(image_dir / "patch_1.png", patch_2)
     _ = nucleus_detector.run(
         patch_mode=True,
         device=device,
         output_type="annotationstore",
         memory_threshold=50,
-        images=[save_dir / "patch_0.png", save_dir / "patch_1.png"],
+        images=[image_dir / "patch_0.png", image_dir / "patch_1.png"],
         save_dir=save_dir,
         overwrite=True,
     )

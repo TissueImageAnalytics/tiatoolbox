@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import warnings
 from collections import OrderedDict
 
 import cv2
@@ -22,7 +23,7 @@ from tiatoolbox.models.architecture.utils import (
     centre_crop_to_shape,
 )
 from tiatoolbox.models.models_abc import ModelABC
-from tiatoolbox.utils.misc import get_bounding_box, get_tqdm
+from tiatoolbox.utils.misc import get_bounding_box, get_tqdm_full
 
 
 class TFSamepaddingLayer(nn.Module):
@@ -603,12 +604,22 @@ class HoVerNet(ModelABC):
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         marker = cv2.morphologyEx(marker, cv2.MORPH_OPEN, kernel)
         marker = ndimage.label(marker)[0]
-        marker = remove_small_objects(marker, min_size=obj_size)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="Only one label was provided to `remove_small_objects`",
+            )
+            marker = remove_small_objects(marker, min_size=obj_size)
 
         return watershed(dist, markers=marker, mask=blb)
 
     @staticmethod
-    def get_instance_info(pred_inst: np.ndarray, pred_type: np.ndarray = None) -> dict:
+    def get_instance_info(
+        pred_inst: np.ndarray,
+        pred_type: np.ndarray = None,
+        *,
+        verbose: bool = True,
+    ) -> dict:
         """To collect instance information and store it within a dictionary.
 
         Args:
@@ -618,6 +629,8 @@ class HoVerNet(ModelABC):
             pred_type (:class:`numpy.ndarray`):
                 An image of shape (height, width, 1) which contains the
                 probabilities of a pixel being a certain type of nuclei.
+            verbose (bool):
+                Whether to display progress bar.
 
         Returns:
             dict:
@@ -650,10 +663,13 @@ class HoVerNet(ModelABC):
         """
         inst_id_list = np.unique(pred_inst)[1:]  # exclude background
         inst_info_dict = {}
-        tqdm_ = get_tqdm()
-        for inst_id in tqdm_(
-            inst_id_list, leave=False, desc="Generating 'info_dict' for instances"
-        ):
+        tqdm_loop = get_tqdm_full(
+            inst_id_list,
+            leave=False,
+            desc="Generating 'info_dict' for instances",
+            verbose=verbose,
+        )
+        for inst_id in tqdm_loop:
             inst_map = pred_inst == inst_id
             inst_box = get_bounding_box(inst_map)
             inst_box_tl = inst_box[:2]
