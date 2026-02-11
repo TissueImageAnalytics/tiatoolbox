@@ -126,10 +126,10 @@ import dask.array as da
 import numpy as np
 import pandas as pd
 import psutil
+import shapely
 import torch
 import zarr
 from dask import delayed
-from shapely.geometry import box as shapely_box
 from shapely.geometry import shape as feature2geometry
 from shapely.strtree import STRtree
 from typing_extensions import Unpack
@@ -1314,12 +1314,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
         def unset_removal_flag(boxes: tuple, removal_flag: np.ndarray) -> np.ndarray:
             """Unset removal flags for tiles intersecting image boundaries."""
             sel_boxes = [
-                shapely_box(0, 0, w, 0),  # top edge
-                shapely_box(0, h, w, h),  # bottom edge
-                shapely_box(0, 0, 0, h),  # left
-                shapely_box(w, 0, w, h),  # right
+                shapely.box(0, 0, w, 0),  # top edge
+                shapely.box(0, h, w, h),  # bottom edge
+                shapely.box(0, 0, 0, h),  # left
+                shapely.box(w, 0, w, h),  # right
             ]
-            geometries = [shapely_box(*bounds) for bounds in boxes]
+            geometries = [shapely.box(*bounds) for bounds in boxes]
             spatial_indexer = STRtree(geometries)
 
             for idx, sel_box in enumerate(sel_boxes):
@@ -2789,23 +2789,23 @@ def _get_sel_indices_margin_lines(
     inst_boxes = [v["box"] for v in inst_dict.values()]
     inst_boxes = np.array(inst_boxes)
 
-    geometries = [shapely_box(*bounds) for bounds in inst_boxes]
+    geometries = [shapely.box(*bounds) for bounds in inst_boxes]
     tile_rtree = STRtree(geometries)
     # !
 
     # create margin bounding box, ordering should match with
     # created tile info flag (top, bottom, left, right)
     boundary_lines = [
-        shapely_box(0, 0, width, 1),  # top egde
-        shapely_box(0, height - 1, width, height),  # bottom edge
-        shapely_box(0, 0, 1, height),  # left
-        shapely_box(width - 1, 0, width, height),  # right
+        shapely.box(0, 0, width, 1),  # top egde
+        shapely.box(0, height - 1, width, height),  # bottom edge
+        shapely.box(0, 0, 1, height),  # left
+        shapely.box(width - 1, 0, width, height),  # right
     ]
     margin_boxes = [
-        shapely_box(0, 0, width, margin),  # top egde
-        shapely_box(0, height - margin, width, height),  # bottom edge
-        shapely_box(0, 0, margin, height),  # left
-        shapely_box(width - margin, 0, width, height),  # right
+        shapely.box(0, 0, width, margin),  # top egde
+        shapely.box(0, height - margin, width, height),  # bottom edge
+        shapely.box(0, 0, margin, height),  # left
+        shapely.box(width - margin, 0, width, height),  # right
     ]
     margin_lines = _get_margin_lines(
         margin=margin,
@@ -2865,7 +2865,7 @@ def _get_margin_lines(
         [[width - margin, margin], [width - margin, height - margin]],  # right
     ]
     margin_lines = np.array(margin_lines) + tile_tl[None, None]
-    return [shapely_box(*v.flatten().tolist()) for v in margin_lines]
+    return [shapely.box(*v.flatten().tolist()) for v in margin_lines]
 
 
 def _move_tile_space_to_wsi_space(
@@ -3076,7 +3076,7 @@ def _compute_info_dict_for_merge(
         inst_boxes = [v["box"] for v in ref_inst_info_dict.values()]
         inst_boxes = np.array(inst_boxes)
 
-        geometries = [shapely_box(*bounds) for bounds in inst_boxes]
+        geometries = [shapely.box(*bounds) for bounds in inst_boxes]
         ref_inst_rtree = STRtree(geometries)
 
     return _process_instance_predictions(
