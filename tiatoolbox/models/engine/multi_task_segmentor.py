@@ -2744,12 +2744,8 @@ def _save_annotation_store(
     predictions_ = dict(zip(keys_to_compute, values, strict=False))
     output_path = save_path.parent / store_file_name
     # Patch mode indexes the "coordinates" while calculating "values" variable.
-    origin = (
-        predictions_.pop("coordinates")[0][:2]
-        if len(predictions_["coordinates"].shape) > 1
-        else predictions_.pop("coordinates")[:2]
-    )
-    origin = tuple(max(0.0, float(x)) for x in origin)
+    origin = (0.0, 0.0)
+    _ = predictions_.pop("coordinates")
     store = SQLiteStore()
     store = dict_to_store(
         store=store,
