@@ -120,16 +120,16 @@ import shutil
 import uuid
 from collections import deque
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import dask.array as da
 import numpy as np
 import pandas as pd
 import psutil
+import shapely
 import torch
 import zarr
 from dask import delayed
-from shapely.geometry import box as shapely_box
 from shapely.geometry import shape as feature2geometry
 from shapely.strtree import STRtree
 from typing_extensions import Unpack
@@ -1314,12 +1314,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
         def unset_removal_flag(boxes: tuple, removal_flag: np.ndarray) -> np.ndarray:
             """Unset removal flags for tiles intersecting image boundaries."""
             sel_boxes = [
-                shapely_box(0, 0, w, 0),  # top edge
-                shapely_box(0, h, w, h),  # bottom edge
-                shapely_box(0, 0, 0, h),  # left
-                shapely_box(w, 0, w, h),  # right
+                shapely.box(0, 0, w, 0),  # top edge
+                shapely.box(0, h, w, h),  # bottom edge
+                shapely.box(0, 0, 0, h),  # left
+                shapely.box(w, 0, w, h),  # right
             ]
-            geometries = [shapely_box(*bounds) for bounds in boxes]
+            geometries = [shapely.box(*bounds) for bounds in boxes]
             spatial_indexer = STRtree(geometries)
 
             for idx, sel_box in enumerate(sel_boxes):
@@ -2016,109 +2016,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
         )
 
 
-def dict_to_store(
-    store: SQLiteStore,
-    processed_predictions: dict,
-    class_dict: dict | None = None,
-    origin: tuple[float, float] = (0, 0),
-    scale_factor: tuple[float, float] = (1, 1),
-    num_workers: int = multiprocessing.cpu_count(),
-    *,
-    verbose: bool = True,
-) -> AnnotationStore:
-    """Write polygonal multitask predictions into an SQLite-backed AnnotationStore.
-
-    Converts a task dictionary (with per-object fields) into `Annotation` records,
-    applying coordinate scaling and translation to move predictions into the slide's
-    baseline coordinate space. Each geometry is created from the per-object
-    `"contours"` entry, validated, and shifted by `origin`. All remaining keys in
-    `processed_predictions` are attached as annotation properties; the `"type"` key
-    can be mapped via `class_dict`.
-
-    Expected `processed_predictions` structure:
-        - "contours": list-like of polygon coordinates per object, where each item
-          is shaped like `[[x0, y0], [x1, y1], ..., [xN, yN]]`. These are interpreted
-          according to `"geom_type"` (default `"Polygon"`).
-        - Optional "geom_type": str (e.g., "Polygon", "MultiPolygon").
-          Defaults to "Polygon".
-        - Additional per-object fields (e.g., "type", "probability", scores, attributes)
-          with list-like values aligned to `contours` length.
-
-    Args:
-        store (SQLiteStore):
-            Target annotation store that will receive the converted annotations.
-        processed_predictions (dict):
-            Dictionary containing per-object fields. Must include `"contours"`;
-            may include `"geom_type"` and any number of additional fields to be
-            written as properties.
-        class_dict (dict | None):
-            Optional mapping for the `"type"` field. When provided and when
-            `"type"` is present in `processed_predictions`, each `"type"` value is
-            replaced by `class_dict[type_id]` in the saved annotation properties.
-        origin (tuple[float, float]):
-            `(x0, y0)` offset to add to the final geometry coordinates (in pixels)
-            after scaling. Typically corresponds to the tile/patch origin in WSI
-            space.
-        scale_factor (tuple[float, float]):
-            `(sx, sy)` factors applied to coordinates before translation, used to
-            convert from model space to baseline slide resolution (e.g.,
-            `model_mpp / slide_mpp`).
-        num_workers (int):
-            Number of parallel worker threads to use. If set to 0 or None,
-            defaults to the number of CPU cores.
-        verbose (bool):
-            Whether to display logs and progress bar.
-
-    Returns:
-        AnnotationStore:
-            The input `store` after appending all converted annotations.
-
-    Notes:
-        - Geometries are constructed from `processed_predictions["contours"]` using
-          `geom_type` (default `"Polygon"`), scaled by `scale_factor`, and translated
-          by `origin`. Invalid geometries are auto-corrected using `make_valid_poly`.
-        - Per-object properties are created by taking the i-th element from each
-          remaining key in `processed_predictions`. Scalars are coerced to arrays
-          first, then converted with `.tolist()` to ensure JSON-serializable values.
-        - If `class_dict` is provided and a `"type"` key exists, `"type"` values are
-          mapped prior to saving.
-        - All annotations are appended in a single batch via `store.append_many(...)`.
-
-    """
-    contours = processed_predictions.pop("contours")
-    n = len(contours)
-
-    # Build delayed tasks
-    delayed_tasks = [
-        _build_single_annotation(
-            i,
-            contours[i],
-            processed_predictions,
-            class_dict,
-            origin,
-            scale_factor,
-        )
-        for i in get_tqdm_full(
-            range(n),
-            leave=False,
-            desc="Creating list of delayed tasks for writing annotations",
-            verbose=verbose,
-        )
-    ]
-
-    ann = tqdm_dask_progress_bar(
-        write_tasks=delayed_tasks,
-        desc="Saving annotations",
-        num_workers=num_workers,
-        verbose=verbose,
-    )
-
-    logger.info("Added %d annotations.", len(ann))
-    store.append_many(ann)
-
-    return store
-
-
 def prepare_multitask_full_batch(
     batch_output: tuple[np.ndarray],
     batch_locs: np.ndarray,
@@ -2744,12 +2641,8 @@ def _save_annotation_store(
     predictions_ = dict(zip(keys_to_compute, values, strict=False))
     output_path = save_path.parent / store_file_name
     # Patch mode indexes the "coordinates" while calculating "values" variable.
-    origin = (
-        predictions_.pop("coordinates")[0][:2]
-        if len(predictions_["coordinates"].shape) > 1
-        else predictions_.pop("coordinates")[:2]
-    )
-    origin = tuple(max(0.0, float(x)) for x in origin)
+    origin = (0.0, 0.0)
+    _ = predictions_.pop("coordinates")
     store = SQLiteStore()
     store = dict_to_store(
         store=store,
@@ -2896,23 +2789,23 @@ def _get_sel_indices_margin_lines(
     inst_boxes = [v["box"] for v in inst_dict.values()]
     inst_boxes = np.array(inst_boxes)
 
-    geometries = [shapely_box(*bounds) for bounds in inst_boxes]
+    geometries = [shapely.box(*bounds) for bounds in inst_boxes]
     tile_rtree = STRtree(geometries)
     # !
 
     # create margin bounding box, ordering should match with
     # created tile info flag (top, bottom, left, right)
     boundary_lines = [
-        shapely_box(0, 0, width, 1),  # top egde
-        shapely_box(0, height - 1, width, height),  # bottom edge
-        shapely_box(0, 0, 1, height),  # left
-        shapely_box(width - 1, 0, width, height),  # right
+        shapely.box(0, 0, width, 1),  # top egde
+        shapely.box(0, height - 1, width, height),  # bottom edge
+        shapely.box(0, 0, 1, height),  # left
+        shapely.box(width - 1, 0, width, height),  # right
     ]
     margin_boxes = [
-        shapely_box(0, 0, width, margin),  # top egde
-        shapely_box(0, height - margin, width, height),  # bottom edge
-        shapely_box(0, 0, margin, height),  # left
-        shapely_box(width - margin, 0, width, height),  # right
+        shapely.box(0, 0, width, margin),  # top egde
+        shapely.box(0, height - margin, width, height),  # bottom edge
+        shapely.box(0, 0, margin, height),  # left
+        shapely.box(width - margin, 0, width, height),  # right
     ]
     margin_lines = _get_margin_lines(
         margin=margin,
@@ -2972,7 +2865,7 @@ def _get_margin_lines(
         [[width - margin, margin], [width - margin, height - margin]],  # right
     ]
     margin_lines = np.array(margin_lines) + tile_tl[None, None]
-    return [shapely_box(*v.flatten().tolist()) for v in margin_lines]
+    return [shapely.box(*v.flatten().tolist()) for v in margin_lines]
 
 
 def _move_tile_space_to_wsi_space(
@@ -3168,51 +3061,6 @@ def _build_tile_tasks(
     return tile_metadata
 
 
-@delayed
-def _build_single_annotation(
-    i: int,
-    contour: np.ndarray,
-    processed_predictions: dict[str, Any],
-    class_dict: dict[int, str] | None,
-    origin: tuple[float, float],
-    scale_factor: tuple[float, float],
-) -> Annotation:
-    """Creates a delayed annotation to run with dask.
-
-    Build a single Annotation object for index `i`.
-
-    This function performs:
-      - geometry creation
-      - coordinate scaling + translation
-      - per-object property extraction
-      - class_dict mapping (if provided)
-
-    Returns:
-        A single Annotation instance.
-
-    """
-    geom = make_valid_poly(
-        feature2geometry(
-            {
-                "type": processed_predictions.get("geom_type", "Polygon"),
-                "coordinates": scale_factor * np.array([contour]),
-            }
-        ),
-        tuple(origin),
-    )
-
-    properties = {
-        prop: (
-            class_dict[processed_predictions[prop][i]]
-            if prop == "type" and class_dict is not None
-            else np.array(processed_predictions[prop][i]).tolist()
-        )
-        for prop in processed_predictions
-    }
-
-    return Annotation(geom, properties)
-
-
 def _compute_info_dict_for_merge(
     inst_dict: dict,
     tile_mode: int,
@@ -3228,7 +3076,7 @@ def _compute_info_dict_for_merge(
         inst_boxes = [v["box"] for v in ref_inst_info_dict.values()]
         inst_boxes = np.array(inst_boxes)
 
-        geometries = [shapely_box(*bounds) for bounds in inst_boxes]
+        geometries = [shapely.box(*bounds) for bounds in inst_boxes]
         ref_inst_rtree = STRtree(geometries)
 
     return _process_instance_predictions(
@@ -3241,3 +3089,257 @@ def _compute_info_dict_for_merge(
         ref_inst_dict=ref_inst_info_dict,
         ref_inst_rtree=ref_inst_rtree,
     )
+
+
+def dict_to_store(
+    store: SQLiteStore,
+    processed_predictions: dict,
+    class_dict: dict | None = None,
+    origin: tuple[float, float] = (0, 0),
+    scale_factor: tuple[float, float] = (1, 1),
+    num_workers: int = multiprocessing.cpu_count(),
+    *,
+    verbose: bool = True,
+) -> AnnotationStore:
+    """Write polygonal multitask predictions into an SQLite-backed AnnotationStore.
+
+    Converts a task dictionary (with per-object fields) into `Annotation` records,
+    applying coordinate scaling and translation to move predictions into the slide's
+    baseline coordinate space. Each geometry is created from the per-object
+    `"contours"` entry, validated, and shifted by `origin`. All remaining keys in
+    `processed_predictions` are attached as annotation properties; the `"type"` key
+    can be mapped via `class_dict`.
+
+    Expected `processed_predictions` structure:
+        - "contours": list-like of polygon coordinates per object, where each item
+          is shaped like `[[x0, y0], [x1, y1], ..., [xN, yN]]`. These are interpreted
+          according to `"geom_type"` (default `"Polygon"`).
+        - Optional "geom_type": str (e.g., "Polygon", "MultiPolygon").
+          Defaults to "Polygon".
+        - Additional per-object fields (e.g., "type", "probability", scores, attributes)
+          with list-like values aligned to `contours` length.
+
+    Args:
+        store (SQLiteStore):
+            Target annotation store that will receive the converted annotations.
+        processed_predictions (dict):
+            Dictionary containing per-object fields. Must include `"contours"`;
+            may include `"geom_type"` and any number of additional fields to be
+            written as properties.
+        class_dict (dict | None):
+            Optional mapping for the `"type"` field. When provided and when
+            `"type"` is present in `processed_predictions`, each `"type"` value is
+            replaced by `class_dict[type_id]` in the saved annotation properties.
+        origin (tuple[float, float]):
+            `(x0, y0)` offset to add to the final geometry coordinates (in pixels)
+            after scaling. Typically corresponds to the tile/patch origin in WSI
+            space.
+        scale_factor (tuple[float, float]):
+            `(sx, sy)` factors applied to coordinates before translation, used to
+            convert from model space to baseline slide resolution (e.g.,
+            `model_mpp / slide_mpp`).
+        num_workers (int):
+            Number of parallel worker threads to use. If set to 0 or None,
+            defaults to the number of CPU cores.
+        verbose (bool):
+            Whether to display logs and progress bar.
+
+    Returns:
+        AnnotationStore:
+            The input `store` after appending all converted annotations.
+
+    Notes:
+        - Geometries are constructed from `processed_predictions["contours"]` using
+          `geom_type` (default `"Polygon"`), scaled by `scale_factor`, and translated
+          by `origin`. Invalid geometries are auto-corrected using `make_valid_poly`.
+        - Per-object properties are created by taking the i-th element from each
+          remaining key in `processed_predictions`. Scalars are coerced to arrays
+          first, then converted with `.tolist()` to ensure JSON-serializable values.
+        - If `class_dict` is provided and a `"type"` key exists, `"type"` values are
+          mapped prior to saving.
+        - All annotations are appended in a single batch via `store.append_many(...)`.
+
+    """
+    contours = processed_predictions.pop("contours")
+    delayed_tasks = DaskDelayedAnnotationStore(
+        contours=contours,
+        processed_predictions=processed_predictions,
+    )
+
+    return delayed_tasks.compute_annotations(
+        store=store,
+        class_dict=class_dict,
+        origin=origin,
+        scale_factor=scale_factor,
+        batch_size=100,
+        num_workers=num_workers,
+        verbose=verbose,
+    )
+
+
+class DaskDelayedAnnotationStore:
+    """Compute and write TIAToolbox annotations using batched Dask Delayed tasks.
+
+    This class parallelizes annotation construction using Dask Delayed while
+    avoiding serialization overhead by storing contours and prediction arrays
+    as instance attributes. Annotations are computed in batches and written
+    directly to a TIAToolbox `SQLiteStore` via `append_many()`.
+
+    """
+
+    def __init__(
+        self: DaskDelayedAnnotationStore,
+        contours: np.ndarray,
+        processed_predictions: dict,
+    ) -> None:
+        """Initialize :class:`DaskDelayedAnnotationStore`.
+
+        Args:
+            contours (np.ndarray):
+                A sequence of polygon contours. Each element is an array-like
+                of shape ``(N_i, 2)`` representing the coordinates of a single
+                object contour.
+
+            processed_predictions (dict):
+                A dictionary of per-object prediction fields. Each key maps to
+                an array-like of length ``len(contours)``. Example keys include
+                ``"type"``, ``"prob"``, ``"centroid"``, etc. May also contain
+                a global field ``"geom_type"``.
+
+        """
+        self._contours = contours
+        self._processed_predictions = processed_predictions
+
+    def _build_single_annotation(
+        self: DaskDelayedAnnotationStore,
+        i: int,
+        class_dict: dict[int, str] | None,
+        origin: tuple[float, float],
+        scale_factor: tuple[float, float],
+    ) -> Annotation:
+        """Build a single annotation for index ``i``.
+
+        This method performs:
+        - geometry creation
+        - coordinate scaling and translation
+        - per-object property extraction
+        - optional class label mapping
+
+        Args:
+            i (int):
+                Index of the object to convert into an annotation.
+
+            class_dict (dict[int, str] | None):
+                Optional mapping from integer class IDs to string labels.
+                If ``None``, raw integer class IDs are used.
+
+            origin (tuple[float, float]):
+                Translation offset ``(x, y)`` applied after scaling.
+
+            scale_factor (tuple[float, float]):
+                Scaling factors ``(sx, sy)`` applied to contour coordinates.
+
+        Returns:
+            Annotation:
+                A fully constructed TIAToolbox `Annotation` instance.
+
+        """
+        geom = make_valid_poly(
+            feature2geometry(
+                {
+                    "type": self._processed_predictions.get("geom_type", "Polygon"),
+                    "coordinates": scale_factor * np.array([self._contours[i]]),
+                }
+            ),
+            tuple(origin),
+        )
+
+        properties = {
+            prop: (
+                class_dict[self._processed_predictions[prop][i]]
+                if prop == "type" and class_dict is not None
+                else np.array(self._processed_predictions[prop][i]).tolist()
+            )
+            for prop in self._processed_predictions
+        }
+
+        return Annotation(geom, properties)
+
+    def compute_annotations(
+        self: DaskDelayedAnnotationStore,
+        store: SQLiteStore,
+        class_dict: dict[int, str] | None,
+        origin: tuple[float, float] = (0, 0),
+        scale_factor: tuple[float, float] = (1, 1),
+        batch_size: int = 100,
+        num_workers: int = 0,
+        *,
+        verbose: bool = True,
+    ) -> SQLiteStore:
+        """Compute annotations in batches and write them to a SQLiteStore.
+
+        This method creates Dask Delayed tasks in batches to reduce scheduler
+        overhead. Each batch is computed and written immediately using
+        ``store.append_many()``.
+
+        Args:
+            store (SQLiteStore):
+                A TIAToolbox SQLiteStore instance used to write annotations.
+
+            class_dict (dict[int, str] | None):
+                Optional mapping from integer class IDs to string labels.
+
+            origin (tuple[float, float], optional):
+                Translation offset ``(x, y)`` applied after scaling.
+                Defaults to ``(0, 0)``.
+
+            scale_factor (tuple[float, float], optional):
+                Scaling factors ``(sx, sy)`` applied to contour coordinates.
+                Defaults to ``(1, 1)``.
+
+            batch_size (int, optional):
+                Number of annotations to compute per batch. Larger batches
+                reduce Dask scheduler overhead. Defaults to ``100``.
+
+            num_workers (int, optional):
+                Number of Dask workers to use. ``0`` means auto-detect.
+                Passed through to the progress bar helper. Defaults to ``0``.
+
+            verbose (bool, optional):
+                Whether to display progress bars. Defaults to ``True``.
+
+        Returns:
+            SQLiteStore:
+                The same store instance, after all annotations have been written.
+
+        """
+        num_contours = len(self._contours)
+        for batch_id in get_tqdm_full(
+            range(0, num_contours, batch_size),
+            leave=False,
+            desc="Calculating annotations in batches.",
+        ):
+            delayed_tasks = [
+                delayed(self._build_single_annotation)(
+                    i,
+                    class_dict,
+                    origin,
+                    scale_factor,
+                )
+                for i in get_tqdm_full(
+                    range(batch_id, min(batch_id + batch_size, num_contours)),
+                    leave=False,
+                    desc="Creating list of delayed tasks for writing annotations",
+                    verbose=True,
+                )
+            ]
+
+            store.append_many(
+                tqdm_dask_progress_bar(
+                    write_tasks=delayed_tasks,
+                    desc="Saving annotations",
+                    verbose=verbose,
+                    num_workers=num_workers,
+                )
+            )
+        return store
