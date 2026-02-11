@@ -3191,7 +3191,7 @@ class DaskDelayedAnnotationStore:
         self: DaskDelayedAnnotationStore,
         contours: np.ndarray,
         processed_predictions: dict,
-    ) -> DaskDelayedAnnotationStore:
+    ) -> None:
         """Initialize :class:`DaskDelayedAnnotationStore`.
 
         Args:
