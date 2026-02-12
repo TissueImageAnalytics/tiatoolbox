@@ -3166,6 +3166,11 @@ def dict_to_store(
         - All annotations are appended in a single batch via `store.append_many(...)`.
 
     """
+    # Assumes annotationstore is computed for properties which can fit in memory.
+    processed_predictions = {
+        key: np.asarray(arr) if isinstance(arr, zarr.Array) and len(arr) > 0 else arr
+        for key, arr in processed_predictions.items()
+    }
     contours = processed_predictions.pop("contours")
     delayed_tasks = DaskDelayedAnnotationStore(
         contours=contours,
