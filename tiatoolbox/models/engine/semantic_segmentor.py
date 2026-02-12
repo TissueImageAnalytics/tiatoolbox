@@ -1284,6 +1284,8 @@ def merge_vertical_chunkwise(
     next_chunk = canvas.blocks[1, 0].compute() if num_chunks > 1 else None
     next_count = count.blocks[1, 0].compute() if num_chunks > 1 else None
 
+    probabilities = np.empty(0)
+
     for i, overlap in enumerate(tqdm_loop):
         if next_chunk is not None and overlap > 0:
             curr_chunk[-overlap:] += next_chunk[:overlap]
@@ -1335,15 +1337,30 @@ def merge_vertical_chunkwise(
             next_chunk, next_count = None, None
 
     if probabilities_zarr:
-        if "canvas" in zarr_group:
-            del zarr_group["canvas"]
-        if "count" in zarr_group:
-            del zarr_group["count"]
-        return da.from_zarr(
-            probabilities_zarr, chunks=(chunk_shape[0], *probabilities.shape[1:])
+        return _get_probabilities_da_from_zarr(
+            zarr_group=zarr_group,
+            probabilities_zarr=probabilities_zarr,
+            chunk_shape=chunk_shape,
+            probabilities=probabilities,
         )
 
     return probabilities_da
+
+
+def _get_probabilities_da_from_zarr(
+    zarr_group: zarr.Group,
+    probabilities_zarr: zarr.Array,
+    chunk_shape: tuple,
+    probabilities: zarr.Array | np.ndarray,
+) -> da.Array:
+    """Helper function to return dask array after probabilities have been merged."""
+    if "canvas" in zarr_group:
+        del zarr_group["canvas"]
+    if "count" in zarr_group:
+        del zarr_group["count"]
+    return da.from_zarr(
+        probabilities_zarr, chunks=(chunk_shape[0], *probabilities.shape[1:])
+    )
 
 
 def store_probabilities(
