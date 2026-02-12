@@ -554,7 +554,7 @@ class KongNet(ModelABC):
         target_channels: list[int],
         min_distance: int,
         threshold_abs: float,
-        postproc_tile_shape: IntPair = (2048, 2048),
+        tile_shape: IntPair = (2048, 2048),
         *,
         wide_decoder: bool = False,
         class_dict: dict | None = None,
@@ -572,7 +572,7 @@ class KongNet(ModelABC):
                 Minimum distance between peaks in post-processing.
             threshold_abs (float):
                 Absolute threshold for peak detection in post-processing.
-            postproc_tile_shape (IntPair):
+            tile_shape (IntPair):
                 Tile shape for post-processing with dask. Defaults to (2048, 2048).
             wide_decoder (bool):
                 Whether to use a wider decoder architecture. Defaults to False.
@@ -629,8 +629,8 @@ class KongNet(ModelABC):
         self.min_distance = min_distance
         self.threshold_abs = threshold_abs
         self.target_channels = target_channels
-        self.output_class_dict = class_dict
-        self.postproc_tile_shape = postproc_tile_shape
+        self.class_dict = class_dict
+        self.tile_shape = tile_shape
 
     @staticmethod
     def preproc(image: np.ndarray) -> np.ndarray:

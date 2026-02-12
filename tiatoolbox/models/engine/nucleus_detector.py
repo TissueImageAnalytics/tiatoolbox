@@ -114,7 +114,7 @@ class NucleusDetectorRunParams(SemanticSegmentorRunParams, total=False):
             Absolute detection threshold applied to model outputs.
         threshold_rel (float):
             Relative detection threshold (e.g., with respect to local maxima).
-        postproc_tile_shape (tuple[int, int]):
+        tile_shape (tuple[int, int]):
             Tile shape (height, width) used during post-processing
             (in pixels) to control rechunking behavior.
         return_labels (bool):
@@ -134,7 +134,7 @@ class NucleusDetectorRunParams(SemanticSegmentorRunParams, total=False):
     min_distance: int
     threshold_abs: float
     threshold_rel: float
-    postproc_tile_shape: IntPair
+    tile_shape: IntPair
 
 
 class NucleusDetector(SemanticSegmentor):
@@ -426,9 +426,9 @@ class NucleusDetector(SemanticSegmentor):
         min_distance = kwargs.get("min_distance")
         if min_distance is None:
             min_distance = self.model.min_distance
-        postproc_tile_shape = kwargs.get("postproc_tile_shape")
-        if postproc_tile_shape is None:
-            postproc_tile_shape = self.model.postproc_tile_shape
+        tile_shape = kwargs.get("tile_shape")
+        if tile_shape is None:
+            tile_shape = self.model.tile_shape
 
         # Add halo (overlap) around each block for post-processing
         depth_h = min_distance
@@ -437,7 +437,7 @@ class NucleusDetector(SemanticSegmentor):
 
         # Re-chunk to post-processing tile shape for more efficient processing
         rechunked_probability_map = raw_predictions["probabilities"].rechunk(
-            (postproc_tile_shape[0], postproc_tile_shape[1], -1)
+            (tile_shape[0], tile_shape[1], -1)
         )
 
         centroid_maps = da.map_overlap(
@@ -594,7 +594,7 @@ class NucleusDetector(SemanticSegmentor):
             # class_dict set from kwargs
             class_dict = kwargs.get("class_dict")
             if class_dict is None:
-                class_dict = self.model.output_class_dict
+                class_dict = self.model.class_dict
 
             out = self._save_predictions_annotation_store(
                 processed_predictions,

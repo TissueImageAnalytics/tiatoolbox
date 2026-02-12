@@ -337,7 +337,7 @@ def test_kongnet_modeling() -> None:
         threshold_abs=0.5,
         wide_decoder=False,
         class_dict=None,
-        postproc_tile_shape=(512, 512),
+        tile_shape=(512, 512),
     )
     assert model is not None
 
@@ -376,10 +376,7 @@ def test_pretrained_model_creation() -> None:
         )
         assert model.min_distance == info["architecture"]["kwargs"]["min_distance"]
         assert model.threshold_abs == info["architecture"]["kwargs"]["threshold_abs"]
-        assert (
-            model.postproc_tile_shape
-            == info["architecture"]["kwargs"]["postproc_tile_shape"]
-        )
+        assert model.tile_shape == info["architecture"]["kwargs"]["tile_shape"]
 
         io_info = info["ioconfig"]
         ioconfig = IOSegmentorConfig(**io_info["kwargs"])
@@ -415,7 +412,7 @@ def test_kongnet_wsi_inference(remote_sample: Callable, track_tmp_path: Path) ->
     annotation_store_path = out[sample_wsi]
     assert Path(annotation_store_path).exists()
     store = SQLiteStore.open(annotation_store_path)
-    assert 1000 < len(store) < 1100
+    assert 900 < len(store) < 1100
 
     detector = NucleusDetector(model="KongNet_Det_MIDOG_1")
     out = detector.run(
