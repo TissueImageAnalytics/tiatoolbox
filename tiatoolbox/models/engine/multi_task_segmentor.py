@@ -2297,6 +2297,7 @@ def save_multitask_to_cache(
     """
     tqdm_loop = tqdm(
         canvas,
+        leave=False,
         desc="Memory Overload, Spilling to disk",
         disable=not verbose,
     )

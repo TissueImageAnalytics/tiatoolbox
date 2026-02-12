@@ -776,6 +776,7 @@ class NucleusDetector(SemanticSegmentor):
 
         tqdm_loop = tqdm(
             range(num_blocks_h),
+            leave=False,
             desc="Processing detection blocks",
             disable=not verbose,
         )
@@ -899,6 +900,7 @@ class NucleusDetector(SemanticSegmentor):
 
         tqdm_loop = tqdm(
             range(0, n, batch_size),
+            leave=False,
             desc="Writing detections to store",
             disable=not verbose,
         )
