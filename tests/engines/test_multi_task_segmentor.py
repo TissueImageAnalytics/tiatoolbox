@@ -13,6 +13,7 @@ import pytest
 import torch
 import zarr
 from click.testing import CliRunner
+from tqdm.auto import tqdm
 
 from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
@@ -25,7 +26,6 @@ from tiatoolbox.models.engine.multi_task_segmentor import (
 )
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils import imwrite
-from tiatoolbox.utils.misc import get_tqdm_full
 from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
@@ -596,7 +596,7 @@ def test_vertical_save_branch_without_patch(
     # --- Real numpy array for shape/dtype ---
     probabilities = np.zeros((1, 3))
 
-    tqdm_loop = get_tqdm_full(
+    tqdm_loop = tqdm(
         range(1),
     )
 

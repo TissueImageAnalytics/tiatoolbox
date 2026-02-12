@@ -16,6 +16,7 @@ from scipy import ndimage
 from skimage.morphology import remove_small_objects
 from skimage.segmentation import watershed
 from torch import nn
+from tqdm.auto import tqdm
 
 from tiatoolbox.models.architecture.utils import (
     UpSample2x,
@@ -23,7 +24,7 @@ from tiatoolbox.models.architecture.utils import (
     centre_crop_to_shape,
 )
 from tiatoolbox.models.models_abc import ModelABC
-from tiatoolbox.utils.misc import get_bounding_box, get_tqdm_full
+from tiatoolbox.utils.misc import get_bounding_box
 
 
 class TFSamepaddingLayer(nn.Module):
@@ -663,11 +664,11 @@ class HoVerNet(ModelABC):
         """
         inst_id_list = np.unique(pred_inst)[1:]  # exclude background
         inst_info_dict = {}
-        tqdm_loop = get_tqdm_full(
+        tqdm_loop = tqdm(
             inst_id_list,
             leave=False,
             desc="Generating 'info_dict' for instances",
-            verbose=verbose,
+            disable=not verbose,
         )
         for inst_id in tqdm_loop:
             inst_map = pred_inst == inst_id

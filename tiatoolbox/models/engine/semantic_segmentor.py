@@ -61,13 +61,14 @@ import numpy as np
 import psutil
 import torch
 import zarr
+from tqdm.auto import tqdm
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
 from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
 from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
-    get_tqdm_full,
+    update_tqdm_desc,
 )
 from tiatoolbox.wsicore.wsireader import is_zarr
 
@@ -460,11 +461,11 @@ class SemanticSegmentor(PatchPredictor):
         )
 
         # Inference loop
-        tqdm_loop = get_tqdm_full(
+        tqdm_loop = tqdm(
             dataloader,
             leave=False,
             desc="Inferring patches",
-            verbose=self.verbose,
+            disable=not self.verbose,
         )
 
         canvas_np, output_locs_y_ = None, None
@@ -536,7 +537,7 @@ class SemanticSegmentor(PatchPredictor):
                         f"exceeds specified threshold: {memory_threshold}. "
                         f"Saving intermediate results to disk."
                     )
-                    tqdm_loop.desc = msg
+                    update_tqdm_desc(tqdm_loop=tqdm_loop, desc=msg)
                     # Flush data in Memory and clear dask graph
                     canvas_zarr, count_zarr = save_to_cache(
                         canvas,
@@ -548,7 +549,7 @@ class SemanticSegmentor(PatchPredictor):
                     )
                     canvas, count = None, None
                     gc.collect()
-                    tqdm_loop.desc = "Inferring patches"
+                    update_tqdm_desc(tqdm_loop=tqdm_loop, desc="Inferring patches")
 
             coordinates.append(
                 da.from_array(
@@ -1198,11 +1199,11 @@ def save_to_cache(
 
     # Append remaining blocks one-at-a-time to limit peak memory.
     num_blocks = canvas.numblocks[0]
-    tqdm_loop = get_tqdm_full(
+    tqdm_loop = tqdm(
         range(start_idx, num_blocks),
         leave=False,
         desc="Memory Overload, Spilling to disk",
-        verbose=verbose,
+        disable=not verbose,
     )
     for block_idx in tqdm_loop:
         canvas_block = canvas.blocks[block_idx, 0, 0].compute()
@@ -1269,11 +1270,11 @@ def merge_vertical_chunkwise(
     probabilities_zarr, probabilities_da = None, None
     chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)
 
-    tqdm_loop = get_tqdm_full(
+    tqdm_loop = tqdm(
         overlaps,
         leave=False,
         desc="Merging rows",
-        verbose=verbose,
+        disable=not verbose,
     )
 
     used_percent = 0
@@ -1304,13 +1305,13 @@ def merge_vertical_chunkwise(
             vm = psutil.virtual_memory()
             used_percent = (probabilities_da.nbytes / vm.free) * 100
         if probabilities_zarr is None and used_percent > memory_threshold:
-            desc = tqdm_loop.desc
+            desc = tqdm_loop.desc if hasattr(tqdm_loop, "desc") else ""
             msg = (
                 f"Current Memory usage: {used_percent} %  "
                 f"exceeds specified threshold: {memory_threshold}. "
                 f"Saving intermediate results to disk."
             )
-            tqdm_loop.desc = msg
+            update_tqdm_desc(tqdm_loop=tqdm_loop, desc=msg)
             zarr_group = zarr.open(str(save_path), mode="a")
             probabilities_zarr = zarr_group.create_dataset(
                 name="probabilities",
@@ -1322,7 +1323,7 @@ def merge_vertical_chunkwise(
             probabilities_zarr[:] = probabilities_da.compute()
 
             probabilities_da = None
-            tqdm_loop.desc = desc
+            update_tqdm_desc(tqdm_loop=tqdm_loop, desc=desc)
 
         if next_chunk is not None:
             curr_chunk, curr_count = next_chunk[overlap:], next_count[overlap:]

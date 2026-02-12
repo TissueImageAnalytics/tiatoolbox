@@ -48,6 +48,7 @@ import zarr
 from dask import compute
 from numcodecs import Pickle
 from torch import nn
+from tqdm.auto import tqdm
 from typing_extensions import Unpack
 
 from tiatoolbox import DuplicateFilter, logger, rcParam
@@ -57,7 +58,6 @@ from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.utils.misc import (
     dict_to_store_patch_predictions,
-    get_tqdm_full,
     tqdm_dask_progress_bar,
 )
 from tiatoolbox.wsicore.wsireader import WSIReader, is_zarr
@@ -532,11 +532,11 @@ class EngineABC(ABC):  # noqa: B024
         raw_predictions = {key: [] for key in keys}
 
         # Inference loop
-        tqdm_loop = get_tqdm_full(
+        tqdm_loop = tqdm(
             dataloader,
             leave=False,
             desc="Inferring patches",
-            verbose=self.verbose,
+            disable=not self.verbose,
         )
 
         infer_batch = self._get_model_attr("infer_batch")
@@ -1566,11 +1566,11 @@ class EngineABC(ABC):  # noqa: B024
             for image in self.images
         }
 
-        tqdm_loop = get_tqdm_full(
+        tqdm_loop = tqdm(
             self.images,
             leave=False,
             desc="Processing WSIs",
-            verbose=self.verbose,
+            disable=not self.verbose,
         )
 
         for image_num, image in enumerate(tqdm_loop):

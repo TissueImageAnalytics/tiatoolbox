@@ -54,6 +54,7 @@ import dask.array as da
 import numpy as np
 import zarr
 from shapely.geometry import Point
+from tqdm.auto import tqdm
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, SQLiteStore
@@ -61,7 +62,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
 )
-from tiatoolbox.utils.misc import get_tqdm_full, tqdm_dask_progress_bar
+from tiatoolbox.utils.misc import tqdm_dask_progress_bar
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
@@ -773,10 +774,10 @@ class NucleusDetector(SemanticSegmentor):
         classes_list = []
         probs_list = []
 
-        tqdm_loop = get_tqdm_full(
+        tqdm_loop = tqdm(
             range(num_blocks_h),
             desc="Processing detection blocks",
-            verbose=verbose,
+            disable=not verbose,
         )
         for i in tqdm_loop:
             for j in range(num_blocks_w):
@@ -896,10 +897,10 @@ class NucleusDetector(SemanticSegmentor):
                 for xx, yy in zip(xs_batch, ys_batch, strict=True)
             ]
 
-        tqdm_loop = get_tqdm_full(
+        tqdm_loop = tqdm(
             range(0, n, batch_size),
             desc="Writing detections to store",
-            verbose=verbose,
+            disable=not verbose,
         )
         written = 0
         for i in tqdm_loop:
