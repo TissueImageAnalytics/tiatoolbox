@@ -3168,7 +3168,7 @@ def dict_to_store(
     """
     # Assumes annotationstore is computed for properties which can fit in memory.
     processed_predictions = {
-        key: np.asarray(arr) if isinstance(arr, zarr.Array) else arr
+        key: np.asarray(arr) if isinstance(arr, zarr.Array) and len(arr) > 0 else arr
         for key, arr in processed_predictions.items()
     }
     contours = processed_predictions.pop("contours")
