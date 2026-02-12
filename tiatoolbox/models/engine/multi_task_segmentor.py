@@ -409,7 +409,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
         coordinates = []
 
         # Expected number of outputs from the model
-        batch_output = self.model.infer_batch(
+        infer_batch = self._get_model_attr("infer_batch")
+        batch_output = infer_batch(
             self.model,
             torch.Tensor(dataloader.dataset[0]["image"][np.newaxis, ...]),
             device=self.device,
@@ -435,7 +436,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         )
 
         for batch_data in tqdm_loop:
-            batch_output = self.model.infer_batch(
+            batch_output = infer_batch(
                 self.model,
                 batch_data["image"],
                 device=self.device,
@@ -581,7 +582,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
         )
 
         # Expected number of outputs from the model
-        batch_output = self.model.infer_batch(
+        infer_batch = self._get_model_attr("infer_batch")
+        batch_output = infer_batch(
             self.model,
             torch.Tensor(dataloader.dataset[0]["image"][np.newaxis, ...]),
             device=self.device,
@@ -783,8 +785,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         """
         probabilities = raw_predictions["probabilities"]
+        postproc_func = self._get_model_attr("postproc_func")
         post_process_predictions = [
-            self.model.postproc_func(list(probs_for_idx))
+            postproc_func(list(probs_for_idx))
             for probs_for_idx in zip(*probabilities, strict=False)
         ]
 
@@ -992,7 +995,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
               removed from the output.
 
         """
-        post_process_predictions = self.model.postproc_func(probabilities)
+        postproc_func = self._get_model_attr("postproc_func")
+        post_process_predictions = postproc_func(probabilities)
         if return_predictions is None:
             return_predictions = [False for _ in post_process_predictions]
         for idx, return_predictions_ in enumerate(return_predictions):
@@ -1244,7 +1248,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
             ].compute()
             for p in self._probabilities
         ]
-        return self.model.postproc_func(head_raws)
+        postproc_func = self._get_model_attr("postproc_func")
+        return postproc_func(head_raws)
 
     @staticmethod
     def _get_tile_info(
