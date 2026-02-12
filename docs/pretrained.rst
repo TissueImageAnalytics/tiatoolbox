@@ -482,7 +482,7 @@ The input output configuration is as follows:
 
 .. collapse:: Model names
 
-    - KongNet_PanNuke_1
+    - KongNet_MONKEY_1
 
 PUMA Dataset
 --------------
