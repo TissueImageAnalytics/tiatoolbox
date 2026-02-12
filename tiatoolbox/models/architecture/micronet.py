@@ -17,13 +17,13 @@ from scipy import ndimage
 from skimage import morphology
 from torch import nn
 from torch.nn import functional
+from tqdm.auto import tqdm
 
 from tiatoolbox.models.architecture.hovernet import (
     HoVerNet,
     _inst_dict_for_dask_processing,
 )
 from tiatoolbox.models.models_abc import ModelABC
-from tiatoolbox.utils.misc import get_tqdm_full
 
 
 def group1_forward_branch(
@@ -601,11 +601,11 @@ class MicroNet(ModelABC):
         pred_inst = ndimage.label(pred_bin)[0]
         pred_inst = morphology.remove_small_objects(pred_inst, min_size=50)
         canvas = np.zeros(pred_inst.shape[:2], dtype=np.int32)
-        tqdm_loop = get_tqdm_full(
+        tqdm_loop = tqdm(
             range(1, np.max(pred_inst) + 1),
             leave=False,
             desc="Performing morphological operations to improve segmentation quality.",
-            verbose=verbose,
+            disable=not verbose,
         )
         for inst_id in tqdm_loop:
             # Get coordinates of this instance

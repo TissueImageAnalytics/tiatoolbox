@@ -133,7 +133,7 @@ class NucleusInstanceSegmentor(MultiTaskSegmentor):
         device: str = "cpu",
         verbose: bool = True,
     ) -> None:
-        """Initialize :class:`MultiTaskSegmentor`.
+        """Initialize :class:`NucleusInstanceSegmentor`.
 
         Args:
             model (str | ModelABC):

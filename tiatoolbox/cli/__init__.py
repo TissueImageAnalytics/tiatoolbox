@@ -41,21 +41,20 @@ def main() -> int:
     return 0
 
 
+main.add_command(deep_feature_extractor)
+main.add_command(multitask_segmentor)
+main.add_command(nucleus_detector)
 main.add_command(nucleus_instance_segment)
 main.add_command(patch_predictor)
 main.add_command(read_bounds)
 main.add_command(save_tiles)
 main.add_command(semantic_segmentor)
-main.add_command(multitask_segmentor)
-main.add_command(nucleus_detector)
-main.add_command(nucleus_instance_segment)
-main.add_command(deep_feature_extractor)
+main.add_command(show_wsi)
 main.add_command(slide_info)
 main.add_command(slide_thumbnail)
-main.add_command(tissue_mask)
 main.add_command(stain_norm)
+main.add_command(tissue_mask)
 main.add_command(visualize)
-main.add_command(show_wsi)
 
 
 if __name__ == "__main__":

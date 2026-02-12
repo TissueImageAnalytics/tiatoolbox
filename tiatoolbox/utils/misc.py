@@ -1224,11 +1224,11 @@ def patch_predictions_as_annotations(
 ) -> list:
     """Helper function to generate annotation per patch predictions."""
     annotations = []
-    tqdm_loop = get_tqdm_full(
+    tqdm_loop = tqdm(
         patch_coords,
         leave=False,
         desc="Converting outputs to AnnotationStore.",
-        verbose=verbose,
+        disable=not verbose,
     )
 
     for i, _ in enumerate(tqdm_loop):
@@ -1405,11 +1405,11 @@ def dict_to_store_semantic_segmentor(
 
     annotations_list: list[Annotation] = []
 
-    tqdm_loop = get_tqdm_full(
+    tqdm_loop = tqdm(
         layer_list,
         leave=False,
         desc="Converting outputs to AnnotationStore.",
-        verbose=verbose,
+        disable=not verbose,
     )
 
     for type_class in tqdm_loop:
@@ -1670,31 +1670,24 @@ def write_probability_heatmap_as_ome_tiff(
     logger.info(msg)
 
 
-def get_tqdm_full(
-    iterable_input: Iterable,
-    desc: str = "Processing input",
-    *,
-    leave: bool = False,
-    verbose: bool = True,
-) -> Iterable:
-    """Helper function to get appropriate tqdm progress bar.
+def update_tqdm_desc(
+    tqdm_loop: tqdm | Iterable,
+    desc: str,
+) -> None:
+    """Helper function to update tqdm progress bar description.
 
     Args:
-        iterable_input (Iterable):
-            Any iterable input.
+        tqdm_loop (tqdm):
+            tqdm progress bar.
         desc (str):
             tqdm progress bar description.
-        leave (bool):
-            Whether to leave progress bar after completion.
-        verbose (bool):
-            Whether to return progress bar or the input iterator.
 
     Returns:
-        Iterable:
-            Iterable of tqdm progress bar if self.verbose is True else input Iterable.
+        None
 
     """
-    return tqdm(iterable_input, leave=leave, desc=desc) if verbose else iterable_input
+    if hasattr(tqdm_loop, "desc"):
+        tqdm_loop.desc = desc
 
 
 def cast_to_min_dtype(array: np.ndarray | da.Array) -> np.ndarray | da.Array:
@@ -1735,9 +1728,9 @@ def create_smart_array(
     shape: tuple[int, ...],
     dtype: np.dtype | str,
     memory_threshold: float,
-    name: str | None,
+    name: str,
     zarr_path: str | Path,
-    chunks: tuple[int, ...] | None = None,
+    chunks: tuple[int, ...] | str = "auto",
 ) -> np.ndarray | zarr.Array:
     """Allocate a NumPy or Zarr array depending on available memory and a threshold.
 
@@ -1826,6 +1819,7 @@ def tqdm_dask_progress_bar(
             list of outputs from dask compute.
 
     """
+    num_workers = max(num_workers, 1)
     if verbose:
         with TqdmCallback(desc=desc, leave=leave):
             return compute(*write_tasks, scheduler=scheduler, num_workers=num_workers)
