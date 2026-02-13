@@ -1269,7 +1269,7 @@ def patch_predictions_as_qupath_json(
     }
 
     tqdm_loop = tqdm(
-        range(patch_coords.shape[0]),
+        range(np.asarray(patch_coords).shape[0]),
         leave=False,
         desc="Converting outputs to QuPath JSON.",
         disable=not verbose,
