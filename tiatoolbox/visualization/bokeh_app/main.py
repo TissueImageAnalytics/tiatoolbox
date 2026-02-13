@@ -68,7 +68,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from tiatoolbox import logger
 from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
 from tiatoolbox.models.engine.prompt_segmentor import (
-    PromptSegmentor,  # skipcq: FLK-E402
+    PromptSegmentor,
 )
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.utils.misc import select_device
@@ -1282,7 +1282,7 @@ def segment_on_box() -> None:
 def sam_segment() -> None:
     """Callback to run SAM using a point on the slide.
 
-    Will run GeneralSegmentor on selected region of wsi defined
+    Will run PromptSegmentor on selected region of wsi defined
     by the point in pt_source.
 
     """
@@ -1316,8 +1316,7 @@ def sam_segment() -> None:
     # Get box coordinates
     x = np.round(UI["box_source"].data["x"])
     y = np.round(UI["box_source"].data["y"])
-    height = np.round(UI["box_source"].data["height"])
-    width = np.round(UI["box_source"].data["width"])
+
     x = [
         round(UI["box_source"].data["x"][i] - 0.5 * UI["box_source"].data["width"][i])
         for i in range(len(x))
@@ -1327,7 +1326,7 @@ def sam_segment() -> None:
         for i in range(len(y))
     ]
     width = [round(UI["box_source"].data["width"][i]) for i in range(len(x))]
-    height = [round(UI["box_source"].data["height"][0]) for i in range(len(x))]
+    height = [round(UI["box_source"].data["height"][i]) for i in range(len(x))]
     box_coords = (
         (
             np.array(

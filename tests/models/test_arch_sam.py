@@ -28,8 +28,6 @@ def test_functional_sam(remote_sample: Callable) -> None:
     model = SAM(device=select_device(on_gpu=ON_GPU))
 
     # create image patch and prompts
-    patch = img[63:191, 750:878, :]
-
     points = np.array([[[64, 64]]])
     boxes = np.array([[[64, 64, 128, 128]]])
 

@@ -99,7 +99,7 @@ class SAM(ModelABC):
         point_coords: list | None = None,
         box_coords: list | None = None,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Torch method. Defines forward pass on each image in the batch.
+        """PyTorch method. Defines forward pass on each image in the batch.
 
         Note: This architecture only uses a single layer, so only one forward pass
         is needed.

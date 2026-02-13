@@ -2,8 +2,6 @@ ci:
   autofix_prs: true
   autoupdate_commit_msg: ':technologist: pre-commit autoupdate'
   autoupdate_schedule: 'monthly'
-default_language_version:
-  python: python3.12
 repos:
   - repo: local
     hooks:

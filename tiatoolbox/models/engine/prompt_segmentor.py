@@ -41,7 +41,7 @@ class PromptSegmentor:
             model = SAM()
         self.model = model
         self.scale = 1.0
-        self.offset = (0, 0)
+        self.offset = np.array([0, 0])
 
     def run(  # skipcq: PYL-W0221
         self,
@@ -69,6 +69,7 @@ class PromptSegmentor:
         Returns:
             list[Path]:
                 Paths to the saved output databases.
+
         """
         self.model.to(device)
         paths = []
@@ -80,12 +81,13 @@ class PromptSegmentor:
             device=device,
         )
         save_dir = Path(save_dir)
+        save_dir.mkdir(parents=True, exist_ok=True)
         for i, _mask in enumerate(masks):
             save_path = save_dir / f"{i}"
             mask = np.any(_mask[0], axis=0, keepdims=False)
             dict_to_store_semantic_segmentor(
                 patch_output={"predictions": mask[0]},
-                scale_factor=self.scale,
+                scale_factor=(self.scale, self.scale),
                 offset=self.offset,
                 save_path=Path(f"{save_path}.{i}.db"),
             )
@@ -94,7 +96,7 @@ class PromptSegmentor:
 
     def calc_mpp(
         self, area_dims: IntPair, base_mpp: float, fixed_size: int = 1500
-    ) -> float:
+    ) -> tuple[float, float]:
         """Calculates the microns per pixel for a fixed area of an image.
 
         Args:
@@ -106,8 +108,8 @@ class PromptSegmentor:
                 Fixed size of the area.
 
         Returns:
-            float:
-                Microns per pixel required to scale the area to a fixed size.
+            tuple[float, float]:
+                Tuple of the scaled mpp and the scale factor.
         """
         scale = max(area_dims) / fixed_size if max(area_dims) > fixed_size else 1.0
         self.scale = scale
