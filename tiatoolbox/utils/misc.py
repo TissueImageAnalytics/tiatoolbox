@@ -1216,7 +1216,7 @@ def patch_predictions_as_annotations(
     keys: list,
     class_dict: dict,
     class_probs: list | np.ndarray,
-    patch_coords: list,
+    patch_coords: list | np.ndarray,
     classes_predicted: list,
     labels: list,
     *,
@@ -1451,10 +1451,11 @@ def dict_to_store_patch_predictions(
     scale_factor: tuple[float, float],
     class_dict: dict | None = None,
     save_path: Path | None = None,
+    output_type: str = "AnnotationStore",
     *,
     verbose: bool = True,
-) -> AnnotationStore | Path:
-    """Converts output of TIAToolbox PatchPredictor engine to AnnotationStore.
+) -> AnnotationStore | dict | Path:
+    """Converts output of the PatchPredictor engine to AnnotationStore or QuPath json.
 
     Args:
         patch_output (dict | zarr.Group):
@@ -1470,6 +1471,9 @@ def dict_to_store_patch_predictions(
         save_path (str or Path):
             Optional Output directory to save the Annotation
             Store results.
+        output_type (str):
+            "annotationstore" → return AnnotationStore
+            "qupath" → return QuPath JSON dict
         verbose (bool):
             Whether to display logs and progress bar.
 
@@ -1488,13 +1492,15 @@ def dict_to_store_patch_predictions(
     # get relevant keys
     class_probs = get_zarr_array(patch_output.get("probabilities", []))
     preds = get_zarr_array(patch_output.get("predictions", []))
-
     patch_coords = np.array(patch_output.get("coordinates", []))
+
+    # Scale coordinates
     if not np.all(np.array(scale_factor) == 1):
         patch_coords = patch_coords * (np.tile(scale_factor, 2))  # to baseline mpp
 
     labels = patch_output.get("labels", [])
-    # get classes to consider
+
+    # Determine classes
     if len(class_probs) == 0:
         classes_predicted = np.unique(preds).tolist()
     else:
@@ -1507,12 +1513,41 @@ def dict_to_store_patch_predictions(
         else:
             class_dict = {i: i for i in range(len(class_probs[0]))}
 
-    # find what keys we need to save
+    # Keys to save
     keys = ["predictions"]
     keys = keys + [key for key in ["probabilities", "labels"] if key in patch_output]
 
+    if output_type.lower() == "qupath":
+        features = []
+
+        for i, (x, y, w, h) in enumerate(patch_coords):
+            class_idx = int(preds[i])
+            class_name = class_dict[class_idx]
+
+            polygon = [[x, y], [x + w, y], [x + w, y + h], [x, y + h], [x, y]]
+
+            feature = {
+                "type": "Feature",
+                "id": f"patch_{i}",
+                "geometry": {"type": "Polygon", "coordinates": [polygon]},
+                "properties": {"classification": {"name": class_name, "color": None}},
+            }
+
+            features.append(feature)
+
+        qupath_json = {"type": "FeatureCollection", "features": features}
+
+        if save_path:
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            save_path = save_path.with_suffix(".json")
+            with Path.open(save_path, "w") as f:
+                json.dump(qupath_json, f, indent=2)
+            return save_path
+
+        return qupath_json
+
     # put patch predictions into a store
-    annotations = patch_predictions_as_annotations(
+    annotations_ = patch_predictions_as_annotations(
         preds.astype(float),
         keys,
         class_dict,
@@ -1524,7 +1559,7 @@ def dict_to_store_patch_predictions(
     )
 
     store = SQLiteStore()
-    _ = store.append_many(annotations, [str(i) for i in range(len(annotations))])
+    _ = store.append_many(annotations_, [str(i) for i in range(len(annotations_))])
 
     # if a save director is provided, then dump store into a file
     if save_path:
@@ -1536,86 +1571,6 @@ def dict_to_store_patch_predictions(
         return save_path
 
     return store
-
-
-def patch_predictions_to_qupath_json(
-    patch_output: dict,
-    scale_factor: tuple[float, float],
-    class_dict: dict | None = None,
-    save_path: Path | None = None,
-) -> dict | Path:
-    """Convert TIAToolbox PatchPredictor output to QuPath-compatible GeoJSON.
-
-    Args:
-        patch_output (dict):
-            Must contain "coordinates", "predictions", and optionally "probabilities", "labels".
-        scale_factor (tuple):
-            Scale factor to convert coordinates to baseline resolution.
-        class_dict (dict):
-            Optional mapping from class index → class name.
-        save_path (Path):
-            Optional path to save the resulting JSON.
-
-    Returns:
-        dict or Path:
-            A QuPath FeatureCollection JSON structure.
-
-    """
-    if "coordinates" not in patch_output:
-        raise ValueError("Patch output must contain coordinates.")
-
-    coords = np.array(patch_output["coordinates"], dtype=float)
-    preds = np.array(patch_output["predictions"], dtype=int)
-
-    # Apply scale factor
-    if not np.all(np.array(scale_factor) == 1):
-        coords = coords * np.tile(scale_factor, 2)
-
-    # Determine class dictionary
-    if class_dict is None:
-        unique_classes = np.unique(preds).tolist()
-        class_dict = {i: f"class_{i}" for i in unique_classes}
-
-    # --- Build QuPath FeatureCollection ---
-    features = []
-
-    for i, (x, y, w, h) in enumerate(coords):
-        class_idx = int(preds[i])
-        class_name = class_dict[class_idx]
-
-        # Rectangle polygon for QuPath
-        polygon = [
-            [x, y],
-            [x + w, y],
-            [x + w, y + h],
-            [x, y + h],
-            [x, y],  # close polygon
-        ]
-
-        feature = {
-            "type": "Feature",
-            "id": f"patch_{i}",
-            "geometry": {"type": "Polygon", "coordinates": [polygon]},
-            "properties": {
-                "classification": {
-                    "name": class_name,
-                    "color": None,  # QuPath will auto-assign if None
-                }
-            },
-        }
-
-        features.append(feature)
-
-    qupath_json = {"type": "FeatureCollection", "features": features}
-
-    # Save if requested
-    if save_path:
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(save_path, "w") as f:
-            json.dump(qupath_json, f, indent=2)
-        return save_path
-
-    return qupath_json
 
 
 def _tiles(

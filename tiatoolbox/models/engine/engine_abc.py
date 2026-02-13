@@ -724,7 +724,7 @@ class EngineABC(ABC):  # noqa: B024
         if output_type.lower() == "dict":
             return processed_predictions
 
-        if output_type.lower() == "annotationstore":
+        if output_type.lower() in ["qupath", "annotationstore"]:
             save_path = Path(kwargs.get("output_file", save_path.parent / "output.db"))
 
             # scale_factor set from kwargs
@@ -737,24 +737,7 @@ class EngineABC(ABC):  # noqa: B024
                 scale_factor,
                 class_dict,
                 save_path,
-                verbose=self.verbose,
-            )
-
-        if output_type.lower() == "qupath":
-            save_path = Path(
-                kwargs.get("output_file", save_path.parent / "output.json")
-            )
-
-            # scale_factor set from kwargs
-            scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
-            # class_dict set from kwargs
-            class_dict = kwargs.get("class_dict", self.model.class_dict)
-
-            return dict_to_store_patch_predictions(
-                processed_predictions,
-                scale_factor,
-                class_dict,
-                save_path,
+                output_type=output_type,
                 verbose=self.verbose,
             )
 

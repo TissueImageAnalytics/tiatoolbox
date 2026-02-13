@@ -341,6 +341,28 @@ def _extract_probabilities_from_annotation_store(dbfile: str) -> dict:
     return output
 
 
+def _extract_from_qupath_json(json_file: str) -> dict:
+    """Extract predictions (and optionally coordinates) from QuPath GeoJSON."""
+    with Path.open(json_file, "r") as f:
+        data = json.load(f)
+
+    output = {"predictions": [], "coordinates": []}
+
+    for feature in data.get("features", []):
+        props = feature.get("properties", {})
+        cls = props.get("classification", {})
+
+        # prediction - class name
+        output["predictions"].append(cls.get("name"))
+
+        # geometry - polygon
+        geom = feature.get("geometry", {})
+        coords = geom.get("coordinates", [[]])[0]  # first ring of polygon
+        output["coordinates"].append(coords)
+
+    return output
+
+
 def _validate_probabilities(output: list | dict | zarr.group) -> bool:
     """Helper function to test if the probabilities value are valid."""
     probabilities = np.array([0.5])
@@ -580,8 +602,8 @@ def test_engine_run_wsi_qupath(
     output_ = output[mini_wsi_svs]
 
     assert output_.exists()
-    assert output_.suffix == ".db"
-    output_ = _extract_probabilities_from_annotation_store(output_)
+    assert output_.suffix == ".json"
+    output_ = _extract_from_qupath_json(output_)
 
     # prediction for each patch
     assert np.array(output_["predictions"]).shape == (69,)

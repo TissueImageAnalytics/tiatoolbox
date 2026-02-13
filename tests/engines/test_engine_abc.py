@@ -125,7 +125,7 @@ def test_incorrect_output_type() -> NoReturn:
 
     with pytest.raises(
         TypeError,
-        match=r".*output_type must be 'dict' or 'zarr' or 'annotationstore*",
+        match=r".*output_type must be 'dict' or 'zarr', 'qupath' or 'annotationstore*",
     ):
         _ = eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
