@@ -37,8 +37,7 @@ class PromptSegmentor:
         model: torch.nn.Module = None,
     ) -> None:
         """Initializes the PromptSegmentor."""
-        if model is None:
-            model = SAM()
+        model = SAM() if model is None else model
         self.model = model
         self.scale = 1.0
         self.offset = np.array([0, 0])
