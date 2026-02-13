@@ -1834,7 +1834,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         # This runs dask.compute and returns numpy arrays
         # for saving annotationstore output.
-        class_dict = kwargs.get("class_dict", self.model.class_dict)
+        class_dict = kwargs.get("class_dict", self._get_model_attr("class_dict"))
         if len(self.tasks) == 1 and class_dict is not None:
             kwargs["class_dict"] = class_dict[next(iter(self.tasks))]
         else:
