@@ -28,6 +28,7 @@ from bokeh.models import (
     ColorPicker,
     Column,
     ColumnDataSource,
+    CustomAction,
     CustomJS,
     CustomJSTickFormatter,
     DataTable,
@@ -1908,6 +1909,22 @@ def make_window(vstate: ViewerState) -> dict:  # noqa: PLR0915
     p.add_tools(BoxEditTool(renderers=[r], num_objects=1))
     p.add_tools(PointDrawTool(renderers=[c]))
     p.add_tools(TapTool())
+    clear_code = """
+            box_source.clear()
+            pt_source.clear()
+            """
+    p.add_tools(
+        CustomAction(
+            callback=CustomJS(
+                args={
+                    "box_source": box_source,
+                    "pt_source": pt_source,
+                },
+                code=clear_code,
+            ),
+            description="Clear",
+        ),
+    )
     if get_from_config(["opts", "hover_on"], 0) == 0:
         p.toolbar.active_inspect = None
 
