@@ -41,7 +41,7 @@ class NucleusInstanceSegmentor(MultiTaskSegmentor):
         weights (str | Path | None):
             Path to model weights. If None, default weights are used.
 
-            >>> engine = SemanticSegmentor(
+            >>> engine = NucleusInstanceSegmentor(
             ...    model="pretrained-model",
             ...    weights="/path/to/pretrained-local-weights.pth"
             ... )
