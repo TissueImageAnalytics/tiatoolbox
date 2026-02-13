@@ -58,10 +58,11 @@ def test_validate_warns_and_trims_when_n_colors_is_n_plus_one(
     """If color_dict has N+1 entries but the image has N channels.
 
     validate() should:
-    - drop the last color,
-    - set channels to [0..N-1] if None,
-    - set is_validated=True,
-    - emit a warning.
+        - drop the last color,
+        - set channels to [0..N-1] if None,
+        - set is_validated=True,
+        - emit a warning.
+
     """
     # Use N = 5 channels in the image so __call__ doesn't early-return,
     # and supply N+1 (=6) colors to trigger the trimming/warning path.
@@ -111,6 +112,7 @@ def test_generate_colors_then_validate_equals_n_path() -> None:
     """When colors are not provided, __call__ should generate N colors.
 
     This should also validate successfully (n_colors == n).
+
     """
     conv = MultichannelToRGB(color_dict=None)
     img = np.zeros((3, 4, 6), dtype=np.uint8)  # N=6 -> will auto-generate 6 colors
@@ -128,6 +130,7 @@ def test_custom_channels_order_is_respected() -> None:
 
     We craft a simple case where only one channel has intensity so we can
     verify which color maps through.
+
     """
     # 3 channels in the image
     img = np.zeros((1, 1, 3), dtype=np.uint8)

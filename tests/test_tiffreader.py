@@ -163,6 +163,7 @@ def test_try_tiff_raises_other_valueerror(
 
         This helper is patched in tests to ensure that `WSIReader.try_tiff`
         surfaces non-unsupported ValueErrors as expected.
+
         """
         _ = args
         _ = kwargs

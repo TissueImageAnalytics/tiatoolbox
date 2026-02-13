@@ -2977,11 +2977,10 @@ def test_post_proc_logic_across_readers(wsi: WSIReader) -> None:
     called: dict[str, bool] = {"flag": False}
     mock_post_proc = _make_mock_post_proc(called)
 
-    skip_check = isinstance(wsi, AnnotationStoreReader)  # and wsi.base_wsi is None
+    skip_check = isinstance(wsi, AnnotationStoreReader)
 
-    if skip_check is False:
-        # Recursively inject post_proc into the actual reader
-        _inject_post_proc_recursive(wsi, mock_post_proc)
+    # Recursively inject post_proc into the actual reader
+    _inject_post_proc_recursive(wsi, mock_post_proc)
 
     patch_utils = _should_patch_background_composite(wsi)
 
@@ -2999,7 +2998,7 @@ def test_post_proc_logic_across_readers(wsi: WSIReader) -> None:
     if skip_check:
         assert isinstance(rect, np.ndarray)
         assert isinstance(region, np.ndarray)
-        assert not called["flag"]
+        assert called["flag"]
         return
 
     if isinstance(wsi, NGFFWSIReader):
@@ -3094,7 +3093,7 @@ def test_post_proc_applied() -> None:
     assert (result[0, 0] == [255, 0, 0]).all()
 
 
-def test_explicit_none_postproc() -> None:
+def test_explicit_none_postproc(sample_svs: Path) -> None:
     """Test explicit None postproc."""
     reader = wsireader.VirtualWSIReader(
         np.ones((100, 100, 3), dtype=np.uint8), post_proc=None
@@ -3102,11 +3101,14 @@ def test_explicit_none_postproc() -> None:
     region = reader.read_bounds((0, 0, 50, 50))
     assert np.all(region == 1)
 
-    reader = wsireader.TIFFWSIReader(
-        np.ones((100, 100, 3), dtype=np.uint8), post_proc=None
-    )
+    reader = wsireader.TIFFWSIReader(sample_svs, post_proc=None)
     region = reader.read_bounds((0, 0, 50, 50))
-    assert np.all(region == 1)
+    assert isinstance(region, np.ndarray)
+    assert region.shape == (50, 50, 3)
+
+    region = reader.read_rect((0, 0), (50, 50), coord_space="resolution")
+    assert isinstance(region, np.ndarray)
+    assert region.shape == (50, 50, 3)
 
 
 def test_fsspec_json_wsi_reader_instantiation() -> None:
