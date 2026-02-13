@@ -49,7 +49,7 @@ TIAToolbox is a computational pathology toolbox developed by the TIA Centre. It 
 
 ### All Users
 
-This package is designed for those interested in digital pathology, including graduate students, medical staff, members of the TIA Centre and PathLAKE, and anyone who may find it useful. We will continue to improve this package, taking into account developments in pathology, microscopy, computing, and related disciplines. Please send comments and feedback to **[tia@dcs.warwick.ac.uk](mailto:tialab@dcs.warwick.ac.uk)**.
+This package is designed for those interested in digital pathology, including graduate students, medical staff, members of the TIA Centre and PathLAKE, and anyone who may find it useful. We will continue to improve this package, taking into account developments in pathology, microscopy, computing, and related disciplines. Please send comments and feedback to **[TIA@warwick.ac.uk](mailto:TIA@warwick.ac.uk)**.
 
 ### Developers
 
