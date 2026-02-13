@@ -14,6 +14,7 @@ from typing import IO, TYPE_CHECKING, cast
 import cv2
 import dask.array as da
 import joblib
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import psutil
@@ -24,7 +25,7 @@ import zarr
 from dask import compute
 from filelock import FileLock
 from shapely.affinity import translate
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, mapping
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
 from tqdm import trange
@@ -1519,18 +1520,37 @@ def dict_to_store_patch_predictions(
 
     if output_type.lower() == "qupath":
         features = []
+        # pick a color for each class based on the class index, using a colormap
+        num_classes = len(class_dict)
+        cmap = plt.cm.get_cmap("tab20", num_classes)
+        class_colours = {
+            class_idx: [
+                int(cmap(class_idx)[0] * 255),
+                int(cmap(class_idx)[1] * 255),
+                int(cmap(class_idx)[2] * 255),
+            ]
+            for class_idx in class_dict
+        }
 
-        for i, (x, y, w, h) in enumerate(patch_coords):
+        for i in range(patch_coords.shape[0]):
             class_idx = int(preds[i])
             class_name = class_dict[class_idx]
-
-            polygon = [[x, y], [x + w, y], [x + w, y + h], [x, y + h], [x, y]]
+            polygon_geo = Polygon.from_bounds(*patch_coords[i])
+            polygon_feat = mapping(polygon_geo)
 
             feature = {
                 "type": "Feature",
                 "id": f"patch_{i}",
-                "geometry": {"type": "Polygon", "coordinates": [polygon]},
-                "properties": {"classification": {"name": class_name, "color": None}},
+                "geometry": polygon_feat,
+                "properties": {
+                    "classification": {
+                        "name": class_name,
+                        "color": class_colours[class_idx],
+                    }
+                },
+                "objectType": "annotation",
+                "name": class_name,
+                "class_value": class_idx,
             }
 
             features.append(feature)
