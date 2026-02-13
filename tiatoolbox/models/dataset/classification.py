@@ -295,6 +295,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
 
         Returns:
             tuple[np.ndarray, np.ndarray]: Validated patch and stride shapes.
+
         """
         if not Path(img_path).is_file():
             msg = "`img_path` must be a valid file path."
@@ -341,6 +342,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
 
         Returns:
             VirtualWSIReader | None: A reader for the mask or None if not applicable.
+
         """
         mask_reader = None
         if mask_path is not None:
@@ -382,6 +384,7 @@ class WSIPatchDataset(dataset_abc.PatchDatasetABC):
 
         Raises:
             ValueError: If no patches remain after filtering.
+
         """
         selected = PatchExtractor.filter_coordinates(
             mask_reader,  # must be at the same resolution

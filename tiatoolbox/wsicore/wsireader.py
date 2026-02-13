@@ -413,6 +413,7 @@ class WSIReader:
 
         Raises:
             TypeError: If the input is not one of the accepted types.
+
         """
         if not isinstance(input_img, (WSIReader, np.ndarray, str, Path)):
             msg = "Invalid input: Must be a WSIReader, numpy array, string or Path"
@@ -586,6 +587,7 @@ class WSIReader:
 
         Try to create a TIFFWSIReader for standard TIFF formats,
         or fallback to virtual WSI.
+
         """
         if last_suffix in (".tif", ".tiff"):
             try:
@@ -3788,6 +3790,7 @@ class TIFFWSIReader(WSIReader):
         Returns:
             dict[str, tuple[float, float, float]] | None: A mapping of channel
             names to RGB tuples, or None if not found.
+
         """
         color_info = root.find(".//ScanColorTable")
         if color_info is None:
@@ -3825,6 +3828,7 @@ class TIFFWSIReader(WSIReader):
         Returns:
             dict[str, tuple[float, float, float]] | None: A mapping of channel
             names to RGB tuples, or None if not found.
+
         """
         # try alternate metadata format
         # Build a map from filter pair string -> color label or RGB string
@@ -3899,6 +3903,7 @@ class TIFFWSIReader(WSIReader):
 
         Returns:
             dict: Dictionary containing the namespace prefix and URI.
+
         """
         if root.tag.startswith("{"):
             ns_uri = root.tag.split("}")[0].strip("{")
@@ -3916,6 +3921,7 @@ class TIFFWSIReader(WSIReader):
 
         Returns:
             dict: Mapping of channel IDs to dye names.
+
         """
         dye_mapping = {}
         for annotation in root.findall(
@@ -3939,6 +3945,7 @@ class TIFFWSIReader(WSIReader):
 
         Returns:
             tuple[float, float, float]: RGB values normalized to [0, 1].
+
         """
         if color_int < 0:
             color_int += 1 << 32
@@ -3963,6 +3970,7 @@ class TIFFWSIReader(WSIReader):
 
         Returns:
             list[dict]: List of dictionaries containing channel metadata.
+
         """
         channel_data = []
         for pixels in root.findall(".//ns:Pixels", ns):
@@ -4002,6 +4010,7 @@ class TIFFWSIReader(WSIReader):
         Returns:
             dict[str, tuple[float, float, float]]: Dictionary mapping channel labels to
             RGB values.
+
         """
         color_dict = {}
         key_counts = defaultdict(int)
@@ -4030,6 +4039,7 @@ class TIFFWSIReader(WSIReader):
         Returns:
             dict[str, tuple[float, float, float]] | None: A mapping
             of channel names to RGB tuples, or None if not found.
+
         """
         # 3) Try OME/Lunaphore format e.g. for COMET
         ns = TIFFWSIReader._get_namespace(root)

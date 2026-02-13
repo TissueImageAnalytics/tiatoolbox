@@ -18,13 +18,14 @@ def test_multichannel_basic_read() -> None:
     """VirtualWSIReader: >4-channel input is reduced to RGB when using auto post-proc.
 
     Also verify that disabling post-proc preserves original channel count.
+
     """
     # Create a small synthetic 6-channel image
     rng = np.random.default_rng()
     img = rng.integers(0, 255, size=(64, 64, 6), dtype=np.uint8)
     meta = wsireader.WSIMeta(slide_dimensions=img.shape[:2][::-1], axes="YXS")
 
-    # By default the VirtualWSIReader will detect "feature" mode for
+    # By default, the VirtualWSIReader will detect "feature" mode for
     # non-RGB(A) shapes and will not apply the auto post-processing.
     v_wsi = wsireader.VirtualWSIReader(img, info=meta)
     out = v_wsi.read_rect((0, 0), (16, 16))
@@ -47,6 +48,7 @@ def test_ngff_multichannel_read(remote_sample: callable) -> None:
     This test is permissive: it asserts the reader returns an ndarray and,
     if the native dataset has many channels, that applying
     `MultichannelToRGB` produces a 3-channel output.
+
     """
     ngff_path = remote_sample("ngff-1")
     wsi = wsireader.NGFFWSIReader(ngff_path)
