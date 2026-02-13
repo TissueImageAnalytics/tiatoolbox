@@ -1081,6 +1081,7 @@ class EngineABC(ABC):  # noqa: B024
                 ioconfig.stride_shape = stride_shape
             if input_resolutions is not None:
                 ioconfig.input_resolutions = input_resolutions
+                ioconfig.__post_init__()
 
             return ioconfig
 

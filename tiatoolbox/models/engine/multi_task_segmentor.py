@@ -894,7 +894,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         """
         probabilities = raw_predictions["probabilities"]
 
-        tile_h, tile_w = self.ioconfig.tile_shape
+        tile_h, tile_w = self._ioconfig.tile_shape
 
         trigger_tile_proc = any(
             p.shape[0] > tile_h or p.shape[1] > tile_w for p in probabilities
@@ -1082,7 +1082,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
               modified in this method; it only derives task-centric outputs.
 
         """
-        highest_input_resolution = self.ioconfig.highest_input_resolution
+        highest_input_resolution = self._ioconfig.highest_input_resolution
         wsi_reader = self.dataloader.dataset.reader
 
         # assume ioconfig has already been converted to `baseline` for `tile` mode
@@ -1090,8 +1090,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         # * retrieve tile placement and tile info flag
         # tile shape will always be corrected to be multiple of output
-        tile_info_sets = self._get_tile_info(wsi_proc_shape, self.ioconfig)
-        ioconfig = self.ioconfig.to_baseline()
+        tile_info_sets = self._get_tile_info(wsi_proc_shape, self._ioconfig)
+        ioconfig = self._ioconfig.to_baseline()
 
         tile_metadata = _build_tile_tasks(
             tile_info_sets=tile_info_sets,
@@ -1104,7 +1104,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         # Calculate batch size for dask compute
         vm = psutil.virtual_memory()
         bytes_per_element = np.dtype(probabilities[0].dtype).itemsize
-        tile_elements = np.prod(self.ioconfig.tile_shape)
+        tile_elements = np.prod(self._ioconfig.tile_shape)
         prod_dim2 = math.prod(p.shape[2] for p in probabilities if len(p.shape) > 2)  # noqa: PLR2004
         tile_memory = len(probabilities) * tile_elements * prod_dim2 * bytes_per_element
         # available memory
