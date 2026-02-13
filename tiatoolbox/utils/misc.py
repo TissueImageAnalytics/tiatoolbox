@@ -28,8 +28,7 @@ from shapely.affinity import translate
 from shapely.geometry import Polygon, mapping
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
-from tqdm import trange
-from tqdm.auto import tqdm
+from tqdm.auto import tqdm, trange
 from tqdm.dask import TqdmCallback
 
 from tiatoolbox import logger
@@ -1248,6 +1247,60 @@ def patch_predictions_as_annotations(
     return annotations
 
 
+def patch_predictions_as_qupath_json(
+    preds: list | np.ndarray,
+    class_dict: dict,
+    patch_coords: list | np.ndarray,
+    *,
+    verbose: bool = True,
+) -> dict:
+    """Helper function to generate QuPath JSON per patch predictions."""
+    features = []
+    # pick a color for each class based on the class index, using a colormap
+    num_classes = len(class_dict)
+    cmap = plt.cm.get_cmap("tab20", num_classes)
+    class_colours = {
+        class_idx: [
+            int(cmap(class_idx)[0] * 255),
+            int(cmap(class_idx)[1] * 255),
+            int(cmap(class_idx)[2] * 255),
+        ]
+        for class_idx in class_dict
+    }
+
+    tqdm_loop = tqdm(
+        range(patch_coords.shape[0]),
+        leave=False,
+        desc="Converting outputs to QuPath JSON.",
+        disable=not verbose,
+    )
+
+    for i in tqdm_loop:
+        class_idx = int(preds[i])
+        class_name = class_dict[class_idx]
+        polygon_geo = Polygon.from_bounds(*patch_coords[i])
+        polygon_feat = mapping(polygon_geo)
+
+        feature = {
+            "type": "Feature",
+            "id": f"patch_{i}",
+            "geometry": polygon_feat,
+            "properties": {
+                "classification": {
+                    "name": class_name,
+                    "color": class_colours[class_idx],
+                }
+            },
+            "objectType": "annotation",
+            "name": class_name,
+            "class_value": class_idx,
+        }
+
+        features.append(feature)
+
+    return {"type": "FeatureCollection", "features": features}
+
+
 def get_zarr_array(zarr_array: zarr.core.Array | np.ndarray | list) -> np.ndarray:
     """Converts a zarr array into a numpy array."""
     if isinstance(zarr_array, zarr.core.Array):
@@ -1519,43 +1572,12 @@ def dict_to_store_patch_predictions(
     keys = keys + [key for key in ["probabilities", "labels"] if key in patch_output]
 
     if output_type.lower() == "qupath":
-        features = []
-        # pick a color for each class based on the class index, using a colormap
-        num_classes = len(class_dict)
-        cmap = plt.cm.get_cmap("tab20", num_classes)
-        class_colours = {
-            class_idx: [
-                int(cmap(class_idx)[0] * 255),
-                int(cmap(class_idx)[1] * 255),
-                int(cmap(class_idx)[2] * 255),
-            ]
-            for class_idx in class_dict
-        }
-
-        for i in range(patch_coords.shape[0]):
-            class_idx = int(preds[i])
-            class_name = class_dict[class_idx]
-            polygon_geo = Polygon.from_bounds(*patch_coords[i])
-            polygon_feat = mapping(polygon_geo)
-
-            feature = {
-                "type": "Feature",
-                "id": f"patch_{i}",
-                "geometry": polygon_feat,
-                "properties": {
-                    "classification": {
-                        "name": class_name,
-                        "color": class_colours[class_idx],
-                    }
-                },
-                "objectType": "annotation",
-                "name": class_name,
-                "class_value": class_idx,
-            }
-
-            features.append(feature)
-
-        qupath_json = {"type": "FeatureCollection", "features": features}
+        qupath_json = patch_predictions_as_qupath_json(
+            preds=preds,
+            class_dict=class_dict,
+            patch_coords=patch_coords,
+            verbose=True,
+        )
 
         if save_path:
             save_path.parent.mkdir(parents=True, exist_ok=True)
