@@ -544,6 +544,54 @@ def test_engine_run_wsi_annotation_store(
     shutil.rmtree(save_dir)
 
 
+def test_engine_run_wsi_qupath(
+    sample_wsi_dict: dict,
+    track_tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test the engine run for Whole slide images."""
+    # convert to pathlib Path to prevent wsireader complaint
+    mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
+
+    eng = PatchPredictor(model="alexnet-kather100k")
+
+    patch_size = np.array([224, 224])
+    save_dir = f"{track_tmp_path}/model_wsi_output"
+
+    kwargs = {
+        "patch_input_shape": patch_size,
+        "stride_shape": patch_size,
+        "resolution": 0.5,
+        "save_dir": save_dir,
+        "units": "mpp",
+        "scale_factor": (2.0, 2.0),
+    }
+
+    output = eng.run(
+        images=[mini_wsi_svs],
+        masks=[mini_wsi_msk],
+        patch_mode=False,
+        output_type="QuPath",
+        batch_size=4,
+        **kwargs,
+    )
+
+    output_ = output[mini_wsi_svs]
+
+    assert output_.exists()
+    assert output_.suffix == ".db"
+    output_ = _extract_probabilities_from_annotation_store(output_)
+
+    # prediction for each patch
+    assert np.array(output_["predictions"]).shape == (69,)
+    assert _validate_probabilities(output_)
+
+    assert "Output file saved at " in caplog.text
+
+    shutil.rmtree(save_dir)
+
+
 # --------------------------------------------------------------------------------------
 # torch.compile
 # --------------------------------------------------------------------------------------

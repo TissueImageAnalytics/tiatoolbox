@@ -1538,6 +1538,86 @@ def dict_to_store_patch_predictions(
     return store
 
 
+def patch_predictions_to_qupath_json(
+    patch_output: dict,
+    scale_factor: tuple[float, float],
+    class_dict: dict | None = None,
+    save_path: Path | None = None,
+) -> dict | Path:
+    """Convert TIAToolbox PatchPredictor output to QuPath-compatible GeoJSON.
+
+    Args:
+        patch_output (dict):
+            Must contain "coordinates", "predictions", and optionally "probabilities", "labels".
+        scale_factor (tuple):
+            Scale factor to convert coordinates to baseline resolution.
+        class_dict (dict):
+            Optional mapping from class index → class name.
+        save_path (Path):
+            Optional path to save the resulting JSON.
+
+    Returns:
+        dict or Path:
+            A QuPath FeatureCollection JSON structure.
+
+    """
+    if "coordinates" not in patch_output:
+        raise ValueError("Patch output must contain coordinates.")
+
+    coords = np.array(patch_output["coordinates"], dtype=float)
+    preds = np.array(patch_output["predictions"], dtype=int)
+
+    # Apply scale factor
+    if not np.all(np.array(scale_factor) == 1):
+        coords = coords * np.tile(scale_factor, 2)
+
+    # Determine class dictionary
+    if class_dict is None:
+        unique_classes = np.unique(preds).tolist()
+        class_dict = {i: f"class_{i}" for i in unique_classes}
+
+    # --- Build QuPath FeatureCollection ---
+    features = []
+
+    for i, (x, y, w, h) in enumerate(coords):
+        class_idx = int(preds[i])
+        class_name = class_dict[class_idx]
+
+        # Rectangle polygon for QuPath
+        polygon = [
+            [x, y],
+            [x + w, y],
+            [x + w, y + h],
+            [x, y + h],
+            [x, y],  # close polygon
+        ]
+
+        feature = {
+            "type": "Feature",
+            "id": f"patch_{i}",
+            "geometry": {"type": "Polygon", "coordinates": [polygon]},
+            "properties": {
+                "classification": {
+                    "name": class_name,
+                    "color": None,  # QuPath will auto-assign if None
+                }
+            },
+        }
+
+        features.append(feature)
+
+    qupath_json = {"type": "FeatureCollection", "features": features}
+
+    # Save if requested
+    if save_path:
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(save_path, "w") as f:
+            json.dump(qupath_json, f, indent=2)
+        return save_path
+
+    return qupath_json
+
+
 def _tiles(
     in_img: np.ndarray | zarr.core.Array,
     tile_size: tuple[int, int],

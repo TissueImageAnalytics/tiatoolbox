@@ -740,6 +740,24 @@ class EngineABC(ABC):  # noqa: B024
                 verbose=self.verbose,
             )
 
+        if output_type.lower() == "qupath":
+            save_path = Path(
+                kwargs.get("output_file", save_path.parent / "output.json")
+            )
+
+            # scale_factor set from kwargs
+            scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
+            # class_dict set from kwargs
+            class_dict = kwargs.get("class_dict", self.model.class_dict)
+
+            return dict_to_store_patch_predictions(
+                processed_predictions,
+                scale_factor,
+                class_dict,
+                save_path,
+                verbose=self.verbose,
+            )
+
         msg = f"Unsupported output type: {output_type}"
         raise TypeError(msg)
 
@@ -1292,8 +1310,8 @@ class EngineABC(ABC):  # noqa: B024
         self.patch_mode = patch_mode
 
         self._validate_input_numbers(images=images, masks=masks, labels=self.labels)
-        if output_type.lower() not in ["dict", "zarr", "annotationstore"]:
-            msg = "output_type must be 'dict' or 'zarr' or 'annotationstore'."
+        if output_type.lower() not in ["dict", "zarr", "qupath", "annotationstore"]:
+            msg = "output_type must be 'dict' or 'zarr', 'qupath' or 'annotationstore'."
             raise TypeError(msg)
 
         self.output_type = output_type
@@ -1301,6 +1319,7 @@ class EngineABC(ABC):  # noqa: B024
         if save_dir is not None and output_type.lower() not in [
             "zarr",
             "annotationstore",
+            "qupath",
         ]:
             self.output_type = "zarr"
             msg = (
@@ -1310,7 +1329,11 @@ class EngineABC(ABC):  # noqa: B024
             )
             logger.info(msg)
 
-        if save_dir is None and output_type.lower() in ["zarr", "annotationstore"]:
+        if save_dir is None and output_type.lower() in [
+            "zarr",
+            "qupath",
+            "annotationstore",
+        ]:
             msg = f"Please provide save_dir for output_type={output_type}"
             raise ValueError(msg)
 
@@ -1414,7 +1437,7 @@ class EngineABC(ABC):  # noqa: B024
         )
         raw_predictions = self.infer_patches(
             dataloader=self.dataloader,
-            return_coordinates=output_type == "annotationstore",
+            return_coordinates=output_type in ["annotationstore", "qupath"],
         )
 
         processed_predictions = self.post_process_patches(
@@ -1660,7 +1683,7 @@ class EngineABC(ABC):  # noqa: B024
             overwrite (bool):
                 Whether to overwrite existing output files. Default is False.
             output_type (str):
-                Desired output format: "dict", "zarr", or "annotationstore".
+                Desired output format: "dict", "zarr", "QuPath", or "annotationstore".
             **kwargs (EngineABCRunParams):
                 Additional runtime parameters to update engine attributes.
 
