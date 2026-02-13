@@ -110,6 +110,11 @@ Zoomed Out Plotting
 
 By default, the interface is set up to show only larger annotations while zoomed out. Smaller annotations which would be too small to see clearly while zoomed out will not be displayed. The 'max-scale' value can be changed to control the zoom level at which this happens. A larger value will mean smaller annotations remain visible at more zoomed out scale. If you want all annotations to be displayed always regardless of zoom, just type in a large value (1000+) to set it to its max. In the case of very many annotations, this may result in some loading lag when zoomed out.
 
+Multichannel Images
+^^^^^^^^^^^^^^^^^^^
+
+When viewing multi-channel (i.e non-RGB) images such as immunofluorescence, a UI element will be available under the 'other options' panel to allow the selection of individual channels in any combination to be displayed. The interface will atempt to get channel color information from the slide metadata, but these can be overriden in this UI too if needed with the color select widget.
+
 Other Options
 ^^^^^^^^^^^^^
 

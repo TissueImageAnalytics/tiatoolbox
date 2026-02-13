@@ -378,6 +378,21 @@ class WSIReader:
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> wsi = WSIReader.open(input_img="./sample.svs")
 
+        When working with multi-channel images such as immunofluorescence,
+        the default behaviour when post_proc is set to "auto" is to convert
+        the output to RGB when reading from the slide. If you need the raw
+        channel outputs, set post_proc to None:
+
+            >>> wsi = WSIReader.open(input_img="./sample.ome.tiff", post_proc="auto")
+            >>> region = wsi.read_rect((0, 0), (100, 100))
+            >>> print(region.shape)
+            (100, 100, 3)  # RGB output
+
+            >>> wsi = WSIReader.open(input_img="./sample.ome.tiff", post_proc=None)
+            >>> region = wsi.read_rect((0, 0), (100, 100))
+            >>> print(region.shape)
+            (100, 100, 5)  # raw channel outputs
+
         """
         WSIReader._validate_input(input_img)
 
