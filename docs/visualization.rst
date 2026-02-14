@@ -113,7 +113,7 @@ By default, the interface is set up to show only larger annotations while zoomed
 Multichannel Images
 ^^^^^^^^^^^^^^^^^^^
 
-When viewing multi-channel (i.e non-RGB) images such as immunofluorescence, a UI element will be available under the 'other options' panel to allow the selection of individual channels in any combination to be displayed. The interface will atempt to get channel color information from the slide metadata, but these can be overriden in this UI too if needed with the color select widget.
+When viewing multi-channel (i.e non-RGB) images such as immunofluorescence, a UI element will be available under the 'other options' panel to allow the selection of individual channels in any combination to be displayed. The interface will attempt to get channel color information from the slide metadata, but these can be overriden in this UI too if needed with the color select widget.
 
 Other Options
 ^^^^^^^^^^^^^
