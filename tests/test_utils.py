@@ -1886,6 +1886,7 @@ def test_dict_to_store_semantic_segment() -> None:
         scale_factor=(1.0, 1.0),
         class_dict=None,
         save_path=None,
+        output_type="annotationstore",
     )
     assert len(store_) == 1
     for annotation in store_.values():
@@ -1899,6 +1900,7 @@ def test_dict_to_store_semantic_segment() -> None:
         scale_factor=(1.0, 1.0),
         class_dict=None,
         save_path=None,
+        output_type="annotationstore",
     )
     assert len(store_) == 2
 
@@ -1918,6 +1920,7 @@ def test_dict_to_store_semantic_segment() -> None:
         scale_factor=(1.0, 1.0),
         class_dict=None,
         save_path=None,
+        output_type="annotationstore",
     )
     assert len(store_) == 3
 
@@ -1938,6 +1941,7 @@ def test_dict_to_store_semantic_segment() -> None:
         scale_factor=(1.0, 1.0),
         class_dict=None,
         save_path=None,
+        output_type="annotationstore",
     )
     assert len(store_) == 4
     annotations_ = store_.values()
@@ -1974,6 +1978,7 @@ def test_dict_to_store_semantic_segment_holes(track_tmp_path: Path) -> None:
         scale_factor=(1.0, 1.0),
         class_dict={0: "background", 1: "object"},
         save_path=save_dir_path,
+        output_type="annotationstore",
     )
 
     assert save_dir_path.exists()
@@ -1983,6 +1988,7 @@ def test_dict_to_store_semantic_segment_holes(track_tmp_path: Path) -> None:
         scale_factor=(1.0, 1.0),
         class_dict={0: "background", 1: "object"},
         save_path=None,
+        output_type="annotationstore",
     )
 
     # outer contour and inner contour/hole are now within the same geometry
@@ -2033,6 +2039,7 @@ def test_dict_to_store_semantic_segment_multiple_holes() -> None:
         scale_factor=(1.0, 1.0),
         class_dict={0: "background", 1: "object"},
         save_path=None,
+        output_type="annotationstore",
     )
 
     # outer contour and inner contour/hole are now within the same geometry
@@ -2081,6 +2088,7 @@ def test_dict_to_store_semantic_segment_no_holes() -> None:
         scale_factor=(1.0, 1.0),
         class_dict={0: "background", 1: "object"},
         save_path=None,
+        output_type="annotationstore",
     )
 
     # outer contour and inner contour/hole are now within the same geometry

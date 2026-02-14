@@ -1483,13 +1483,13 @@ def _semantic_segmentations_as_qupath_json(
     layer_list: list,
     preds: da.Array,
     scale_factor: tuple[float, float],
-    class_dict: dict | None = None,
+    class_dict: dict,
     save_path: Path | None = None,
     *,
     verbose: bool = True,
 ) -> dict | Path:
     """Helper function to save semantic segmentation as QuPath json."""
-    features = []
+    features: list = []
 
     # color map for classes
     num_classes = len(class_dict)
@@ -1527,7 +1527,7 @@ def _semantic_segmentations_as_qupath_json(
                 continue
 
             # scale coordinates
-            cnt_scaled = cnt.squeeze(1).astype(float)
+            cnt_scaled: np.ndarray = cnt.squeeze(1).astype(float)
             cnt_scaled[:, 0] *= scale_factor[0]
             cnt_scaled[:, 1] *= scale_factor[1]
 
@@ -1568,7 +1568,7 @@ def _semantic_segmentations_as_annotations(
     layer_list: list,
     preds: da.Array,
     scale_factor: tuple[float, float],
-    class_dict: dict | None = None,
+    class_dict: dict,
     save_path: Path | None = None,
     *,
     verbose: bool = True,

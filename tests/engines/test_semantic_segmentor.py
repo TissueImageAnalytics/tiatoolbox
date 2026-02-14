@@ -307,7 +307,7 @@ def test_save_annotation_store_nparray(
     zarr_group = zarr.open(str(track_tmp_path / "output1" / "output.zarr"), mode="r")
     assert "probabilities" in zarr_group
 
-    assert "Probability maps cannot be saved as AnnotationStore." in caplog.text
+    assert "Probability maps cannot be saved as AnnotationStore" in caplog.text
 
     _test_store_output_patch(output[0])
     _test_store_output_patch(output[1])
@@ -617,7 +617,7 @@ def test_wsi_segmentor_annotationstore(
 
     zarr_group = zarr.open(output[sample_svs].with_suffix(".zarr"), mode="r")
     assert "probabilities" in zarr_group
-    assert "Probability maps cannot be saved as AnnotationStore" in caplog.text
+    assert "Probability maps cannot be saved as AnnotationStore or JSON." in caplog.text
 
 
 def test_wsi_segmentor_qupath_json(sample_svs: Path, track_tmp_path: Path) -> None:
