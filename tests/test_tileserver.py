@@ -918,3 +918,28 @@ def test_sessions_one_slide_loaded(
 
         assert isinstance(sessions, dict)
         assert len(sessions) == 1
+
+
+def test_channels_set_nopostproc(app: TileServer) -> None:
+    """Test setting channels when no postproc is present."""
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/channels",
+            data={
+                "channels": json.dumps({"c0": [1.0, 0.0, 0.0]}),
+                "active": json.dumps(["c0"]),
+            },
+        )
+        assert response.status_code == 200
+        assert response.data.decode() == "done"
+
+
+def test_enhance_set_nopostproc(app: TileServer) -> None:
+    """Test setting enhance when no postproc is present."""
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/enhance",
+            data={"val": json.dumps(1.7)},
+        )
+        assert response.status_code == 200
+        assert response.data.decode() == "done"

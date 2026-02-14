@@ -472,6 +472,22 @@ def test_wsi_patch_dataset(  # noqa: PLR0915
     assert ds_roi.shape[1] == rd_roi.shape[1]
     assert np.min(correlation) > 0.9, correlation
 
+    # check automask works if only mpp in metadata
+    reader = WSIReader.open(mini_wsi_svs)
+    meta = reader.info
+    meta.objective_power = None
+    reader._m_info = meta
+    ds = WSIPatchDataset(
+        input_img=mini_wsi_svs,
+        patch_input_shape=patch_size,
+        stride_shape=stride_size,
+        auto_get_mask=True,
+        resolution=0.5,
+        units="mpp",
+    )
+    mask_reader = ds._setup_mask_reader(None, reader, auto_get_mask=True)
+    assert mask_reader is not None
+
     # test creation with auto mask gen and input mask
     ds = WSIPatchDataset(
         input_img=mini_wsi_svs,

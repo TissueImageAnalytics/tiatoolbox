@@ -277,6 +277,14 @@ files:
     hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
     subfolder: "testdata/models/predictions/nuclei_mask"
     filename: "nuclick-output.npy"
+  qptiff_sample:
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "multiplex_example.qptiff"
+  qptiff_sample_small:
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "multiplex_example_small.qptiff"
   reg_disp_mha_example:
     hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
     subfolder: "testdata/registration"

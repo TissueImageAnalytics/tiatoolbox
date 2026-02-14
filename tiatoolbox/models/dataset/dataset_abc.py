@@ -329,24 +329,11 @@ class WSIPatchDataset(PatchDatasetABC):
                 stride_shape=stride_shape[::-1],
             )
 
-        mask_reader = None
-        if mask_path is not None:
-            mask_path = Path(mask_path)
-            if not Path.is_file(mask_path):
-                msg = "`mask_path` must be a valid file path."
-                raise ValueError(msg)
-            mask = imread(mask_path)  # assume to be gray
-            mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
-            mask = np.array(mask > 0, dtype=np.uint8)
-
-            mask_reader = VirtualWSIReader(mask)
-            mask_reader.info = self.reader_info
-        elif auto_get_mask and mask_path is None:
-            # if no mask provided and `wsi` mode, generate basic tissue
-            # mask on the fly
-            mask_reader = reader.tissue_mask(resolution=1.25, units="power")
-            # ? will this mess up  ?
-            mask_reader.info = self.reader_info
+        mask_reader = self._setup_mask_reader(
+            mask_path=mask_path,
+            reader=reader,
+            auto_get_mask=auto_get_mask,
+        )
 
         if mask_reader is not None:
             selected = PatchExtractor.filter_coordinates(
@@ -368,6 +355,41 @@ class WSIPatchDataset(PatchDatasetABC):
 
         # Perform check on the input
         self._check_input_integrity(mode="wsi")
+
+    def _setup_mask_reader(
+        self: WSIPatchDataset,
+        mask_path: str | Path | None,
+        reader: WSIReader,
+        *,
+        auto_get_mask: bool,
+    ) -> VirtualWSIReader | None:
+        """Create a mask reader for WSIPatchDataset if requested."""
+        if mask_path is not None:
+            mask_path = Path(mask_path)
+            if not Path.is_file(mask_path):
+                msg = "`mask_path` must be a valid file path."
+                raise ValueError(msg)
+            mask = imread(mask_path)  # assume to be gray
+            mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
+            mask = np.array(mask > 0, dtype=np.uint8)
+
+            mask_reader = VirtualWSIReader(mask)
+            mask_reader.info = self.reader_info
+            return mask_reader
+
+        if auto_get_mask and mask_path is None:
+            # if no mask provided and `wsi` mode, generate basic tissue
+            # mask on the fly
+            try:
+                mask_reader = reader.tissue_mask(resolution=1.25, units="power")
+            except ValueError:
+                # if power is None, try with mpp
+                mask_reader = reader.tissue_mask(resolution=6.0, units="mpp")
+            # ? will this mess up  ?
+            mask_reader.info = self.reader_info
+
+            return mask_reader
+        return None
 
     def _check_inputs(self: WSIPatchDataset) -> None:
         """Check if input length is valid after filtering."""
