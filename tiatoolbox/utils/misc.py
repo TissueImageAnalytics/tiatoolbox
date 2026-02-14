@@ -1422,7 +1422,7 @@ def dict_to_store_semantic_segmentor(
     save_path: Path | None = None,
     *,
     verbose: bool = True,
-) -> AnnotationStore | Path:
+) -> AnnotationStore | dict | Path:
     """Converts output of TIAToolbox SemanticSegmentor engine to AnnotationStore.
 
     Args:
