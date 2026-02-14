@@ -1417,6 +1417,7 @@ def process_contours(
 def dict_to_store_semantic_segmentor(
     patch_output: dict | zarr.Group,
     scale_factor: tuple[float, float],
+    output_type: str,
     class_dict: dict | None = None,
     save_path: Path | None = None,
     *,
@@ -1432,6 +1433,9 @@ def dict_to_store_semantic_segmentor(
             annotations. All coordinates will be multiplied by this factor to allow
             conversion of annotations saved at non-baseline resolution to baseline.
             Should be model_mpp/slide_mpp.
+        output_type (str):
+            "annotationstore" → return AnnotationStore
+            "qupath" → return QuPath JSON dict
         class_dict (dict):
             Optional dictionary mapping class indices to class names.
         save_path (str or Path):
@@ -1452,11 +1456,125 @@ def dict_to_store_semantic_segmentor(
     # Get the number of unique predictions
     layer_list = da.unique(preds).compute()
 
-    store = SQLiteStore()
-
     if class_dict is None:
         class_dict = {int(i): int(i) for i in layer_list.tolist()}
 
+    if output_type.lower() == "qupath":
+        return _semantic_segmentations_as_qupath_json(
+            layer_list=layer_list,
+            preds=preds,
+            scale_factor=scale_factor,
+            class_dict=class_dict,
+            save_path=save_path,
+            verbose=verbose,
+        )
+
+    return _semantic_segmentations_as_annotations(
+        layer_list=layer_list,
+        preds=preds,
+        scale_factor=scale_factor,
+        class_dict=class_dict,
+        save_path=save_path,
+        verbose=verbose,
+    )
+
+
+def _semantic_segmentations_as_qupath_json(
+    layer_list: list,
+    preds: da.Array,
+    scale_factor: tuple[float, float],
+    class_dict: dict | None = None,
+    save_path: Path | None = None,
+    *,
+    verbose: bool = True,
+) -> dict | Path:
+    """Helper function to save semantic segmentation as QuPath json."""
+    features = []
+
+    # color map for classes
+    num_classes = len(class_dict)
+    cmap = plt.cm.get_cmap("tab20", num_classes)
+    class_colours = {
+        class_idx: [
+            int(cmap(class_idx)[0] * 255),
+            int(cmap(class_idx)[1] * 255),
+            int(cmap(class_idx)[2] * 255),
+        ]
+        for class_idx in class_dict
+    }
+
+    tqdm_loop = tqdm(
+        layer_list,
+        leave=False,
+        desc="Converting outputs to QuPath JSON.",
+        disable=not verbose,
+    )
+
+    for type_class in tqdm_loop:
+        class_id = int(type_class)
+        class_label = class_dict[class_id]
+
+        # binary mask for this class
+        layer = da.where(preds == type_class, 1, 0).astype("uint8").compute()
+
+        contours, _ = cv2.findContours(layer, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+
+        contours = cast("list[np.ndarray]", contours)
+
+        # Convert contours to polygons
+        for cnt in contours:
+            if cnt.shape[0] < 3:  # noqa: PLR2004
+                continue
+
+            # scale coordinates
+            cnt_scaled = cnt.squeeze(1).astype(float)
+            cnt_scaled[:, 0] *= scale_factor[0]
+            cnt_scaled[:, 1] *= scale_factor[1]
+
+            poly = Polygon(cnt_scaled)
+            poly_geo = mapping(poly)
+
+            feature = {
+                "type": "Feature",
+                "geometry": poly_geo,
+                "id": f"class_{class_id}_{len(features)}",
+                "properties": {
+                    "classification": {
+                        "name": class_label,
+                        "color": class_colours[class_id],
+                    }
+                },
+                "objectType": "annotation",
+                "name": class_label,
+                "class_value": class_id,
+            }
+
+            features.append(feature)
+
+    qupath_json = {"type": "FeatureCollection", "features": features}
+
+    # if a save director is provided, then dump json into a file
+    if save_path:
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        save_path = save_path.with_suffix(".json")
+        with Path.open(save_path, "w") as f:
+            json.dump(qupath_json, f, indent=2)
+        return save_path
+
+    return qupath_json
+
+
+def _semantic_segmentations_as_annotations(
+    layer_list: list,
+    preds: da.Array,
+    scale_factor: tuple[float, float],
+    class_dict: dict | None = None,
+    save_path: Path | None = None,
+    *,
+    verbose: bool = True,
+) -> AnnotationStore | Path:
+    """Helper function to save semantic segmentation as annotations."""
+    store = SQLiteStore()
     annotations_list: list[Annotation] = []
 
     tqdm_loop = tqdm(

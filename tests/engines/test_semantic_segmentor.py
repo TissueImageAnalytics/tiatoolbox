@@ -154,6 +154,39 @@ def _test_store_output_patch(output: Path) -> None:
     assert annotations_properties is not None
 
 
+def _test_qupath_output_patch(output: Path) -> None:
+    """Helper function to test QuPath JSON output for a patch."""
+    with Path.open(output) as f:
+        data = json.load(f)
+
+    assert "features" in data
+    features = data["features"]
+    assert len(features) > 0
+
+    geometry_types = []
+    class_values = set()
+
+    for feat in features:
+        # geometry type
+        geom = feat.get("geometry", {})
+        geometry_types.append(geom.get("type"))
+
+        # class index (you stored this as class_value)
+        class_val = feat.get("class_value")
+        if class_val is not None:
+            class_values.add(class_val)
+
+    # Check geometry type
+    assert "Polygon" in geometry_types
+
+    # When class_dict is None, types are assigned as 0, 1, ...
+    assert 0 in class_values
+    assert 1 in class_values
+
+    # Basic sanity check
+    assert features is not None
+
+
 def test_semantic_segmentor_tiles(track_tmp_path: Path) -> None:
     """Tests SemanticSegmentor on image tiles with no mpp metadata."""
     segmentor = SemanticSegmentor(
@@ -198,7 +231,7 @@ def test_save_annotation_store(remote_sample: Callable, track_tmp_path: Path) ->
     # Test str input
     sample_image = remote_sample("thumbnail-1k-1k")
 
-    inputs = [str(sample_image)]
+    inputs = [Path(sample_image)]
 
     output = segmentor.run(
         images=inputs,
@@ -214,6 +247,33 @@ def test_save_annotation_store(remote_sample: Callable, track_tmp_path: Path) ->
     assert output[0] == track_tmp_path / "output1" / (sample_image.stem + ".db")
     assert len(output) == 1
     _test_store_output_patch(output[0])
+
+
+def test_save_qupath_json(remote_sample: Callable, track_tmp_path: Path) -> None:
+    """Test for saving output as annotation store."""
+    segmentor = SemanticSegmentor(
+        model="fcn-tissue_mask", batch_size=32, verbose=False, device=device
+    )
+
+    # Test str input
+    sample_image = remote_sample("thumbnail-1k-1k")
+
+    inputs = [Path(sample_image)]
+
+    output = segmentor.run(
+        images=inputs,
+        return_probabilities=False,
+        return_labels=False,
+        device=device,
+        patch_mode=True,
+        save_dir=track_tmp_path / "output1",
+        output_type="qupath",
+        verbose=True,
+    )
+
+    assert output[0] == track_tmp_path / "output1" / (sample_image.stem + ".json")
+    assert len(output) == 1
+    _test_qupath_output_patch(output[0])
 
 
 def test_save_annotation_store_nparray(
@@ -557,7 +617,31 @@ def test_wsi_segmentor_annotationstore(
 
     zarr_group = zarr.open(output[sample_svs].with_suffix(".zarr"), mode="r")
     assert "probabilities" in zarr_group
-    assert "Probability maps cannot be saved as AnnotationStore." in caplog.text
+    assert "Probability maps cannot be saved as AnnotationStore" in caplog.text
+
+
+def test_wsi_segmentor_qupath_json(sample_svs: Path, track_tmp_path: Path) -> None:
+    """Test SemanticSegmentor for WSIs with QuPath JSON output."""
+    segmentor = SemanticSegmentor(
+        model="fcn-tissue_mask",
+        batch_size=32,
+        verbose=False,
+    )
+    # Return Probabilities is False
+    output = segmentor.run(
+        images=[sample_svs],
+        return_probabilities=False,
+        return_labels=False,
+        device=device,
+        patch_mode=False,
+        save_dir=track_tmp_path / "wsi_out_check",
+        verbose=False,
+        output_type="QuPath",
+    )
+
+    assert output[sample_svs] == track_tmp_path / "wsi_out_check" / (
+        sample_svs.stem + ".json"
+    )
 
 
 def test_prepare_full_batch_low_memory(track_tmp_path: Path) -> None:

@@ -501,7 +501,6 @@ def test_patch_predictor_patch_mode_no_probabilities(
 
     assert "probabilities" not in output
 
-    # don't run test on GPU
     output = predictor.run(
         images=inputs,
         return_probabilities=False,
@@ -516,6 +515,22 @@ def test_patch_predictor_patch_mode_no_probabilities(
     output = _extract_probabilities_from_annotation_store(output)
     assert np.all(output["predictions"] == [6, 3])
     assert output["probabilities"] == []
+
+    # QuPath Output
+    output = predictor.run(
+        images=inputs,
+        return_probabilities=False,
+        return_labels=False,
+        device=device,
+        patch_mode=True,
+        save_dir=track_tmp_path / "patch_out_check",
+        output_type="qupath",
+        overwrite=True,
+    )
+
+    assert output.exists()
+    output = _extract_from_qupath_json(output)
+    assert np.all(output["predictions"] == [6, 3])
 
 
 def test_engine_run_wsi_annotation_store(
