@@ -125,6 +125,16 @@ def sample_svs(remote_sample: Callable) -> Path:
 
 
 @pytest.fixture(scope="session")
+def sample_qptiff(remote_sample: Callable) -> Path:
+    """Sample pytest fixture for qptiff images.
+
+    Download qptiff image for pytest.
+
+    """
+    return remote_sample("qptiff_sample")
+
+
+@pytest.fixture(scope="session")
 def sample_ome_tiff(remote_sample: Callable) -> Path:
     """Sample pytest fixture for ome-tiff (brightfield pyramid) images.
 
