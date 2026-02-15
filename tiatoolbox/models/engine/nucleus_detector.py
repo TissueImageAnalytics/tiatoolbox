@@ -1064,7 +1064,7 @@ def save_detection_arrays_to_qupath_json(
 
     features: list[dict] = []
 
-    for i in range(len(xs)):
+    for i, _ in enumerate(xs):
         # Scale coordinates
         x = float(xs[i]) * scale_factor[0]
         y = float(ys[i]) * scale_factor[1]
