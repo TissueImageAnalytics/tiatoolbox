@@ -315,6 +315,8 @@ class Trainer:
 
     def _build_checkpoint_state(self: Trainer, epoch: int) -> dict[str, Any]:
         """Build serializable training state."""
+        trainer_config = asdict(self.config)
+        trainer_config["output_dir"] = str(trainer_config["output_dir"])
         return {
             "epoch": epoch,
             "model_state_dict": extract_model_state_dict(self.model),
@@ -328,7 +330,7 @@ class Trainer:
             "best_monitor_value": self.best_monitor_value,
             "best_epoch": self.best_epoch,
             "history": self.history,
-            "trainer_config": asdict(self.config),
+            "trainer_config": trainer_config,
         }
 
     def _resume_from_checkpoint(self: Trainer, checkpoint_path: str | Path) -> int:

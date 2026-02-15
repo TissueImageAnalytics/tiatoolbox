@@ -9,6 +9,8 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+from tiatoolbox.annotation import AnnotationStore, SQLiteStore
+from tiatoolbox.models.training.targets import TargetBuilderABC
 from tiatoolbox.utils.misc import imread
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -83,6 +85,19 @@ def _ensure_tensor_mask(mask: np.ndarray | torch.Tensor) -> torch.Tensor:
         raise ValueError(msg)
 
     return tensor.long()
+
+
+def _ensure_tensor_target(
+    target: np.ndarray | torch.Tensor | int | float,
+) -> torch.Tensor:
+    """Convert a generic target output to a torch tensor."""
+    if isinstance(target, torch.Tensor):
+        return target
+    if isinstance(target, np.ndarray):
+        if target.ndim == 0:
+            return torch.tensor(target.item())
+        return torch.from_numpy(np.ascontiguousarray(target))
+    return torch.tensor(target)
 
 
 def _discover_files(
@@ -289,10 +304,191 @@ class PatchMaskPairDataset(Dataset):
         return {"image": image_tensor, "target": mask_tensor}
 
 
+class PatchAnnotationDataset(Dataset):
+    """Dataset for patch images paired with TIAToolbox annotation stores.
+
+    This dataset supports training targets built dynamically from annotations
+    stored in :class:`tiatoolbox.annotation.SQLiteStore`.
+    """
+
+    def __init__(
+        self: PatchAnnotationDataset,
+        patch_inputs: list[str | Path | np.ndarray] | np.ndarray,
+        annotation_stores: (
+            AnnotationStore
+            | str
+            | Path
+            | list[AnnotationStore | str | Path]
+        ),
+        target_builder: TargetBuilderABC,
+        patch_bounds: (
+            list[tuple[float, float, float, float]]
+            | np.ndarray
+            | None
+        ) = None,
+        image_transform: Callable | None = None,
+        target_transform: Callable | None = None,
+    ) -> None:
+        """Initialize :class:`PatchAnnotationDataset`."""
+        super().__init__()
+
+        self.patch_inputs = self._normalize_patch_inputs(patch_inputs)
+        if not self.patch_inputs:
+            msg = "`patch_inputs` must contain at least one sample."
+            raise ValueError(msg)
+
+        self.annotation_store_specs = self._normalize_annotation_stores(
+            annotation_stores,
+            len(self.patch_inputs),
+        )
+        self.target_builder = target_builder
+
+        self.patch_bounds = self._normalize_patch_bounds(patch_bounds)
+        if (
+            self.patch_bounds is not None
+            and len(self.patch_bounds) != len(self.patch_inputs)
+        ):
+            msg = "`patch_bounds` must have the same length as `patch_inputs`."
+            raise ValueError(msg)
+
+        self.image_transform = image_transform
+        self.target_transform = target_transform
+        self._store_cache: dict[str, AnnotationStore] = {}
+
+    @staticmethod
+    def _normalize_patch_inputs(
+        patch_inputs: list[str | Path | np.ndarray] | np.ndarray,
+    ) -> list[str | Path | np.ndarray]:
+        """Normalize supported patch input variants to a list."""
+        if isinstance(patch_inputs, np.ndarray):
+            if patch_inputs.ndim == 4:
+                return [patch for patch in patch_inputs]
+            if patch_inputs.dtype == object:
+                return list(patch_inputs)
+            msg = (
+                "`patch_inputs` as ndarray must be either object dtype "
+                "or a 4D tensor-like array (N, H, W, C)."
+            )
+            raise ValueError(msg)
+
+        if isinstance(patch_inputs, list):
+            return patch_inputs
+
+        msg = "`patch_inputs` must be a list or a numpy.ndarray."
+        raise ValueError(msg)
+
+    @staticmethod
+    def _normalize_annotation_stores(
+        annotation_stores: (
+            AnnotationStore
+            | str
+            | Path
+            | list[AnnotationStore | str | Path]
+        ),
+        num_patches: int,
+    ) -> list[AnnotationStore | str | Path]:
+        """Normalize annotation store input to a per-patch list."""
+        if isinstance(annotation_stores, list):
+            if len(annotation_stores) != num_patches:
+                msg = (
+                    "When `annotation_stores` is a list it must have the same "
+                    "length as `patch_inputs`."
+                )
+                raise ValueError(msg)
+            return annotation_stores
+
+        return [annotation_stores for _ in range(num_patches)]
+
+    @staticmethod
+    def _normalize_patch_bounds(
+        patch_bounds: (
+            list[tuple[float, float, float, float]]
+            | np.ndarray
+            | None
+        ),
+    ) -> list[tuple[float, float, float, float]] | None:
+        """Normalize optional patch bounds argument."""
+        if patch_bounds is None:
+            return None
+
+        if isinstance(patch_bounds, np.ndarray):
+            patch_bounds = patch_bounds.tolist()
+
+        normalized = []
+        for bounds in patch_bounds:
+            if len(bounds) != 4:  # noqa: PLR2004
+                msg = "Each `patch_bounds` item must have length 4."
+                raise ValueError(msg)
+            x_min, y_min, x_max, y_max = [float(value) for value in bounds]
+            if x_max <= x_min or y_max <= y_min:
+                msg = (
+                    "Each patch bounds item must satisfy "
+                    "x_max > x_min and y_max > y_min."
+                )
+                raise ValueError(msg)
+            normalized.append((x_min, y_min, x_max, y_max))
+        return normalized
+
+    def _get_store(self: PatchAnnotationDataset, index: int) -> AnnotationStore:
+        """Get an AnnotationStore for one sample index."""
+        store_spec = self.annotation_store_specs[index]
+        if isinstance(store_spec, AnnotationStore):
+            return store_spec
+
+        store_path = Path(store_spec)
+        if not store_path.exists():
+            msg = f"Annotation store path does not exist: `{store_path}`."
+            raise ValueError(msg)
+
+        cache_key = str(store_path.resolve())
+        if cache_key not in self._store_cache:
+            self._store_cache[cache_key] = SQLiteStore(store_path)
+        return self._store_cache[cache_key]
+
+    def __len__(self: PatchAnnotationDataset) -> int:
+        """Return number of samples."""
+        return len(self.patch_inputs)
+
+    def __getitem__(self: PatchAnnotationDataset, index: int) -> dict:
+        """Get a patch image and its target built from paired annotations."""
+        image_item = self.patch_inputs[index]
+        image = (
+            _load_image(Path(image_item))
+            if isinstance(image_item, (str, Path))
+            else image_item
+        )
+
+        if self.image_transform is not None:
+            image = self.image_transform(image)
+
+        image_tensor = _ensure_tensor_image(image)
+        height, width = image_tensor.shape[1:]
+
+        bounds = (
+            self.patch_bounds[index]
+            if self.patch_bounds is not None
+            else (0.0, 0.0, float(width), float(height))
+        )
+        store = self._get_store(index)
+        target = self.target_builder.create_target(
+            store=store,
+            patch_bounds=bounds,
+            output_shape=(height, width),
+        )
+
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        target_tensor = _ensure_tensor_target(target)
+
+        return {"image": image_tensor, "target": target_tensor}
+
+
 def create_dataset(
     dataset_type: Literal[
         "patch_folder_classification",
         "patch_mask_pair",
+        "patch_annotation",
     ],
     **kwargs: dict,
 ) -> Dataset:
@@ -301,9 +497,12 @@ def create_dataset(
         return PatchFolderClassificationDataset(**kwargs)
     if dataset_type == "patch_mask_pair":
         return PatchMaskPairDataset(**kwargs)
+    if dataset_type == "patch_annotation":
+        return PatchAnnotationDataset(**kwargs)
 
     msg = (
         "Unsupported `dataset_type`. "
-        "Supported values are: `patch_folder_classification`, `patch_mask_pair`."
+        "Supported values are: `patch_folder_classification`, "
+        "`patch_mask_pair`, `patch_annotation`."
     )
     raise ValueError(msg)

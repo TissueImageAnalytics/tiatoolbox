@@ -16,8 +16,16 @@ from tiatoolbox.models.training.config import (
 )
 from tiatoolbox.models.training.datasets import (
     PatchFolderClassificationDataset,
+    PatchAnnotationDataset,
     PatchMaskPairDataset,
     create_dataset,
+)
+from tiatoolbox.models.training.targets import (
+    CoverageClassTargetBuilder,
+    MaskTargetBuilder,
+    MultiLabelTargetBuilder,
+    PresenceTargetBuilder,
+    TargetBuilderABC,
 )
 from tiatoolbox.models.training.tasks import (
     ClassificationTask,
@@ -36,12 +44,18 @@ __all__ = [
     "CheckpointConfig",
     "ClassificationTask",
     "DataLoaderConfig",
+    "CoverageClassTargetBuilder",
+    "MaskTargetBuilder",
+    "MultiLabelTargetBuilder",
     "OptimizerConfig",
+    "PatchAnnotationDataset",
     "PatchFolderClassificationDataset",
     "PatchMaskPairDataset",
+    "PresenceTargetBuilder",
     "SchedulerConfig",
     "SegmentationTask",
     "TaskConfig",
+    "TargetBuilderABC",
     "Trainer",
     "TrainerConfig",
     "TrainingTaskABC",
