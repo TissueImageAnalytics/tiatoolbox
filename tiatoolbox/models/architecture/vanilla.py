@@ -216,6 +216,8 @@ def _infer_batch(
     model: nn.Module,
     batch_data: torch.Tensor,
     device: str,
+    *,
+    apply_softmax: bool = False,
 ) -> np.ndarray:
     """Run inference on an input batch.
 
@@ -229,6 +231,8 @@ def _infer_batch(
             `torch.utils.data.DataLoader`.
         device (str):
             Transfers model to the specified device. Default is "cpu".
+        apply_softmax (bool):
+            If ``True``, apply softmax to the final axis before returning.
 
     Returns:
         dict[str, np.ndarray]:
@@ -249,6 +253,8 @@ def _infer_batch(
     # Do not compute the gradient (not training)
     with torch.inference_mode():
         output = model(img_patches_device)
+        if apply_softmax:
+            output = torch.softmax(output, dim=-1)
     # Output should be a single tensor or scalar
     return output.cpu().numpy()
 
@@ -313,7 +319,7 @@ class CNNModel(ModelABC):
         gap_feat = self.pool(feat)
         gap_feat = torch.flatten(gap_feat, 1)
         logit = self.classifier(gap_feat)
-        return torch.softmax(logit, -1)
+        return logit
 
     @staticmethod
     def postproc(image: np.ndarray) -> np.ndarray:
@@ -356,7 +362,12 @@ class CNNModel(ModelABC):
             >>> print(output)
 
         """
-        return _infer_batch(model=model, batch_data=batch_data, device=device)
+        return _infer_batch(
+            model=model,
+            batch_data=batch_data,
+            device=device,
+            apply_softmax=True,
+        )
 
 
 class TimmModel(ModelABC):
@@ -437,7 +448,7 @@ class TimmModel(ModelABC):
         feat = self.feat_extract(imgs)
         feat = torch.flatten(feat, 1)
         logit = self.classifier(feat)
-        return torch.softmax(logit, -1)
+        return logit
 
     @staticmethod
     def postproc(image: np.ndarray) -> np.ndarray:
@@ -484,7 +495,12 @@ class TimmModel(ModelABC):
             >>> print(output)
 
         """
-        return _infer_batch(model=model, batch_data=batch_data, device=device)
+        return _infer_batch(
+            model=model,
+            batch_data=batch_data,
+            device=device,
+            apply_softmax=True,
+        )
 
 
 class CNNBackbone(ModelABC):

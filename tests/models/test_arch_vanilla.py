@@ -80,3 +80,30 @@ def test_timm_functional() -> None:
     # skipcq
     with pytest.raises(ValueError, match=r".*Backbone.*not supported.*"):
         TimmModel(backbone="shiny_model_to_crash", num_classes=2, pretrained=False)
+
+
+def test_classification_models_forward_logits_infer_probabilities() -> None:
+    """Forward should return logits while infer_batch returns probabilities."""
+    cnn_model = CNNModel(backbone="resnet18", num_classes=3)
+    cnn_logits = cnn_model(torch.rand((2, 3, 64, 64)))
+    assert cnn_logits.shape == (2, 3)
+    assert not torch.allclose(cnn_logits.sum(dim=1), torch.ones(2), atol=1e-4)
+
+    cnn_probs = cnn_model.infer_batch(
+        model=cnn_model,
+        batch_data=torch.rand((2, 64, 64, 3)),
+        device="cpu",
+    )
+    assert np.allclose(cnn_probs.sum(axis=1), np.ones(2), atol=1e-5)
+
+    timm_model = TimmModel(backbone="efficientnet_b0", num_classes=3, pretrained=False)
+    timm_logits = timm_model(torch.rand((2, 3, 224, 224)))
+    assert timm_logits.shape == (2, 3)
+    assert not torch.allclose(timm_logits.sum(dim=1), torch.ones(2), atol=1e-4)
+
+    timm_probs = timm_model.infer_batch(
+        model=timm_model,
+        batch_data=torch.rand((2, 224, 224, 3)),
+        device="cpu",
+    )
+    assert np.allclose(timm_probs.sum(axis=1), np.ones(2), atol=1e-5)
