@@ -1555,11 +1555,7 @@ def _semantic_segmentations_as_qupath_json(
 
     # if a save director is provided, then dump json into a file
     if save_path:
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        save_path = save_path.with_suffix(".json")
-        with Path.open(save_path, "w") as f:
-            json.dump(qupath_json, f, indent=2)
-        return save_path
+        return save_qupath_json(save_path=save_path, qupath_json=qupath_json)
 
     return qupath_json
 
@@ -1607,15 +1603,32 @@ def _semantic_segmentations_as_annotations(
 
     # # if a save director is provided, then dump store into a file
     if save_path:
-        # ensure parent directory exists
-        save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
-        # ensure proper db extension
-        save_path = save_path.parent.absolute() / (save_path.stem + ".db")
-        store.commit()
-        store.dump(save_path)
-        return save_path
+        return save_annotations(
+            save_path=save_path,
+            store=store,
+        )
 
     return store
+
+
+def save_annotations(
+    save_path: Path,
+    store: AnnotationStore,
+) -> Path:
+    """Saves Annotation Store to disk."""
+    # ensure proper db extension
+    save_path = save_path.parent.absolute() / (save_path.stem + ".db")
+    store.commit()
+    store.dump(save_path)
+    return save_path
+
+
+def save_qupath_json(save_path: Path, qupath_json: dict) -> Path:
+    """Saves QuPath JSON to disk."""
+    save_path = save_path.with_suffix(".json")
+    with Path.open(save_path, "w") as f:
+        json.dump(qupath_json, f, indent=2)
+    return save_path
 
 
 def dict_to_store_patch_predictions(
@@ -1698,11 +1711,7 @@ def dict_to_store_patch_predictions(
         )
 
         if save_path:
-            save_path.parent.mkdir(parents=True, exist_ok=True)
-            save_path = save_path.with_suffix(".json")
-            with Path.open(save_path, "w") as f:
-                json.dump(qupath_json, f, indent=2)
-            return save_path
+            return save_qupath_json(save_path=save_path, qupath_json=qupath_json)
 
         return qupath_json
 
@@ -1723,12 +1732,10 @@ def dict_to_store_patch_predictions(
 
     # if a save director is provided, then dump store into a file
     if save_path:
-        # ensure parent directory exists
-        save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
-        # ensure proper db extension
-        save_path = save_path.parent.absolute() / (save_path.stem + ".db")
-        store.dump(save_path)
-        return save_path
+        return save_annotations(
+            save_path=save_path,
+            store=store,
+        )
 
     return store
 
