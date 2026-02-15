@@ -9,6 +9,7 @@ import sqlite3
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import dask.array as da
 import numpy as np
 import torch
 import yaml
@@ -244,6 +245,65 @@ def test_patch_predictor_api(
     assert len(output["probabilities"]) == len(output["labels"])
     assert list(output["labels"]) == [1, 2]
 
+    processed_predictions = {
+        k: da.from_array(v) for k, v in output.items() if k != "labels"
+    }
+    processed_predictions["coordinates"] = np.asarray(
+        [[0, 0, 224, 224], [0, 0, 224, 224]]
+    )
+
+    output_ = predictor.save_predictions(
+        processed_predictions=processed_predictions,
+        output_type="annotationstore",
+        save_path=track_tmp_path / "patch_out_check" / "output.db",
+    )
+
+    assert output_.exists()
+    output_ann = _extract_probabilities_from_annotation_store(output_)
+    assert np.all(np.array(output_ann["probabilities"]) <= 1)
+    assert np.all(np.array(output_ann["probabilities"]) >= 0)
+
+
+def test_patch_predictor_patch_mode_no_probabilities(
+    sample_patch1: Path,
+    sample_patch2: Path,
+    track_tmp_path: Path,
+) -> None:
+    """Test the output of patch classification models on Kather100K dataset."""
+    inputs = [Path(sample_patch1), Path(sample_patch2)]
+
+    predictor = PatchPredictor(
+        model="alexnet-kather100k",
+        batch_size=32,
+        verbose=False,
+    )
+
+    output = predictor.run(
+        images=inputs,
+        return_probabilities=False,
+        return_labels=False,
+        device=device,
+        patch_mode=True,
+    )
+
+    assert "probabilities" not in output
+
+    processed_predictions = {k: v for k, v in output.items() if k != "labels"}
+    processed_predictions["coordinates"] = np.asarray(
+        [[0, 0, 224, 224], [0, 0, 224, 224]]
+    )
+
+    output_ = predictor.save_predictions(
+        processed_predictions=processed_predictions,
+        output_type="annotationstore",
+        save_path=track_tmp_path / "patch_out_check" / "output.db",
+    )
+
+    assert output_.exists()
+    output_ann = _extract_probabilities_from_annotation_store(output_)
+    assert np.all(output_ann["predictions"] == [6, 3])
+    assert "probabilities" not in output
+
 
 def test_wsi_predictor_api(
     sample_wsi_dict: dict,
@@ -422,78 +482,6 @@ def test_wsi_predictor_zarr(
     assert output_["predictions"].ndim == 1
     assert _validate_probabilities(output=output_)
     assert "Output file saved at " in caplog.text
-
-
-def test_patch_predictor_patch_mode_annotation_store(
-    sample_patch1: Path,
-    sample_patch2: Path,
-    track_tmp_path: Path,
-) -> None:
-    """Test the output of patch classification models on Kather100K dataset."""
-    inputs = [Path(sample_patch1), Path(sample_patch2)]
-
-    predictor = PatchPredictor(
-        model="alexnet-kather100k",
-        batch_size=32,
-        verbose=False,
-    )
-    # don't run test on GPU
-    output = predictor.run(
-        images=inputs,
-        return_probabilities=True,
-        return_labels=False,
-        device=device,
-        patch_mode=True,
-        save_dir=track_tmp_path / "patch_out_check",
-        output_type="annotationstore",
-    )
-
-    assert output.exists()
-    output = _extract_probabilities_from_annotation_store(output)
-    assert np.all(output["predictions"] == [6, 3])
-    assert np.all(np.array(output["probabilities"]) <= 1)
-    assert np.all(np.array(output["probabilities"]) >= 0)
-
-
-def test_patch_predictor_patch_mode_no_probabilities(
-    sample_patch1: Path,
-    sample_patch2: Path,
-    track_tmp_path: Path,
-) -> None:
-    """Test the output of patch classification models on Kather100K dataset."""
-    inputs = [Path(sample_patch1), Path(sample_patch2)]
-
-    predictor = PatchPredictor(
-        model="alexnet-kather100k",
-        batch_size=32,
-        verbose=False,
-    )
-
-    output = predictor.run(
-        images=inputs,
-        return_probabilities=False,
-        return_labels=False,
-        device=device,
-        patch_mode=True,
-    )
-
-    assert "probabilities" not in output
-
-    # don't run test on GPU
-    output = predictor.run(
-        images=inputs,
-        return_probabilities=False,
-        return_labels=False,
-        device=device,
-        patch_mode=True,
-        save_dir=track_tmp_path / "patch_out_check",
-        output_type="annotationstore",
-    )
-
-    assert output.exists()
-    output = _extract_probabilities_from_annotation_store(output)
-    assert np.all(output["predictions"] == [6, 3])
-    assert output["probabilities"] == []
 
 
 def test_engine_run_wsi_annotation_store(
