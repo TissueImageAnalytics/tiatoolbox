@@ -515,106 +515,114 @@ class KongNet(ModelABC):
     Please cite the paper [1], if you use this model.
 
     .. list-table:: KongNet detection performance (FROC)
-        on the MONKEY Challenge Final Leaderboard[2]
+        on the MONKEY Challenge Final Leaderboard [2]
         :widths: 15 15 15 15
         :header-rows: 1
+        :align: left
 
         * - Model name
-        - Overall Inflammatory
-        - Lymphocytes
-        - Monocytes
+          - Overall Inflammatory
+          - Lymphocytes
+          - Monocytes
         * - KongNet_MONKEY_1
-        - 0.3930
-        - 0.4624
-        - 0.2392
+          - 0.3930
+          - 0.4624
+          - 0.2392
 
     .. list-table:: KongNet detection performance (F1)
-        on the MIDOG 2025 Challenge Final Leaderboard[3]
+        on the MIDOG 2025 Challenge Final Leaderboard [3]
         :widths: 15 15
         :header-rows: 1
+        :align: left
 
         * - Model name
-        - Mitotic Figures
+          - Mitotic Figures
         * - KongNet_Det_MIDOG_1
-        - 0.7400
+          - 0.7400
 
     .. list-table:: KongNet detection performance (F1)
-        on the PUMA Challenge Final Leaderboard Track 1[4]
+        on the PUMA Challenge Final Leaderboard Track 1 [4]
         :widths: 15 15 15 15
         :header-rows: 1
+        :align: left
 
         * - Model name
-        - Tumour Cells
-        - Lymphocytes
-        - Other
+          - Tumour Cells
+          - Lymphocytes
+          - Other
         * - KongNet_PUMA_T1_3
-        - 0.7948
-        - 0.6746
-        - 0.4704
+          - 0.7948
+          - 0.6746
+          - 0.4704
 
     .. list-table:: KongNet detection performance (F1)
-        on the PUMA Challenge Final Leaderboard Track 2[4]
+        on the PUMA Challenge Final Leaderboard Track 2 [4]
         :widths: 15 15 15 15 15 15 15 15 15 15 15
         :header-rows: 1
+        :align: left
 
         * - Model name
-        - Tumour Cells
-        - Stroma Cells
-        - Apoptotic Cells
-        - Epithelium Cells
-        - Histiocytes
-        - Lymphocytes
-        - Neutrophils
-        - Endothelial Cells
-        - Melanophages
-        - Plasma Cells
+          - Tumour Cells
+          - Stroma Cells
+          - Apoptotic Cells
+          - Epithelium Cells
+          - Histiocytes
+          - Lymphocytes
+          - Neutrophils
+          - Endothelial Cells
+          - Melanophages
+          - Plasma Cells
         * - KongNet_PUMA_T1_3
-        - 0.7952
-        - 0.2927
-        - 0.1170
-        - 0.0707
-        - 0.2154
-        - 0.6642
-        - 0.0361
-        - 0.2123
-        - 0.1931
-        - 0.0595
+          - 0.7952
+          - 0.2927
+          - 0.1170
+          - 0.0707
+          - 0.2154
+          - 0.6642
+          - 0.0361
+          - 0.2123
+          - 0.1931
+          - 0.0595
 
-    .. list-table:: KongNet detection performance (F1) on the PanNuke Dataset[5]
-        :widths: 15 15 15 15 15 15
-        :header-rows: 1
-
-        * - Model name
-        - Neoplastic Cells
-        - Inflammatory Cells
-        - Epithelial Cells
-        - Connective Cells
-        - Dead Cells
-        * - KongNet_CoNIC_1
-        - 0.71
-        - 0.72
-        - 0.65
-        - 0.70
-        - 0.59
-
-    .. list-table:: KongNet detection performance (F1) on the CoNIC Dataset[6]
+    .. list-table:: KongNet detection performance (F1) on the PanNuke Dataset [5]
         :widths: 15 15 15 15 15 15 15
         :header-rows: 1
+        :align: left
 
         * - Model name
-        - Neutrophils
-        - Epithelial Cells
-        - Lymphocytes
-        - Plasma Cells
-        - Eosinophils
-        - Connective Cells
+          - Overall
+          - Neoplastic Cells
+          - Inflammatory Cells
+          - Epithelial Cells
+          - Connective Cells
+          - Dead Cells
         * - KongNet_CoNIC_1
-        - 0.510
-        - 0.818
-        - 0.707
-        - 0.596
-        - 0.591
-        - 0.695
+          - 0.84
+          - 0.71
+          - 0.72
+          - 0.65
+          - 0.70
+          - 0.59
+
+    .. list-table:: KongNet detection performance (F1) on the CoNIC Dataset [6]
+        :widths: 15 15 15 15 15 15 15
+        :header-rows: 1
+        :align: left
+
+        * - Model name
+          - Neutrophils
+          - Epithelial Cells
+          - Lymphocytes
+          - Plasma Cells
+          - Eosinophils
+          - Connective Cells
+        * - KongNet_CoNIC_1
+          - 0.510
+          - 0.818
+          - 0.707
+          - 0.596
+          - 0.591
+          - 0.695
 
 
     Attributes:
