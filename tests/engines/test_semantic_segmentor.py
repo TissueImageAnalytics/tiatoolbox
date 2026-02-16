@@ -383,7 +383,7 @@ def test_wsi_segmentor_zarr(
     )
     # Return Probabilities is False
     output = segmentor.run(
-        images=[wsi4_512_512_svs],
+        images=[sample_svs],
         return_probabilities=False,
         return_labels=False,
         device=device,
@@ -394,8 +394,8 @@ def test_wsi_segmentor_zarr(
         memory_threshold=1,
     )
 
-    output_ = zarr.open(output[wsi4_512_512_svs], mode="r")
-    assert 0.0 < np.mean(output_["predictions"][:]) < 0.02
+    output_ = zarr.open(output[sample_svs], mode="r")
+    assert 0.17 < np.mean(output_["predictions"][:]) < 0.21
     assert "probabilities" not in output_
     assert "canvas" not in output_
     assert "count" not in output_
@@ -409,7 +409,7 @@ def test_wsi_segmentor_zarr(
     # Return Probabilities is True
     # Testing with WSIReader
     output = segmentor.run(
-        images=[WSIReader.open(wsi4_512_512_svs)],
+        images=[WSIReader.open(sample_svs)],
         return_probabilities=True,
         return_labels=False,
         device=device,
@@ -420,8 +420,8 @@ def test_wsi_segmentor_zarr(
         memory_threshold=1,
     )
 
-    output_ = zarr.open(output[wsi4_512_512_svs], mode="r")
-    assert 0.0 < np.mean(output_["predictions"][:]) < 0.02
+    output_ = zarr.open(output[sample_svs], mode="r")
+    assert 0.17 < np.mean(output_["predictions"][:]) < 0.21
     assert "probabilities" in output_
     assert "canvas" not in output_
     assert "count" not in output_
