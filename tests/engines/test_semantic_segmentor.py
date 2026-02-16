@@ -514,7 +514,7 @@ def test_wsi_segmentor_zarr(
     assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
 
 
-def test_wsi_segmentor_annotationstore(
+def test_wsi_segmentor_annotationstore_qupath(
     remote_sample: Callable, track_tmp_path: Path, caplog: pytest.CaptureFixture
 ) -> None:
     """Test SemanticSegmentor for WSIs with AnnotationStore output."""
@@ -547,6 +547,7 @@ def test_wsi_segmentor_annotationstore(
         verbose=False,
     )
     # Return Probabilities is True
+    # Check QuPath output
     output = segmentor.run(
         images=[wsi4_512_512_svs],
         return_probabilities=True,
@@ -555,41 +556,17 @@ def test_wsi_segmentor_annotationstore(
         patch_mode=False,
         save_dir=track_tmp_path / "wsi_prob_out_check",
         verbose=True,
-        output_type="annotationstore",
+        output_type="QuPath",
     )
 
     assert output[wsi4_512_512_svs] == track_tmp_path / "wsi_prob_out_check" / (
-        wsi4_512_512_svs.stem + ".db"
+        wsi4_512_512_svs.stem + ".json"
     )
     assert output[wsi4_512_512_svs].with_suffix(".zarr").exists()
 
     zarr_group = zarr.open(output[wsi4_512_512_svs].with_suffix(".zarr"), mode="r")
     assert "probabilities" in zarr_group
     assert "Probability maps cannot be saved as AnnotationStore or JSON." in caplog.text
-
-
-def test_wsi_segmentor_qupath_json(sample_svs: Path, track_tmp_path: Path) -> None:
-    """Test SemanticSegmentor for WSIs with QuPath JSON output."""
-    segmentor = SemanticSegmentor(
-        model="fcn-tissue_mask",
-        batch_size=32,
-        verbose=False,
-    )
-    # Return Probabilities is False
-    output = segmentor.run(
-        images=[sample_svs],
-        return_probabilities=False,
-        return_labels=False,
-        device=device,
-        patch_mode=False,
-        save_dir=track_tmp_path / "wsi_out_check",
-        verbose=False,
-        output_type="QuPath",
-    )
-
-    assert output[sample_svs] == track_tmp_path / "wsi_out_check" / (
-        sample_svs.stem + ".json"
-    )
 
 
 def test_prepare_full_batch_low_memory(track_tmp_path: Path) -> None:

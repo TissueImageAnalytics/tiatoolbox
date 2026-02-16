@@ -1036,14 +1036,9 @@ def save_detection_arrays_to_qupath_json(
               all detections.
 
     """
-    xs = np.atleast_1d(np.asarray(detection_arrays["x"]))
-    ys = np.atleast_1d(np.asarray(detection_arrays["y"]))
-    classes = np.atleast_1d(np.asarray(detection_arrays["classes"]))
-    probs = np.atleast_1d(np.asarray(detection_arrays["probabilities"]))
-
-    if not len(xs) == len(ys) == len(classes) == len(probs):
-        msg = "Detection record lengths are misaligned."
-        raise ValueError(msg)
+    xs, ys, classes, probs = _validate_detections_for_saving_to_json(
+        detection_arrays=detection_arrays,
+    )
 
     # Determine class dictionary
     unique_classes = np.unique(classes).tolist()
@@ -1155,19 +1150,9 @@ def save_detection_arrays_to_store(
           which performs coordinate scaling, class mapping, and batch writing.
 
     """
-    xs = detection_arrays["x"]
-    ys = detection_arrays["y"]
-    classes = detection_arrays["classes"]
-    probs = detection_arrays["probabilities"]
-
-    xs = np.atleast_1d(np.asarray(xs))
-    ys = np.atleast_1d(np.asarray(ys))
-    classes = np.atleast_1d(np.asarray(classes))
-    probs = np.atleast_1d(np.asarray(probs))
-
-    if not len(xs) == len(ys) == len(classes) == len(probs):
-        msg = "Detection record lengths are misaligned."
-        raise ValueError(msg)
+    xs, ys, classes, probs = _validate_detections_for_saving_to_json(
+        detection_arrays=detection_arrays,
+    )
 
     store = SQLiteStore()
     total_written = _write_detection_arrays_to_store(
@@ -1186,6 +1171,22 @@ def save_detection_arrays_to_store(
         )
 
     return store
+
+
+def _validate_detections_for_saving_to_json(
+    detection_arrays: dict[str, da.Array],
+) -> tuple:
+    """Validates x, y,  classes and probs for writing to QuPath or AnnotationStore."""
+    xs = np.atleast_1d(np.asarray(detection_arrays["x"]))
+    ys = np.atleast_1d(np.asarray(detection_arrays["y"]))
+    classes = np.atleast_1d(np.asarray(detection_arrays["classes"]))
+    probs = np.atleast_1d(np.asarray(detection_arrays["probabilities"]))
+
+    if not len(xs) == len(ys) == len(classes) == len(probs):
+        msg = "Detection record lengths are misaligned."
+        raise ValueError(msg)
+
+    return xs, ys, classes, probs
 
 
 def _write_detection_arrays_to_store(
