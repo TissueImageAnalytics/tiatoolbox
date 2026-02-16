@@ -714,3 +714,15 @@ def module_teardown() -> None:
         if path.exists():
             shutil.rmtree(path)
             print(f"Cleaned up: {path}")
+
+
+@pytest.fixture(scope="session")
+def rm_dir(tmp_samples_path: str) -> Callable:  # noqa: ARG001
+    """Factory fixture to remove directory."""
+
+    def _rm_dir(tmp_samples_path: Path) -> None:
+        """Helper func to remove directory."""
+        if tmp_samples_path.exists():
+            shutil.rmtree(tmp_samples_path, ignore_errors=True)
+
+    return _rm_dir

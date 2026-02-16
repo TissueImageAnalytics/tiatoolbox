@@ -900,7 +900,7 @@ class NucleusDetector(SemanticSegmentor):
 
     @staticmethod
     def save_detection_arrays_to_store(
-        detection_arrays: dict[str, da.Array],
+        detection_arrays: dict[str, da.Array | np.ndarray],
         scale_factor: tuple[float, float] = (1.0, 1.0),
         class_dict: dict | None = None,
         save_path: Path | None = None,
@@ -984,7 +984,7 @@ class NucleusDetector(SemanticSegmentor):
 
     def run(
         self: NucleusDetector,
-        images: list[os.PathLike | Path | WSIReader] | np.ndarray,
+        images: list[os.PathLike | Path | WSIReader | np.ndarray] | np.ndarray,
         *,
         masks: list[os.PathLike | Path] | np.ndarray | None = None,
         input_resolutions: list[dict[Units, Resolution]] | None = None,
