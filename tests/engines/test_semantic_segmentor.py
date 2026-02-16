@@ -93,6 +93,8 @@ def test_semantic_segmentor_patches(
     assert 0.62 < np.mean(output["predictions"][:]) < 0.66
     assert 0.48 < np.mean(output["probabilities"][:]) < 0.52
 
+    # Test str input
+    inputs = [Path(sample_image)]
     output = segmentor.run(
         images=inputs,
         return_probabilities=False,
@@ -105,53 +107,25 @@ def test_semantic_segmentor_patches(
 
     assert output == track_tmp_path / "output1" / "output.zarr"
 
-    output = zarr.open(output, mode="r")
-    assert 0.62 < np.mean(output["predictions"][:]) < 0.66
-    assert "probabilities" not in output.keys()  # noqa: SIM118
+    output_ = zarr.open(output, mode="r")
+    assert 0.62 < np.mean(output_["predictions"][:]) < 0.66
+    assert "probabilities" not in output_.keys()  # noqa: SIM118
+    assert "predictions" in output_
 
-    output = segmentor.run(
-        images=inputs,
-        return_probabilities=False,
-        return_labels=False,
-        device=device,
-        patch_mode=True,
-        save_dir=track_tmp_path / "output2",
-        output_type="zarr",
+    processed_predictions = {
+        k: da.from_zarr(v) for k, v in output_.items() if k != "labels"
+    }
+
+    # Test for saving output as annotation store.
+    output_seg = segmentor.save_predictions(
+        processed_predictions=processed_predictions,
+        output_type="annotationstore",
+        save_path=output.with_suffix(".db"),
     )
 
-    assert output == track_tmp_path / "output2" / "output.zarr"
-
-    output = zarr.open(output, mode="r")
-    assert 0.62 < np.mean(output["predictions"][:]) < 0.66
-    assert "probabilities" not in output
-    assert "predictions" in output
-
-
-def _test_store_output_patch(output: Path) -> None:
-    """Helper method to test annotation store output for a patch."""
-    store_ = SQLiteStore.open(output)
-    annotations_ = store_.values()
-    annotations_geometry_type = [
-        str(annotation_.geometry_type) for annotation_ in annotations_
-    ]
-    assert "Polygon" in annotations_geometry_type
-
-    con = sqlite3.connect(output)
-    cur = con.cursor()
-    annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
-
-    annotation_types = set()
-
-    for item in annotations_properties:
-        for json_str in item:
-            probs = json.loads(json_str)
-            if "type" in probs:
-                annotation_types.add(probs.pop("type"))
-    # When class_dict is none, types are assigned as 0, 1, ...
-    assert 0 in annotation_types
-    assert 1 in annotation_types
-
-    assert annotations_properties is not None
+    assert output_seg[0] == track_tmp_path / "output1" / (sample_image.stem + ".db")
+    assert len(output_seg) == 1
+    _test_store_output_patch(output_seg[0])
 
 
 def test_semantic_segmentor_tiles(track_tmp_path: Path) -> None:
@@ -181,39 +155,11 @@ def test_semantic_segmentor_tiles(track_tmp_path: Path) -> None:
         input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         patch_input_shape=(1024, 1024),
     )
-    print(output)
     output = zarr.open(output[sample_image], mode="r")
 
     assert output["predictions"].shape == (2048, 3584)
 
     sample_image.unlink()
-
-
-def test_save_annotation_store(remote_sample: Callable, track_tmp_path: Path) -> None:
-    """Test for saving output as annotation store."""
-    segmentor = SemanticSegmentor(
-        model="fcn-tissue_mask", batch_size=32, verbose=False, device=device
-    )
-
-    # Test str input
-    sample_image = remote_sample("thumbnail-1k-1k")
-
-    inputs = [str(sample_image)]
-
-    output = segmentor.run(
-        images=inputs,
-        return_probabilities=False,
-        return_labels=False,
-        device=device,
-        patch_mode=True,
-        save_dir=track_tmp_path / "output1",
-        output_type="annotationstore",
-        verbose=True,
-    )
-
-    assert output[0] == track_tmp_path / "output1" / (sample_image.stem + ".db")
-    assert len(output) == 1
-    _test_store_output_patch(output[0])
 
 
 def test_save_annotation_store_nparray(
@@ -394,10 +340,11 @@ def test_merge_vertical_chunkwise_memory_threshold_triggered() -> None:
 
 
 def test_raise_value_error_return_labels_wsi(
-    sample_svs: Path,
+    remote_sample: Callable,
     track_tmp_path: Path,
 ) -> None:
     """Test for raises value error for return_labels in wsi mode."""
+    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
     segmentor = SemanticSegmentor(
         model="fcn-tissue_mask",
         batch_size=64,
@@ -409,7 +356,7 @@ def test_raise_value_error_return_labels_wsi(
         match=r".*return_labels` is not supported when `patch_mode` is False",
     ):
         _ = segmentor.run(
-            images=[sample_svs],
+            images=[wsi4_512_512_svs],
             return_probabilities=False,
             return_labels=True,
             device=device,
@@ -426,7 +373,7 @@ def test_wsi_segmentor_zarr(
     track_tmp_path: Path,
 ) -> None:
     """Test SemanticSegmentor for WSIs with zarr output."""
-    wsi1_2k_2k_svs = Path(remote_sample("wsi1_2k_2k_svs"))
+    wsi4_512_512_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     segmentor = SemanticSegmentor(
         model="fcn-tissue_mask",
@@ -436,7 +383,7 @@ def test_wsi_segmentor_zarr(
     )
     # Return Probabilities is False
     output = segmentor.run(
-        images=[sample_svs],
+        images=[wsi4_512_512_svs],
         return_probabilities=False,
         return_labels=False,
         device=device,
@@ -447,8 +394,8 @@ def test_wsi_segmentor_zarr(
         memory_threshold=1,
     )
 
-    output_ = zarr.open(output[sample_svs], mode="r")
-    assert 0.17 < np.mean(output_["predictions"][:]) < 0.21
+    output_ = zarr.open(output[wsi4_512_512_svs], mode="r")
+    assert 0.0 < np.mean(output_["predictions"][:]) < 0.02
     assert "probabilities" not in output_
     assert "canvas" not in output_
     assert "count" not in output_
@@ -462,7 +409,7 @@ def test_wsi_segmentor_zarr(
     # Return Probabilities is True
     # Testing with WSIReader
     output = segmentor.run(
-        images=[WSIReader.open(sample_svs)],
+        images=[WSIReader.open(wsi4_512_512_svs)],
         return_probabilities=True,
         return_labels=False,
         device=device,
@@ -473,8 +420,8 @@ def test_wsi_segmentor_zarr(
         memory_threshold=1,
     )
 
-    output_ = zarr.open(output[sample_svs], mode="r")
-    assert 0.17 < np.mean(output_["predictions"][:]) < 0.21
+    output_ = zarr.open(output[wsi4_512_512_svs], mode="r")
+    assert 0.0 < np.mean(output_["predictions"][:]) < 0.02
     assert "probabilities" in output_
     assert "canvas" not in output_
     assert "count" not in output_
@@ -489,7 +436,7 @@ def test_wsi_segmentor_zarr(
     )
     segmentor.drop_keys = []
     output = segmentor.run(
-        images=[sample_svs, wsi1_2k_2k_svs],
+        images=[sample_svs, wsi4_512_512_svs],
         return_probabilities=True,
         return_labels=False,
         device=device,
@@ -502,15 +449,16 @@ def test_wsi_segmentor_zarr(
     assert 0.17 < np.mean(output_["predictions"][:]) < 0.21
     assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
 
-    output_ = zarr.open(output[wsi1_2k_2k_svs], mode="r")
-    assert 0.24 < np.mean(output_["predictions"][:]) < 0.25
+    output_ = zarr.open(output[wsi4_512_512_svs], mode="r")
+    assert 0.0 < np.mean(output_["predictions"][:]) < 0.02
     assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
 
 
 def test_wsi_segmentor_annotationstore(
-    sample_svs: Path, track_tmp_path: Path, caplog: pytest.CaptureFixture
+    remote_sample: Callable, track_tmp_path: Path, caplog: pytest.CaptureFixture
 ) -> None:
     """Test SemanticSegmentor for WSIs with AnnotationStore output."""
+    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
     segmentor = SemanticSegmentor(
         model="fcn-tissue_mask",
         batch_size=32,
@@ -518,7 +466,7 @@ def test_wsi_segmentor_annotationstore(
     )
     # Return Probabilities is False
     output = segmentor.run(
-        images=[sample_svs],
+        images=[wsi4_512_512_svs],
         return_probabilities=False,
         return_labels=False,
         device=device,
@@ -528,8 +476,8 @@ def test_wsi_segmentor_annotationstore(
         output_type="annotationstore",
     )
 
-    assert output[sample_svs] == track_tmp_path / "wsi_out_check" / (
-        sample_svs.stem + ".db"
+    assert output[wsi4_512_512_svs] == track_tmp_path / "wsi_out_check" / (
+        wsi4_512_512_svs.stem + ".db"
     )
 
     # Return Probabilities
@@ -540,7 +488,7 @@ def test_wsi_segmentor_annotationstore(
     )
     # Return Probabilities is True
     output = segmentor.run(
-        images=[sample_svs],
+        images=[wsi4_512_512_svs],
         return_probabilities=True,
         return_labels=False,
         device=device,
@@ -550,12 +498,12 @@ def test_wsi_segmentor_annotationstore(
         output_type="annotationstore",
     )
 
-    assert output[sample_svs] == track_tmp_path / "wsi_prob_out_check" / (
-        sample_svs.stem + ".db"
+    assert output[wsi4_512_512_svs] == track_tmp_path / "wsi_prob_out_check" / (
+        wsi4_512_512_svs.stem + ".db"
     )
-    assert output[sample_svs].with_suffix(".zarr").exists()
+    assert output[wsi4_512_512_svs].with_suffix(".zarr").exists()
 
-    zarr_group = zarr.open(output[sample_svs].with_suffix(".zarr"), mode="r")
+    zarr_group = zarr.open(output[wsi4_512_512_svs].with_suffix(".zarr"), mode="r")
     assert "probabilities" in zarr_group
     assert "Probability maps cannot be saved as AnnotationStore." in caplog.text
 
@@ -974,3 +922,30 @@ def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) ->
 
     assert models_wsi_result.exit_code == 0
     assert (track_tmp_path / "output" / (wsi4_512_512_svs.stem + ".db")).exists()
+
+
+def _test_store_output_patch(output: Path) -> None:
+    """Helper method to test annotation store output for a patch."""
+    store_ = SQLiteStore.open(output)
+    annotations_ = store_.values()
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+    assert "Polygon" in annotations_geometry_type
+
+    con = sqlite3.connect(output)
+    cur = con.cursor()
+    annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
+
+    annotation_types = set()
+
+    for item in annotations_properties:
+        for json_str in item:
+            probs = json.loads(json_str)
+            if "type" in probs:
+                annotation_types.add(probs.pop("type"))
+    # When class_dict is none, types are assigned as 0, 1, ...
+    assert 0 in annotation_types
+    assert 1 in annotation_types
+
+    assert annotations_properties is not None

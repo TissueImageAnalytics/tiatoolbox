@@ -35,7 +35,7 @@ device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
 def test_io_config_delegation(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test for delegating args to io config."""
-    mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     model = CNNModel("resnet50")
     predictor = PatchPredictor(model=model, weights=None)
     kwargs = {
@@ -492,15 +492,16 @@ def test_patch_predictor_torch_compile(
 # -------------------------------------------------------------------------------------
 
 
-def test_cli_model_single_file(sample_svs: Path, track_tmp_path: Path) -> None:
+def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test for models CLI single file."""
+    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
     runner = CliRunner()
     models_wsi_result = runner.invoke(
         cli.main,
         [
             "patch-predictor",
             "--img-input",
-            str(sample_svs),
+            str(wsi4_512_512_svs),
             "--patch-mode",
             "False",
             "--output-path",
@@ -509,7 +510,7 @@ def test_cli_model_single_file(sample_svs: Path, track_tmp_path: Path) -> None:
     )
 
     assert models_wsi_result.exit_code == 0
-    assert (track_tmp_path / "output" / (sample_svs.stem + ".db")).exists()
+    assert (track_tmp_path / "output" / (wsi4_512_512_svs.stem + ".db")).exists()
 
 
 def test_cli_model_multiple_file_mask(
