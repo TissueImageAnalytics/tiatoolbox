@@ -6,7 +6,6 @@ import copy
 import logging
 import shutil
 from pathlib import Path
-from typing import NoReturn
 
 import dask.array as da
 import numpy as np
@@ -31,65 +30,7 @@ from tiatoolbox.models.engine.io_config import ModelIOConfigABC
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
 
-class TestEngineABC(EngineABC):
-    """Test EngineABC."""
-
-    def __init__(
-        self: TestEngineABC,
-        model: str | torch.nn.Module,
-        weights: str | Path | None = None,
-        *,
-        verbose: bool | None = None,
-    ) -> NoReturn:
-        """Test EngineABC init."""
-        super().__init__(model=model, weights=weights, verbose=verbose)
-
-    def get_dataloader(
-        self: EngineABC,
-        images: Path,
-        masks: Path | None = None,
-        labels: list | None = None,
-        ioconfig: ModelIOConfigABC | None = None,
-        *,
-        patch_mode: bool = True,
-    ) -> torch.utils.data.DataLoader:
-        """Test pre process images."""
-        return super().get_dataloader(
-            images,
-            masks,
-            labels,
-            ioconfig,
-            patch_mode=patch_mode,
-        )
-
-    def post_process_wsi(
-        self: EngineABC,
-        raw_predictions: dict | Path,
-        save_path: Path,
-        **kwargs: Unpack[EngineABCRunParams],
-    ) -> dict | Path:
-        """Post process WSI output."""
-        return super().post_process_wsi(
-            raw_predictions=raw_predictions,
-            save_path=save_path,
-            **kwargs,
-        )
-
-    def infer_wsi(
-        self: EngineABC,
-        dataloader: torch.utils.data.DataLoader,
-        save_path: Path,
-        **kwargs: dict,
-    ) -> dict | np.ndarray:
-        """Test infer_wsi."""
-        return super().infer_wsi(  # skipcq: PYL-E1121
-            dataloader,
-            save_path,
-            **kwargs,
-        )
-
-
-def test_engine_abc_incorrect_model_type() -> NoReturn:
+def test_engine_abc_incorrect_model_type() -> None:
     """Test EngineABC initialization with incorrect model type."""
     with pytest.raises(
         TypeError,
@@ -104,19 +45,19 @@ def test_engine_abc_incorrect_model_type() -> NoReturn:
         TestEngineABC(model=1)
 
 
-def test_incorrect_ioconfig() -> NoReturn:
+def test_incorrect_ioconfig() -> None:
     """Test EngineABC initialization with incorrect ioconfig."""
     model = torch_models.resnet18()
-    engine = TestEngineABC(model=model)
+    engine_ = TestEngineABC(model=model)
 
     with pytest.raises(
         ValueError,
         match=r".*Must provide.*`ioconfig`.*",
     ):
-        engine.run(images=[], masks=[], ioconfig=None)
+        engine_.run(images=[], masks=[], ioconfig=None)
 
 
-def test_incorrect_output_type() -> NoReturn:
+def test_incorrect_output_type() -> None:
     """Test EngineABC for incorrect output type."""
     pretrained_model = "alexnet-kather100k"
 
@@ -129,14 +70,14 @@ def test_incorrect_output_type() -> NoReturn:
     ):
         _ = eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-            on_gpu=False,
+            device=device,
             patch_mode=True,
             ioconfig=None,
             output_type="random",
         )
 
 
-def test_incorrect_output_type_save_dir() -> NoReturn:
+def test_incorrect_output_type_save_dir() -> None:
     """Test EngineABC for None output_type and output type zarr/annotationstore."""
     pretrained_model = "alexnet-kather100k"
 
@@ -149,7 +90,7 @@ def test_incorrect_output_type_save_dir() -> NoReturn:
     ):
         _ = eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-            on_gpu=False,
+            device=device,
             patch_mode=True,
             ioconfig=None,
             output_type="zarr",
@@ -161,14 +102,14 @@ def test_incorrect_output_type_save_dir() -> NoReturn:
     ):
         _ = eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-            on_gpu=False,
+            device=device,
             patch_mode=True,
             ioconfig=None,
             output_type="annotationstore",
         )
 
 
-def test_pretrained_ioconfig() -> NoReturn:
+def test_pretrained_ioconfig() -> None:
     """Test EngineABC initialization with pretrained model name in the toolbox."""
     pretrained_model = "alexnet-kather100k"
 
@@ -176,7 +117,7 @@ def test_pretrained_ioconfig() -> NoReturn:
     eng = TestEngineABC(model=pretrained_model)
     out = eng.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-        on_gpu=False,
+        device=device,
         patch_mode=True,
         ioconfig=None,
     )
@@ -184,7 +125,7 @@ def test_pretrained_ioconfig() -> NoReturn:
     assert "labels" not in out
 
 
-def test_ioconfig() -> NoReturn:
+def test_ioconfig() -> None:
     """Test EngineABC initialization with valid ioconfig."""
     ioconfig = ModelIOConfigABC(
         input_resolutions=[
@@ -206,7 +147,7 @@ def test_ioconfig() -> NoReturn:
 def test_prepare_engines_save_dir(
     track_tmp_path: pytest.TempPathFactory,
     caplog: pytest.LogCaptureFixture,
-) -> NoReturn:
+) -> None:
     """Test prepare save directory for engines."""
     out_dir = prepare_engines_save_dir(
         save_dir=track_tmp_path / "patch_output",
@@ -286,7 +227,7 @@ def test_prepare_engines_save_dir(
         )
 
 
-def test_engine_initalization() -> NoReturn:
+def test_engine_initalization() -> None:
     """Test engine initialization."""
     with pytest.raises(
         TypeError,
@@ -313,7 +254,7 @@ def test_engine_initalization() -> NoReturn:
     assert eng._get_model_attr("test_attr") is True
 
 
-def test_engine_run() -> NoReturn:
+def test_engine_run() -> None:
     """Test engine run."""
     eng = TestEngineABC(model="alexnet-kather100k")
     assert isinstance(eng, EngineABC)
@@ -340,7 +281,7 @@ def test_engine_run() -> NoReturn:
         eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
             labels=list(range(1)),
-            on_gpu=False,
+            device=device,
         )
 
     with pytest.raises(
@@ -350,7 +291,7 @@ def test_engine_run() -> NoReturn:
         eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
             masks=np.zeros((1, 224, 224, 3)),
-            on_gpu=False,
+            device=device,
         )
 
     eng = TestEngineABC(model="alexnet-kather100k")
@@ -361,13 +302,13 @@ def test_engine_run() -> NoReturn:
         eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
             masks=np.zeros((10, 3)),
-            on_gpu=False,
+            device=device,
         )
 
     eng = TestEngineABC(model="alexnet-kather100k")
     out = eng.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-        on_gpu=False,
+        device=device,
         patch_mode=True,
     )
     assert "probabilities" in out
@@ -376,7 +317,7 @@ def test_engine_run() -> NoReturn:
     eng = TestEngineABC(model="alexnet-kather100k")
     out = eng.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-        on_gpu=False,
+        device=device,
         verbose=False,
     )
     assert "probabilities" in out
@@ -386,7 +327,7 @@ def test_engine_run() -> NoReturn:
     out = eng.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         labels=list(range(10)),
-        on_gpu=False,
+        device=device,
     )
     assert "probabilities" in out
     assert "labels" in out
@@ -400,7 +341,7 @@ def test_engine_run() -> NoReturn:
     np.testing.assert_array_equal(pred, raw_output)
 
 
-def test_engine_run_with_verbose() -> NoReturn:
+def test_engine_run_with_verbose() -> None:
     """Test engine run with verbose."""
     # Run pytest with `-rP` option to view progress bar on the captured stderr call.
 
@@ -415,14 +356,14 @@ def test_engine_run_with_verbose() -> NoReturn:
     assert "labels" in out
 
 
-def test_patch_pred_zarr_store(track_tmp_path: pytest.TempPathFactory) -> NoReturn:
+def test_patch_pred_zarr_store(track_tmp_path: pytest.TempPathFactory) -> None:
     """Test the engine run and patch pred store."""
     save_dir = track_tmp_path / "patch_output"
 
     eng = TestEngineABC(model="alexnet-kather100k")
     out = eng.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-        on_gpu=False,
+        device=device,
         save_dir=save_dir,
         overwrite=True,
     )
@@ -431,7 +372,7 @@ def test_patch_pred_zarr_store(track_tmp_path: pytest.TempPathFactory) -> NoRetu
     eng = TestEngineABC(model="alexnet-kather100k")
     out = eng.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-        on_gpu=False,
+        device=device,
         verbose=False,
         save_dir=save_dir,
         overwrite=True,
@@ -442,7 +383,7 @@ def test_patch_pred_zarr_store(track_tmp_path: pytest.TempPathFactory) -> NoRetu
     out = eng.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         labels=list(range(10)),
-        on_gpu=False,
+        device=device,
         save_dir=save_dir,
         overwrite=True,
     )
@@ -453,7 +394,7 @@ def test_patch_pred_zarr_store(track_tmp_path: pytest.TempPathFactory) -> NoRetu
     out = eng.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         labels=list(range(10)),
-        on_gpu=False,
+        device=device,
         save_dir=save_dir,
         overwrite=True,
         output_file="patch_pred_output",
@@ -468,7 +409,7 @@ def test_patch_pred_zarr_store(track_tmp_path: pytest.TempPathFactory) -> NoRetu
         _ = eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
             labels=list(range(10)),
-            on_gpu=False,
+            device=device,
             save_dir=save_dir,
             overwrite=True,
             output_type="AnnotationStore",
@@ -481,7 +422,7 @@ def test_patch_pred_zarr_store(track_tmp_path: pytest.TempPathFactory) -> NoRetu
         _ = eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
             labels=list(range(10)),
-            on_gpu=False,
+            device=device,
             save_dir=save_dir,
             overwrite=True,
             output_type="AnnotationStore",
@@ -495,7 +436,7 @@ def test_patch_pred_zarr_store(track_tmp_path: pytest.TempPathFactory) -> NoRetu
         _ = eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
             labels=list(range(10)),
-            on_gpu=False,
+            device=device,
             save_dir=save_dir,
             overwrite=True,
             output_type="AnnotationStore",
@@ -535,14 +476,14 @@ def test_io_config_delegation(
     """Test for delegating args to io config."""
     # test not providing config / full input info for not pretrained models
     model = CNNModel("resnet50")
-    eng = TestEngineABC(model=model)
+    eng_ = TestEngineABC(model=model)
 
     kwargs = {
-        "patch_input_shape": [224, 224],
+        "patch_input_shape": (224, 224),
         "input_resolutions": [{"units": "mpp", "resolution": 1.75}],
     }
     with caplog.at_level(logging.WARNING):
-        eng.run(
+        eng_.run(
             np.zeros((10, 224, 224, 3)),
             patch_mode=True,
             save_dir=track_tmp_path / "dump",
@@ -558,58 +499,58 @@ def test_io_config_delegation(
         stride_shape=(256, 256),
         input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
     )
-    eng.run(
+    eng_.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         patch_mode=True,
-        save_dir=f"{track_tmp_path}/dump",
+        save_dir=Path(f"{track_tmp_path}/dump"),
         ioconfig=ioconfig,
     )
-    assert eng._ioconfig.patch_input_shape == (224, 224)
-    assert eng._ioconfig.stride_shape == (256, 256)
-    assert eng._ioconfig.input_resolutions == [{"resolution": 1.35, "units": "mpp"}]
+    assert eng_._ioconfig.patch_input_shape == (224, 224)
+    assert eng_._ioconfig.stride_shape == (256, 256)
+    assert eng_._ioconfig.input_resolutions == [{"resolution": 1.35, "units": "mpp"}]
     shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
-    eng.run(
+    eng_.run(
         images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
         patch_mode=True,
-        save_dir=f"{track_tmp_path}/dump",
+        save_dir=Path(f"{track_tmp_path}/dump"),
         **kwargs,
     )
-    assert eng._ioconfig.patch_input_shape == [224, 224]
-    assert eng._ioconfig.stride_shape == [224, 224]
-    assert eng._ioconfig.input_resolutions == [{"resolution": 1.75, "units": "mpp"}]
+    assert eng_._ioconfig.patch_input_shape == (224, 224)
+    assert eng_._ioconfig.stride_shape == (224, 224)
+    assert eng_._ioconfig.input_resolutions == [{"resolution": 1.75, "units": "mpp"}]
     shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     # test overwriting pretrained ioconfig
-    eng = TestEngineABC(model="alexnet-kather100k")
-    eng.run(
+    eng_ = TestEngineABC(model="alexnet-kather100k")
+    eng_.run(
         images=np.zeros((10, 300, 300, 3), dtype=np.uint8),
         patch_input_shape=(300, 300),
         stride_shape=(300, 300),
         input_resolutions=[{"units": "baseline", "resolution": 1.99}],
         patch_mode=True,
-        save_dir=f"{track_tmp_path}/dump",
+        save_dir=Path(f"{track_tmp_path}/dump"),
     )
-    assert eng._ioconfig.patch_input_shape == (300, 300)
-    assert eng._ioconfig.stride_shape == (300, 300)
-    assert eng._ioconfig.input_resolutions[0]["resolution"] == 1.99
-    assert eng._ioconfig.input_resolutions[0]["units"] == "baseline"
+    assert eng_._ioconfig.patch_input_shape == (300, 300)
+    assert eng_._ioconfig.stride_shape == (300, 300)
+    assert eng_._ioconfig.input_resolutions[0]["resolution"] == 1.99
+    assert eng_._ioconfig.input_resolutions[0]["units"] == "baseline"
     shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
-    eng.run(
+    eng_.run(
         images=np.zeros((10, 300, 300, 3), dtype=np.uint8),
         patch_input_shape=(300, 300),
         stride_shape=(300, 300),
         input_resolutions=None,
         patch_mode=True,
-        save_dir=f"{track_tmp_path}/dump",
+        save_dir=Path(f"{track_tmp_path}/dump"),
     )
-    assert eng._ioconfig.patch_input_shape == (300, 300)
-    assert eng._ioconfig.stride_shape == (300, 300)
+    assert eng_._ioconfig.patch_input_shape == (300, 300)
+    assert eng_._ioconfig.stride_shape == (300, 300)
     shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
-    eng.ioconfig = None
-    _ioconfig = eng._update_ioconfig(
+    eng_.ioconfig = None
+    _ioconfig = eng_._update_ioconfig(
         ioconfig=None,
         patch_input_shape=(300, 300),
         stride_shape=(300, 300),
@@ -629,7 +570,7 @@ def test_io_config_delegation(
             match=r".*Must provide either `ioconfig` or "
             r"`patch_input_shape` and `input_resolutions`*",
         ):
-            eng._update_ioconfig(
+            eng_._update_ioconfig(
                 ioconfig=None,
                 patch_input_shape=_kwargs["patch_input_shape"],
                 stride_shape=(1, 1),
@@ -643,3 +584,61 @@ def test_save_predictions_incorrect_output_type() -> None:
 
     with pytest.raises(TypeError, match=r".*Unsupported output type.* "):
         eng.save_predictions({"predictions": np.zeros((20, 9))}, output_type="random")
+
+
+class TestEngineABC(EngineABC):
+    """Test EngineABC."""
+
+    def __init__(
+        self: TestEngineABC,
+        model: str | torch.nn.Module,
+        weights: str | Path | None = None,
+        *,
+        verbose: bool | None = None,
+    ) -> None:
+        """Test EngineABC init."""
+        super().__init__(model=model, weights=weights, verbose=verbose)
+
+    def get_dataloader(
+        self: EngineABC,
+        images: Path | np.ndarray | list[np.ndarray],
+        masks: Path | None = None,
+        labels: list | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
+        *,
+        patch_mode: bool = True,
+    ) -> torch.utils.data.DataLoader:
+        """Test pre process images."""
+        return super().get_dataloader(
+            images,
+            masks,
+            labels,
+            ioconfig,
+            patch_mode=patch_mode,
+        )
+
+    def post_process_wsi(
+        self: EngineABC,
+        raw_predictions: dict | Path,
+        save_path: Path,
+        **kwargs: Unpack[EngineABCRunParams],
+    ) -> dict | Path:
+        """Post process WSI output."""
+        return super().post_process_wsi(
+            raw_predictions=raw_predictions,
+            save_path=save_path,
+            **kwargs,
+        )
+
+    def infer_wsi(
+        self: EngineABC,
+        dataloader: torch.utils.data.DataLoader,
+        save_path: Path,
+        **kwargs: dict,
+    ) -> dict | np.ndarray:
+        """Test infer_wsi."""
+        return super().infer_wsi(  # skipcq: PYL-E1121
+            dataloader,
+            save_path,
+            **kwargs,
+        )

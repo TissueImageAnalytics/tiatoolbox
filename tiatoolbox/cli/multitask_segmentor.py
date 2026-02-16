@@ -42,8 +42,8 @@ if TYPE_CHECKING:  # pragma: no cover
 @tiatoolbox_cli.command()
 @cli_img_input()
 @cli_output_path(
-    usage_help="Output directory where model segmentation will be saved.",
-    default="semantic_segmentation",
+    usage_help="Output directory where model output will be saved.",
+    default="multitask_segmentor",
 )
 @cli_output_file(default=None)
 @cli_file_type(

@@ -29,8 +29,8 @@ Key Classes
 
     MultiTaskSegmentorRunParams
         TypedDict of runtime parameters used across the engine. Extends
-        :class:`SemanticSegmentorRunParams` with additional multitask options:
-        `return_predictions`, `return_probabilities`, `memory_threshold`, etc.
+        :class:`SemanticSegmentorRunParams` with additional multitask option:
+        `return_predictions`.
 
 Important Functions
     infer_patches(dataloader, *, return_coordinates=False) -> dict

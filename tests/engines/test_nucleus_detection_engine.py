@@ -1,6 +1,5 @@
 """Tests for NucleusDetector."""
 
-import shutil
 from collections.abc import Callable
 from pathlib import Path
 
@@ -20,12 +19,6 @@ from tiatoolbox.utils.misc import imwrite
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
-
-
-def _rm_dir(path: Path) -> None:
-    """Helper func to remove directory."""
-    if path.exists():
-        shutil.rmtree(path, ignore_errors=True)
 
 
 def test_centroid_maps_to_detection_arrays() -> None:
@@ -89,14 +82,14 @@ def test_write_detection_records_to_store_no_class_dict() -> None:
 
 
 def test_nucleus_detector_patch_annotation_store_output(
-    remote_sample: Callable, track_tmp_path: Path
+    remote_sample: Callable, track_tmp_path: Path, rm_dir: Callable
 ) -> None:
     """Test for nucleus detection engine in patch mode."""
-    mini_wsi_svs = Path(remote_sample("wsi1_2k_2k_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     wsi_reader = WSIReader.open(mini_wsi_svs)
     patch_1 = wsi_reader.read_bounds(
-        (30, 30, 61, 61),
+        (120, 120, 151, 151),
         resolution=0.25,
         units="mpp",
         coord_space="resolution",
@@ -109,11 +102,11 @@ def test_nucleus_detector_patch_annotation_store_output(
 
     nucleus_detector = NucleusDetector(model=pretrained_model)
     _ = nucleus_detector.run(
+        images=[patch_1, patch_2],
         patch_mode=True,
         device=device,
         output_type="annotationstore",
         memory_threshold=50,
-        images=[patch_1, patch_2],
         save_dir=save_dir,
         overwrite=True,
         class_dict=None,
@@ -149,18 +142,18 @@ def test_nucleus_detector_patch_annotation_store_output(
     assert len(store_2.values()) == 0
     store_2.close()
 
-    _rm_dir(save_dir)
+    rm_dir(save_dir)
 
 
 def test_nucleus_detector_patches_dict_output(
     remote_sample: Callable,
 ) -> None:
     """Test for nucleus detection engine in patch mode."""
-    mini_wsi_svs = Path(remote_sample("wsi1_2k_2k_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     wsi_reader = WSIReader.open(mini_wsi_svs)
     patch_1 = wsi_reader.read_bounds(
-        (30, 30, 61, 61),
+        (120, 120, 151, 151),
         resolution=0.25,
         units="mpp",
         coord_space="resolution",
@@ -196,13 +189,13 @@ def test_nucleus_detector_patches_dict_output(
 
 
 def test_nucleus_detector_patches_zarr_output(
-    remote_sample: Callable, track_tmp_path: Path
+    remote_sample: Callable, track_tmp_path: Path, rm_dir: Callable
 ) -> None:
     """Test for nucleus detection engine in patch mode."""
-    mini_wsi_svs = Path(remote_sample("wsi1_2k_2k_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     wsi_reader = WSIReader.open(mini_wsi_svs)
     patch_1 = wsi_reader.read_bounds(
-        (30, 30, 61, 61),
+        (120, 120, 151, 151),
         resolution=0.25,
         units="mpp",
         coord_space="resolution",
@@ -238,10 +231,12 @@ def test_nucleus_detector_patches_zarr_output(
     assert output_zarr["probabilities"][0].size == 1
     assert output_zarr["probabilities"][1].size == 0
 
-    _rm_dir(save_dir)
+    rm_dir(save_dir)
 
 
-def test_nucleus_detector_wsi(remote_sample: Callable, track_tmp_path: Path) -> None:
+def test_nucleus_detector_wsi(
+    remote_sample: Callable, track_tmp_path: Path, rm_dir: Callable
+) -> None:
     """Test for nucleus detection engine."""
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
@@ -304,7 +299,7 @@ def test_nucleus_detector_wsi(remote_sample: Callable, track_tmp_path: Path) -> 
     assert 245 <= len(ys) <= 255
     assert 245 <= len(classes) <= 255
 
-    _rm_dir(save_dir)
+    rm_dir(save_dir)
 
 
 # -------------------------------------------------------------------------------------
