@@ -516,7 +516,7 @@ class KongNet(ModelABC):
 
     .. list-table:: KongNet detection performance (FROC)
         on the MONKEY Challenge Final Leaderboard[2]
-        :widths: 15 15 15 15 15 15 15
+        :widths: 15 15 15 15
         :header-rows: 1
 
         * - Model name
@@ -535,21 +535,19 @@ class KongNet(ModelABC):
 
         * - Model name
         - Mitotic Figures
-        * - hovernet-original-kumar
-        - KongNet_Det_MIDOG_1
+        * - KongNet_Det_MIDOG_1
         - 0.7400
 
     .. list-table:: KongNet detection performance (F1)
         on the PUMA Challenge Final Leaderboard Track 1[4]
-        :widths: 15 15
+        :widths: 15 15 15 15
         :header-rows: 1
 
         * - Model name
         - Tumour Cells
         - Lymphocytes
         - Other
-        * - hovernet-original-kumar
-        - KongNet_PUMA_T1_3
+        * - KongNet_PUMA_T1_3
         - 0.7948
         - 0.6746
         - 0.4704
@@ -570,8 +568,7 @@ class KongNet(ModelABC):
         - Endothelial Cells
         - Melanophages
         - Plasma Cells
-        * - hovernet-original-kumar
-        - KongNet_PUMA_T1_3
+        * - KongNet_PUMA_T1_3
         - 0.7952
         - 0.2927
         - 0.1170
@@ -584,7 +581,7 @@ class KongNet(ModelABC):
         - 0.0595
 
     .. list-table:: KongNet detection performance (F1) on the PanNuke Dataset[5]
-        :widths: 15 15
+        :widths: 15 15 15 15 15 15
         :header-rows: 1
 
         * - Model name
@@ -593,8 +590,7 @@ class KongNet(ModelABC):
         - Epithelial Cells
         - Connective Cells
         - Dead Cells
-        * - hovernet-original-kumar
-        - KongNet_CoNIC_1
+        * - KongNet_CoNIC_1
         - 0.71
         - 0.72
         - 0.65
@@ -602,7 +598,7 @@ class KongNet(ModelABC):
         - 0.59
 
     .. list-table:: KongNet detection performance (F1) on the CoNIC Dataset[6]
-        :widths: 15 15
+        :widths: 15 15 15 15 15 15 15
         :header-rows: 1
 
         * - Model name
@@ -612,8 +608,7 @@ class KongNet(ModelABC):
         - Plasma Cells
         - Eosinophils
         - Connective Cells
-        * - hovernet-original-kumar
-        - KongNet_CoNIC_1
+        * - KongNet_CoNIC_1
         - 0.510
         - 0.818
         - 0.707
