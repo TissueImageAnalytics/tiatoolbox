@@ -14,6 +14,7 @@ from tiatoolbox import cli
 from tiatoolbox.models import IOPatchPredictorConfig
 from tiatoolbox.models.architecture.vanilla import CNNBackbone, TimmBackbone
 from tiatoolbox.models.engine.deep_feature_extractor import DeepFeatureExtractor
+from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore.wsireader import WSIReader
 
@@ -68,7 +69,7 @@ def test_feature_extractor_wsi(remote_sample: Callable, track_tmp_path: Path) ->
     """Test feature extraction with DeepFeatureExtractor engine."""
     save_dir = track_tmp_path / "output"
     # # convert to pathlib Path to prevent wsireader complaint
-    mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     # * test providing pretrained from torch vs pretrained_model.yaml
     shutil.rmtree(save_dir, ignore_errors=True)  # default output dir test
@@ -101,14 +102,14 @@ def test_feature_extractor_wsi(remote_sample: Callable, track_tmp_path: Path) ->
     ],
 )
 def test_full_inference(
-    remote_sample: Callable, track_tmp_path: Path, model: Callable
+    remote_sample: Callable, track_tmp_path: Path, model: ModelABC
 ) -> None:
     """Test full inference with CNNBackbone and TimmBackbone models."""
     save_dir = track_tmp_path / "output"
     # pre-emptive clean up
     shutil.rmtree(save_dir, ignore_errors=True)  # default output dir test
 
-    mini_wsi_svs = Path(remote_sample("wsi4_1k_1k_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     ioconfig = IOPatchPredictorConfig(
         input_resolutions=[
@@ -206,16 +207,17 @@ def test_multi_gpu_feature_extraction(
 # -------------------------------------------------------------------------------------
 
 
-def test_cli_model_single_file(sample_svs: Path, track_tmp_path: Path) -> None:
+def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test for feature extractor CLI single file."""
     runner = CliRunner()
+    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
 
     models_wsi_result = runner.invoke(
         cli.main,
         [
             "deep-feature-extractor",
             "--img-input",
-            str(sample_svs),
+            str(wsi4_512_512_svs),
             "--model",
             "resnet18",
             "--patch-mode",
@@ -231,11 +233,11 @@ def test_cli_model_single_file(sample_svs: Path, track_tmp_path: Path) -> None:
     )
 
     assert models_wsi_result.exit_code == 0
-    assert (track_tmp_path / "output" / (sample_svs.stem + ".zarr")).exists()
+    assert (track_tmp_path / "output" / (wsi4_512_512_svs.stem + ".zarr")).exists()
 
     output = zarr.open(
-        track_tmp_path / "output" / (sample_svs.stem + ".zarr"), mode="r"
+        str(track_tmp_path / "output" / (wsi4_512_512_svs.stem + ".zarr")), mode="r"
     )
 
     # Output shape should be # of patches x feature size
-    assert output["features"].shape == (255, 512)
+    assert output["features"].shape == (9, 512)
