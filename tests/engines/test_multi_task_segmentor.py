@@ -454,6 +454,45 @@ def test_wsi_segmentor_annotationstore(
     weights_path.unlink()
 
 
+def test_wsi_segmentor_qupath(remote_sample: Callable, track_tmp_path: Path) -> None:
+    """Test MultiTaskSegmentor for WSIs with AnnotationStore output."""
+    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
+    # testing different configuration for hovernet.
+    # kumar only has two probability maps
+    model_name = "hovernet_fast-pannuke"
+    mtsegmentor = MultiTaskSegmentor(
+        model=model_name,
+        batch_size=32,
+        verbose=False,
+    )
+
+    class_dict = mtsegmentor.model.class_dict
+
+    # Return Probabilities is False
+    output = mtsegmentor.run(
+        images=[wsi4_512_512_svs],
+        return_probabilities=False,
+        device=device,
+        patch_mode=False,
+        save_dir=track_tmp_path / "wsi_out_check",
+        verbose=True,
+        output_type="qupath",
+        class_dict=class_dict,
+        memory_threshold=0,
+    )
+
+    for output_ in output[wsi4_512_512_svs]:
+        assert output_.suffix != ".zarr"
+
+    json_file_name = f"{wsi4_512_512_svs.stem}.json"
+    json_file_name = track_tmp_path / "wsi_out_check" / json_file_name
+    assert json_file_name.exists()
+    assert json_file_name == output[wsi4_512_512_svs][0]
+
+    weights_path = Path(fetch_pretrained_weights(model_name=model_name))
+    weights_path.unlink()
+
+
 def test_wsi_segmentor_annotationstore_probabilities(
     remote_sample: Callable, track_tmp_path: Path, caplog: pytest.CaptureFixture
 ) -> None:
