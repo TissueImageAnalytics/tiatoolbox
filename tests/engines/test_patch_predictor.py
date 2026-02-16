@@ -9,6 +9,7 @@ import sqlite3
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import dask.array as da
 import numpy as np
 import torch
 import yaml
@@ -32,61 +33,9 @@ if TYPE_CHECKING:
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
 
-def _test_predictor_output(
-    inputs: list,
-    model: str,
-    probabilities_check: list | None = None,
-    classification_check: list | None = None,
-    output_type: str = "dict",
-    track_tmp_path: Path | None = None,
-) -> None:
-    """Test the predictions of multiple models included in tiatoolbox."""
-    cache_mode = None if track_tmp_path is None else True
-    save_dir = None if track_tmp_path is None else track_tmp_path / "output"
-    predictor = PatchPredictor(
-        model=model,
-        batch_size=32,
-        verbose=False,
-    )
-    # don't run test on GPU
-    output = predictor.run(
-        inputs,
-        return_labels=False,
-        device=device,
-        cache_mode=cache_mode,
-        save_dir=save_dir,
-        output_type=output_type,
-        return_probabilities=True,
-    )
-
-    if track_tmp_path is not None:
-        output = zarr.open(output, mode="r")
-
-    probabilities = output["probabilities"]
-    classification = output["predictions"]
-    for idx, probabilities_ in enumerate(probabilities):
-        probabilities_max = max(probabilities_)
-        assert np.abs(probabilities_max - probabilities_check[idx]) <= 1e-3, (
-            model,
-            probabilities_max,
-            probabilities_check[idx],
-            probabilities_,
-            classification_check[idx],
-        )
-        assert classification[idx] == classification_check[idx], (
-            model,
-            probabilities_max,
-            probabilities_check[idx],
-            probabilities_,
-            classification_check[idx],
-        )
-    if save_dir:
-        shutil.rmtree(save_dir)
-
-
 def test_io_config_delegation(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test for delegating args to io config."""
-    mini_wsi_svs = Path(remote_sample("wsi2_4k_4k_svs"))
+    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
     model = CNNModel("resnet50")
     predictor = PatchPredictor(model=model, weights=None)
     kwargs = {
@@ -104,14 +53,14 @@ def test_io_config_delegation(remote_sample: Callable, track_tmp_path: Path) -> 
         images=[mini_wsi_svs],
         ioconfig=ioconfig,
         patch_mode=False,
-        save_dir=f"{track_tmp_path}/dump",
+        save_dir=Path(f"{track_tmp_path}/dump"),
     )
     shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
     predictor.run(
         images=[mini_wsi_svs],
         patch_mode=False,
-        save_dir=f"{track_tmp_path}/dump",
+        save_dir=Path(f"{track_tmp_path}/dump"),
         **kwargs,
     )
     shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
@@ -122,7 +71,7 @@ def test_io_config_delegation(remote_sample: Callable, track_tmp_path: Path) -> 
         images=[mini_wsi_svs],
         patch_input_shape=(300, 300),
         patch_mode=False,
-        save_dir=f"{track_tmp_path}/dump",
+        save_dir=Path(f"{track_tmp_path}/dump"),
     )
     assert predictor._ioconfig.patch_input_shape == (300, 300)
     shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
@@ -131,7 +80,7 @@ def test_io_config_delegation(remote_sample: Callable, track_tmp_path: Path) -> 
         images=[mini_wsi_svs],
         stride_shape=(300, 300),
         patch_mode=False,
-        save_dir=f"{track_tmp_path}/dump",
+        save_dir=Path(f"{track_tmp_path}/dump"),
     )
     assert predictor._ioconfig.stride_shape == (300, 300)
     shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
@@ -140,7 +89,7 @@ def test_io_config_delegation(remote_sample: Callable, track_tmp_path: Path) -> 
         images=[mini_wsi_svs],
         input_resolutions=[{"units": "mpp", "resolution": 1.99}],
         patch_mode=False,
-        save_dir=f"{track_tmp_path}/dump",
+        save_dir=Path(f"{track_tmp_path}/dump"),
     )
     assert predictor._ioconfig.input_resolutions[0]["resolution"] == 1.99
     shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
@@ -149,7 +98,7 @@ def test_io_config_delegation(remote_sample: Callable, track_tmp_path: Path) -> 
         images=[mini_wsi_svs],
         input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         patch_mode=False,
-        save_dir=f"{track_tmp_path}/dump",
+        save_dir=Path(f"{track_tmp_path}/dump"),
     )
     assert predictor._ioconfig.input_resolutions[0]["units"] == "baseline"
     shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
@@ -158,7 +107,7 @@ def test_io_config_delegation(remote_sample: Callable, track_tmp_path: Path) -> 
         images=[mini_wsi_svs],
         input_resolutions=[{"units": "level", "resolution": 0}],
         patch_mode=False,
-        save_dir=f"{track_tmp_path}/dump",
+        save_dir=Path(f"{track_tmp_path}/dump"),
     )
     assert predictor._ioconfig.input_resolutions[0]["units"] == "level"
     assert predictor._ioconfig.input_resolutions[0]["resolution"] == 0
@@ -168,7 +117,7 @@ def test_io_config_delegation(remote_sample: Callable, track_tmp_path: Path) -> 
         images=[mini_wsi_svs],
         input_resolutions=[{"units": "power", "resolution": 20}],
         patch_mode=False,
-        save_dir=f"{track_tmp_path}/dump",
+        save_dir=Path(f"{track_tmp_path}/dump"),
     )
     assert predictor._ioconfig.input_resolutions[0]["units"] == "power"
     assert predictor._ioconfig.input_resolutions[0]["resolution"] == 20
@@ -244,6 +193,24 @@ def test_patch_predictor_api(
     assert len(output["probabilities"]) == len(output["labels"])
     assert list(output["labels"]) == [1, 2]
 
+    processed_predictions = {
+        k: da.from_array(v) for k, v in output.items() if k != "labels"
+    }
+    processed_predictions["coordinates"] = np.asarray(
+        [[0, 0, 224, 224], [0, 0, 224, 224]]
+    )
+    (track_tmp_path / "patch_out_check").mkdir()
+    output_ = predictor.save_predictions(
+        processed_predictions=processed_predictions,
+        output_type="annotationstore",
+        save_path=track_tmp_path / "patch_out_check" / "output.db",
+    )
+
+    assert output_.exists()
+    output_ann = _extract_probabilities_from_annotation_store(output_)
+    assert np.all(np.array(output_ann["probabilities"]) <= 1)
+    assert np.all(np.array(output_ann["probabilities"]) >= 0)
+
 
 def test_wsi_predictor_api(
     sample_wsi_dict: dict,
@@ -255,7 +222,7 @@ def test_wsi_predictor_api(
     # Test both Path and str input
     mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
     mini_wsi_jpg = sample_wsi_dict["wsi2_4k_4k_jpg"]
-    mini_wsi_msk = str(sample_wsi_dict["wsi2_4k_4k_msk"])
+    mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
 
     patch_size = np.array([224, 224])
     predictor = PatchPredictor(model="resnet18-kather100k", batch_size=32)
@@ -321,69 +288,6 @@ def test_patch_predictor_kather100k_output(
             classification_check=[6, 3],
             track_tmp_path=track_tmp_path,
         )
-
-
-def _extract_probabilities_from_annotation_store(dbfile: str) -> dict:
-    """Helper function to extract probabilities from Annotation Store."""
-    con = sqlite3.connect(dbfile)
-    cur = con.cursor()
-    annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
-
-    output = {"probabilities": [], "predictions": []}
-
-    for item in annotations_properties:
-        for json_str in item:
-            probs_dict = json.loads(json_str)
-            if "proba_0" in probs_dict:
-                output["probabilities"].append(probs_dict.pop("prob_0"))
-            output["predictions"].append(probs_dict.pop("type"))
-
-    return output
-
-
-def _extract_from_qupath_json(json_file: str) -> dict:
-    """Extract predictions (and optionally coordinates) from QuPath GeoJSON."""
-    with Path.open(json_file, "r") as f:
-        data = json.load(f)
-
-    output = {"predictions": [], "coordinates": []}
-
-    for feature in data.get("features", []):
-        props = feature.get("properties", {})
-        cls = props.get("classification", {})
-
-        # prediction - class name
-        output["predictions"].append(cls.get("name"))
-
-        # geometry - polygon
-        geom = feature.get("geometry", {})
-        coords = geom.get("coordinates", [[]])[0]  # first ring of polygon
-        output["coordinates"].append(coords)
-
-    return output
-
-
-def _validate_probabilities(output: list | dict | zarr.group) -> bool:
-    """Helper function to test if the probabilities value are valid."""
-    probabilities = np.array([0.5])
-
-    if "probabilities" in output:
-        probabilities = output["probabilities"]
-
-    predictions = output["predictions"]
-    if isinstance(probabilities, dict):
-        return all(0 <= probability <= 1 for _, probability in probabilities.items())
-
-    predictions = np.array(get_zarr_array(predictions)).astype(int)
-    probabilities = get_zarr_array(probabilities)
-
-    if not np.all(np.array(probabilities) <= 1):
-        return False
-
-    if not np.all(np.array(probabilities) >= 0):
-        return False
-
-    return np.all(predictions[:][0:5] == [7, 3, 2, 3, 3])
 
 
 def test_wsi_predictor_zarr(
@@ -501,36 +405,35 @@ def test_patch_predictor_patch_mode_no_probabilities(
 
     assert "probabilities" not in output
 
-    output = predictor.run(
-        images=inputs,
-        return_probabilities=False,
-        return_labels=False,
-        device=device,
-        patch_mode=True,
-        save_dir=track_tmp_path / "patch_out_check",
-        output_type="annotationstore",
+    processed_predictions = {k: v for k, v in output.items() if k != "labels"}
+    processed_predictions["coordinates"] = np.asarray(
+        [[0, 0, 224, 224], [0, 0, 224, 224]]
     )
 
-    assert output.exists()
-    output = _extract_probabilities_from_annotation_store(output)
-    assert np.all(output["predictions"] == [6, 3])
-    assert output["probabilities"] == []
+    (track_tmp_path / "patch_out_check").mkdir()
+
+    output_ = predictor.save_predictions(
+        processed_predictions=processed_predictions,
+        output_type="annotationstore",
+        save_path=track_tmp_path / "patch_out_check" / "output.db",
+    )
+
+    assert output_.exists()
+    output_ann = _extract_probabilities_from_annotation_store(output_)
+    assert np.all(output_ann["predictions"] == [6, 3])
+    assert "probabilities" not in output
 
     # QuPath Output
-    output = predictor.run(
-        images=inputs,
-        return_probabilities=False,
-        return_labels=False,
-        device=device,
-        patch_mode=True,
-        save_dir=track_tmp_path / "patch_out_check",
+    output_ = predictor.save_predictions(
+        processed_predictions=processed_predictions,
         output_type="qupath",
-        overwrite=True,
+        save_path=track_tmp_path / "patch_out_check" / "output.json",
     )
 
-    assert output.exists()
-    output = _extract_from_qupath_json(output)
-    assert np.all(output["predictions"] == [6, 3])
+    assert output_.exists()
+    output_ann = _extract_from_qupath_json(output_)
+    assert np.all(output_ann["predictions"] == [6, 3])
+    assert "probabilities" not in output
 
 
 def test_engine_run_wsi_annotation_store(
@@ -682,15 +585,16 @@ def test_patch_predictor_torch_compile(
 # -------------------------------------------------------------------------------------
 
 
-def test_cli_model_single_file(sample_svs: Path, track_tmp_path: Path) -> None:
+def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test for models CLI single file."""
+    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
     runner = CliRunner()
     models_wsi_result = runner.invoke(
         cli.main,
         [
             "patch-predictor",
             "--img-input",
-            str(sample_svs),
+            str(wsi4_512_512_svs),
             "--patch-mode",
             "False",
             "--output-path",
@@ -699,7 +603,7 @@ def test_cli_model_single_file(sample_svs: Path, track_tmp_path: Path) -> None:
     )
 
     assert models_wsi_result.exit_code == 0
-    assert (track_tmp_path / "output" / (sample_svs.stem + ".db")).exists()
+    assert (track_tmp_path / "output" / (wsi4_512_512_svs.stem + ".db")).exists()
 
 
 def test_cli_model_multiple_file_mask(
@@ -709,7 +613,7 @@ def test_cli_model_multiple_file_mask(
     mini_wsi_svs = Path(remote_sample("svs-1-small"))
     sample_wsi_msk = remote_sample("small_svs_tissue_mask")
     sample_wsi_msk = np.load(sample_wsi_msk).astype(np.uint8)
-    imwrite(f"{track_tmp_path}/small_svs_tissue_mask.jpg", sample_wsi_msk)
+    imwrite(Path(f"{track_tmp_path}/small_svs_tissue_mask.jpg"), sample_wsi_msk)
     mini_wsi_msk = track_tmp_path.joinpath("small_svs_tissue_mask.jpg")
 
     # Make multiple copies for test
@@ -776,3 +680,118 @@ def test_cli_model_multiple_file_mask(
     assert (track_tmp_path / "output" / ("1_" + mini_wsi_svs.stem + ".zarr")).exists()
     assert (track_tmp_path / "output" / ("2_" + mini_wsi_svs.stem + ".zarr")).exists()
     assert (track_tmp_path / "output" / ("3_" + mini_wsi_svs.stem + ".zarr")).exists()
+
+
+def _test_predictor_output(
+    inputs: list,
+    model: str,
+    probabilities_check: list | None = None,
+    classification_check: list | None = None,
+    output_type: str = "dict",
+    track_tmp_path: Path | None = None,
+) -> None:
+    """Test the predictions of multiple models included in tiatoolbox."""
+    cache_mode = None if track_tmp_path is None else True
+    save_dir = None if track_tmp_path is None else track_tmp_path / "output"
+    predictor = PatchPredictor(
+        model=model,
+        batch_size=32,
+        verbose=False,
+    )
+    # don't run test on GPU
+    output = predictor.run(
+        inputs,
+        return_labels=False,
+        device=device,
+        cache_mode=cache_mode,
+        save_dir=save_dir,
+        output_type=output_type,
+        return_probabilities=True,
+    )
+
+    if track_tmp_path is not None:
+        output = zarr.open(output, mode="r")
+
+    probabilities = output["probabilities"]
+    classification = output["predictions"]
+    for idx, probabilities_ in enumerate(probabilities):
+        probabilities_max = max(probabilities_)
+        assert np.abs(probabilities_max - probabilities_check[idx]) <= 1e-3, (
+            model,
+            probabilities_max,
+            probabilities_check[idx],
+            probabilities_,
+            classification_check[idx],
+        )
+        assert classification[idx] == classification_check[idx], (
+            model,
+            probabilities_max,
+            probabilities_check[idx],
+            probabilities_,
+            classification_check[idx],
+        )
+    if save_dir:
+        shutil.rmtree(save_dir)
+
+
+def _extract_probabilities_from_annotation_store(dbfile: str | Path) -> dict:
+    """Helper function to extract probabilities from Annotation Store."""
+    con = sqlite3.connect(dbfile)
+    cur = con.cursor()
+    annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
+
+    output = {"probabilities": [], "predictions": []}
+
+    for item in annotations_properties:
+        for json_str in item:
+            probs_dict = json.loads(json_str)
+            if "proba_0" in probs_dict:
+                output["probabilities"].append(probs_dict.pop("prob_0"))
+            output["predictions"].append(probs_dict.pop("type"))
+
+    return output
+
+
+def _extract_from_qupath_json(json_file: str) -> dict:
+    """Extract predictions (and optionally coordinates) from QuPath GeoJSON."""
+    with Path.open(json_file, "r") as f:
+        data = json.load(f)
+
+    output = {"predictions": [], "coordinates": []}
+
+    for feature in data.get("features", []):
+        props = feature.get("properties", {})
+        cls = props.get("classification", {})
+
+        # prediction - class name
+        output["predictions"].append(cls.get("name"))
+
+        # geometry - polygon
+        geom = feature.get("geometry", {})
+        coords = geom.get("coordinates", [[]])[0]  # first ring of polygon
+        output["coordinates"].append(coords)
+
+    return output
+
+
+def _validate_probabilities(output: list | dict | zarr.group) -> bool:
+    """Helper function to test if the probabilities value are valid."""
+    probabilities = np.array([0.5])
+
+    if "probabilities" in output:
+        probabilities = output["probabilities"]
+
+    predictions = output["predictions"]
+    if isinstance(probabilities, dict):
+        return all(0 <= probability <= 1 for _, probability in probabilities.items())
+
+    predictions = np.array(get_zarr_array(predictions)).astype(int)
+    probabilities = get_zarr_array(probabilities)
+
+    if not np.all(np.array(probabilities) <= 1):
+        return False
+
+    if not np.all(np.array(probabilities) >= 0):
+        return False
+
+    return np.all(predictions[:][0:5] == [7, 3, 2, 3, 3])
