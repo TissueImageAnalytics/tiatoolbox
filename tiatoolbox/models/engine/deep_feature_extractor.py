@@ -67,85 +67,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.wsicore import WSIReader
 
 
-def save_to_cache(
-    probabilities: list[da.Array],
-    coordinates: list[da.Array],
-    probabilities_zarr: zarr.Array | None,
-    coordinates_zarr: zarr.Array | None,
-    save_path: str | Path = "temp.zarr",
-) -> tuple[zarr.Array, zarr.Array]:
-    """Save computed feature and coordinate arrays to Zarr cache.
-
-    This function computes the given Dask arrays (`probabilities` and `coordinates`),
-    resizes the corresponding Zarr datasets to accommodate the new data, and appends
-    the results. If the Zarr datasets do not exist, it initializes them within the
-    specified Zarr group.
-
-    Args:
-        probabilities (list[dask.array.Array]):
-            List of Dask arrays representing extracted feature maps.
-        coordinates (list[dask.array.Array]):
-            List of Dask arrays representing patch coordinates.
-        probabilities_zarr (zarr.Array | None):
-            Existing Zarr dataset for feature maps. If None, a new one is created.
-        coordinates_zarr (zarr.Array | None):
-            Existing Zarr dataset for coordinates. If None, a new one is created.
-        save_path (str | Path):
-            Path to the Zarr group for saving datasets. Defaults to "temp.zarr".
-
-    Returns:
-        tuple[zarr.Array, zarr.Array]:
-            Updated Zarr datasets for feature maps and coordinates.
-
-    """
-    if len(probabilities) == 0:
-        return probabilities_zarr, coordinates_zarr
-
-    coordinates = da.concatenate(coordinates, axis=0)
-    probabilities = da.concatenate(probabilities, axis=0)
-
-    computed_values = compute(*[probabilities, coordinates])
-    probabilities_computed, coordinates_computed = computed_values
-
-    chunk_shape = tuple(chunk[0] for chunk in probabilities.chunks)
-    if probabilities_zarr is None:
-        zarr_group = zarr.open(str(save_path), mode="w")
-
-        probabilities_zarr = zarr_group.create_dataset(
-            name="canvas",
-            shape=(0, *probabilities_computed.shape[1:]),
-            chunks=(chunk_shape[0], *probabilities_computed.shape[1:]),
-            dtype=probabilities_computed.dtype,
-            overwrite=True,
-        )
-
-        coordinates_zarr = zarr_group.create_dataset(
-            name="count",
-            shape=(0, *coordinates_computed.shape[1:]),
-            dtype=coordinates_computed.dtype,
-            chunks=(chunk_shape[0], *coordinates_computed.shape[1:]),
-            overwrite=True,
-        )
-
-    probabilities_zarr.resize(
-        (
-            probabilities_zarr.shape[0] + probabilities_computed.shape[0],
-            *probabilities_zarr.shape[1:],
-        )
-    )
-    probabilities_zarr[-probabilities_computed.shape[0] :] = probabilities_computed
-
-    coordinates_zarr.resize(
-        (
-            coordinates_zarr.shape[0] + coordinates_computed.shape[0],
-            *coordinates_zarr.shape[1:],
-        )
-    )
-    coordinates_zarr[-coordinates_computed.shape[0] :] = coordinates_computed
-
-    return probabilities_zarr, coordinates_zarr
-
-
 class DeepFeatureExtractor(PatchPredictor):
     r"""Generic deep feature extractor for digital pathology images.
 
@@ -725,3 +646,82 @@ class DeepFeatureExtractor(PatchPredictor):
             output_type=output_type,
             **kwargs,
         )
+
+
+def save_to_cache(
+    probabilities: list[da.Array],
+    coordinates: list[da.Array],
+    probabilities_zarr: zarr.Array | None,
+    coordinates_zarr: zarr.Array | None,
+    save_path: str | Path = "temp.zarr",
+) -> tuple[zarr.Array, zarr.Array]:
+    """Save computed feature and coordinate arrays to Zarr cache.
+
+    This function computes the given Dask arrays (`probabilities` and `coordinates`),
+    resizes the corresponding Zarr datasets to accommodate the new data, and appends
+    the results. If the Zarr datasets do not exist, it initializes them within the
+    specified Zarr group.
+
+    Args:
+        probabilities (list[dask.array.Array]):
+            List of Dask arrays representing extracted feature maps.
+        coordinates (list[dask.array.Array]):
+            List of Dask arrays representing patch coordinates.
+        probabilities_zarr (zarr.Array | None):
+            Existing Zarr dataset for feature maps. If None, a new one is created.
+        coordinates_zarr (zarr.Array | None):
+            Existing Zarr dataset for coordinates. If None, a new one is created.
+        save_path (str | Path):
+            Path to the Zarr group for saving datasets. Defaults to "temp.zarr".
+
+    Returns:
+        tuple[zarr.Array, zarr.Array]:
+            Updated Zarr datasets for feature maps and coordinates.
+
+    """
+    if len(probabilities) == 0:
+        return probabilities_zarr, coordinates_zarr
+
+    coordinates = da.concatenate(coordinates, axis=0)
+    probabilities = da.concatenate(probabilities, axis=0)
+
+    computed_values = compute(*[probabilities, coordinates])
+    probabilities_computed, coordinates_computed = computed_values
+
+    chunk_shape = tuple(chunk[0] for chunk in probabilities.chunks)
+    if probabilities_zarr is None:
+        zarr_group = zarr.open(str(save_path), mode="w")
+
+        probabilities_zarr = zarr_group.create_dataset(
+            name="canvas",
+            shape=(0, *probabilities_computed.shape[1:]),
+            chunks=(chunk_shape[0], *probabilities_computed.shape[1:]),
+            dtype=probabilities_computed.dtype,
+            overwrite=True,
+        )
+
+        coordinates_zarr = zarr_group.create_dataset(
+            name="count",
+            shape=(0, *coordinates_computed.shape[1:]),
+            dtype=coordinates_computed.dtype,
+            chunks=(chunk_shape[0], *coordinates_computed.shape[1:]),
+            overwrite=True,
+        )
+
+    probabilities_zarr.resize(
+        (
+            probabilities_zarr.shape[0] + probabilities_computed.shape[0],
+            *probabilities_zarr.shape[1:],
+        )
+    )
+    probabilities_zarr[-probabilities_computed.shape[0] :] = probabilities_computed
+
+    coordinates_zarr.resize(
+        (
+            coordinates_zarr.shape[0] + coordinates_computed.shape[0],
+            *coordinates_zarr.shape[1:],
+        )
+    )
+    coordinates_zarr[-coordinates_computed.shape[0] :] = coordinates_computed
+
+    return probabilities_zarr, coordinates_zarr
