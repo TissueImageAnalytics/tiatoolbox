@@ -56,17 +56,22 @@ References:
     [1] Lv, Jiaqi et al., "KongNet: A Multi-headed Deep Learning Model for Detection
     and Classification of Nuclei in Histopathology Images.", 2025,
     arXiv preprint arXiv:2510.23559., URL: https://arxiv.org/abs/2510.23559
+
     [2] L. Studer, “Structured description of the monkey challenge,” Sept. 2024.
+
     [3] J. Ammeling, M. Aubreville, S. Banerjee, C. A. Bertram, K. Breininger,
     D. Hirling, P. Horvath, N. Stathonikos, and M. Veta, “Mitosis domain
     generalization challenge 2025,” Mar. 2025.
+
     [4] M. Schuiveling, H. Liu, D. Eek, G. Breimer, K. Suijkerbuijk, W. Blokx,
     and M. Veta, “A novel dataset for nuclei and tissue segmentation in
     melanoma with baseline nuclei segmentation and tissue segmentation
     benchmarks,” GigaScience, vol. 14, 01 2025.
+
     [5] J. Gamper, N. A. Koohbanani, K. Benes, S. Graham, M. Jahanifar,
     S. A. Khurram, A. Azam, K. Hewitt, and N. Rajpoot, “Pannuke dataset
     extension, insights and baselines,” 2020.
+
     [6]  S. Graham et al., “Conic challenge: Pushing the frontiers of nuclear detection,
     segmentation, classification and counting,” Medical Image Analysis,
     vol. 92, p. 103047, 2024.
@@ -515,106 +520,106 @@ class KongNet(ModelABC):
         :header-rows: 1
 
         * - Model name
-            - Overall Inflammatory
-            - Lymphocytes
-            - Monocytes
+        - Overall Inflammatory
+        - Lymphocytes
+        - Monocytes
         * - KongNet_MONKEY_1
-            - 0.3930
-            - 0.4624
-            - 0.2392
+        - 0.3930
+        - 0.4624
+        - 0.2392
 
-        .. list-table:: KongNet detection performance (F1)
-            on the MIDOG 2025 Challenge Final Leaderboard[3]
+    .. list-table:: KongNet detection performance (F1)
+        on the MIDOG 2025 Challenge Final Leaderboard[3]
         :widths: 15 15
         :header-rows: 1
 
         * - Model name
-            - Mitotic Figures
+        - Mitotic Figures
         * - hovernet-original-kumar
-            - KongNet_Det_MIDOG_1
-            - 0.7400
+        - KongNet_Det_MIDOG_1
+        - 0.7400
 
-        .. list-table:: KongNet detection performance (F1)
-            on the PUMA Challenge Final Leaderboard Track 1[4]
+    .. list-table:: KongNet detection performance (F1)
+        on the PUMA Challenge Final Leaderboard Track 1[4]
         :widths: 15 15
         :header-rows: 1
 
         * - Model name
-            - Tumour Cells
-            - Lymphocytes
-            - Other
+        - Tumour Cells
+        - Lymphocytes
+        - Other
         * - hovernet-original-kumar
-            - KongNet_PUMA_T1_3
-            - 0.7948
-            - 0.6746
-            - 0.4704
+        - KongNet_PUMA_T1_3
+        - 0.7948
+        - 0.6746
+        - 0.4704
 
-        .. list-table:: KongNet detection performance (F1)
-            on the PUMA Challenge Final Leaderboard Track 2[4]
+    .. list-table:: KongNet detection performance (F1)
+        on the PUMA Challenge Final Leaderboard Track 2[4]
         :widths: 15 15 15 15 15 15 15 15 15 15 15
         :header-rows: 1
 
         * - Model name
-            - Tumour Cells
-            - Stroma Cells
-            - Apoptotic Cells
-            - Epithelium Cells
-            - Histiocytes
-            - Lymphocytes
-            - Neutrophils
-            - Endothelial Cells
-            - Melanophages
-            - Plasma Cells
+        - Tumour Cells
+        - Stroma Cells
+        - Apoptotic Cells
+        - Epithelium Cells
+        - Histiocytes
+        - Lymphocytes
+        - Neutrophils
+        - Endothelial Cells
+        - Melanophages
+        - Plasma Cells
         * - hovernet-original-kumar
-            - KongNet_PUMA_T1_3
-            - 0.7952
-            - 0.2927
-            - 0.1170
-            - 0.0707
-            - 0.2154
-            - 0.6642
-            - 0.0361
-            - 0.2123
-            - 0.1931
-            - 0.0595
+        - KongNet_PUMA_T1_3
+        - 0.7952
+        - 0.2927
+        - 0.1170
+        - 0.0707
+        - 0.2154
+        - 0.6642
+        - 0.0361
+        - 0.2123
+        - 0.1931
+        - 0.0595
 
-        .. list-table:: KongNet detection performance (F1) on the PanNuke Dataset[5]
+    .. list-table:: KongNet detection performance (F1) on the PanNuke Dataset[5]
         :widths: 15 15
         :header-rows: 1
 
         * - Model name
-            - Neoplastic Cells
-            - Inflammatory Cells
-            - Epithelial Cells
-            - Connective Cells
-            - Dead Cells
+        - Neoplastic Cells
+        - Inflammatory Cells
+        - Epithelial Cells
+        - Connective Cells
+        - Dead Cells
         * - hovernet-original-kumar
-            - KongNet_CoNIC_1
-            - 0.71
-            - 0.72
-            - 0.65
-            - 0.70
-            - 0.59
+        - KongNet_CoNIC_1
+        - 0.71
+        - 0.72
+        - 0.65
+        - 0.70
+        - 0.59
 
-        .. list-table:: KongNet detection performance (F1) on the CoNIC Dataset[6]
+    .. list-table:: KongNet detection performance (F1) on the CoNIC Dataset[6]
         :widths: 15 15
         :header-rows: 1
 
         * - Model name
-            - Neutrophils
-            - Epithelial Cells
-            - Lymphocytes
-            - Plasma Cells
-            - Eosinophils
-            - Connective Cells
+        - Neutrophils
+        - Epithelial Cells
+        - Lymphocytes
+        - Plasma Cells
+        - Eosinophils
+        - Connective Cells
         * - hovernet-original-kumar
-            - KongNet_CoNIC_1
-            - 0.510
-            - 0.818
-            - 0.707
-            - 0.596
-            - 0.591
-            - 0.695
+        - KongNet_CoNIC_1
+        - 0.510
+        - 0.818
+        - 0.707
+        - 0.596
+        - 0.591
+        - 0.695
 
 
     Attributes:
@@ -652,17 +657,22 @@ class KongNet(ModelABC):
         and Classification of Nuclei in Histopathology Images.", 2025,
         arXiv preprint arXiv:2510.23559.,
         URL: https://arxiv.org/abs/2510.23559
+
         [2] L. Studer, “Structured description of the monkey challenge,” Sept. 2024.
+
         [3] J. Ammeling, M. Aubreville, S. Banerjee, C. A. Bertram, K. Breininger,
         D. Hirling, P. Horvath, N. Stathonikos, and M. Veta, “Mitosis domain
         generalization challenge 2025,” Mar. 2025.
+
         [4] M. Schuiveling, H. Liu, D. Eek, G. Breimer, K. Suijkerbuijk, W. Blokx,
         and M. Veta, “A novel dataset for nuclei and tissue segmentation in
         melanoma with baseline nuclei segmentation and tissue segmentation
         benchmarks,” GigaScience, vol. 14, 01 2025.
+
         [5] J. Gamper, N. A. Koohbanani, K. Benes, S. Graham, M. Jahanifar,
         S. A. Khurram, A. Azam, K. Hewitt, and N. Rajpoot, “Pannuke dataset
         extension, insights and baselines,” 2020.
+
         [6]  S. Graham et al.,
         “Conic challenge: Pushing the frontiers of nuclear detection,
         segmentation, classification and counting,” Medical Image Analysis,
