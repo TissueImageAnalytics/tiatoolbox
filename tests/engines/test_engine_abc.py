@@ -90,7 +90,7 @@ def test_incorrect_output_type_save_dir() -> None:
     ):
         _ = eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-            on_gpu=False,
+            device=device,
             patch_mode=True,
             ioconfig=None,
             output_type="zarr",
@@ -102,7 +102,7 @@ def test_incorrect_output_type_save_dir() -> None:
     ):
         _ = eng.run(
             images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-            on_gpu=False,
+            device=device,
             patch_mode=True,
             ioconfig=None,
             output_type="annotationstore",
