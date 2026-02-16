@@ -65,18 +65,16 @@ def test_feature_extractor_patches(
         )
 
 
-def test_feature_extractor_wsi(remote_sample: Callable, track_tmp_path: Path) -> None:
+def test_feature_extractor_wsi(sample_svs: Path, track_tmp_path: Path) -> None:
     """Test feature extraction with DeepFeatureExtractor engine."""
     save_dir = track_tmp_path / "output"
-    # # convert to pathlib Path to prevent wsireader complaint
-    mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
 
     # * test providing pretrained from torch vs pretrained_model.yaml
     shutil.rmtree(save_dir, ignore_errors=True)  # default output dir test
 
     extractor = DeepFeatureExtractor(batch_size=1, model="fcn-tissue_mask")
     output = extractor.run(
-        images=[mini_wsi_svs],
+        images=[sample_svs],
         return_probabilities=False,
         return_labels=False,
         device=device,
@@ -84,10 +82,10 @@ def test_feature_extractor_wsi(remote_sample: Callable, track_tmp_path: Path) ->
         save_dir=track_tmp_path / "wsi_out_check",
         batch_size=1,
         output_type="zarr",
-        memory_threshold=1,
+        memory_threshold=0,
     )
 
-    output_ = zarr.open(output[mini_wsi_svs], mode="r")
+    output_ = zarr.open(output[sample_svs], mode="r")
     assert len(output_["coordinates"].shape) == 2
     assert len(output_["features"].shape) == 3
 
