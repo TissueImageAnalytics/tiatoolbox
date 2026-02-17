@@ -36,7 +36,13 @@ from tiatoolbox.models.architecture.utils import (
 )
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
-from tiatoolbox.utils.misc import cast_to_min_dtype, create_smart_array
+from tiatoolbox.utils.misc import (
+    _semantic_segmentations_as_qupath_json,
+    _tiles,
+    cast_to_min_dtype,
+    create_smart_array,
+    dict_to_store_patch_predictions,
+)
 from tiatoolbox.utils.transforms import locsize2bounds
 
 if TYPE_CHECKING:
@@ -2343,3 +2349,110 @@ def test_returns_numpy_when_fits_in_memory(
     assert isinstance(arr, np.ndarray)
     assert arr.shape == shape
     assert arr.dtype == dtype
+
+
+def test_tiles_zero_iterations() -> None:
+    """Test helper function with zero iterations."""
+    in_img = np.zeros((0, 0), dtype=np.uint8)
+
+    tile_size = (32, 32)  # larger than the image
+    colormap = 2  # arbitrary valid OpenCV colormap
+
+    tile_iter = _tiles(in_img, tile_size, colormap=colormap, level=0)
+
+    tiles = list(tile_iter)
+
+    assert tiles == []  # no tiles generated
+
+
+def test_semantic_segmentation_returns_json_dict() -> None:
+    """Test for semantic_segmentation QuPath JSON dict."""
+    # Fake 4 x 4 prediction map with two classes: 0 and 1
+    preds_np = np.array(
+        [
+            [0, 0, 1, 1],
+            [0, 0, 1, 1],
+            [0, 0, 1, 1],
+            [0, 0, 1, 1],
+        ],
+        dtype=np.uint8,
+    )
+
+    preds = da.from_array(preds_np, chunks=(4, 4))
+
+    layer_list = [0, 1]  # two classes
+    scale_factor = (1.0, 1.0)
+    class_dict = {0: "Background", 1: "Tumor"}
+
+    qupath_json = _semantic_segmentations_as_qupath_json(
+        layer_list=layer_list,
+        preds=preds,
+        scale_factor=scale_factor,
+        class_dict=class_dict,
+        save_path=None,
+        verbose=False,
+    )
+
+    # --- Assert ---
+    assert isinstance(qupath_json, dict)
+    assert "type" in qupath_json
+    assert qupath_json["type"] == "FeatureCollection"
+    assert "features" in qupath_json
+    assert isinstance(qupath_json["features"], list)
+    assert len(qupath_json["features"]) > 0
+
+    for feature in qupath_json["features"]:
+        assert feature["properties"]["classification"]["name"] in class_dict.values()
+        assert feature["properties"]["classification"]["color"] is not None
+        assert feature["name"] in class_dict.values()
+        assert feature["class_value"] in class_dict
+
+
+def test_dict_to_store_patch_predictions_returns_qupath_json() -> None:
+    """Test for dict_to_store_patch_predictions QuPath JSON dict."""
+    # Fake patch output
+    patch_output = {
+        "predictions": np.array([0, 1, 0, 1], dtype=np.uint8),
+        "coordinates": np.array(
+            [
+                [0, 0, 10, 10],
+                [10, 0, 20, 10],
+                [0, 10, 10, 20],
+                [10, 10, 20, 20],
+            ]
+        ),
+        "labels": np.array([0, 1, 0, 1]),
+    }
+
+    scale_factor = (1.0, 1.0)
+    class_dict = {0: "Background", 1: "Tumor"}
+
+    result = dict_to_store_patch_predictions(
+        patch_output=patch_output,
+        scale_factor=scale_factor,
+        class_dict=class_dict,
+        save_path=None,
+        output_type="qupath",
+        verbose=False,
+    )
+
+    assert isinstance(result, dict)
+
+    assert "type" in result
+    assert result["type"] == "FeatureCollection"
+    assert "features" in result
+    assert isinstance(result["features"], list)
+
+    assert len(result["features"]) > 0
+
+    for feature in result["features"]:
+        assert feature["type"] == "Feature"
+        assert "geometry" in feature
+        assert "properties" in feature
+        assert "classification" in feature["properties"]
+        assert "name" in feature
+        assert "class_value" in feature
+
+        assert feature["class_value"] in class_dict
+        assert feature["properties"]["classification"]["name"] in class_dict.values()
+        assert feature["properties"]["classification"]["color"] is not None
