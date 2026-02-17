@@ -1695,7 +1695,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         return_probabilities = kwargs.get("return_probabilities", False)
         if return_probabilities:
             msg = (
-                f"Probability maps cannot be saved as AnnotationStore. "
+                f"Probability maps cannot be saved as AnnotationStore or JSON. "
                 f"To visualise heatmaps in TIAToolbox Visualization tool,"
                 f"convert heatmaps in {save_path} to ome.tiff using"
                 f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
@@ -2653,7 +2653,8 @@ def _save_annotation_json_store(
         )
     else:
         store_file_name = f"{idx}.db" if task_name is None else f"{idx}_{task_name}.db"
-    output_path = save_path.parent / store_file_name
+    suffix = ".json" if output_type.lower() == "qupath" else ".db"
+    output_path = (save_path.parent / store_file_name).with_suffix(suffix)
     # Patch mode indexes the "coordinates" while calculating "values" variable.
     origin = (0.0, 0.0)
     _ = predictions.pop("coordinates")
@@ -3178,16 +3179,19 @@ def dict_to_json_store(
         for key, arr in processed_predictions.items()
     }
     contours = processed_predictions.pop("contours")
-    delayed_tasks = DaskDelayedAnnotationStore(
+    delayed_tasks = DaskDelayedJSONStore(
         contours=contours,
         processed_predictions=processed_predictions,
     )
 
-    if output_type == "qupath":
+    if output_type.lower() == "qupath":
         return delayed_tasks.compute_qupath_json(
-            class_dict={0: "Tumor", 1: "Stroma"},
-            origin=(0, 0),
+            class_dict=class_dict,
+            origin=origin,
             scale_factor=scale_factor,
+            batch_size=100,
+            num_workers=num_workers,
+            verbose=verbose,
             save_path=output_path.with_suffix(".json"),
         )
 
@@ -3208,7 +3212,7 @@ def dict_to_json_store(
     return output_path
 
 
-class DaskDelayedAnnotationStore:
+class DaskDelayedJSONStore:
     """Compute and write TIAToolbox annotations using batched Dask Delayed tasks.
 
     This class parallelizes annotation construction using Dask Delayed while
@@ -3219,7 +3223,7 @@ class DaskDelayedAnnotationStore:
     """
 
     def __init__(
-        self: DaskDelayedAnnotationStore,
+        self: DaskDelayedJSONStore,
         contours: np.ndarray,
         processed_predictions: dict,
     ) -> None:
@@ -3242,7 +3246,7 @@ class DaskDelayedAnnotationStore:
         self._processed_predictions = processed_predictions
 
     def _build_single_annotation(
-        self: DaskDelayedAnnotationStore,
+        self: DaskDelayedJSONStore,
         i: int,
         class_dict: dict[int, str] | None,
         origin: tuple[float, float],
@@ -3297,13 +3301,44 @@ class DaskDelayedAnnotationStore:
         return Annotation(geom, properties)
 
     def _build_single_qupath_feature(
-        self: DaskDelayedAnnotationStore,
+        self: DaskDelayedJSONStore,
         i: int,
         class_dict: dict | None,
         origin: tuple[float, float],
         scale_factor: tuple[float, float],
         class_colours: dict,
     ) -> dict:
+        """Build a single feature for index ``i``.
+
+        This method performs:
+        - geometry creation
+        - coordinate scaling and translation
+        - per-object property extraction
+        - optional class label mapping
+
+        Args:
+            i (int):
+                Index of the object to convert into an annotation.
+
+            class_dict (dict[int, str] | None):
+                Optional mapping from integer class IDs to string labels.
+                If ``None``, raw integer class IDs are used.
+
+            origin (tuple[float, float]):
+                Translation offset ``(x, y)`` applied after scaling.
+
+            scale_factor (tuple[float, float]):
+                Scaling factors ``(sx, sy)`` applied to contour coordinates.
+
+            class_colours (dict):
+                Maps classes to specific colors.
+
+        Returns:
+            dict:
+                A fully constructed Feature dictionary instance for writing
+                to QuPath JSON.
+
+        """
         contour = np.array(self._contours[i], dtype=float)
         contour[:, 0] = contour[:, 0] * scale_factor[0] + origin[0]
         contour[:, 1] = contour[:, 1] * scale_factor[1] + origin[1]
@@ -3316,21 +3351,26 @@ class DaskDelayedAnnotationStore:
         class_name = None
 
         for key, arr in self._processed_predictions.items():
-            value = arr[i]
+            value = arr[i].tolist() if hasattr(arr[i], "tolist") else arr[i]
+
             if key == "type":
-                # Convert numpy/zarr scalar to Python
-                value = value.tolist() if hasattr(value, "tolist") else value
+                # Handle None class name
+                if value is None:
+                    # Assign default class 0
+                    class_value = 0
+                    class_name = class_dict.get(0, 0)
+                    props["type"] = class_name
+                    continue
 
                 # Safe class lookup
                 if class_dict is not None and value in class_dict:
                     class_name = class_dict[value]
                 else:
-                    class_name = value  # keep raw value
+                    # Already a name or no mapping available
+                    class_name = value
 
-                if class_name is not None:
-                    props["type"] = class_name
-                    class_value = value
-
+                props["type"] = class_name
+                class_value = value
             else:
                 if value is None:
                     continue
@@ -3355,7 +3395,7 @@ class DaskDelayedAnnotationStore:
         }
 
     def compute_annotations(
-        self: DaskDelayedAnnotationStore,
+        self: DaskDelayedJSONStore,
         store: SQLiteStore,
         class_dict: dict[int, str] | None,
         origin: tuple[float, float] = (0, 0),
@@ -3435,7 +3475,7 @@ class DaskDelayedAnnotationStore:
         return store
 
     def compute_qupath_json(
-        self: DaskDelayedAnnotationStore,
+        self: DaskDelayedJSONStore,
         class_dict: dict[int, str] | None,
         origin: tuple[float, float] = (0, 0),
         scale_factor: tuple[float, float] = (1, 1),
@@ -3451,11 +3491,21 @@ class DaskDelayedAnnotationStore:
 
         if class_dict is None:
             type_arr = self._processed_predictions.get("type")
-            if type_arr is not None:
-                max_class = int(type_arr.max())
+
+            # Extract only valid class IDs/names
+            valid_ids = [v for v in type_arr if v is not None]
+
+            if len(valid_ids) == 0:
+                # No class info at all → fallback
+                class_dict = {0: 0}
+            # Numeric class IDs
+            elif all(isinstance(v, (int, np.integer)) for v in valid_ids):
+                max_class = int(max(valid_ids))
                 class_dict = {i: i for i in range(max_class + 1)}
             else:
-                class_dict = {0: 0}
+                # Already class names
+                unique_names = sorted(set(valid_ids))
+                class_dict = {name: name for name in unique_names}
 
         # Enumerate class_dict keys to assign stable integer color indices
         class_keys = list(class_dict.keys())

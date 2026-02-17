@@ -1427,7 +1427,7 @@ class EngineABC(ABC):  # noqa: B024
         )
         raw_predictions = self.infer_patches(
             dataloader=self.dataloader,
-            return_coordinates=output_type in ["annotationstore", "qupath"],
+            return_coordinates=output_type.lower() in ["annotationstore", "qupath"],
         )
 
         processed_predictions = self.post_process_patches(
