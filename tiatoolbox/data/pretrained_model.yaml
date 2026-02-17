@@ -964,3 +964,22 @@ grandqc_tissue_detection:
             patch_output_shape: [512, 512]
             stride_shape: [256, 256]
             save_resolution: {'units': 'mpp', 'resolution': 10.0}
+
+efficientunet-tissue_mask:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    architecture:
+        class: tissue_mask_model.EfficientNetUnet
+        kwargs:
+            num_classes: 1
+            threshold: 0.95
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 8.0}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 8.0}
+            patch_input_shape: [512, 512]
+            patch_output_shape: [512, 512]
+            stride_shape: [480, 480]
+            save_resolution: {'units': 'mpp', 'resolution': 8.0}
