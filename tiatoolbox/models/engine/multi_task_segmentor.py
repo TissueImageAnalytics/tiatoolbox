@@ -2777,7 +2777,7 @@ def retrieve_sel_uids(sel_indices_: list, inst_dict_: dict) -> list:
     return [inst_uids[idx] for idx in sel_indices_]
 
 
-def _get_sel_indices_margin_lines(
+def _get_sel_indices_margin_lines(  # skipcq: PY-R1000
     ioconfig: IOSegmentorConfig,
     tile_shape: tuple[int, int],
     tile_flag: tuple[int, int, int, int],
