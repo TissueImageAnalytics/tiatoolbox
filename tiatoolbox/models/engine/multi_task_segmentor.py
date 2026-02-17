@@ -1291,7 +1291,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     - :class:`numpy.ndarray` - Removal flags
 
         """
-        margin = np.array(ioconfig.margin)
+        margin = 0 if ioconfig.margin is None else np.array(ioconfig.margin)
         tile_shape = np.array(ioconfig.tile_shape)
         tile_shape = (
             np.floor(tile_shape / ioconfig.patch_output_shape)
@@ -2790,7 +2790,7 @@ def _get_sel_indices_margin_lines(
         msg = f"Unknown tile mode {tile_mode}."
         raise ValueError(msg)
 
-    margin = ioconfig.margin
+    margin = 0 if ioconfig.margin is None else ioconfig.margin
     width, height = tile_shape
     inst_boxes = [v["box"] for v in inst_dict.values()]
     inst_boxes = np.array(inst_boxes)
@@ -3004,6 +3004,12 @@ def _update_tile_based_predictions_array(
             continue
         max_h, max_w = wsi_info_dict[idx]["predictions"].shape
         x_end, y_end = min(x_end, max_w), min(y_end, max_h)
+        if y_end - y_start > post_process_output_["predictions"].shape[0]:
+            y_end = y_start + post_process_output_["predictions"].shape[0]
+
+        if x_end - x_start > post_process_output_["predictions"].shape[1]:
+            x_end = x_start + post_process_output_["predictions"].shape[1]
+
         wsi_info_dict[idx]["predictions"][y_start:y_end, x_start:x_end] = (
             post_process_output_["predictions"][
                 0 : y_end - y_start, 0 : x_end - x_start
