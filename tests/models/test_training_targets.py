@@ -6,15 +6,19 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import torch
 from shapely.geometry import Polygon
 
 from tiatoolbox.annotation import Annotation, SQLiteStore
 from tiatoolbox.models.training import (
+    ClassBalancedIndexSampler,
     CoverageClassTargetBuilder,
     MaskTargetBuilder,
     MultiLabelTargetBuilder,
     PatchAnnotationDataset,
     PresenceTargetBuilder,
+    SlideAnnotationPatchDataset,
+    generate_slide_patch_coordinates,
 )
 
 
@@ -198,3 +202,193 @@ def test_patch_annotation_dataset_validation_errors(track_tmp_path: Path) -> Non
     )
     with pytest.raises(ValueError, match="does not exist"):
         _ = dataset[0]
+
+
+def test_generate_slide_patch_coordinates_with_mask(track_tmp_path: Path) -> None:
+    """Coordinate generation should respect optional mask filtering."""
+    slide = np.zeros((32, 32, 3), dtype=np.uint8)
+    slide_path = track_tmp_path / "slide.npy"
+    np.save(slide_path, slide)
+
+    mask = np.zeros((32, 32), dtype=np.uint8)
+    mask[:, :16] = 1
+
+    coords = generate_slide_patch_coordinates(
+        input_img=slide_path,
+        patch_size=(16, 16),
+        stride=(16, 16),
+        resolution=1.0,
+        units="baseline",
+        input_mask=mask,
+        min_mask_ratio=0.5,
+    )
+    assert coords.shape == (2, 4)
+    assert {
+        tuple(coord.tolist()) for coord in coords
+    } == {
+        (0, 0, 16, 16),
+        (0, 16, 16, 32),
+    }
+
+
+def test_slide_annotation_patch_dataset(track_tmp_path: Path) -> None:
+    """Slide+annotation dataset should stream patches and build targets per slide."""
+    slide_0 = np.zeros((32, 32, 3), dtype=np.uint8)
+    slide_1 = np.zeros((32, 32, 3), dtype=np.uint8)
+    slide_0_path = track_tmp_path / "slide_0.npy"
+    slide_1_path = track_tmp_path / "slide_1.npy"
+    np.save(slide_0_path, slide_0)
+    np.save(slide_1_path, slide_1)
+
+    store_0_path = track_tmp_path / "store_0.db"
+    store_1_path = track_tmp_path / "store_1.db"
+    store_0 = SQLiteStore(store_0_path)
+    store_1 = SQLiteStore(store_1_path)
+
+    store_0.append(
+        Annotation(
+            Polygon([(0, 0), (16, 0), (16, 16), (0, 16)]),
+            properties={"class": "tumor"},
+        ),
+        key="slide_0_tumor",
+    )
+    store_1.append(
+        Annotation(
+            Polygon([(16, 0), (32, 0), (32, 16), (16, 16)]),
+            properties={"class": "tumor"},
+        ),
+        key="slide_1_tumor",
+    )
+
+    dataset = SlideAnnotationPatchDataset(
+        slide_inputs=[slide_0_path, slide_1_path],
+        annotation_stores=[store_0_path, store_1_path],
+        target_builder=PresenceTargetBuilder(
+            where='props["class"] == "tumor"',
+            min_fraction=0.25,
+            positive_label=1,
+            negative_label=0,
+        ),
+        patch_size=(16, 16),
+        stride=(16, 16),
+        resolution=1.0,
+        units="baseline",
+    )
+
+    assert len(dataset) == 8
+    targets = [int(dataset[index]["target"].item()) for index in range(len(dataset))]
+    assert targets[:4].count(1) == 1
+    assert targets[4:].count(1) == 1
+
+    sample = dataset[0]
+    assert sample["image"].shape == (3, 16, 16)
+    assert sample["bounds"].shape == (4,)
+    assert sample["slide_index"].dtype == torch.long
+
+
+def test_slide_annotation_patch_dataset_resolution_conversion(
+    track_tmp_path: Path,
+) -> None:
+    """Slide bounds should be converted from resolution-space to baseline bounds."""
+    slide = np.zeros((32, 32, 3), dtype=np.uint8)
+    slide_path = track_tmp_path / "slide_res.npy"
+    np.save(slide_path, slide)
+
+    store_path = track_tmp_path / "store_res.db"
+    store = SQLiteStore(store_path)
+    store.append(
+        Annotation(
+            Polygon([(0, 0), (16, 0), (16, 16), (0, 16)]),
+            properties={"class": "tumor"},
+        ),
+        key="tumor",
+    )
+
+    dataset = SlideAnnotationPatchDataset(
+        slide_inputs=[slide_path],
+        annotation_stores=store_path,
+        target_builder=PresenceTargetBuilder(
+            where='props["class"] == "tumor"',
+            min_fraction=0.5,
+            positive_label=1,
+            negative_label=0,
+        ),
+        patch_size=(8, 8),
+        stride=(8, 8),
+        resolution=0.5,
+        units="baseline",
+    )
+    targets = [int(dataset[index]["target"].item()) for index in range(len(dataset))]
+    assert targets == [1, 0, 0, 0]
+
+
+def test_slide_annotation_patch_dataset_validation_errors(
+    track_tmp_path: Path,
+) -> None:
+    """Slide annotation dataset should fail on invalid input combinations."""
+    slide = np.zeros((32, 32, 3), dtype=np.uint8)
+    slide_path = track_tmp_path / "valid_slide.npy"
+    np.save(slide_path, slide)
+
+    store_path = track_tmp_path / "valid_store.db"
+    SQLiteStore(store_path)
+
+    builder = PresenceTargetBuilder()
+    with pytest.raises(ValueError, match="same length as `slide_inputs`"):
+        _ = SlideAnnotationPatchDataset(
+            slide_inputs=[slide_path, slide_path],
+            annotation_stores=[store_path],
+            target_builder=builder,
+            patch_size=(16, 16),
+        )
+
+    with pytest.raises(ValueError, match="same length as `slide_inputs`"):
+        _ = SlideAnnotationPatchDataset(
+            slide_inputs=[slide_path, slide_path],
+            annotation_stores=store_path,
+            target_builder=builder,
+            patch_size=(16, 16),
+            input_masks=[None],
+        )
+
+    with pytest.raises(ValueError, match="does not exist"):
+        _ = SlideAnnotationPatchDataset(
+            slide_inputs=[track_tmp_path / "missing_slide.npy"],
+            annotation_stores=store_path,
+            target_builder=builder,
+            patch_size=(16, 16),
+        )
+
+    with pytest.raises(ValueError, match="No patch coordinates"):
+        _ = SlideAnnotationPatchDataset(
+            slide_inputs=[slide_path],
+            annotation_stores=store_path,
+            target_builder=builder,
+            patch_size=(16, 16),
+            input_masks=np.zeros((32, 32), dtype=np.uint8),
+            min_mask_ratio=0.5,
+        )
+
+
+def test_class_balanced_index_sampler() -> None:
+    """Class-balanced sampler should upweight minority classes."""
+    labels = np.array([0] * 9 + [1], dtype=np.int64)
+    sampler = ClassBalancedIndexSampler(
+        labels=labels,
+        num_samples=1000,
+        generator=torch.Generator().manual_seed(7),
+    )
+    sampled_labels = labels[list(iter(sampler))]
+
+    minority_ratio = float(np.mean(sampled_labels == 1))
+    assert 0.4 < minority_ratio < 0.6
+    assert len(sampler) == 1000
+
+    ignore_sampler = ClassBalancedIndexSampler(
+        labels=np.array([0, 0, 1, 2], dtype=np.int64),
+        num_samples=200,
+        ignore_labels={2},
+        generator=torch.Generator().manual_seed(3),
+    )
+    ignore_labels = np.array([0, 0, 1, 2], dtype=np.int64)[list(iter(ignore_sampler))]
+    assert np.all(ignore_labels != 2)

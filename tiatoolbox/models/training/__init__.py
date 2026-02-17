@@ -18,7 +18,12 @@ from tiatoolbox.models.training.datasets import (
     PatchFolderClassificationDataset,
     PatchAnnotationDataset,
     PatchMaskPairDataset,
+    SlideAnnotationPatchDataset,
     create_dataset,
+)
+from tiatoolbox.models.training.samplers import (
+    ClassBalancedIndexSampler,
+    generate_slide_patch_coordinates,
 )
 from tiatoolbox.models.training.targets import (
     CoverageClassTargetBuilder,
@@ -51,6 +56,8 @@ __all__ = [
     "PatchAnnotationDataset",
     "PatchFolderClassificationDataset",
     "PatchMaskPairDataset",
+    "SlideAnnotationPatchDataset",
+    "ClassBalancedIndexSampler",
     "PresenceTargetBuilder",
     "SchedulerConfig",
     "SegmentationTask",
@@ -68,4 +75,5 @@ __all__ = [
     "save_checkpoint",
     "save_model_weights",
     "set_seed",
+    "generate_slide_patch_coordinates",
 ]

@@ -10,11 +10,16 @@ import torch
 from torch.utils.data import Dataset
 
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
+from tiatoolbox.models.training.samplers import generate_slide_patch_coordinates
 from tiatoolbox.models.training.targets import TargetBuilderABC
 from tiatoolbox.utils.misc import imread
+from tiatoolbox.wsicore.wsireader import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable
+
+    from tiatoolbox.type_hints import Resolution, Units
+    from tiatoolbox.wsicore.wsireader import VirtualWSIReader
 
 DEFAULT_IMAGE_SUFFIXES = {
     ".bmp",
@@ -484,11 +489,276 @@ class PatchAnnotationDataset(Dataset):
         return {"image": image_tensor, "target": target_tensor}
 
 
+class SlideAnnotationPatchDataset(Dataset):
+    """Dataset reading patches on-the-fly from slides with paired annotation stores."""
+
+    def __init__(  # noqa: PLR0913
+        self: SlideAnnotationPatchDataset,
+        slide_inputs: list[str | Path | WSIReader],
+        annotation_stores: (
+            AnnotationStore
+            | str
+            | Path
+            | list[AnnotationStore | str | Path]
+        ),
+        target_builder: TargetBuilderABC,
+        patch_size: int | tuple[int, int],
+        *,
+        stride: int | tuple[int, int] | None = None,
+        resolution: Resolution = 0,
+        units: Units = "level",
+        within_bound: bool = False,
+        input_masks: (
+            str
+            | Path
+            | np.ndarray
+            | VirtualWSIReader
+            | AnnotationStore
+            | list[
+                str
+                | Path
+                | np.ndarray
+                | VirtualWSIReader
+                | AnnotationStore
+                | None
+            ]
+            | None
+        ) = None,
+        min_mask_ratio: float = 0.0,
+        store_filter: str | None = None,
+        image_transform: Callable | None = None,
+        target_transform: Callable | None = None,
+    ) -> None:
+        """Initialize :class:`SlideAnnotationPatchDataset`."""
+        super().__init__()
+        self.slide_inputs = self._normalize_slide_inputs(slide_inputs)
+        self.annotation_store_specs = self._normalize_annotation_stores(
+            annotation_stores,
+            num_slides=len(self.slide_inputs),
+        )
+        self.input_mask_specs = self._normalize_input_masks(
+            input_masks,
+            num_slides=len(self.slide_inputs),
+        )
+
+        self.target_builder = target_builder
+        self.patch_size = patch_size
+        self.stride = stride
+        self.resolution = resolution
+        self.units = units
+        self.within_bound = within_bound
+        self.min_mask_ratio = float(min_mask_ratio)
+        self.store_filter = store_filter
+        self.image_transform = image_transform
+        self.target_transform = target_transform
+
+        self._reader_cache: dict[str, WSIReader] = {}
+        self._store_cache: dict[str, AnnotationStore] = {}
+        (
+            self.sample_slide_indices,
+            self.sample_bounds,
+        ) = self._build_patch_index()
+
+    @staticmethod
+    def _normalize_slide_inputs(
+        slide_inputs: list[str | Path | WSIReader],
+    ) -> list[str | Path | WSIReader]:
+        """Validate and normalize slide input list."""
+        if not isinstance(slide_inputs, list):
+            msg = "`slide_inputs` must be a list."
+            raise ValueError(msg)
+        if not slide_inputs:
+            msg = "`slide_inputs` must contain at least one slide."
+            raise ValueError(msg)
+        return slide_inputs
+
+    @staticmethod
+    def _normalize_annotation_stores(
+        annotation_stores: (
+            AnnotationStore
+            | str
+            | Path
+            | list[AnnotationStore | str | Path]
+        ),
+        num_slides: int,
+    ) -> list[AnnotationStore | str | Path]:
+        """Normalize annotation store specs to per-slide entries."""
+        if isinstance(annotation_stores, list):
+            if len(annotation_stores) != num_slides:
+                msg = (
+                    "When `annotation_stores` is a list it must have the same "
+                    "length as `slide_inputs`."
+                )
+                raise ValueError(msg)
+            return annotation_stores
+
+        return [annotation_stores for _ in range(num_slides)]
+
+    @staticmethod
+    def _normalize_input_masks(
+        input_masks: (
+            str
+            | Path
+            | np.ndarray
+            | VirtualWSIReader
+            | AnnotationStore
+            | list[
+                str
+                | Path
+                | np.ndarray
+                | VirtualWSIReader
+                | AnnotationStore
+                | None
+            ]
+            | None
+        ),
+        num_slides: int,
+    ) -> list[
+        str
+        | Path
+        | np.ndarray
+        | VirtualWSIReader
+        | AnnotationStore
+        | None
+    ]:
+        """Normalize optional input-mask specs to per-slide entries."""
+        if isinstance(input_masks, list):
+            if len(input_masks) != num_slides:
+                msg = (
+                    "When `input_masks` is a list it must have the same "
+                    "length as `slide_inputs`."
+                )
+                raise ValueError(msg)
+            return input_masks
+
+        return [input_masks for _ in range(num_slides)]
+
+    def _get_reader(self: SlideAnnotationPatchDataset, index: int) -> WSIReader:
+        """Get a cached WSI reader for one slide index."""
+        slide_spec = self.slide_inputs[index]
+        if isinstance(slide_spec, WSIReader):
+            return slide_spec
+
+        slide_path = Path(slide_spec)
+        if not slide_path.exists():
+            msg = f"Slide path does not exist: `{slide_path}`."
+            raise ValueError(msg)
+
+        cache_key = str(slide_path.resolve())
+        if cache_key not in self._reader_cache:
+            self._reader_cache[cache_key] = WSIReader.open(slide_path)
+        return self._reader_cache[cache_key]
+
+    def _get_store(self: SlideAnnotationPatchDataset, index: int) -> AnnotationStore:
+        """Get a cached annotation store for one slide index."""
+        store_spec = self.annotation_store_specs[index]
+        if isinstance(store_spec, AnnotationStore):
+            return store_spec
+
+        store_path = Path(store_spec)
+        if not store_path.exists():
+            msg = f"Annotation store path does not exist: `{store_path}`."
+            raise ValueError(msg)
+
+        cache_key = str(store_path.resolve())
+        if cache_key not in self._store_cache:
+            self._store_cache[cache_key] = SQLiteStore(store_path)
+        return self._store_cache[cache_key]
+
+    def _build_patch_index(
+        self: SlideAnnotationPatchDataset,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Build flattened slide-index and patch-bounds arrays."""
+        per_slide_indices: list[np.ndarray] = []
+        per_slide_bounds: list[np.ndarray] = []
+
+        for slide_index in range(len(self.slide_inputs)):
+            reader = self._get_reader(slide_index)
+            bounds = generate_slide_patch_coordinates(
+                input_img=reader,
+                patch_size=self.patch_size,
+                stride=self.stride,
+                resolution=self.resolution,
+                units=self.units,
+                within_bound=self.within_bound,
+                input_mask=self.input_mask_specs[slide_index],
+                min_mask_ratio=self.min_mask_ratio,
+                store_filter=self.store_filter,
+            )
+            if bounds.size == 0:
+                continue
+
+            per_slide_indices.append(
+                np.full((bounds.shape[0],), fill_value=slide_index, dtype=np.int64),
+            )
+            per_slide_bounds.append(bounds.astype(np.int64, copy=False))
+
+        if not per_slide_bounds:
+            msg = "No patch coordinates were generated for the provided slides."
+            raise ValueError(msg)
+
+        return (
+            np.concatenate(per_slide_indices, axis=0),
+            np.concatenate(per_slide_bounds, axis=0),
+        )
+
+    def __len__(self: SlideAnnotationPatchDataset) -> int:
+        """Return total number of generated patch coordinates."""
+        return int(self.sample_slide_indices.shape[0])
+
+    def __getitem__(self: SlideAnnotationPatchDataset, index: int) -> dict:
+        """Get one on-the-fly slide patch and annotation-derived target."""
+        slide_index = int(self.sample_slide_indices[index])
+        bounds_at_resolution = tuple(
+            int(value) for value in self.sample_bounds[index].tolist()
+        )
+
+        reader = self._get_reader(slide_index)
+        image = reader.read_bounds(
+            bounds_at_resolution,
+            resolution=self.resolution,
+            units=self.units,
+            coord_space="resolution",
+        )
+        if self.image_transform is not None:
+            image = self.image_transform(image)
+
+        image_tensor = _ensure_tensor_image(image)
+        height, width = image_tensor.shape[1:]
+
+        bounds_at_baseline = tuple(
+            float(value)
+            for value in reader.bounds_at_resolution_to_baseline(
+                bounds_at_resolution,
+                self.resolution,
+                self.units,
+            )
+        )
+        store = self._get_store(slide_index)
+        target = self.target_builder.create_target(
+            store=store,
+            patch_bounds=bounds_at_baseline,
+            output_shape=(height, width),
+        )
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        target_tensor = _ensure_tensor_target(target)
+        bounds_tensor = torch.as_tensor(bounds_at_resolution, dtype=torch.long)
+        return {
+            "image": image_tensor,
+            "target": target_tensor,
+            "slide_index": torch.tensor(slide_index, dtype=torch.long),
+            "bounds": bounds_tensor,
+        }
+
+
 def create_dataset(
     dataset_type: Literal[
         "patch_folder_classification",
         "patch_mask_pair",
         "patch_annotation",
+        "slide_annotation_patch",
     ],
     **kwargs: dict,
 ) -> Dataset:
@@ -499,10 +769,12 @@ def create_dataset(
         return PatchMaskPairDataset(**kwargs)
     if dataset_type == "patch_annotation":
         return PatchAnnotationDataset(**kwargs)
+    if dataset_type == "slide_annotation_patch":
+        return SlideAnnotationPatchDataset(**kwargs)
 
     msg = (
         "Unsupported `dataset_type`. "
         "Supported values are: `patch_folder_classification`, "
-        "`patch_mask_pair`, `patch_annotation`."
+        "`patch_mask_pair`, `patch_annotation`, `slide_annotation_patch`."
     )
     raise ValueError(msg)
