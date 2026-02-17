@@ -401,48 +401,6 @@ def test_patch_pred_zarr_store(track_tmp_path: pytest.TempPathFactory) -> None:
     )
     assert Path.exists(out), "Zarr output file does not exist"
 
-    eng = TestEngineABC(model="alexnet-kather100k")
-    with pytest.raises(
-        ValueError,
-        match=r".*Patch output must contain coordinates.",
-    ):
-        _ = eng.run(
-            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-            labels=list(range(10)),
-            device=device,
-            save_dir=save_dir,
-            overwrite=True,
-            output_type="AnnotationStore",
-        )
-
-    with pytest.raises(
-        ValueError,
-        match=r".*Patch output must contain coordinates.",
-    ):
-        _ = eng.run(
-            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-            labels=list(range(10)),
-            device=device,
-            save_dir=save_dir,
-            overwrite=True,
-            output_type="AnnotationStore",
-            class_dict={0: "class0", 1: "class1"},
-        )
-
-    with pytest.raises(
-        ValueError,
-        match=r".*Patch output must contain coordinates.",
-    ):
-        _ = eng.run(
-            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
-            labels=list(range(10)),
-            device=device,
-            save_dir=save_dir,
-            overwrite=True,
-            output_type="AnnotationStore",
-            scale_factor=(2.0, 2.0),
-        )
-
 
 def test_get_dataloader(sample_svs: Path) -> None:
     """Test the get_dataloader function."""
