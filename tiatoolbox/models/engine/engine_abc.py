@@ -727,7 +727,7 @@ class EngineABC(ABC):  # noqa: B024
             return processed_predictions
 
         if output_type.lower() in ["qupath", "annotationstore"]:
-            suffix = "output.json" if output_type.lower() == "qupath" else ".db"
+            suffix = ".json" if output_type.lower() == "qupath" else ".db"
             save_path = Path(
                 kwargs.get("output_file", save_path.parent / ("output" + suffix))
             )

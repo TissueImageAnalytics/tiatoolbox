@@ -1707,7 +1707,7 @@ def dict_to_store_patch_predictions(
             preds=preds,
             class_dict=class_dict,
             patch_coords=patch_coords,
-            verbose=True,
+            verbose=verbose,
         )
 
         if save_path:

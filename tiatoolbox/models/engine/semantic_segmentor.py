@@ -702,8 +702,9 @@ class SemanticSegmentor(PatchPredictor):
         # Need to add support for zarr conversion.
         save_paths = []
 
-        logger.info("Saving predictions as AnnotationStore.")
         suffix = ".json" if output_type.lower() == "qupath" else ".db"
+        msg = f"Saving predictions as f{output_type} in {suffix} format."
+        logger.info(msg)
         if self.patch_mode:
             for i, predictions in enumerate(processed_predictions["predictions"]):
                 if isinstance(self.images[i], Path):

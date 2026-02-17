@@ -1065,7 +1065,7 @@ def save_detection_arrays_to_qupath_json(
         y = float(ys[i]) * scale_factor[1]
 
         class_id = int(classes[i])
-        class_label = class_dict[class_id]
+        class_label = class_dict.get(class_id, class_id)
         prob = float(probs[i])
 
         # QuPath point geometry
@@ -1081,7 +1081,7 @@ def save_detection_arrays_to_qupath_json(
             "properties": {
                 "classification": {
                     "name": class_label,
-                    "color": class_colours[class_id],
+                    "color": class_colours.get(class_id, class_id),
                 },
                 "probability": prob,
             },
