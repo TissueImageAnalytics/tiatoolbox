@@ -861,7 +861,7 @@ def assert_annotation_store_patch_output(
             assert annotations_list == []
 
 
-def assert_qupath_json_patch_output(
+def assert_qupath_json_patch_output(  # skipcq: PY-R1000
     inputs: list | np.ndarray,
     output_json: list[Path],
     task_name: str | None,
