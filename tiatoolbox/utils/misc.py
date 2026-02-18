@@ -1553,7 +1553,7 @@ def _semantic_segmentations_as_qupath_json(
 
     qupath_json = {"type": "FeatureCollection", "features": features}
 
-    # if a save director is provided, then dump json into a file
+    # if a save directory is provided, then dump JSON into a file
     if save_path:
         return save_qupath_json(save_path=save_path, qupath_json=qupath_json)
 
@@ -1601,7 +1601,7 @@ def _semantic_segmentations_as_annotations(
         annotations_list, [str(i) for i in range(len(annotations_list))]
     )
 
-    # # if a save director is provided, then dump store into a file
+    # # if a save directory is provided, then dump store into a file
     if save_path:
         return save_annotations(
             save_path=save_path,
@@ -1657,8 +1657,8 @@ def dict_to_store_patch_predictions(
             Optional Output directory to save the Annotation
             Store results.
         output_type (str):
-            "annotationstore" → return AnnotationStore
-            "qupath" → return QuPath JSON dict
+            "AnnotationStore" → return AnnotationStore
+            "QuPath" → return QuPath JSON dict
         verbose (bool):
             Whether to display logs and progress bar.
 

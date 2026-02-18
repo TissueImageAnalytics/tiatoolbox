@@ -2665,7 +2665,7 @@ def _save_annotation_json_store(
     *,
     verbose: bool = True,
 ) -> Path:
-    """Helper function to save to annotation store."""
+    """Helper function to save to QuPath JSON or Annotation store."""
     if isinstance(curr_image, Path):
         store_file_name = (
             f"{curr_image.stem}.db"
@@ -3125,7 +3125,7 @@ def _compute_info_dict_for_merge(
 
 def dict_to_json_store(
     processed_predictions: dict,
-    output_path: str | Path,
+    output_path: Path,
     output_type: str,
     class_dict: dict | None = None,
     origin: tuple[float, float] = (0, 0),
@@ -3134,7 +3134,7 @@ def dict_to_json_store(
     *,
     verbose: bool = True,
 ) -> Path:
-    """Write polygonal multitask predictions into an SQLite-backed AnnotationStore.
+    """Write polygonal multitask predictions into an QuPath JSON or AnnotationStore.
 
     Converts a task dictionary (with per-object fields) into `Annotation` records,
     applying coordinate scaling and translation to move predictions into the slide's
@@ -3157,7 +3157,7 @@ def dict_to_json_store(
             Dictionary containing per-object fields. Must include `"contours"`;
             may include `"geom_type"` and any number of additional fields to be
             written as properties.
-        output_path (str | Path):
+        output_path (Path):
             Path to save the output.
         output_type (str):
             Desired output format: "qupath" or "annotationstore".
@@ -3328,7 +3328,7 @@ class DaskDelayedJSONStore:
         class_dict: dict | None,
         origin: tuple[float, float],
         scale_factor: tuple[float, float],
-        class_colours: dict,
+        class_colors: dict,
     ) -> dict:
         """Build a single feature for index ``i``.
 
@@ -3352,7 +3352,7 @@ class DaskDelayedJSONStore:
             scale_factor (tuple[float, float]):
                 Scaling factors ``(sx, sy)`` applied to contour coordinates.
 
-            class_colours (dict):
+            class_colors (dict):
                 Maps classes to specific colors.
 
         Returns:
@@ -3399,8 +3399,8 @@ class DaskDelayedJSONStore:
                 props[key] = np.array(value).tolist()
 
         # Classification block
-        if class_name is not None and class_value in class_colours:
-            color = class_colours[class_value]
+        if class_name is not None and class_value in class_colors:
+            color = class_colors[class_value]
             props["classification"] = {
                 "name": class_name,
                 "color": color,
@@ -3534,7 +3534,7 @@ class DaskDelayedJSONStore:
         num_classes = len(class_keys)
         cmap = plt.cm.get_cmap("tab20", num_classes)
 
-        class_colours = {
+        class_colors = {
             key: [
                 int(cmap(i)[0] * 255),
                 int(cmap(i)[1] * 255),
@@ -3556,7 +3556,7 @@ class DaskDelayedJSONStore:
                     class_dict,
                     origin,
                     scale_factor,
-                    class_colours,
+                    class_colors,
                 )
                 for i in tqdm(
                     range(batch_id, min(batch_id + batch_size, num_contours)),

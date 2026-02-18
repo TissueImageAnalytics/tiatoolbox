@@ -802,14 +802,14 @@ def test_qupath_feature_class_dict_lookup_fails() -> None:
     qupath_json._processed_predictions = {"type": np.array([5], dtype=object)}
 
     class_dict = {0: "A", 1: "B"}  # does NOT contain 5
-    class_colours = {0: [255, 0, 0], 1: [0, 255, 0]}  # also does NOT contain 5
+    class_colors = {0: [255, 0, 0], 1: [0, 255, 0]}  # also does NOT contain 5
 
     feat = qupath_json._build_single_qupath_feature(
         i=0,
         class_dict=class_dict,
         origin=(0, 0),
         scale_factor=(1, 1),
-        class_colours=class_colours,
+        class_colors=class_colors,
     )
 
     # type should fall back to raw value (5)
@@ -825,14 +825,14 @@ def test_qupath_feature_classification_block_skipped() -> None:
     qupath_json._processed_predictions = {"type": np.array([1], dtype=object)}
 
     class_dict = {1: "Tumor"}
-    class_colours = {0: [255, 0, 0]}  # does NOT contain 1
+    class_colors = {0: [255, 0, 0]}  # does NOT contain 1
 
     feat = qupath_json._build_single_qupath_feature(
         i=0,
         class_dict=class_dict,
         origin=(0, 0),
         scale_factor=(1, 1),
-        class_colours=class_colours,
+        class_colors=class_colors,
     )
 
     assert feat["properties"]["type"] == "Tumor"

@@ -1022,18 +1022,15 @@ def save_detection_arrays_to_qupath_json(
             If ``None``, an identity mapping is used based on the detected
             class IDs.
         save_path (Path or None):
-            Destination path for saving the `.db` file. If ``None``, the
-            resulting SQLiteStore is returned in memory. If provided, the
-            parent directory is created if needed, and the final store is
-            written as ``save_path.with_suffix(".db")``.
-        batch_size (int):
-            Number of detection records to write per batch. Defaults to ``5000``.
+            Destination path for saving the QuPath-compatible ``.json`` file.
+            If ``None``, an in-memory JSON-compatible representation of all
+            detections is returned instead of writing to disk.
 
     Returns:
         Path or QuPath:
-            - If `save_path` is provided: the path to the saved `.json` file.
-            - If `save_path` is ``None``: an in-memory `JSON` containing
-              all detections.
+            - If ``save_path`` is provided: the path to the saved ``.json`` file.
+            - If ``save_path`` is ``None``: an in-memory dict representing
+              QuPath JSON containing all detections.
 
     """
     xs, ys, classes, probs = _validate_detections_for_saving_to_json(
@@ -1048,7 +1045,7 @@ def save_detection_arrays_to_qupath_json(
     # Color map for classes
     num_classes = len(class_dict)
     cmap = plt.cm.get_cmap("tab20", num_classes)
-    class_colours = {
+    class_colors = {
         class_idx: [
             int(cmap(class_idx)[0] * 255),
             int(cmap(class_idx)[1] * 255),
@@ -1081,7 +1078,7 @@ def save_detection_arrays_to_qupath_json(
             "properties": {
                 "classification": {
                     "name": class_label,
-                    "color": class_colours.get(class_id, class_id),
+                    "color": class_colors[class_id],
                 },
                 "probability": prob,
             },
