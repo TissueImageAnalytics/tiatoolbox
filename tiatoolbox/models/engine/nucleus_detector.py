@@ -466,7 +466,7 @@ class NucleusDetector(SemanticSegmentor):
             url=zarr_file,
             component="centroid_maps",
             compute=False,
-            zarr_array_kwargs={"object_codec": None},
+            object_codec=None,
         )
         _ = tqdm_dask_progress_bar(
             desc="Computing Centroids",

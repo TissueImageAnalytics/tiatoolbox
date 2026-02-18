@@ -638,9 +638,9 @@ class KongNet(ModelABC):
             Absolute threshold for peak detection in post-processing
         target_channels:
             List of target channel indices for post-processing
-        output_class_dict:
+        class_dict:
             Optional dictionary mapping class names to indices
-        postproc_tile_shape:
+        tile_shape:
             Tile shape for post-processing with dask
 
     Example:

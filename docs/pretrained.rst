@@ -352,7 +352,7 @@ The input output configuration is as follows:
         from tiatoolbox.models.engine.io_config import IOSegmentorConfig
         ioconfig = IOSegmentorConfig(
             patch_input_shape=(31, 31),
-            path_output_shape=(13, 13),
+            patch_output_shape=(13, 13),
             stride_shape=(8, 8),
             input_resolutions=[{"resolution": 0.25, "units": "mpp"}],
         )
@@ -393,7 +393,7 @@ The input output configuration is as follows:
         from tiatoolbox.models.engine.io_config import IOSegmentorConfig
         ioconfig = IOSegmentorConfig(
             patch_input_shape=(31, 31),
-            path_output_shape=(13, 13),
+            patch_output_shape=(13, 13),
             stride_shape=(8, 8),
             input_resolutions=[{"resolution": 0.25, "units": "mpp"}]
         )

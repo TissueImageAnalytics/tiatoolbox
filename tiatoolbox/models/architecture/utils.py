@@ -413,7 +413,8 @@ def peak_detection_map_overlap(
     """Post-processing function for peak detection.
 
     Builds a processed mask per input channel. Runs peak_local_max then
-    writes 1.0 at peak pixels.
+    writes 1.0 at peak pixels if return_probability is False, otherwise writes
+    the confidence scores at peak locations.
 
     Can be called from dask.da.map_overlap on a padded NumPy block
     (h_pad, w_pad, C) to process large prediction maps in chunks with overlap.
@@ -446,7 +447,9 @@ def peak_detection_map_overlap(
 
     Returns:
         out:
-            NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere.
+            NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere
+            if return_probability is False, otherwise with confidence
+            scores at peak locations.
 
     """
     block_height, block_width, block_channels = block.shape
@@ -471,10 +474,10 @@ def peak_detection_map_overlap(
         )
 
     for ch in range(block_channels):
-        img = np.asarray(block[..., ch])  # NumPy 2D view
+        probs_map = np.asarray(block[..., ch])  # NumPy 2D view
 
         coords = peak_local_max(
-            img,
+            probs_map,
             min_distance=min_distance,
             threshold_abs=threshold_abs,
             threshold_rel=threshold_rel,
@@ -487,7 +490,7 @@ def peak_detection_map_overlap(
 
         if return_probability:
             labeled_peaks = label(out[..., ch])
-            peak_stats = regionprops(labeled_peaks, intensity_image=img)
+            peak_stats = regionprops(labeled_peaks, intensity_image=probs_map)
             for peak in peak_stats:
                 centroid = peak["centroid"]
                 r, c, confidence = (
