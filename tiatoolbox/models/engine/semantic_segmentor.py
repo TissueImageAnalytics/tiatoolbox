@@ -1240,10 +1240,13 @@ def get_wsi_output_shape(dataset: object) -> tuple[int, int] | None:
                     resolution=dataset.resolution, units=dataset.units
                 )
             except (AttributeError, OSError, TypeError, ValueError):
+                msg = "WSI output shape is not recognizable. Please verify outputs."
+                logger.info(msg)
                 return None
-
-    if wsi_shape is None:
-        return None
+        else:
+            msg = "No metadata found in dataset. Please verify outputs."
+            logger.warning(msg)
+            return None
 
     return int(wsi_shape[1]), int(wsi_shape[0])
 
