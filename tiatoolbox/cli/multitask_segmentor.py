@@ -1,4 +1,4 @@
-"""Command line interface for patch_predictor."""
+"""Command line interface for multitask segmentation."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 from tiatoolbox.cli.common import (
     cli_auto_get_mask,
     cli_batch_size,
-    cli_class_dict,
     cli_device,
     cli_file_type,
     cli_img_input,
@@ -18,10 +17,13 @@ from tiatoolbox.cli.common import (
     cli_num_workers,
     cli_output_file,
     cli_output_path,
+    cli_output_resolutions,
     cli_output_type,
     cli_overwrite,
     cli_patch_input_shape,
     cli_patch_mode,
+    cli_patch_output_shape,
+    cli_return_predictions,
     cli_return_probabilities,
     cli_scale_factor,
     cli_stride_shape,
@@ -40,16 +42,16 @@ if TYPE_CHECKING:  # pragma: no cover
 @tiatoolbox_cli.command()
 @cli_img_input()
 @cli_output_path(
-    usage_help="Output directory where model predictions will be saved.",
-    default="patch_prediction",
+    usage_help="Output directory where model output will be saved.",
+    default="multitask_segmentor",
 )
 @cli_output_file(default=None)
 @cli_file_type(
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
 )
 @cli_input_resolutions(default=None)
-@cli_class_dict(default=None)
-@cli_model(default="resnet18-kather100k")
+@cli_output_resolutions(default=None)
+@cli_model(default="hovernetplus-oed")
 @cli_weights()
 @cli_device(default="cpu")
 @cli_batch_size(default=64)
@@ -61,23 +63,26 @@ if TYPE_CHECKING:  # pragma: no cover
 )
 @cli_memory_threshold(default=80)
 @cli_patch_input_shape(default=None)
+@cli_patch_output_shape(default=None)
 @cli_stride_shape(default=None)
 @cli_scale_factor(default=None)
 @cli_patch_mode(default=False)
+@cli_return_predictions(default=None)
 @cli_return_probabilities(default=True)
 @cli_auto_get_mask(default=True)
 @cli_overwrite(default=False)
 @cli_verbose(default=True)
-def patch_predictor(
+def multitask_segmentor(
     model: str,
     weights: str,
     img_input: str,
     file_types: str,
-    class_dict: list[tuple[int, str]],
     input_resolutions: list[dict],
+    output_resolutions: list[dict],
     masks: str | None,
     output_path: str,
     patch_input_shape: IntPair | None,
+    patch_output_shape: tuple[int, int] | None,
     stride_shape: IntPair | None,
     scale_factor: tuple[float, float] | None,
     batch_size: int,
@@ -89,18 +94,14 @@ def patch_predictor(
     output_file: str | None,
     *,
     patch_mode: bool,
+    return_predictions: tuple[bool, ...] | None,
     return_probabilities: bool,
     auto_get_mask: bool,
     verbose: bool,
     overwrite: bool,
 ) -> None:
-    """Process an image/directory of input images with a patch classification engine."""
-    from tiatoolbox.models.engine.io_config import (  # noqa: PLC0415
-        IOPatchPredictorConfig,
-    )
-    from tiatoolbox.models.engine.patch_predictor import PatchPredictor  # noqa: PLC0415
-
-    class_dict = dict(class_dict) if class_dict else None
+    """Process a set of input images with a multitask segmentation engine."""
+    from tiatoolbox.models import IOSegmentorConfig, MultiTaskSegmentor  # noqa: PLC0415
 
     files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,
@@ -109,7 +110,13 @@ def patch_predictor(
         file_types=file_types,
     )
 
-    predictor = PatchPredictor(
+    ioconfig = prepare_ioconfig(
+        IOSegmentorConfig,
+        pretrained_weights=weights,
+        yaml_config_path=yaml_config_path,
+    )
+
+    mtsegmentor = MultiTaskSegmentor(
         model=model,
         weights=weights,
         batch_size=batch_size,
@@ -117,31 +124,24 @@ def patch_predictor(
         verbose=verbose,
     )
 
-    ioconfig = prepare_ioconfig(
-        IOPatchPredictorConfig,
-        pretrained_weights=weights,
-        yaml_config_path=yaml_config_path,
-    )
-
-    _ = predictor.run(
+    _ = mtsegmentor.run(
         images=files_all,
         masks=masks_all,
-        class_dict=class_dict,
         patch_mode=patch_mode,
         patch_input_shape=patch_input_shape,
+        patch_output_shape=patch_output_shape,
         input_resolutions=input_resolutions,
-        batch_size=batch_size,
+        output_resolutions=output_resolutions,
         ioconfig=ioconfig,
         device=device,
         save_dir=output_path,
         output_type=output_type,
+        return_predictions=return_predictions,
         return_probabilities=return_probabilities,
         auto_get_mask=auto_get_mask,
         memory_threshold=memory_threshold,
-        num_workers=num_workers,
         output_file=output_file,
         scale_factor=scale_factor,
         stride_shape=stride_shape,
         overwrite=overwrite,
-        verbose=verbose,
     )

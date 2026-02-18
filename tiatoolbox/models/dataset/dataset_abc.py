@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import copy
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -11,20 +10,17 @@ from typing import TYPE_CHECKING
 import cv2
 import numpy as np
 import torch
-import torch.utils.data as torch_data
 
 from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import imread
 from tiatoolbox.utils.exceptions import DimensionMismatchError
-from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIMeta, WSIReader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable, Iterable
-    from multiprocessing.managers import Namespace
     from typing import TypeGuard
 
-    from tiatoolbox.models.engine.io_config import IOSegmentorConfig
     from tiatoolbox.type_hints import IntPair, Resolution, Units
 
 input_type = list[str | Path | np.ndarray] | np.ndarray
@@ -189,149 +185,6 @@ class PatchDatasetABC(ABC, torch.utils.data.Dataset):
     def __getitem__(self: PatchDatasetABC, idx: int) -> None:
         """Get an item from the dataset."""
         ...  # pragma: no cover
-
-
-class WSIStreamDataset(torch_data.Dataset):
-    """Reading a wsi in parallel mode with persistent workers.
-
-    To speed up the inference process for multiple WSIs. The
-    `torch.utils.data.Dataloader` is set to run in persistent mode.
-    Normally, this will prevent workers from altering their initial
-    states (such as provided input etc.). To sidestep this, we use a
-    shared parallel workspace context manager to send data and signal
-    from the main thread, thus allowing each worker to load a new wsi as
-    well as corresponding patch information.
-
-    Args:
-        mp_shared_space (:class:`Namespace`):
-            A shared multiprocessing space, must be from
-            `torch.multiprocessing`.
-        ioconfig (:class:`IOSegmentorConfig`):
-            An object which contains I/O placement for patches.
-        wsi_paths (list): List of paths pointing to a WSI or tiles.
-        preproc (Callable):
-            Pre-processing function to be applied to a patch.
-        mode (str):
-            Either `"wsi"` or `"tile"` to indicate the format of images
-            in `wsi_paths`.
-
-    Examples:
-        >>> ioconfig = IOSegmentorConfig(
-        ...     input_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        ...     output_resolutions=[{"units": "baseline", "resolution": 1.0}],
-        ...     patch_input_shape=[2048, 2048],
-        ...     patch_output_shape=[1024, 1024],
-        ...     stride_shape=[512, 512],
-        ... )
-        >>> mp_manager = torch_mp.Manager()
-        >>> mp_shared_space = mp_manager.Namespace()
-        >>> mp_shared_space.signal = 1  # adding variable to the shared space
-        >>> wsi_paths = ['A.svs', 'B.svs']
-        >>> wsi_dataset = WSIStreamDataset(ioconfig, wsi_paths, mp_shared_space)
-
-    """
-
-    def __init__(
-        self: WSIStreamDataset,
-        ioconfig: IOSegmentorConfig,
-        wsi_paths: list[str | Path],
-        mp_shared_space: Namespace,
-        preproc: Callable[[np.ndarray], np.ndarray] | None = None,
-        mode: str = "wsi",
-    ) -> None:
-        """Initialize :class:`WSIStreamDataset`."""
-        super().__init__()
-        self.mode = mode
-        self.preproc = preproc
-        self.ioconfig = copy.deepcopy(ioconfig)
-
-        if mode == "tile":
-            logger.warning(
-                "WSIPatchDataset only reads image tile at "
-                '`units="baseline"`. Resolutions will be converted '
-                "to baseline value.",
-                stacklevel=2,
-            )
-            self.ioconfig = self.ioconfig.to_baseline()
-
-        self.mp_shared_space = mp_shared_space
-        self.wsi_paths = wsi_paths
-        self.wsi_idx = None  # to be received externally via thread communication
-        self.reader = None
-
-    def _get_reader(self: WSIStreamDataset, img_path: str | Path) -> WSIReader:
-        """Get appropriate reader for input path."""
-        img_path = Path(img_path)
-        if self.mode == "wsi":
-            return WSIReader.open(img_path)
-        img = imread(img_path)
-        # initialise metadata for VirtualWSIReader.
-        # here, we simulate a whole-slide image, but with a single level.
-        metadata = WSIMeta(
-            mpp=np.array([1.0, 1.0]),
-            objective_power=10,
-            axes="YXS",
-            slide_dimensions=np.array(img.shape[:2][::-1]),
-            level_downsamples=[1.0],
-            level_dimensions=[np.array(img.shape[:2][::-1])],
-        )
-        return VirtualWSIReader(
-            img,
-            info=metadata,
-        )
-
-    def __len__(self: WSIStreamDataset) -> int:
-        """Return the length of the instance attributes."""
-        return len(self.mp_shared_space.patch_inputs)
-
-    @staticmethod
-    def collate_fn(batch: list | np.ndarray) -> torch.Tensor:
-        """Prototype to handle reading exception.
-
-        This will exclude any sample with `None` from the batch. As
-        such, wrapping `__getitem__` with try-catch and return `None`
-        upon exceptions will prevent crashing the entire program. But as
-        a side effect, the batch may not have the size as defined.
-
-        """
-        batch = [v for v in batch if v is not None]
-        return torch.utils.data.dataloader.default_collate(batch)
-
-    def __getitem__(self: WSIStreamDataset, idx: int) -> tuple:
-        """Get an item from the dataset."""
-        # ! no need to lock as we do not modify source value in shared space
-        if self.wsi_idx != self.mp_shared_space.wsi_idx:
-            self.wsi_idx = int(self.mp_shared_space.wsi_idx.item())
-            self.reader = self._get_reader(self.wsi_paths[self.wsi_idx])
-
-        # this is in XY and at requested resolution (not baseline)
-        bounds = self.mp_shared_space.patch_inputs[idx]
-        bounds = bounds.numpy()  # expected to be a torch.Tensor
-
-        # be the same as bounds br-tl, unless bounds are of float
-        patch_data_ = []
-        scale_factors = self.ioconfig.scale_to_highest(
-            self.ioconfig.input_resolutions,
-            self.ioconfig.resolution_unit,
-        )
-        for idy, resolution in enumerate(self.ioconfig.input_resolutions):
-            resolution_bounds = np.round(bounds * scale_factors[idy])
-            patch_data = self.reader.read_bounds(
-                resolution_bounds.astype(np.int32),
-                coord_space="resolution",
-                pad_constant_values=0,  # expose this ?
-                **resolution,
-            )
-
-            if self.preproc is not None:
-                patch_data = patch_data.copy()
-                patch_data = self.preproc(patch_data)
-            patch_data_.append(patch_data)
-        if len(patch_data_) == 1:
-            patch_data_ = patch_data_[0]
-
-        bound = self.mp_shared_space.patch_outputs[idx]
-        return patch_data_, bound
 
 
 class WSIPatchDataset(PatchDatasetABC):

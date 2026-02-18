@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import multiprocessing
 import shutil
 import tempfile
 import zipfile
@@ -15,25 +16,27 @@ import dask.array as da
 import joblib
 import numpy as np
 import pandas as pd
+import psutil
 import requests
 import tifffile
 import yaml
 import zarr
+from dask import compute
 from filelock import FileLock
 from shapely.affinity import translate
 from shapely.geometry import Polygon
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
-from tqdm import notebook as tqdm_notebook
-from tqdm import tqdm, trange
+from tqdm import trange
+from tqdm.auto import tqdm
+from tqdm.dask import TqdmCallback
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
-from tiatoolbox.utils.env_detection import is_notebook
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Iterator
+    from collections.abc import Iterable, Iterator
     from os import PathLike
 
     from shapely import geometry
@@ -1216,10 +1219,19 @@ def patch_predictions_as_annotations(
     patch_coords: list,
     classes_predicted: list,
     labels: list,
+    *,
+    verbose: bool = True,
 ) -> list:
     """Helper function to generate annotation per patch predictions."""
     annotations = []
-    for i, _ in enumerate(patch_coords):
+    tqdm_loop = tqdm(
+        patch_coords,
+        leave=False,
+        desc="Converting outputs to AnnotationStore.",
+        disable=not verbose,
+    )
+
+    for i, _ in enumerate(tqdm_loop):
         if "probabilities" in keys:
             props = {
                 f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
@@ -1353,6 +1365,8 @@ def dict_to_store_semantic_segmentor(
     scale_factor: tuple[float, float],
     class_dict: dict | None = None,
     save_path: Path | None = None,
+    *,
+    verbose: bool = True,
 ) -> AnnotationStore | Path:
     """Converts output of TIAToolbox SemanticSegmentor engine to AnnotationStore.
 
@@ -1369,6 +1383,8 @@ def dict_to_store_semantic_segmentor(
         save_path (str or Path):
             Optional Output directory to save the Annotation
             Store results.
+        verbose (bool):
+            Whether to display logs and progress bar.
 
     Returns:
         (SQLiteStore or Path):
@@ -1389,7 +1405,14 @@ def dict_to_store_semantic_segmentor(
 
     annotations_list: list[Annotation] = []
 
-    for type_class in layer_list:
+    tqdm_loop = tqdm(
+        layer_list,
+        leave=False,
+        desc="Converting outputs to AnnotationStore.",
+        disable=not verbose,
+    )
+
+    for type_class in tqdm_loop:
         class_id = int(type_class)
         class_label = class_dict.get(class_id, class_id)
         layer = da.where(preds == type_class, 1, 0).astype("uint8").compute()
@@ -1428,6 +1451,8 @@ def dict_to_store_patch_predictions(
     scale_factor: tuple[float, float],
     class_dict: dict | None = None,
     save_path: Path | None = None,
+    *,
+    verbose: bool = True,
 ) -> AnnotationStore | Path:
     """Converts output of TIAToolbox PatchPredictor engine to AnnotationStore.
 
@@ -1445,6 +1470,8 @@ def dict_to_store_patch_predictions(
         save_path (str or Path):
             Optional Output directory to save the Annotation
             Store results.
+        verbose (bool):
+            Whether to display logs and progress bar.
 
     Returns:
         (SQLiteStore or Path):
@@ -1493,6 +1520,7 @@ def dict_to_store_patch_predictions(
         patch_coords.astype(float),
         classes_predicted,
         labels,
+        verbose=verbose,
     )
 
     store = SQLiteStore()
@@ -1642,11 +1670,24 @@ def write_probability_heatmap_as_ome_tiff(
     logger.info(msg)
 
 
-def get_tqdm() -> type[tqdm_notebook | tqdm]:
-    """Returns appropriate tqdm tqdm object."""
-    if is_notebook():  # pragma: no cover
-        return tqdm_notebook.tqdm
-    return tqdm
+def update_tqdm_desc(
+    tqdm_loop: tqdm | Iterable,
+    desc: str,
+) -> None:
+    """Helper function to update tqdm progress bar description.
+
+    Args:
+        tqdm_loop (tqdm):
+            tqdm progress bar.
+        desc (str):
+            tqdm progress bar description.
+
+    Returns:
+        None
+
+    """
+    if hasattr(tqdm_loop, "desc"):
+        tqdm_loop.desc = desc
 
 
 def cast_to_min_dtype(array: np.ndarray | da.Array) -> np.ndarray | da.Array:
@@ -1681,3 +1722,106 @@ def cast_to_min_dtype(array: np.ndarray | da.Array) -> np.ndarray | da.Array:
             return array.astype(dtype)
 
     return array
+
+
+def create_smart_array(
+    shape: tuple[int, ...],
+    dtype: np.dtype | str,
+    memory_threshold: float,
+    name: str,
+    zarr_path: str | Path,
+    chunks: tuple[int, ...] | str = "auto",
+) -> np.ndarray | zarr.Array:
+    """Allocate a NumPy or Zarr array depending on available memory and a threshold.
+
+    This function estimates the memory required for an array of the given shape and
+    dtype. If the required memory is below the allowed fraction of available RAM
+    (defined by `memory_threshold`), a NumPy array is created in memory. Otherwise,
+    a Zarr array is created on disk. This enables seamless scaling between in-memory
+    and out-of-core workflows.
+
+    Args:
+        shape (tuple(int,...)):
+            Shape of the array to allocate, e.g., (height, width, channels).
+        dtype (np.dtype | str):
+            NumPy dtype or dtype string for the array, e.g., np.float32 or "float32".
+        memory_threshold (float):
+            Fraction of available RAM allowed for this allocation. Must be between
+            0.0 and 100. A value of 100 allows using all available RAM; 0.0 forces
+            Zarr allocation.
+        name (str | None):
+            Name for the zarr dataset.
+        zarr_path (str | None):
+            Filesystem path where the Zarr array will be created if needed.
+        chunks (tuple(int,...) | None):
+            Chunk shape for the Zarr array. If None, a reasonable default is chosen
+            based on the array shape.
+
+    Returns:
+        np.ndarray | zarr.core.Array:
+            - The allocated array (NumPy or Zarr).
+
+    """
+    # Compute required bytes
+    bytes_needed = np.prod(shape) * np.dtype(dtype).itemsize
+
+    # Available memory
+    available = psutil.virtual_memory().available
+    allowed = available * (memory_threshold / 100.0)
+
+    fits_in_memory = bytes_needed <= allowed
+
+    if fits_in_memory:
+        # Allocate in-memory NumPy array
+        return np.zeros(shape, dtype=dtype)
+
+    # Allocate Zarr array on disk
+    # Default chunking: try to chunk along spatial dims
+    chunks = shape if chunks is None else chunks
+
+    zarr_group = zarr.open(zarr_path, mode="a")
+
+    return zarr_group.create_dataset(
+        name=name,
+        shape=shape,
+        chunks=chunks,
+        dtype=dtype,
+    )
+
+
+def tqdm_dask_progress_bar(
+    write_tasks: list,
+    num_workers: int = multiprocessing.cpu_count(),
+    scheduler: str = "threads",
+    desc: str = "Processing data",
+    *,
+    leave: bool = False,
+    verbose: bool = True,
+) -> list:
+    """Helper function for tqdm_dask_progress_bar.
+
+    Args:
+        write_tasks (list):
+            List of dask tasks to compute.
+        num_workers (int):
+            Number of workers to use.
+        scheduler (str):
+            dask compute scheduler to use e.g., "threads" or "processes".
+        desc (str):
+            Message to display for the progress bar.
+        leave (bool):
+            Whether to leave progress bar after completion.
+        verbose (bool):
+            Whether to display progress bar.
+
+    Returns:
+        List:
+            list of outputs from dask compute.
+
+    """
+    num_workers = max(num_workers, 1)
+    if verbose:
+        with TqdmCallback(desc=desc, leave=leave):
+            return compute(*write_tasks, scheduler=scheduler, num_workers=num_workers)
+
+    return compute(*write_tasks, scheduler=scheduler, num_workers=num_workers)

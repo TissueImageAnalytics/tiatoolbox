@@ -3,16 +3,20 @@
 from __future__ import annotations
 
 import math
+import warnings
 from collections import OrderedDict
 
 import cv2
+import dask.array as da
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn.functional as F  # noqa: N812
 from scipy import ndimage
 from skimage.morphology import remove_small_objects
 from skimage.segmentation import watershed
 from torch import nn
+from tqdm.auto import tqdm
 
 from tiatoolbox.models.architecture.utils import (
     UpSample2x,
@@ -335,6 +339,10 @@ class HoVerNet(ModelABC):
         self.mode = mode
         self.num_types = num_types
         self.nuc_type_dict = nuc_type_dict
+        self.tasks = ["nuclei_segmentation"]
+        self.class_dict = {
+            self.tasks[0]: nuc_type_dict,
+        }
 
         if mode not in ["original", "fast"]:
             msg = (
@@ -597,12 +605,22 @@ class HoVerNet(ModelABC):
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         marker = cv2.morphologyEx(marker, cv2.MORPH_OPEN, kernel)
         marker = ndimage.label(marker)[0]
-        marker = remove_small_objects(marker, min_size=obj_size)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="Only one label was provided to `remove_small_objects`",
+            )
+            marker = remove_small_objects(marker, min_size=obj_size)
 
         return watershed(dist, markers=marker, mask=blb)
 
     @staticmethod
-    def get_instance_info(pred_inst: np.ndarray, pred_type: np.ndarray = None) -> dict:
+    def get_instance_info(
+        pred_inst: np.ndarray,
+        pred_type: np.ndarray = None,
+        *,
+        verbose: bool = True,
+    ) -> dict:
         """To collect instance information and store it within a dictionary.
 
         Args:
@@ -612,6 +630,8 @@ class HoVerNet(ModelABC):
             pred_type (:class:`numpy.ndarray`):
                 An image of shape (height, width, 1) which contains the
                 probabilities of a pixel being a certain type of nuclei.
+            verbose (bool):
+                Whether to display progress bar.
 
         Returns:
             dict:
@@ -644,7 +664,13 @@ class HoVerNet(ModelABC):
         """
         inst_id_list = np.unique(pred_inst)[1:]  # exclude background
         inst_info_dict = {}
-        for inst_id in inst_id_list:
+        tqdm_loop = tqdm(
+            inst_id_list,
+            leave=False,
+            desc="Generating 'info_dict' for instances",
+            disable=not verbose,
+        )
+        for inst_id in tqdm_loop:
             inst_map = pred_inst == inst_id
             inst_box = get_bounding_box(inst_map)
             inst_box_tl = inst_box[:2]
@@ -678,7 +704,7 @@ class HoVerNet(ModelABC):
             inst_info_dict[inst_id] = {  # inst_id should start at 1
                 "box": inst_box,
                 "centroid": inst_centroid,
-                "contour": inst_contour,
+                "contours": inst_contour,
                 "prob": None,
                 "type": None,
             }
@@ -711,9 +737,8 @@ class HoVerNet(ModelABC):
 
         return inst_info_dict
 
-    @staticmethod
     # skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(raw_maps: list[np.ndarray]) -> tuple[np.ndarray, dict]:
+    def postproc(self: HoVerNet, raw_maps: list[np.ndarray]) -> tuple[dict, ...]:
         """Post-processing script for image tiles.
 
         Args:
@@ -776,15 +801,47 @@ class HoVerNet(ModelABC):
             tp_map = None
             np_map, hv_map = raw_maps
 
-        pred_type = tp_map
+        # Assumes raw_maps is a tuple of dask or numpy arrays.
+        # Only return dask if it's required.
+        is_dask = isinstance(raw_maps[0], da.Array)
+
+        np_map = np_map.compute() if is_dask else np_map
+        hv_map = hv_map.compute() if is_dask else hv_map
+        pred_type = tp_map.compute() if tp_map is not None and is_dask else tp_map
+
         pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
         nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
 
-        return pred_inst, nuc_inst_info_dict
+        nuc_inst_info_dict_ = {}
+        if not nuc_inst_info_dict:
+            # inst_id should start at 1; use NumPy or Dask empty arrays
+            empty_array = da.empty(shape=0) if is_dask else np.empty(shape=0)
+            nuc_inst_info_dict_ = {
+                "box": empty_array,
+                "centroid": empty_array,
+                "contours": empty_array,
+                "prob": empty_array,
+                "type": empty_array,
+            }
+        else:
+            nuc_inst_info_dict_ = _inst_dict_for_dask_processing(
+                inst_info_dict=nuc_inst_info_dict,
+                inst_info_dict_=nuc_inst_info_dict_,
+                is_dask=is_dask,
+            )
+        nuclei_seg = {
+            "task_type": self.tasks[0],
+            "predictions": da.array(pred_inst)
+            if isinstance(raw_maps[0], da.Array)
+            else pred_inst,
+            "info_dict": nuc_inst_info_dict_,
+        }
+
+        return (nuclei_seg,)  # Ensure return type is tuple.
 
     @staticmethod
     def infer_batch(  # skipcq: PYL-W0221
-        model: nn.Module, batch_data: np.ndarray, device: str
+        model: nn.Module, batch_data: np.ndarray | torch.Tensor, *, device: str
     ) -> tuple:
         """Run inference on an input batch.
 
@@ -832,3 +889,25 @@ class HoVerNet(ModelABC):
         if "tp" in pred_dict:
             return pred_dict["np"], pred_dict["hv"], pred_dict["tp"]
         return pred_dict["np"], pred_dict["hv"]
+
+
+def _inst_dict_for_dask_processing(
+    inst_info_dict: dict,
+    inst_info_dict_: dict,
+    *,
+    is_dask: bool,
+) -> dict:
+    """Helper function to convert dictionary with numpy arrays to dask arrays."""
+    # dask dataframe does not support transpose
+    inst_info_df = pd.DataFrame(inst_info_dict).transpose()
+    for key, col in inst_info_df.items():
+        col_np = col.to_numpy()
+        inst_info_dict_[key] = (
+            da.from_array(
+                col_np,
+                chunks=(len(col),),
+            )
+            if is_dask
+            else col_np
+        )
+    return inst_info_dict_

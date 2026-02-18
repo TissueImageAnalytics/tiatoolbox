@@ -53,7 +53,7 @@ def get_masker(
     default="power",
     input_type=click.Choice(["mpp", "power"], case_sensitive=False),
 )
-@cli_mode(default="show")
+@cli_mode(default="show", input_type=click.Choice(["show", "save"]))
 @cli_file_type(default="*.svs, *.ndpi, *.jp2, *.png, *.jpg, *.tif, *.tiff")
 # inputs specific to this function
 @click.option(

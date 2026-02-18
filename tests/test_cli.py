@@ -1,6 +1,8 @@
 """Tests for cli inputs."""
 
 import json
+from pathlib import Path
+from unittest.mock import patch
 
 import click
 import pytest
@@ -10,6 +12,8 @@ from tiatoolbox.cli.common import (
     cli_class_dict,
     cli_input_resolutions,
     cli_output_resolutions,
+    parse_bool_list,
+    prepare_model_cli,
 )
 
 
@@ -143,3 +147,87 @@ def test_cli_resolutions_not_list(option: str) -> None:
     )
     assert result.exit_code != 0
     assert "Must be a JSON list of dictionaries" in result.output
+
+
+def test_parse_bool_list_none() -> None:
+    """parse_bool_list should return None when value is None."""
+    result = parse_bool_list(_ctx=None, _param=None, value=None)
+    assert result is None
+
+
+@pytest.mark.parametrize(
+    ("input_str", "expected"),
+    [
+        ("true,false", (True, False)),
+        ("1,0", (True, False)),
+        ("yes,no", (True, False)),
+        ("y,n", (True, False)),
+        (" true , 0 , YES ", (True, False, True)),
+    ],
+)
+def test_parse_bool_list_valid(
+    input_str: str,
+    expected: tuple[bool, ...],
+) -> None:
+    """parse_bool_list should correctly parse valid boolean lists."""
+    result = parse_bool_list(_ctx=None, _param=None, value=input_str)
+    assert result == expected
+
+
+@pytest.mark.parametrize("bad_value", ["foo", "true,bar", "1,2", "yes,maybe"])
+def test_parse_bool_list_invalid(bad_value: str) -> None:
+    """parse_bool_list should raise BadParameter on invalid tokens."""
+    with pytest.raises(click.BadParameter):
+        parse_bool_list(_ctx=None, _param=None, value=bad_value)
+
+
+def test_output_path_exists_raises() -> None:
+    """Ensure FileExistsError when the output_path already exists on disk."""
+    img_input = Path("input.jpg")
+    output_path = Path("out")
+    masks = None
+
+    # First call: output_path.exists() → True
+    # Second call: img_input.exists() → True (never reached)
+    with (
+        patch.object(Path, "exists", side_effect=[True, True]),
+        pytest.raises(FileExistsError),
+    ):
+        prepare_model_cli(img_input, output_path, masks, "*.jpg")
+
+
+def test_img_input_not_found_raises() -> None:
+    """Ensure FileNotFoundError when the img_input path does not exist."""
+    img_input = Path("missing.jpg")
+    output_path = Path("out")
+    masks = None
+
+    # output_path.exists() → False
+    # img_input.exists() → False
+    with (
+        patch.object(Path, "exists", side_effect=[False, False]),
+        pytest.raises(FileNotFoundError),
+    ):
+        prepare_model_cli(img_input, output_path, masks, "*.jpg")
+
+
+def test_masks_is_file() -> None:
+    """Verify that when masks is a file a list containing that mask file is returned."""
+    img_input = Path("input.jpg")
+    output_path = Path("out")
+    masks = Path("mask.png")
+
+    # output_path.exists() → False
+    # img_input.exists() → True
+    with (
+        patch.object(Path, "exists", side_effect=[False, True]),
+        patch.object(Path, "is_file", return_value=True),
+        patch.object(Path, "is_dir", return_value=False),
+    ):
+        files, masks_all, out = prepare_model_cli(
+            img_input, output_path, masks, "*.jpg"
+        )
+
+    assert files == [img_input]
+    assert masks_all == [masks]
+    assert out == output_path
