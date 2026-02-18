@@ -2999,7 +2999,8 @@ def _create_wsi_info_dict(
             "predictions": None
             if not return_predictions[idx]
             else create_smart_array(
-                shape=wsi_proc_shape,
+                # WSIReader returns width, height
+                shape=wsi_proc_shape[::-1],
                 dtype=post_process_output_["predictions"].dtype,
                 memory_threshold=memory_threshold,
                 zarr_path=save_path,
@@ -3025,12 +3026,6 @@ def _update_tile_based_predictions_array(
             continue
         max_h, max_w = wsi_info_dict[idx]["predictions"].shape
         x_end, y_end = min(x_end, max_w), min(y_end, max_h)
-        if y_end - y_start > post_process_output_["predictions"].shape[0]:
-            y_end = y_start + post_process_output_["predictions"].shape[0]
-
-        if x_end - x_start > post_process_output_["predictions"].shape[1]:
-            x_end = x_start + post_process_output_["predictions"].shape[1]
-
         wsi_info_dict[idx]["predictions"][y_start:y_end, x_start:x_end] = (
             post_process_output_["predictions"][
                 0 : y_end - y_start, 0 : x_end - x_start

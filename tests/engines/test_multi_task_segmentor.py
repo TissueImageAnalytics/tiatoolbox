@@ -281,6 +281,56 @@ def test_single_task_mtsegmentor(
     assert "Probability maps cannot be saved as AnnotationStore" in caplog.text
 
 
+def test_wsi_mtsegmentor_correct_nonsquare_shape(
+    remote_sample: Callable,
+    track_tmp_path: Path,
+) -> None:
+    """Test MultiTaskSegmentor output shape for non-square WSIs with zarr output."""
+    svs_1_small = remote_sample("svs-1-small")
+    mtsegmentor = MultiTaskSegmentor(
+        model="hovernetplus-oed",
+        batch_size=64,
+        verbose=False,
+        num_workers=1,
+    )
+    ioconfig = mtsegmentor.ioconfig
+    # Return Probabilities is False
+    output_full = mtsegmentor.run(
+        # Use rectangular (not square) to test output shape
+        images=[svs_1_small],
+        return_probabilities=False,
+        return_labels=False,
+        device=device,
+        patch_mode=False,
+        save_dir=track_tmp_path / "wsi_out_full",
+        batch_size=2,
+        output_type="zarr",
+        ioconfig=ioconfig,
+        return_predictions=(True, True),  # True for both tasks.
+    )
+
+    output_full_ = zarr.open(output_full[svs_1_small], mode="r")
+    assert 12 < np.mean(output_full_["nuclei_segmentation"]["predictions"][:]) < 16
+    assert 0.42 < np.mean(output_full_["layer_segmentation"]["predictions"][:]) < 0.46
+    assert "probabilities" not in output_full_
+    assert "canvas" not in output_full_["nuclei_segmentation"]
+    assert "count" not in output_full_["nuclei_segmentation"]
+    assert "canvas" not in output_full_["layer_segmentation"]
+    assert "count" not in output_full_["layer_segmentation"]
+
+    # Verify output shape
+    reader = WSIReader.open(svs_1_small)
+    expected_shape = reader.slide_dimensions(
+        **mtsegmentor.ioconfig.highest_input_resolution
+    )[::-1]
+    assert np.all(
+        output_full_["nuclei_segmentation"]["predictions"][:].shape == expected_shape
+    )
+    assert np.all(
+        output_full_["layer_segmentation"]["predictions"][:].shape == expected_shape
+    )
+
+
 def test_wsi_mtsegmentor_zarr(
     remote_sample: Callable,
     track_tmp_path: Path,
@@ -294,6 +344,9 @@ def test_wsi_mtsegmentor_zarr(
         num_workers=1,
     )
     ioconfig = mtsegmentor.ioconfig
+
+    # Force calculation without tile-based processing.
+    ioconfig.tile_shape = (1200, 1200)
     # Return Probabilities is False
     output_full = mtsegmentor.run(
         images=[wsi4_1k_1k_svs],
