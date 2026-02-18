@@ -20,6 +20,7 @@ from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.engine.multi_task_segmentor import (
+    DaskDelayedJSONStore,
     MultiTaskSegmentor,
     _clear_zarr,
     _get_sel_indices_margin_lines,
@@ -792,6 +793,121 @@ def test_vertical_save_branch_without_patch(
 
     # Data was written correctly
     assert np.array_equal(new_zarr[idx][:], np.array([[1, 2, 3]]))
+
+
+def test_qupath_feature_class_dict_lookup_fails() -> None:
+    """Test qupath_feature_class_dict lookup fails."""
+    qupath_json = DaskDelayedJSONStore.__new__(DaskDelayedJSONStore)
+    qupath_json._contours = [np.array([[0, 0], [1, 0], [1, 1]])]
+    qupath_json._processed_predictions = {"type": np.array([5], dtype=object)}
+
+    class_dict = {0: "A", 1: "B"}  # does NOT contain 5
+    class_colours = {0: [255, 0, 0], 1: [0, 255, 0]}  # also does NOT contain 5
+
+    feat = qupath_json._build_single_qupath_feature(
+        i=0,
+        class_dict=class_dict,
+        origin=(0, 0),
+        scale_factor=(1, 1),
+        class_colours=class_colours,
+    )
+
+    # type should fall back to raw value (5)
+    assert feat["properties"]["type"] == 5
+    # classification block should NOT appear
+    assert "classification" not in feat["properties"]
+
+
+def test_qupath_feature_classification_block_skipped() -> None:
+    """Test qupath_feature_classification_block_skipped fails."""
+    qupath_json = DaskDelayedJSONStore.__new__(DaskDelayedJSONStore)
+    qupath_json._contours = [np.array([[0, 0], [1, 0], [1, 1]])]
+    qupath_json._processed_predictions = {"type": np.array([1], dtype=object)}
+
+    class_dict = {1: "Tumor"}
+    class_colours = {0: [255, 0, 0]}  # does NOT contain 1
+
+    feat = qupath_json._build_single_qupath_feature(
+        i=0,
+        class_dict=class_dict,
+        origin=(0, 0),
+        scale_factor=(1, 1),
+        class_colours=class_colours,
+    )
+
+    assert feat["properties"]["type"] == "Tumor"
+    assert "classification" not in feat["properties"]
+
+
+def test_compute_qupath_json_valid_ids_not_empty(track_tmp_path: Path) -> None:
+    """Test compute_qupath_json valid ids not empty."""
+    store = DaskDelayedJSONStore.__new__(DaskDelayedJSONStore)
+
+    # One simple contour
+    store._contours = [np.array([[0, 0], [10, 0], [10, 10], [0, 10]])]
+
+    # Mixed type array → valid_ids = [1, 2]
+    store._processed_predictions = {"type": np.array([1, None, 2], dtype=object)}
+
+    out_path = track_tmp_path / "out.json"
+    result_path = store.compute_qupath_json(
+        class_dict=None,
+        save_path=out_path,
+        verbose=False,
+    )
+
+    # Load JSON
+    data = json.loads(Path(result_path).read_text())
+    props = data["features"][0]["properties"]
+
+    # 1. class_dict should have been inferred as {0:0, 1:1, 2:2}
+    assert props["type"] in (1, 2)
+
+    # 2. type must NOT be null
+    assert props["type"] is not None
+
+    # 3. classification block should exist only if class_value in class_colours
+    assert "null" not in json.dumps(data)
+
+
+def test_compute_qupath_json_string_class_names(track_tmp_path: Path) -> None:
+    """Test compute_qupath_json string class names not empty and str."""
+    store = DaskDelayedJSONStore.__new__(DaskDelayedJSONStore)
+
+    # One simple contour
+    store._contours = [np.array([[0, 0], [10, 0], [10, 10], [0, 10]])]
+
+    # String class names → triggers the "already class names" branch
+    store._processed_predictions = {
+        "type": np.array(["Tumor", None, "Stroma"], dtype=object)
+    }
+
+    # Run compute_qupath_json with class_dict=None
+    out_path = track_tmp_path / "out.json"
+    result_path = store.compute_qupath_json(
+        class_dict=None,
+        save_path=out_path,
+        verbose=False,
+    )
+
+    # Load JSON
+    data = json.loads(Path(result_path).read_text())
+    props = data["features"][0]["properties"]
+
+    # --- Assertions ---
+
+    # 1. type must be one of the string class names
+    assert props["type"] in ("Tumor", "Stroma")
+
+    # 2. type must NOT be null
+    assert props["type"] is not None
+
+    # 3. class_dict should have been inferred as identity mapping
+    #    "Stroma": "Stroma", "Tumor": "Tumor"
+    #    So classification block should exist only if class_colours
+    #    contains the key, but we don't enforce that here — just
+    #    ensure no nulls
+    assert "null" not in json.dumps(data)
 
 
 # HELPER functions
