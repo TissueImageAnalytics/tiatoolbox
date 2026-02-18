@@ -1083,7 +1083,6 @@ class EngineABC(ABC):  # noqa: B024
                 if input_resolutions[0]["units"] == "baseline":
                     ioconfig = ioconfig.to_baseline()
                 ioconfig.input_resolutions = input_resolutions
-                ioconfig.__post_init__()
 
             return ioconfig
 
