@@ -35,6 +35,7 @@ Example:
 from __future__ import annotations
 
 import copy
+import shutil
 from abc import ABC
 from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
@@ -45,9 +46,9 @@ import numpy as np
 import torch
 import zarr
 from dask import compute
-from dask.diagnostics.progress import ProgressBar
 from numcodecs import Pickle
 from torch import nn
+from tqdm.auto import tqdm
 from typing_extensions import Unpack
 
 from tiatoolbox import DuplicateFilter, logger, rcParam
@@ -57,7 +58,7 @@ from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.utils.misc import (
     dict_to_store_patch_predictions,
-    get_tqdm,
+    tqdm_dask_progress_bar,
 )
 from tiatoolbox.wsicore.wsireader import WSIReader, is_zarr
 
@@ -528,14 +529,14 @@ class EngineABC(ABC):  # noqa: B024
             coordinates = []
 
         # Main output dictionary
-        raw_predictions = dict(zip(keys, [[]] * len(keys), strict=False))
+        raw_predictions = {key: [] for key in keys}
 
         # Inference loop
-        tqdm = get_tqdm()
-        tqdm_loop = (
-            tqdm(dataloader, leave=False, desc="Inferring patches")
-            if self.verbose
-            else self.dataloader
+        tqdm_loop = tqdm(
+            dataloader,
+            leave=False,
+            desc="Inferring patches",
+            disable=not self.verbose,
         )
 
         infer_batch = self._get_model_attr("infer_batch")
@@ -729,23 +730,67 @@ class EngineABC(ABC):  # noqa: B024
             # scale_factor set from kwargs
             scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
             # class_dict set from kwargs
-            class_dict = kwargs.get("class_dict")
+            class_dict = kwargs.get("class_dict", self.model.class_dict)
 
             return dict_to_store_patch_predictions(
                 processed_predictions,
                 scale_factor,
                 class_dict,
                 save_path,
+                verbose=self.verbose,
             )
 
         msg = f"Unsupported output type: {output_type}"
         raise TypeError(msg)
+
+    @staticmethod
+    def _get_tasks_for_saving_zarr(
+        dask_output: da.Array | list,
+        key: str,
+        task_name: str | None,
+        save_path: Path,
+        write_tasks: list,
+    ) -> list:
+        """Helper function to get dask tasks for saving zarr output."""
+        if isinstance(dask_output, da.Array):
+            dask_output_dtype = dask_output.dtype
+            object_codec = Pickle()
+            if dask_output_dtype != "object":
+                dask_output = dask_output.rechunk("auto")
+                object_codec = None
+            component = key if task_name is None else f"{task_name}/{key}"
+            task = dask_output.to_zarr(
+                url=save_path,
+                component=component,
+                compute=False,
+                object_codec=object_codec,  # zarr kwargs
+            )
+            write_tasks.append(task)
+
+        if isinstance(dask_output, list) and all(
+            isinstance(dask_array, da.Array) for dask_array in dask_output
+        ):
+            for i, dask_array in enumerate(dask_output):
+                object_codec = Pickle() if dask_array.dtype == "object" else None
+                component = (
+                    f"{key}/{i}" if task_name is None else f"{task_name}/{key}/{i}"
+                )
+                task = dask_array.to_zarr(
+                    url=save_path,
+                    component=component,
+                    compute=False,
+                    object_codec=object_codec,  # zarr kwargs
+                )
+                write_tasks.append(task)
+
+        return write_tasks
 
     def save_predictions_as_zarr(
         self: EngineABC,
         processed_predictions: dict,
         save_path: Path,
         keys_to_compute: list,
+        task_name: str | None = None,
     ) -> Path:
         """Save model predictions as a zarr file.
 
@@ -759,6 +804,8 @@ class EngineABC(ABC):  # noqa: B024
                 Path to save the zarr file.
             keys_to_compute (list):
                 List of keys in processed_predictions to save.
+            task_name (str):
+                Task Name for Multitask outputs.
 
         Returns:
             save_path (Path):
@@ -768,33 +815,32 @@ class EngineABC(ABC):  # noqa: B024
         if is_zarr(save_path):
             zarr_group = zarr.open(save_path, mode="r")
             keys_to_compute = [k for k in keys_to_compute if k not in zarr_group]
+
+            # If the task group already exists, only compute missing keys
+            if task_name is not None and task_name in zarr_group:
+                task_group = zarr_group[task_name]
+                keys_to_compute = [k for k in keys_to_compute if k not in task_group]
+
         write_tasks = []
         for key in keys_to_compute:
             dask_output = processed_predictions[key]
-            if isinstance(dask_output, da.Array):
-                dask_output = dask_output.rechunk("auto")
-                task = dask_output.to_zarr(
-                    url=save_path, component=key, compute=False, object_codec=None
-                )
-                write_tasks.append(task)
-
-            if isinstance(dask_output, list) and all(
-                isinstance(dask_array, da.Array) for dask_array in dask_output
-            ):
-                for i, dask_array in enumerate(dask_output):
-                    object_codec = Pickle() if dask_array.dtype == "object" else None
-                    task = dask_array.to_zarr(
-                        url=save_path,
-                        component=f"{key}/{i}",
-                        compute=False,
-                        object_codec=object_codec,
-                    )
-                    write_tasks.append(task)
+            write_tasks = self._get_tasks_for_saving_zarr(
+                dask_output=dask_output,
+                key=key,
+                task_name=task_name,
+                save_path=save_path,
+                write_tasks=write_tasks,
+            )
 
         msg = f"Saving output to {save_path}."
-        logger.info(msg=msg)
-        with ProgressBar():
-            compute(*write_tasks)
+        _ = tqdm_dask_progress_bar(
+            desc=msg,
+            write_tasks=write_tasks,
+            num_workers=self.num_workers,
+            scheduler="threads",  # tasks are I/O-bound and shared memory use threads
+            leave=False,
+            verbose=self.verbose,
+        )
 
         zarr_group = zarr.open(save_path, mode="r+")
         for key in self.drop_keys:
@@ -1221,6 +1267,9 @@ class EngineABC(ABC):  # noqa: B024
                 If an unsupported output_type is provided.
             ValueError:
                 If required configuration or input parameters are missing.
+            ValueError:
+                If save_dir is not provided and output_type is "zarr"
+                or "annotationstore".
 
         """
         for key in kwargs:
@@ -1261,6 +1310,10 @@ class EngineABC(ABC):  # noqa: B024
             )
             logger.info(msg)
 
+        if save_dir is None and output_type.lower() in ["zarr", "annotationstore"]:
+            msg = f"Please provide save_dir for output_type={output_type}"
+            raise ValueError(msg)
+
         self.images = self._validate_images_masks(images=images)
 
         if masks is not None:
@@ -1286,7 +1339,7 @@ class EngineABC(ABC):  # noqa: B024
         self: EngineABC,
         output_type: str,
         save_dir: Path,
-        **kwargs: EngineABCRunParams,
+        **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | AnnotationStore | Path:
         """Run the engine in patch mode.
 
@@ -1377,6 +1430,9 @@ class EngineABC(ABC):  # noqa: B024
             save_path=save_path,
             **kwargs,
         )
+
+        if isinstance(out, dict):
+            return out
 
         msg = f"Output file saved at {out}."
         logger.info(msg=msg)
@@ -1492,14 +1548,6 @@ class EngineABC(ABC):  # noqa: B024
                 Output may be a zarr file, SQLite database, or in-memory dictionary.
 
         """
-        progress_bar = None
-        tqdm = get_tqdm()
-
-        if self.verbose:
-            progress_bar = tqdm(
-                total=len(self.images),
-                desc="Processing WSIs",
-            )
         suffix = ".zarr"
         if output_type == "AnnotationStore":
             suffix = ".db"
@@ -1518,7 +1566,14 @@ class EngineABC(ABC):  # noqa: B024
             for image in self.images
         }
 
-        for image_num, image in enumerate(self.images):
+        tqdm_loop = tqdm(
+            self.images,
+            leave=False,
+            desc="Processing WSIs",
+            disable=not self.verbose,
+        )
+
+        for image_num, image in enumerate(tqdm_loop):
             duplicate_filter = DuplicateFilter()
             logger.addFilter(duplicate_filter)
             mask = self.masks[image_num] if self.masks is not None else None
@@ -1555,12 +1610,6 @@ class EngineABC(ABC):  # noqa: B024
             logger.removeFilter(duplicate_filter)
             msg = f"Output file saved at {out[get_path(image)]}."
             logger.info(msg=msg)
-
-            if progress_bar:
-                progress_bar.update()
-
-        if progress_bar:
-            progress_bar.close()
 
         return out
 
@@ -1736,7 +1785,9 @@ def prepare_engines_save_dir(
     if patch_mode:
         if save_dir is not None:
             save_dir = Path(save_dir)
-            save_dir.mkdir(parents=True, exist_ok=overwrite)
+            if save_dir.exists() and overwrite:
+                shutil.rmtree(save_dir)
+            save_dir.mkdir(parents=True)
             return save_dir
         return None
 
@@ -1755,6 +1806,8 @@ def prepare_engines_save_dir(
     )
 
     save_dir = Path(save_dir)
-    save_dir.mkdir(parents=True, exist_ok=overwrite)
+    if save_dir.exists() and overwrite:
+        shutil.rmtree(save_dir)
+    save_dir.mkdir(parents=True)
 
     return save_dir

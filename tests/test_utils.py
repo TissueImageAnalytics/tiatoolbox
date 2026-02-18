@@ -13,6 +13,7 @@ import dask.array as da
 import joblib
 import numpy as np
 import pandas as pd
+import psutil
 import pytest
 import shapely
 import tifffile
@@ -35,7 +36,7 @@ from tiatoolbox.models.architecture.utils import (
 )
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
-from tiatoolbox.utils.misc import cast_to_min_dtype
+from tiatoolbox.utils.misc import cast_to_min_dtype, create_smart_array
 from tiatoolbox.utils.transforms import locsize2bounds
 
 if TYPE_CHECKING:
@@ -2304,3 +2305,31 @@ def test_process_contours_with_properties() -> None:
     # When properties are provided, base_props should be updated with custom properties
     expected_props = {"type": "mask", "label": "test_label", "confidence": 0.95}
     assert annotations[0].properties == expected_props
+
+
+def test_returns_numpy_when_fits_in_memory(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Test that a NumPy array is returned when the array fits in memory."""
+    shape = (10, 10, 3)
+    dtype = np.float32
+    bytes_needed = np.prod(shape) * np.dtype(dtype).itemsize
+
+    class FakeVM:
+        """Mock available memory to be very large."""
+
+        available = bytes_needed * 10
+
+    monkeypatch.setattr(psutil, "virtual_memory", FakeVM)
+
+    arr = create_smart_array(
+        shape=shape,
+        dtype=dtype,
+        memory_threshold=100,  # allow full RAM
+        name="test",
+        zarr_path=tmp_path / "array.zarr",
+    )
+
+    assert isinstance(arr, np.ndarray)
+    assert arr.shape == shape
+    assert arr.dtype == dtype

@@ -6,7 +6,6 @@ from .dataset_abc import (
     PatchDataset,
     PatchDatasetABC,
     WSIPatchDataset,
-    WSIStreamDataset,
 )
 from .info import DatasetInfoABC, KatherPatchDataset
 
@@ -16,6 +15,5 @@ __all__ = [
     "PatchDataset",
     "PatchDatasetABC",
     "WSIPatchDataset",
-    "WSIStreamDataset",
     "predefined_preproc_func",
 ]

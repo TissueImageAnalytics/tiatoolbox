@@ -10,7 +10,7 @@ from .architecture.mapde import MapDe
 from .architecture.micronet import MicroNet
 from .architecture.nuclick import NuClick
 from .architecture.sccnn import SCCNN
-from .dataset import PatchDataset, WSIPatchDataset, WSIStreamDataset
+from .dataset import PatchDataset, WSIPatchDataset
 from .engine.deep_feature_extractor import DeepFeatureExtractor
 from .engine.io_config import (
     IOInstanceSegmentorConfig,
@@ -43,7 +43,6 @@ __all__ = [
     "PatchPredictor",
     "SemanticSegmentor",
     "WSIPatchDataset",
-    "WSIStreamDataset",
     "architecture",
     "dataset",
     "engine",
