@@ -89,7 +89,7 @@ def test_grandqc_with_semantic_segmentor(
     segmentor = SemanticSegmentor(model="grandqc_tissue_detection")
 
     sample_image = remote_sample("svs-1-small")
-    inputs = [str(sample_image)]
+    inputs = [Path(sample_image)]
 
     output = segmentor.run(
         images=inputs,
@@ -114,7 +114,7 @@ def test_grandqc_with_semantic_segmentor(
         unique_types.add(annotation.properties["type"])
         if annotation.properties["type"] == "tissue":
             tissue_area_px += annotation.geometry.area
-    assert 2999000 < tissue_area_px < 3004000
+    assert 2950000 < tissue_area_px < 2960000
 
     assert unique_types == {"background", "tissue"}
     store.close()

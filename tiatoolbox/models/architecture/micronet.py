@@ -601,8 +601,10 @@ class MicroNet(ModelABC):
         pred_inst = ndimage.label(pred_bin)[0]
         pred_inst = morphology.remove_small_objects(pred_inst, min_size=50)
         canvas = np.zeros(pred_inst.shape[:2], dtype=np.int32)
+        # if margin is zero, there could be arrays of size zero.
+        max_value = 0 if not np.any(pred_inst) else np.max(pred_inst)
         tqdm_loop = tqdm(
-            range(1, np.max(pred_inst) + 1),
+            range(1, max_value + 1),
             leave=False,
             desc="Performing morphological operations to improve segmentation quality.",
             disable=not verbose,

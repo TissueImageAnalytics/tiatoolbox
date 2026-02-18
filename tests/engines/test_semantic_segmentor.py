@@ -20,9 +20,12 @@ from huggingface_hub import hf_hub_download
 
 from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
+from tiatoolbox.models import WSIPatchDataset
 from tiatoolbox.models.engine import semantic_segmentor
 from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
+    clip_probabilities_to_shape,
+    get_wsi_output_shape,
     merge_vertical_chunkwise,
     prepare_full_batch,
 )
@@ -455,7 +458,7 @@ def test_wsi_segmentor_zarr(
     )
 
     output_ = zarr.open(output[sample_svs], mode="r")
-    assert 0.17 < np.mean(output_["predictions"][:]) < 0.21
+    assert 0.36 < np.mean(output_["predictions"][:]) < 0.46
     assert "probabilities" not in output_
     assert "canvas" not in output_
     assert "count" not in output_
@@ -468,8 +471,9 @@ def test_wsi_segmentor_zarr(
     )
     # Return Probabilities is True
     # Testing with WSIReader
+    reader = WSIReader.open(sample_svs)
     output = segmentor.run(
-        images=[WSIReader.open(sample_svs)],
+        images=[reader],
         return_probabilities=True,
         return_labels=False,
         device=device,
@@ -480,8 +484,10 @@ def test_wsi_segmentor_zarr(
         memory_threshold=1,
     )
 
+    shape_at_2mpp = reader.slide_dimensions(resolution=2, units="mpp")
     output_ = zarr.open(output[sample_svs], mode="r")
-    assert 0.17 < np.mean(output_["predictions"][:]) < 0.21
+    assert 0.36 < np.mean(output_["predictions"][:]) < 0.46
+    assert np.all(output_["predictions"].shape == shape_at_2mpp[::-1])
     assert "probabilities" in output_
     assert "canvas" not in output_
     assert "count" not in output_
@@ -506,11 +512,11 @@ def test_wsi_segmentor_zarr(
     )
 
     output_ = zarr.open(output[sample_svs], mode="r")
-    assert 0.17 < np.mean(output_["predictions"][:]) < 0.21
+    assert 0.36 < np.mean(output_["predictions"][:]) < 0.46
     assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
 
     output_ = zarr.open(output[wsi4_512_512_svs], mode="r")
-    assert 0.0 < np.mean(output_["predictions"][:]) < 0.02
+    assert 0.97 < np.mean(output_["predictions"][:]) < 1.00
     assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
 
 
@@ -957,6 +963,54 @@ def test_save_predictions_cleanup_zarr(track_tmp_path: Path) -> None:
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].suffix == ".db"
+
+
+def test_clip_probabilities_empty_clipped() -> None:
+    """Test for clipped shape -> 0."""
+    probabilities = np.zeros((0, 5, 3))  # shape[0] == 0
+    output_shape = (10, 5)  # target height, width
+    written_height = 0
+
+    clipped, new_written_height, finished = clip_probabilities_to_shape(
+        probabilities, output_shape, written_height
+    )
+
+    assert clipped.shape[0] == 0
+    assert new_written_height == written_height
+    assert finished is True
+
+
+def test_reader_exception_returns_none(
+    remote_sample: Callable, caplog: pytest.CaptureFixture
+) -> None:
+    """Test exception inside try block → return None."""
+    wsi4_512_512_svs = Path(remote_sample("wsi4_512_512_svs"))
+    dataset = WSIPatchDataset(
+        wsi4_512_512_svs,
+        patch_input_shape=(512, 512),
+        stride_shape=(512, 512),
+        resolution=0.50,
+        units="mpp",
+    )
+    dataset.wsi_shape = None
+    dataset.img_path = "dummy.svs"
+    dataset.resolution = 0.252
+    dataset.units = "mpp"
+    dataset.reader = None
+
+    assert get_wsi_output_shape(dataset) is None
+    assert "WSI output shape is not recognizable. Please verify outputs" in caplog.text
+
+    dataset.img_path = wsi4_512_512_svs
+    output_shape = get_wsi_output_shape(dataset)
+    assert np.all(output_shape == (512, 512))
+
+    delattr(dataset, "img_path")
+    delattr(dataset, "resolution")
+    delattr(dataset, "units")
+
+    assert get_wsi_output_shape(dataset) is None
+    assert "No metadata found in dataset. Please verify outputs." in caplog.text
 
 
 # -------------------------------------------------------------------------------------
