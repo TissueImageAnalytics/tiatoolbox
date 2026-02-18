@@ -150,7 +150,9 @@ from tiatoolbox.wsicore.wsireader import is_zarr
 from .semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
+    clip_probabilities_to_shape,
     concatenate_none,
+    get_wsi_output_shape,
     merge_horizontal,
     prepare_full_batch,
     save_to_cache,
@@ -678,6 +680,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
             change_indices=[len(output_locs)],
         )
 
+        output_shape = get_wsi_output_shape(dataloader.dataset)
+
         raw_predictions["probabilities"] = _calculate_probabilities(
             canvas_zarr=canvas_zarr,
             count_zarr=count_zarr,
@@ -686,6 +690,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             output_locs_y_=output_locs_y_,
             save_path=save_path,
             memory_threshold=memory_threshold,
+            output_shape=output_shape,
             verbose=self.verbose,
         )
 
@@ -894,7 +899,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         """
         probabilities = raw_predictions["probabilities"]
 
-        tile_h, tile_w = self._ioconfig.tile_shape
+        tile_h, tile_w = self.ioconfig.tile_shape
 
         trigger_tile_proc = any(
             p.shape[0] > tile_h or p.shape[1] > tile_w for p in probabilities
@@ -1082,7 +1087,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
               modified in this method; it only derives task-centric outputs.
 
         """
-        highest_input_resolution = self._ioconfig.highest_input_resolution
+        highest_input_resolution = self.ioconfig.highest_input_resolution
         wsi_reader = self.dataloader.dataset.reader
 
         # assume ioconfig has already been converted to `baseline` for `tile` mode
@@ -1090,8 +1095,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         # * retrieve tile placement and tile info flag
         # tile shape will always be corrected to be multiple of output
-        tile_info_sets = self._get_tile_info(wsi_proc_shape, self._ioconfig)
-        ioconfig = self._ioconfig.to_baseline()
+        tile_info_sets = self._get_tile_info(wsi_proc_shape, self.ioconfig)
+        ioconfig = self.ioconfig.to_baseline()
 
         tile_metadata = _build_tile_tasks(
             tile_info_sets=tile_info_sets,
@@ -1104,7 +1109,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         # Calculate batch size for dask compute
         vm = psutil.virtual_memory()
         bytes_per_element = np.dtype(probabilities[0].dtype).itemsize
-        tile_elements = np.prod(self._ioconfig.tile_shape)
+        tile_elements = np.prod(self.ioconfig.tile_shape)
         prod_dim2 = math.prod(p.shape[2] for p in probabilities if len(p.shape) > 2)  # noqa: PLR2004
         tile_memory = len(probabilities) * tile_elements * prod_dim2 * bytes_per_element
         # available memory
@@ -1291,7 +1296,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     - :class:`numpy.ndarray` - Removal flags
 
         """
-        margin = np.array(ioconfig.margin)
+        margin = 0 if ioconfig.margin is None else np.array(ioconfig.margin)
         tile_shape = np.array(ioconfig.tile_shape)
         tile_shape = (
             np.floor(tile_shape / ioconfig.patch_output_shape)
@@ -1834,7 +1839,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         # This runs dask.compute and returns numpy arrays
         # for saving annotationstore output.
-        class_dict = kwargs.get("class_dict", self._get_model_attr("class_dict"))
+        class_dict = kwargs.get("class_dict", self.model.class_dict)
         if len(self.tasks) == 1 and class_dict is not None:
             kwargs["class_dict"] = class_dict[next(iter(self.tasks))]
         else:
@@ -2327,6 +2332,7 @@ def merge_multitask_vertical_chunkwise(
     zarr_group: zarr.Group,
     save_path: Path,
     memory_threshold: int = 80,
+    output_shape: tuple[int, int] | None = None,
     *,
     verbose: bool = True,
 ) -> list[da.Array]:
@@ -2372,6 +2378,10 @@ def merge_multitask_vertical_chunkwise(
         memory_threshold (int):
             Maximum allowed RAM usage (percentage) before converting in-memory
             probability accumulators to Zarr-backed arrays. Default is 80.
+        output_shape (tuple[int, int] | None):
+            Optional target output shape as (height, width). If provided,
+            merged probabilities are clipped to this shape before being
+            accumulated or written to Zarr.
         verbose (bool):
             Whether to display logs and progress bar.
 
@@ -2406,6 +2416,7 @@ def merge_multitask_vertical_chunkwise(
     for idx, canvas_ in enumerate(canvas):
         num_chunks = canvas_.numblocks[0]
         chunk_shape = tuple(chunk[0] for chunk in canvas_.chunks)
+        written_height = 0
 
         curr_chunk = canvas_.blocks[0, 0].compute()
         curr_count = count[idx].blocks[0, 0].compute()
@@ -2426,6 +2437,14 @@ def merge_multitask_vertical_chunkwise(
             # Normalize
             curr_count = np.where(curr_count == 0, 1, curr_count)
             probabilities = curr_chunk / curr_count.astype(np.float32)
+
+            probabilities, written_height, should_stop = clip_probabilities_to_shape(
+                probabilities=probabilities,
+                output_shape=output_shape,
+                written_height=written_height,
+            )
+            if should_stop:
+                break
 
             probabilities_zarr[idx], probabilities_da[idx] = store_probabilities(
                 probabilities=probabilities,
@@ -2473,7 +2492,7 @@ def _save_multitask_vertical_to_cache(
     probabilities_da: list[da.Array] | list[None],
     probabilities: np.ndarray,
     idx: int,
-    tqdm_loop: type[tqdm],
+    tqdm_loop: tqdm,
     save_path: Path,
     chunk_shape: tuple,
     memory_threshold: int = 80,
@@ -2536,6 +2555,7 @@ def _calculate_probabilities(
     output_locs_y_: np.ndarray,
     save_path: Path,
     memory_threshold: int,
+    output_shape: tuple[int, int],
     *,
     verbose: bool,
 ) -> list[da.Array]:
@@ -2558,12 +2578,13 @@ def _calculate_probabilities(
 
     # Final vertical merge
     return merge_multitask_vertical_chunkwise(
-        canvas,
-        count,
-        output_locs_y_,
-        zarr_group,
-        save_path,
-        memory_threshold,
+        canvas=canvas,
+        count=count,
+        output_locs_y_=output_locs_y_,
+        zarr_group=zarr_group,
+        save_path=save_path,
+        memory_threshold=memory_threshold,
+        output_shape=output_shape,
     )
 
 
@@ -2777,7 +2798,7 @@ def retrieve_sel_uids(sel_indices_: list, inst_dict_: dict) -> list:
     return [inst_uids[idx] for idx in sel_indices_]
 
 
-def _get_sel_indices_margin_lines(
+def _get_sel_indices_margin_lines(  # skipcq: PY-R1000
     ioconfig: IOSegmentorConfig,
     tile_shape: tuple[int, int],
     tile_flag: tuple[int, int, int, int],
@@ -2790,7 +2811,7 @@ def _get_sel_indices_margin_lines(
         msg = f"Unknown tile mode {tile_mode}."
         raise ValueError(msg)
 
-    margin = ioconfig.margin
+    margin = 0 if ioconfig.margin is None else ioconfig.margin
     width, height = tile_shape
     inst_boxes = [v["box"] for v in inst_dict.values()]
     inst_boxes = np.array(inst_boxes)
@@ -2978,7 +2999,8 @@ def _create_wsi_info_dict(
             "predictions": None
             if not return_predictions[idx]
             else create_smart_array(
-                shape=wsi_proc_shape,
+                # WSIReader returns width, height
+                shape=wsi_proc_shape[::-1],
                 dtype=post_process_output_["predictions"].dtype,
                 memory_threshold=memory_threshold,
                 zarr_path=save_path,

@@ -70,7 +70,7 @@ from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
     update_tqdm_desc,
 )
-from tiatoolbox.wsicore.wsireader import is_zarr
+from tiatoolbox.wsicore.wsireader import WSIReader, is_zarr
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
 
@@ -83,7 +83,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import IntPair, Resolution, Units
-    from tiatoolbox.wsicore import WSIReader
 
 
 class SemanticSegmentorRunParams(PredictorRunParams, total=False):
@@ -580,6 +579,8 @@ class SemanticSegmentor(PatchPredictor):
             count = da.from_zarr(count_zarr, chunks=count_zarr.chunks)
             zarr_group = zarr.open(canvas_zarr.store.path, mode="a")
 
+        output_shape = get_wsi_output_shape(dataloader.dataset)
+
         # Final vertical merge
         raw_predictions["probabilities"] = merge_vertical_chunkwise(
             canvas,
@@ -588,6 +589,7 @@ class SemanticSegmentor(PatchPredictor):
             zarr_group,
             save_path,
             memory_threshold,
+            output_shape=output_shape,
             verbose=self.verbose,
         )
         raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
@@ -1222,6 +1224,33 @@ def save_to_cache(
     return canvas_zarr, count_zarr
 
 
+def get_wsi_output_shape(dataset: object) -> tuple[int, int] | None:
+    """Return WSI output shape as (height, width) for the dataset if available."""
+    wsi_shape = getattr(dataset, "wsi_shape", None)
+    if wsi_shape is None:
+        has_meta = all(
+            hasattr(dataset, attr) for attr in ("img_path", "resolution", "units")
+        )
+        if has_meta:
+            try:
+                reader = getattr(dataset, "reader", None)
+                if reader is None:
+                    reader = WSIReader.open(dataset.img_path)
+                wsi_shape = reader.slide_dimensions(
+                    resolution=dataset.resolution, units=dataset.units
+                )
+            except (AttributeError, OSError, TypeError, ValueError):
+                msg = "WSI output shape is not recognizable. Please verify outputs."
+                logger.info(msg)
+                return None
+        else:
+            msg = "No metadata found in dataset. Please verify outputs."
+            logger.warning(msg)
+            return None
+
+    return int(wsi_shape[1]), int(wsi_shape[0])
+
+
 def merge_vertical_chunkwise(
     canvas: da.Array,
     count: da.Array,
@@ -1229,6 +1258,7 @@ def merge_vertical_chunkwise(
     zarr_group: zarr.Group,
     save_path: Path,
     memory_threshold: int = 80,
+    output_shape: tuple[int, int] | None = None,
     *,
     verbose: bool = True,
 ) -> da.Array:
@@ -1254,6 +1284,10 @@ def merge_vertical_chunkwise(
             is saved in a Zarr file.
         memory_threshold (int):
             Memory usage threshold (in percentage) to trigger caching behavior.
+        output_shape (tuple[int, int] | None):
+            Optional target output shape as (height, width). If provided,
+            merged probabilities are clipped to this shape before being
+            accumulated or written to Zarr.
         verbose (bool):
             Whether to display progress bar.
 
@@ -1269,6 +1303,7 @@ def merge_vertical_chunkwise(
     num_chunks = canvas.numblocks[0]
     probabilities_zarr, probabilities_da = None, None
     chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)
+    written_height = 0
 
     tqdm_loop = tqdm(
         overlaps,
@@ -1294,6 +1329,14 @@ def merge_vertical_chunkwise(
         # Normalize
         curr_count = np.where(curr_count == 0, 1, curr_count)
         probabilities = curr_chunk / curr_count.astype(np.float32)
+
+        probabilities, written_height, should_stop = clip_probabilities_to_shape(
+            probabilities=probabilities,
+            output_shape=output_shape,
+            written_height=written_height,
+        )
+        if should_stop:
+            break
 
         probabilities_zarr, probabilities_da = store_probabilities(
             probabilities=probabilities,
@@ -1345,6 +1388,27 @@ def merge_vertical_chunkwise(
         )
 
     return probabilities_da
+
+
+def clip_probabilities_to_shape(
+    probabilities: np.ndarray,
+    output_shape: tuple[int, int] | None,
+    written_height: int,
+) -> tuple[np.ndarray, int, bool]:
+    """Clip probability chunk to target output shape and track written height."""
+    if output_shape is None:
+        return probabilities, written_height, False
+
+    target_height, target_width = map(int, output_shape)
+    remaining_height = target_height - written_height
+    if remaining_height <= 0:
+        return probabilities[:0], written_height, True
+
+    clipped = probabilities[:remaining_height, :target_width, ...]
+    if clipped.shape[0] == 0:
+        return clipped, written_height, True
+
+    return clipped, written_height + clipped.shape[0], False
 
 
 def _get_probabilities_da_from_zarr(
