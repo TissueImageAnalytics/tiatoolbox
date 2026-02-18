@@ -309,20 +309,26 @@ def test_wsi_mtsegmentor_zarr(
     )
 
     output_full_ = zarr.open(output_full[wsi4_1k_1k_svs], mode="r")
-    assert 37 < np.mean(output_full_["nuclei_segmentation"]["predictions"][:]) < 41
-    assert 0.50 < np.mean(output_full_["layer_segmentation"]["predictions"][:]) < 0.54
+    assert 64 < np.mean(output_full_["nuclei_segmentation"]["predictions"][:]) < 68
+    assert 0.88 < np.mean(output_full_["layer_segmentation"]["predictions"][:]) < 0.92
     assert "probabilities" not in output_full_
     assert "canvas" not in output_full_["nuclei_segmentation"]
     assert "count" not in output_full_["nuclei_segmentation"]
     assert "canvas" not in output_full_["layer_segmentation"]
     assert "count" not in output_full_["layer_segmentation"]
+    assert np.all(
+        output_full_["nuclei_segmentation"]["predictions"][:].shape == (504, 504)
+    )
+    assert np.all(
+        output_full_["layer_segmentation"]["predictions"][:].shape == (504, 504)
+    )
 
     # Redefine tile size to force tile-based processing.
     # 350 x 350 forces tile mode 3 (overlap)
     ioconfig.tile_shape = (350, 350)
     mtsegmentor.drop_keys = []
 
-    # Return Probabilities is False
+    # Return predictions is False
     output_tile = mtsegmentor.run(
         images=[wsi4_1k_1k_svs],
         return_probabilities=False,
@@ -401,13 +407,13 @@ def test_multi_input_wsi_mtsegmentor_zarr(
     )
 
     output_ = zarr.open(output[wsi4_512_512_svs], mode="r")
-    assert 23 < np.mean(output_["predictions"][:]) < 27
+    assert 37 < np.mean(output_["predictions"][:]) < 41
     assert "probabilities" in output_
     assert "canvas" not in output_
     assert "count" not in output_
 
     output_ = zarr.open(output[wsi4_512_512_svs_2], mode="r")
-    assert 23 < np.mean(output_["predictions"][:]) < 27
+    assert 37 < np.mean(output_["predictions"][:]) < 41
     assert "probabilities" in output_
     assert "canvas" not in output_
     assert "count" not in output_

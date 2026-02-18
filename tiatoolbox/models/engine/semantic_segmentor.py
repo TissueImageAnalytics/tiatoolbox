@@ -579,7 +579,7 @@ class SemanticSegmentor(PatchPredictor):
             count = da.from_zarr(count_zarr, chunks=count_zarr.chunks)
             zarr_group = zarr.open(canvas_zarr.store.path, mode="a")
 
-        output_shape = _get_wsi_output_shape(dataloader.dataset)
+        output_shape = get_wsi_output_shape(dataloader.dataset)
 
         # Final vertical merge
         raw_predictions["probabilities"] = merge_vertical_chunkwise(
@@ -1224,7 +1224,7 @@ def save_to_cache(
     return canvas_zarr, count_zarr
 
 
-def _get_wsi_output_shape(dataset: object) -> tuple[int, int] | None:
+def get_wsi_output_shape(dataset: object) -> tuple[int, int] | None:
     """Return WSI output shape as (height, width) for the dataset if available."""
     wsi_shape = getattr(dataset, "wsi_shape", None)
     if wsi_shape is None:
@@ -1327,7 +1327,7 @@ def merge_vertical_chunkwise(
         curr_count = np.where(curr_count == 0, 1, curr_count)
         probabilities = curr_chunk / curr_count.astype(np.float32)
 
-        probabilities, written_height, should_stop = _clip_probabilities_to_shape(
+        probabilities, written_height, should_stop = clip_probabilities_to_shape(
             probabilities=probabilities,
             output_shape=output_shape,
             written_height=written_height,
@@ -1387,7 +1387,7 @@ def merge_vertical_chunkwise(
     return probabilities_da
 
 
-def _clip_probabilities_to_shape(
+def clip_probabilities_to_shape(
     probabilities: np.ndarray,
     output_shape: tuple[int, int] | None,
     written_height: int,
