@@ -903,7 +903,7 @@ class EfficientNetUnet(ModelABC):
 
     @staticmethod
     def infer_batch(
-        model: torch.nn.Module,
+        model: EfficientNetUnet,
         batch_data: torch.Tensor,
         *,
         device: str,
@@ -914,8 +914,8 @@ class EfficientNetUnet(ModelABC):
         forward pass, and returns sigmoid probabilities.
 
         Args:
-            model (torch.nn.Module):
-                PyTorch model instance.
+            model (EfficientNetUnet):
+                EfficientNetUnet model instance.
             batch_data (torch.Tensor):
                 Batch of input images in NHWC format.
             device (str):
