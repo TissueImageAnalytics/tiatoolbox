@@ -46,9 +46,10 @@ import dask.array as da
 import psutil
 import zarr
 from dask import compute
+from tqdm.auto import tqdm
 from typing_extensions import Unpack
 
-from tiatoolbox.utils.misc import get_tqdm
+from tiatoolbox.utils.misc import update_tqdm_desc
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
 
@@ -213,11 +214,11 @@ class DeepFeatureExtractor(PatchPredictor):
         )
 
         # Inference loop
-        tqdm = get_tqdm()
-        tqdm_loop = (
-            tqdm(dataloader, leave=False, desc="Inferring patches")
-            if self.verbose
-            else dataloader
+        tqdm_loop = tqdm(
+            dataloader,
+            leave=False,
+            desc="Inferring Patches",
+            disable=not self.verbose,
         )
 
         probabilities_zarr, coordinates_zarr = None, None
@@ -246,7 +247,6 @@ class DeepFeatureExtractor(PatchPredictor):
                 used_percent > memory_threshold
                 or probabilities_used_percent > memory_threshold
             ):
-                tqdm_loop.desc = "Spill intermediate data to disk"
                 used_percent = (
                     probabilities_used_percent
                     if (probabilities_used_percent > memory_threshold)
@@ -257,8 +257,7 @@ class DeepFeatureExtractor(PatchPredictor):
                     f"exceeds specified threshold: {memory_threshold}. "
                     f"Saving intermediate results to disk."
                 )
-
-                tqdm.write(msg)
+                update_tqdm_desc(tqdm_loop=tqdm_loop, desc=msg)
                 # Flush data in Memory and clear dask graph
                 probabilities_zarr, coordinates_zarr = save_to_cache(
                     probabilities,
@@ -271,7 +270,7 @@ class DeepFeatureExtractor(PatchPredictor):
                 probabilities, coordinates = [], []
                 probabilities_used_percent = 0
                 gc.collect()
-                tqdm_loop.desc = "Inferring patches"
+                update_tqdm_desc(tqdm_loop=tqdm_loop, desc="Inferring patches")
 
         if probabilities_zarr is not None:
             probabilities_zarr, coordinates_zarr = save_to_cache(

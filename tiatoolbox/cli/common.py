@@ -435,39 +435,6 @@ def cli_method(
     )
 
 
-def cli_pretrained_model(
-    usage_help: str = "Name of the predefined model used to process the data. "
-    "The format is <model_name>_<dataset_trained_on>. For example, "
-    "`resnet18-kather100K` is a resnet18 model trained on the Kather dataset. "
-    "Please see "
-    "https://tia-toolbox.readthedocs.io/en/latest/usage.html#deep-learning-models "
-    "for a detailed list of available pretrained models."
-    "By default, the corresponding pretrained weights will also be"
-    "downloaded. However, you can override with your own set of weights"
-    "via the `pretrained_weights` argument. Argument is case insensitive.",
-    default: str = "resnet18-kather100k",
-) -> Callable:
-    """Enables --pretrained-model option for cli."""
-    return click.option(
-        "--model",
-        help=add_default_to_usage_help(usage_help, default=default),
-        default=default,
-    )
-
-
-def cli_pretrained_weights(
-    usage_help: str = "Path to the model weight file. If not supplied, the default "
-    "pretrained weight will be used.",
-    default: str | None = None,
-) -> Callable:
-    """Enables --pretrained-weights option for cli."""
-    return click.option(
-        "--pretrained-weights",
-        help=add_default_to_usage_help(usage_help, default=default),
-        default=default,
-    )
-
-
 def cli_model(
     usage_help: str = "Name of the predefined model used to process the data. "
     "The format is <model_name>_<dataset_trained_on>. For example, "
@@ -527,30 +494,67 @@ def cli_return_probabilities(
     )
 
 
-def cli_merge_predictions(
-    usage_help: str = "Whether to merge the predictions to form a 2-dimensional map.",
-    *,
-    default: bool = True,
-) -> Callable:
-    """Enables --merge-predictions option for cli."""
-    return click.option(
-        "--merge-predictions",
-        type=bool,
-        default=default,
-        help=add_default_to_usage_help(usage_help, default=default),
-    )
+def parse_bool_list(
+    _ctx: click.Context,
+    _param: click.Parameter,
+    value: str | None,
+) -> tuple[bool, ...] | None:
+    """Parse a comma-separated list of boolean values for a Click option.
+
+    This function is intended for use as a Click callback. It converts a
+    comma-separated string (e.g., ``"true,false,1,0"``) into a tuple of Python
+    booleans. Each item is stripped, lowercased, and validated against a set of
+    accepted truthy and falsy representations.
+
+    Accepted truthy values:
+        ``"true"``, ``"1"``, ``"yes"``, ``"y"``
+
+    Accepted falsy values:
+        ``"false"``, ``"0"``, ``"no"``, ``"n"``
+
+    Args:
+        ctx (click.Context):
+            The Click context object (unused but required by Click callback API).
+        param (click.Parameter):
+            The Click parameter object (unused but required by Click callback API).
+        value (str | None):
+            The raw string provided by the user. If ``None``, the function returns
+            ``None`` unchanged.
+
+    Returns:
+        tuple[bool, ...] | None:
+            A tuple of parsed boolean values, or ``None`` if no value was provided.
+
+    Raises:
+        click.BadParameter:
+            If any item in the comma-separated list is not a valid boolean string.
+    """
+    if value is None:
+        return None
+    items = value.split(",")
+    out = []
+    for item in items:
+        item_ = item.strip().lower()
+        if item_ in ("true", "1", "yes", "y"):
+            out.append(True)
+        elif item_ in ("false", "0", "no", "n"):
+            out.append(False)
+        else:
+            msg = f"Invalid boolean: {item_}"
+            raise click.BadParameter(msg)
+    return tuple(out)
 
 
-def cli_return_labels(
-    usage_help: str = "Whether to return raw model output as labels.",
+def cli_return_predictions(
+    usage_help: str = "Whether to return predictions for individual tasks.",
     *,
-    default: bool = False,
+    default: tuple[bool, ...] | None = None,
 ) -> Callable:
-    """Enables --return-labels option for cli."""
+    """Enables --return-predictions option for cli."""
     return click.option(
-        "--return-labels",
-        type=bool,
-        help=add_default_to_usage_help(usage_help, default=default),
+        "--return-predictions",
+        callback=parse_bool_list,
+        help=add_default_to_usage_help(usage_help, default=None),
         default=default,
     )
 

@@ -230,6 +230,8 @@ class IOSegmentorConfig(ModelIOConfigABC):
             Shape of the largest output in (height, width).
         save_resolution (dict):
             Resolution to save all output.
+        tile_shape (tuple(int, int)):
+            Tile shape to process the WSI.
 
     Attributes:
         input_resolutions (list(dict)):
@@ -250,6 +252,10 @@ class IOSegmentorConfig(ModelIOConfigABC):
             Highest resolution to process the image based on input and
             output resolutions. This helps to read the image at the optimal
             resolution and improves performance.
+        tile_shape (tuple(int, int)):
+            Tile shape to process the WSI.
+        margin (int):
+            Tile margin to accumulate the output.
 
     Examples:
         >>> # Defining io for a network having 1 input and 1 output at the
@@ -285,6 +291,8 @@ class IOSegmentorConfig(ModelIOConfigABC):
 
     patch_output_shape: list[int] | np.ndarray | tuple[int, int] = None
     save_resolution: dict = None
+    tile_shape: tuple[int, int] | None = None
+    margin: int | None = None
 
     def to_baseline(self: IOSegmentorConfig) -> IOSegmentorConfig:
         """Returns a new config object converted to baseline form.
@@ -439,9 +447,6 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
         ... )
 
     """
-
-    margin: int = None
-    tile_shape: tuple[int, int] = None
 
     def to_baseline(self: IOInstanceSegmentorConfig) -> IOInstanceSegmentorConfig:
         """Returns a new config object converted to baseline form.

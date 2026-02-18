@@ -61,15 +61,16 @@ import numpy as np
 import psutil
 import torch
 import zarr
+from tqdm.auto import tqdm
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
 from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
 from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
-    get_tqdm,
+    update_tqdm_desc,
 )
-from tiatoolbox.wsicore.wsireader import is_zarr
+from tiatoolbox.wsicore.wsireader import WSIReader, is_zarr
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
 
@@ -82,7 +83,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import IntPair, Resolution, Units
-    from tiatoolbox.wsicore import WSIReader
 
 
 class SemanticSegmentorRunParams(PredictorRunParams, total=False):
@@ -460,11 +460,11 @@ class SemanticSegmentor(PatchPredictor):
         )
 
         # Inference loop
-        tqdm_ = get_tqdm()
-        tqdm_loop = (
-            tqdm_(dataloader, leave=False, desc="Inferring patches")
-            if self.verbose
-            else dataloader
+        tqdm_loop = tqdm(
+            dataloader,
+            leave=False,
+            desc="Inferring patches",
+            disable=not self.verbose,
         )
 
         canvas_np, output_locs_y_ = None, None
@@ -536,7 +536,7 @@ class SemanticSegmentor(PatchPredictor):
                         f"exceeds specified threshold: {memory_threshold}. "
                         f"Saving intermediate results to disk."
                     )
-                    tqdm_loop.desc = msg
+                    update_tqdm_desc(tqdm_loop=tqdm_loop, desc=msg)
                     # Flush data in Memory and clear dask graph
                     canvas_zarr, count_zarr = save_to_cache(
                         canvas,
@@ -544,10 +544,11 @@ class SemanticSegmentor(PatchPredictor):
                         canvas_zarr,
                         count_zarr,
                         save_path=save_path,
+                        verbose=self.verbose,
                     )
                     canvas, count = None, None
                     gc.collect()
-                    tqdm_loop.desc = "Inferring patches"
+                    update_tqdm_desc(tqdm_loop=tqdm_loop, desc="Inferring patches")
 
             coordinates.append(
                 da.from_array(
@@ -567,12 +568,18 @@ class SemanticSegmentor(PatchPredictor):
         zarr_group = None
         if canvas_zarr is not None:
             canvas_zarr, count_zarr = save_to_cache(
-                canvas, count, canvas_zarr, count_zarr
+                canvas,
+                count,
+                canvas_zarr,
+                count_zarr,
+                verbose=self.verbose,
             )
             # Wrap zarr in dask array
             canvas = da.from_zarr(canvas_zarr, chunks=canvas_zarr.chunks)
             count = da.from_zarr(count_zarr, chunks=count_zarr.chunks)
             zarr_group = zarr.open(canvas_zarr.store.path, mode="a")
+
+        output_shape = get_wsi_output_shape(dataloader.dataset)
 
         # Final vertical merge
         raw_predictions["probabilities"] = merge_vertical_chunkwise(
@@ -582,6 +589,8 @@ class SemanticSegmentor(PatchPredictor):
             zarr_group,
             save_path,
             memory_threshold,
+            output_shape=output_shape,
+            verbose=self.verbose,
         )
         raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
 
@@ -705,6 +714,7 @@ class SemanticSegmentor(PatchPredictor):
                     scale_factor=scale_factor,
                     class_dict=class_dict,
                     save_path=output_path,
+                    verbose=self.verbose,
                 )
 
                 save_paths.append(out_file)
@@ -714,6 +724,7 @@ class SemanticSegmentor(PatchPredictor):
                 scale_factor=scale_factor,
                 class_dict=class_dict,
                 save_path=save_path.with_suffix(".db"),
+                verbose=self.verbose,
             )
             save_paths = out_file
 
@@ -1045,7 +1056,7 @@ def merge_batch_to_canvas(
 def merge_horizontal(
     canvas: None | da.Array,
     count: None | da.Array,
-    output_locs_y_: np.ndarray,
+    output_locs_y: np.ndarray,
     canvas_np: np.ndarray,
     output_locs: np.ndarray,
     change_indices: np.ndarray | list[int],
@@ -1062,7 +1073,7 @@ def merge_horizontal(
             Existing Dask array for canvas data, or None if uninitialized.
         count (None | da.Array):
             Existing Dask array for count data, or None if uninitialized.
-        output_locs_y_ (np.ndarray):
+        output_locs_y (np.ndarray):
             Array tracking vertical output locations for merged patches.
         canvas_np (np.ndarray):
             NumPy array of canvas patches to be merged.
@@ -1101,15 +1112,15 @@ def merge_horizontal(
         canvas = concatenate_none(old_arr=canvas, new_arr=canvas_merge)
         count = concatenate_none(old_arr=count, new_arr=count_merge)
 
-        output_locs_y_ = concatenate_none(
-            old_arr=output_locs_y_, new_arr=output_locs_[:, (1, 3)]
+        output_locs_y = concatenate_none(
+            old_arr=output_locs_y, new_arr=output_locs_[:, (1, 3)]
         )
 
         canvas_np = canvas_np[c_idx - start_idx :]
         output_locs = output_locs[c_idx - start_idx :]
         start_idx = c_idx
 
-    return canvas, count, canvas_np, output_locs, output_locs_y_
+    return canvas, count, canvas_np, output_locs, output_locs_y
 
 
 def save_to_cache(
@@ -1118,6 +1129,9 @@ def save_to_cache(
     canvas_zarr: zarr.Array,
     count_zarr: zarr.Array,
     save_path: str | Path = "temp.zarr",
+    zarr_dataset_name: tuple[str, str] = ("canvas", "count"),
+    *,
+    verbose: bool = True,
 ) -> tuple[zarr.Array, zarr.Array]:
     """Incrementally save computed canvas and count arrays to Zarr cache.
 
@@ -1137,6 +1151,11 @@ def save_to_cache(
             Existing Zarr dataset for count data. If None, a new one is created.
         save_path (str | Path):
             Path to the Zarr group for saving datasets. Defaults to "temp.zarr".
+        zarr_dataset_name (tuple[str, str]):
+            Tuple of name for zarr dataset to save canvas and count.
+            Defaults to ("canvas", "count").
+        verbose (bool):
+            Whether to display progress bar.
 
     Returns:
         tuple[zarr.Array, zarr.Array]:
@@ -1145,7 +1164,7 @@ def save_to_cache(
     chunk0 = canvas.chunks[0][0]
 
     if canvas_zarr is None:
-        zarr_group = zarr.open(str(save_path), mode="w")
+        zarr_group = zarr.open(str(save_path), mode="a")
 
         # Peek first block shapes to initialise datasets without computing all rows.
         # Blocks are 3D: (row_chunk, col_chunk, channel_chunk). Grab the first.
@@ -1153,7 +1172,7 @@ def save_to_cache(
         first_count_block = count.blocks[0, 0, 0].compute()
 
         canvas_zarr = zarr_group.create_dataset(
-            name="canvas",
+            name=zarr_dataset_name[0],
             # Append along axis 0 (height); keep width/channels fixed.
             shape=(0, *first_canvas_block.shape[1:]),
             chunks=(chunk0, *first_canvas_block.shape[1:]),
@@ -1162,7 +1181,7 @@ def save_to_cache(
         )
 
         count_zarr = zarr_group.create_dataset(
-            name="count",
+            name=zarr_dataset_name[1],
             shape=(0, *first_count_block.shape[1:]),
             dtype=first_count_block.dtype,
             chunks=(chunk0, *first_count_block.shape[1:]),
@@ -1182,7 +1201,13 @@ def save_to_cache(
 
     # Append remaining blocks one-at-a-time to limit peak memory.
     num_blocks = canvas.numblocks[0]
-    for block_idx in range(start_idx, num_blocks):
+    tqdm_loop = tqdm(
+        range(start_idx, num_blocks),
+        leave=False,
+        desc="Memory Overload, Spilling to disk",
+        disable=not verbose,
+    )
+    for block_idx in tqdm_loop:
         canvas_block = canvas.blocks[block_idx, 0, 0].compute()
         count_block = count.blocks[block_idx, 0, 0].compute()
 
@@ -1199,6 +1224,33 @@ def save_to_cache(
     return canvas_zarr, count_zarr
 
 
+def get_wsi_output_shape(dataset: object) -> tuple[int, int] | None:
+    """Return WSI output shape as (height, width) for the dataset if available."""
+    wsi_shape = getattr(dataset, "wsi_shape", None)
+    if wsi_shape is None:
+        has_meta = all(
+            hasattr(dataset, attr) for attr in ("img_path", "resolution", "units")
+        )
+        if has_meta:
+            try:
+                reader = getattr(dataset, "reader", None)
+                if reader is None:
+                    reader = WSIReader.open(dataset.img_path)
+                wsi_shape = reader.slide_dimensions(
+                    resolution=dataset.resolution, units=dataset.units
+                )
+            except (AttributeError, OSError, TypeError, ValueError):
+                msg = "WSI output shape is not recognizable. Please verify outputs."
+                logger.info(msg)
+                return None
+        else:
+            msg = "No metadata found in dataset. Please verify outputs."
+            logger.warning(msg)
+            return None
+
+    return int(wsi_shape[1]), int(wsi_shape[0])
+
+
 def merge_vertical_chunkwise(
     canvas: da.Array,
     count: da.Array,
@@ -1206,6 +1258,9 @@ def merge_vertical_chunkwise(
     zarr_group: zarr.Group,
     save_path: Path,
     memory_threshold: int = 80,
+    output_shape: tuple[int, int] | None = None,
+    *,
+    verbose: bool = True,
 ) -> da.Array:
     """Merge vertically chunked canvas and count arrays into a single probability map.
 
@@ -1229,6 +1284,12 @@ def merge_vertical_chunkwise(
             is saved in a Zarr file.
         memory_threshold (int):
             Memory usage threshold (in percentage) to trigger caching behavior.
+        output_shape (tuple[int, int] | None):
+            Optional target output shape as (height, width). If provided,
+            merged probabilities are clipped to this shape before being
+            accumulated or written to Zarr.
+        verbose (bool):
+            Whether to display progress bar.
 
     Returns:
         da.Array:
@@ -1242,9 +1303,14 @@ def merge_vertical_chunkwise(
     num_chunks = canvas.numblocks[0]
     probabilities_zarr, probabilities_da = None, None
     chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)
+    written_height = 0
 
-    tqdm = get_tqdm()
-    tqdm_loop = tqdm(overlaps, leave=False, desc="Merging rows")
+    tqdm_loop = tqdm(
+        overlaps,
+        leave=False,
+        desc="Merging rows",
+        disable=not verbose,
+    )
 
     used_percent = 0
 
@@ -1252,6 +1318,8 @@ def merge_vertical_chunkwise(
     curr_count = count.blocks[0, 0].compute()
     next_chunk = canvas.blocks[1, 0].compute() if num_chunks > 1 else None
     next_count = count.blocks[1, 0].compute() if num_chunks > 1 else None
+
+    probabilities = np.empty(0)
 
     for i, overlap in enumerate(tqdm_loop):
         if next_chunk is not None and overlap > 0:
@@ -1261,6 +1329,14 @@ def merge_vertical_chunkwise(
         # Normalize
         curr_count = np.where(curr_count == 0, 1, curr_count)
         probabilities = curr_chunk / curr_count.astype(np.float32)
+
+        probabilities, written_height, should_stop = clip_probabilities_to_shape(
+            probabilities=probabilities,
+            output_shape=output_shape,
+            written_height=written_height,
+        )
+        if should_stop:
+            break
 
         probabilities_zarr, probabilities_da = store_probabilities(
             probabilities=probabilities,
@@ -1274,12 +1350,13 @@ def merge_vertical_chunkwise(
             vm = psutil.virtual_memory()
             used_percent = (probabilities_da.nbytes / vm.free) * 100
         if probabilities_zarr is None and used_percent > memory_threshold:
+            desc = tqdm_loop.desc if hasattr(tqdm_loop, "desc") else ""
             msg = (
                 f"Current Memory usage: {used_percent} %  "
                 f"exceeds specified threshold: {memory_threshold}. "
                 f"Saving intermediate results to disk."
             )
-            tqdm.write(msg)
+            update_tqdm_desc(tqdm_loop=tqdm_loop, desc=msg)
             zarr_group = zarr.open(str(save_path), mode="a")
             probabilities_zarr = zarr_group.create_dataset(
                 name="probabilities",
@@ -1291,6 +1368,7 @@ def merge_vertical_chunkwise(
             probabilities_zarr[:] = probabilities_da.compute()
 
             probabilities_da = None
+            update_tqdm_desc(tqdm_loop=tqdm_loop, desc=desc)
 
         if next_chunk is not None:
             curr_chunk, curr_count = next_chunk[overlap:], next_count[overlap:]
@@ -1302,15 +1380,51 @@ def merge_vertical_chunkwise(
             next_chunk, next_count = None, None
 
     if probabilities_zarr:
-        if "canvas" in zarr_group:
-            del zarr_group["canvas"]
-        if "count" in zarr_group:
-            del zarr_group["count"]
-        return da.from_zarr(
-            probabilities_zarr, chunks=(chunk_shape[0], *probabilities.shape[1:])
+        return _get_probabilities_da_from_zarr(
+            zarr_group=zarr_group,
+            probabilities_zarr=probabilities_zarr,
+            chunk_shape=chunk_shape,
+            probabilities=probabilities,
         )
 
     return probabilities_da
+
+
+def clip_probabilities_to_shape(
+    probabilities: np.ndarray,
+    output_shape: tuple[int, int] | None,
+    written_height: int,
+) -> tuple[np.ndarray, int, bool]:
+    """Clip probability chunk to target output shape and track written height."""
+    if output_shape is None:
+        return probabilities, written_height, False
+
+    target_height, target_width = map(int, output_shape)
+    remaining_height = target_height - written_height
+    if remaining_height <= 0:
+        return probabilities[:0], written_height, True
+
+    clipped = probabilities[:remaining_height, :target_width, ...]
+    if clipped.shape[0] == 0:
+        return clipped, written_height, True
+
+    return clipped, written_height + clipped.shape[0], False
+
+
+def _get_probabilities_da_from_zarr(
+    zarr_group: zarr.Group,
+    probabilities_zarr: zarr.Array,
+    chunk_shape: tuple,
+    probabilities: zarr.Array | np.ndarray,
+) -> da.Array:
+    """Helper function to return dask array after probabilities have been merged."""
+    if "canvas" in zarr_group:
+        del zarr_group["canvas"]
+    if "count" in zarr_group:
+        del zarr_group["count"]
+    return da.from_zarr(
+        probabilities_zarr, chunks=(chunk_shape[0], *probabilities.shape[1:])
+    )
 
 
 def store_probabilities(
@@ -1455,17 +1569,6 @@ def prepare_full_batch(
             dtype=batch_output.dtype,
         )
     else:
-        # Array too large, use zarr backed by disk to avoid RAM spikes
-        # Use a unique temp subdirectory per call to avoid chunk-shape clashes
-        msg = (
-            f"Estimated peak memory usage for full batch output: "
-            f"{peak_bytes / (1024**3):.2f} GB exceeds threshold of "
-            f"{memory_available / (1024**3):.2f} GB."
-            f"Allocating full batch output of size "
-            f"{final_size}x{sample_shape} using Zarr on disk."
-        )
-        logger.info(msg)
-
         save_path_dir = Path(save_path)
         save_path_dir.mkdir(parents=True, exist_ok=True)
         temp_dir = Path(
