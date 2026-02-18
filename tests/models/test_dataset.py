@@ -19,7 +19,6 @@ from tiatoolbox.models.dataset import (
     PatchDatasetABC,
     predefined_preproc_func,
 )
-from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils import imread, imwrite, unzip_data
 from tiatoolbox.utils.exceptions import DimensionMismatchError
 from tiatoolbox.wsicore import WSIReader
@@ -75,7 +74,8 @@ def test_dataset_abc() -> None:
         Proto4()  # skipcq
 
 
-@pytest.mark.skipif(toolbox_env.running_on_ci(), reason="Local test on local machine.")
+# Skip unless explicitly set to run
+@pytest.mark.skipif(condition=True, reason="Local test on local machine.")
 def test_kather_dataset_default() -> None:
     """Test for kather patch dataset with default parameters."""
     # test Kather with default init

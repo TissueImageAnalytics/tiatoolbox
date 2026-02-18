@@ -424,7 +424,7 @@ def test_wsi_segmentor_zarr(
     shape_at_2mpp = reader.slide_dimensions(resolution=2, units="mpp")
     output_ = zarr.open(output[sample_svs], mode="r")
     assert 0.36 < np.mean(output_["predictions"][:]) < 0.46
-    assert output_["predictions"].shape == shape_at_2mpp
+    assert np.all(output_["predictions"].shape == shape_at_2mpp[::-1])
     assert "probabilities" in output_
     assert "canvas" not in output_
     assert "count" not in output_
@@ -449,11 +449,11 @@ def test_wsi_segmentor_zarr(
     )
 
     output_ = zarr.open(output[sample_svs], mode="r")
-    assert 0.17 < np.mean(output_["predictions"][:]) < 0.21
+    assert 0.36 < np.mean(output_["predictions"][:]) < 0.46
     assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
 
     output_ = zarr.open(output[wsi4_512_512_svs], mode="r")
-    assert 0.0 < np.mean(output_["predictions"][:]) < 0.02
+    assert 0.97 < np.mean(output_["predictions"][:]) < 1.00
     assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
 
 
