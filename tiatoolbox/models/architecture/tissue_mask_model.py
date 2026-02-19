@@ -7,8 +7,6 @@ and segmentation head for high-resolution tissue segmentation.
 
 Key Components:
 ---------------
-- SiLU:
-    Sigmoid Linear Unit activation function.
 - Conv2dStaticSamePadding:
     Convolutional layer with static same padding.
 - MBConvBlock:
@@ -49,6 +47,10 @@ Example:
 from __future__ import annotations
 
 import math
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover
+    from typing import Any
 
 import cv2
 import dask.array as da
@@ -56,37 +58,8 @@ import numpy as np
 import torch
 from torch import nn
 
+from tiatoolbox.models.architecture.utils import SiLU
 from tiatoolbox.models.models_abc import ModelABC
-
-
-class SiLU(nn.Module):
-    """Sigmoid Linear Unit (SiLU) activation function.
-
-    Also known as Swish activation function. Computes element-wise
-    x * sigmoid(x) for improved gradient flow in deep networks.
-
-    Example:
-        >>> activation = SiLU()
-        >>> x = torch.randn(1, 64, 32, 32)
-        >>> output = activation(x)
-        >>> output.shape
-        ... torch.Size([1, 64, 32, 32])
-
-    """
-
-    def forward(self: SiLU, x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through SiLU activation.
-
-        Args:
-            x (torch.Tensor):
-                Input tensor of any shape.
-
-        Returns:
-            torch.Tensor:
-                Output tensor with same shape as input.
-
-        """
-        return x * torch.sigmoid(x)
 
 
 class Conv2dStaticSamePadding(nn.Conv2d):
@@ -636,10 +609,6 @@ class UnetDecoderBlock(nn.Module):
         """
         x = torch.nn.functional.interpolate(x, scale_factor=2, mode="nearest")
         if skip is not None:
-            if x.shape != skip.shape:
-                x = torch.nn.functional.interpolate(
-                    x, size=skip.shape[2:], mode="nearest"
-                )
             x = torch.cat([x, skip], dim=1)
         x = self.conv1(x)
         x = self.attention1(x)
@@ -825,7 +794,12 @@ class EfficientNetUnet(ModelABC):
         self.segmentation_head = SegmentationHead(16, num_classes)
         self.threshold = threshold
 
-    def forward(self: EfficientNetUnet, x: torch.Tensor) -> torch.Tensor:
+    def forward(  # skipcq: PYL-W0613
+        self: EfficientNetUnet,
+        x: torch.Tensor,
+        *args: tuple[Any, ...],  # noqa: ARG002
+        **kwargs: dict,  # noqa: ARG002
+    ) -> torch.Tensor:
         """Forward pass through the EfficientNetUnet model.
 
         Sequentially processes the input tensor through the encoder, decoder,
@@ -834,6 +808,10 @@ class EfficientNetUnet(ModelABC):
         Args:
             x (torch.Tensor):
                 (B, 3, H, W). Input image tensor.
+            *args (tuple):
+                Additional positional arguments (unused).
+            **kwargs (dict):
+                Additional keyword arguments (unused).
 
         Returns:
             torch.Tensor:
@@ -869,7 +847,9 @@ class EfficientNetUnet(ModelABC):
         std = np.array([0.229, 0.224, 0.225])
         return (image / 255.0 - mean) / std
 
-    def postproc(self: EfficientNetUnet, image: np.ndarray) -> np.ndarray:
+    def postproc(
+        self: EfficientNetUnet, image: np.ndarray
+    ) -> np.ndarray:  # skipcq: PYL-W0221
         """Postprocess model output to generate tissue mask.
 
         Applies thresholding and morphological operations to classify pixels

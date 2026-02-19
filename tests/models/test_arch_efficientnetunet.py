@@ -20,7 +20,6 @@ from tiatoolbox.models.architecture.tissue_mask_model import (
     EfficientNetUnet,
     MBConvBlock,
     SegmentationHead,
-    SiLU,
     UnetDecoder,
     UnetDecoderBlock,
 )
@@ -107,18 +106,6 @@ def test_efficientnetunet_with_semantic_segmentor(
     assert 1800000 < tissue_area_px < 20000000
 
     store.close()
-
-
-def test_silu_activation() -> None:
-    """Test SiLU activation function."""
-    activation = SiLU()
-    x = torch.randn(1, 64, 32, 32)
-    output = activation(x)
-    assert output.shape == (1, 64, 32, 32)
-
-    # Test that SiLU computes x * sigmoid(x)
-    expected = x * torch.sigmoid(x)
-    assert torch.allclose(output, expected)
 
 
 def test_conv2d_static_same_padding() -> None:
@@ -257,16 +244,6 @@ def test_unet_decoder_block_without_skip() -> None:
     assert output.shape == (1, 64, 64, 64)
 
 
-def test_unet_decoder_block_mismatched_shapes() -> None:
-    """Test UnetDecoderBlock with mismatched input and skip shapes."""
-    block = UnetDecoderBlock(in_channels=128, skip_channels=64, out_channels=64)
-    input_tensor = torch.randn(1, 128, 32, 32)
-    # Skip with slightly different spatial dimensions
-    skip = torch.randn(1, 64, 65, 65)
-    output = block(input_tensor, skip)
-    assert output.shape == (1, 64, 65, 65)
-
-
 def test_unet_decoder() -> None:
     """Test UnetDecoder forward pass."""
     decoder = UnetDecoder()
@@ -320,13 +297,13 @@ def test_efficientnetunet_postproc_threshold() -> None:
 
     # Create probability map with values above and below threshold
     probs = np.array([[[0.3]], [[0.7]], [[0.5]], [[0.9]]])
-    probs = probs.reshape(2, 2, 1).astype(np.float32)
+    probs = probs.reshape((2, 2, 1)).astype(np.float32)
 
     mask = model.postproc(probs)
     assert mask.shape == (2, 2)
     assert mask.dtype == np.uint8
 
-    # Note: morphological operations may change exact values,
+    # Note: morphological operations change exact values,
     # so we just check shape and dtype
 
 
