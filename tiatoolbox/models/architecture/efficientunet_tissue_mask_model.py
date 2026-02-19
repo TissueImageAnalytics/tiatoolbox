@@ -58,7 +58,6 @@ import numpy as np
 import torch
 from torch import nn
 
-from tiatoolbox.models.architecture.utils import SiLU
 from tiatoolbox.models.models_abc import ModelABC
 
 
@@ -164,15 +163,18 @@ class Conv2dStaticSamePadding(nn.Conv2d):
 
         """
         h, w = x.shape[-2:]
+        # Account for dilation when computing the effective kernel size
+        effective_kernel_w = (self.kernel_size[1] - 1) * self.dilation[1] + 1
+        effective_kernel_h = (self.kernel_size[0] - 1) * self.dilation[0] + 1
         extra_h = (
             (math.ceil(w / self.stride[1]) - 1) * self.stride[1]
             - w
-            + self.kernel_size[1]
+            + effective_kernel_w
         )
         extra_v = (
             (math.ceil(h / self.stride[0]) - 1) * self.stride[0]
             - h
-            + self.kernel_size[0]
+            + effective_kernel_h
         )
         extra_h = max(extra_h, 0)
         extra_v = max(extra_v, 0)
@@ -274,7 +276,7 @@ class MBConvBlock(nn.Module):
             self._expand_conv = nn.Identity()
             self._bn0 = nn.Identity()
 
-        self._swish = SiLU()
+        self._swish = torch.nn.SiLU()
 
         # 2. Depthwise Convolution
         self._depthwise_conv = Conv2dStaticSamePadding(
@@ -398,7 +400,7 @@ class EfficientNetEncoder(nn.Module):
             3, 32, kernel_size=3, stride=2, bias=False
         )
         self._bn0 = nn.BatchNorm2d(32, eps=1e-3, momentum=0.01)
-        self._swish = SiLU()
+        self._swish = torch.nn.SiLU()
 
         self.block_args = [
             [32, 16, 1, 3, 1, 1],
@@ -437,8 +439,8 @@ class EfficientNetEncoder(nn.Module):
                 - features[0]: (B, 32, H/2, W/2)
                 - features[1]: (B, 24, H/4, W/4)
                 - features[2]: (B, 40, H/8, W/8)
-                - features[3]: (B, 80, H/16, W/16)
-                - features[4]: (B, 112, H/16, W/16)
+                - features[3]: (B, 112, H/16, W/16)
+                - features[4]: (B, 320, H/32, W/32)
 
         """
         features = []
@@ -636,8 +638,8 @@ class UnetDecoder(nn.Module):
         ...     torch.randn(1, 32, 112, 112),
         ...     torch.randn(1, 24, 56, 56),
         ...     torch.randn(1, 40, 28, 28),
-        ...     torch.randn(1, 80, 14, 14),
-        ...     torch.randn(1, 320, 14, 14)
+        ...     torch.randn(1, 112, 14, 14),
+        ...     torch.randn(1, 320, 7, 7)
         ... ]
         >>> output = decoder(features)
         >>> output.shape
@@ -867,8 +869,8 @@ class EfficientUNetTissueMaskModel(ModelABC):
                 Binary tissue mask where 1 = Tissue and 0 = Background.
 
         Example:
-            >>> probs = np.random.rand(256, 256, 1)
-            >>> mask = EfficientNetUnet.postproc(probs)
+            >>> model = EfficientNetUnet(num_classes=1, threshold=0.95)
+            >>> mask = model.postproc(probs)
             >>> mask.shape
             (256, 256)
 

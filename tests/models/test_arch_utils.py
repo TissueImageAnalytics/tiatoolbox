@@ -6,7 +6,6 @@ import pytest
 import torch
 
 from tiatoolbox.models.architecture.utils import (
-    SiLU,
     UpSample2x,
     centre_crop,
     centre_crop_to_shape,
@@ -161,15 +160,3 @@ def test_peak_detection_map_overlap() -> None:
     assert peak_map[0, 0, 0] == 1.0
     assert peak_map[3, 3, 0] == 1.0
     assert np.sum(peak_map) == 2.0
-
-
-def test_silu_activation() -> None:
-    """Test SiLU activation function."""
-    activation = SiLU()
-    x = torch.randn(1, 64, 32, 32)
-    output = activation(x)
-    assert output.shape == (1, 64, 32, 32)
-
-    # Test that SiLU computes x * sigmoid(x)
-    expected = x * torch.sigmoid(x)
-    assert torch.allclose(output, expected)

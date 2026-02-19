@@ -324,34 +324,3 @@ def peak_detection_map_overlap(
                 out[r, c, ch] = 1.0
 
     return out
-
-
-class SiLU(nn.Module):
-    """Sigmoid Linear Unit (SiLU) activation function.
-
-    Also known as Swish activation function. Computes element-wise
-    x * sigmoid(x) for improved gradient flow in deep networks.
-
-    Example:
-        >>> activation = SiLU()
-        >>> x = torch.randn(1, 64, 32, 32)
-        >>> output = activation(x)
-        >>> output.shape
-        ... torch.Size([1, 64, 32, 32])
-
-    """
-
-    @staticmethod
-    def forward(x: torch.Tensor) -> torch.Tensor:
-        """Forward pass through SiLU activation.
-
-        Args:
-            x (torch.Tensor):
-                Input tensor of any shape.
-
-        Returns:
-            torch.Tensor:
-                Output tensor with same shape as input.
-
-        """
-        return x * torch.sigmoid(x)
