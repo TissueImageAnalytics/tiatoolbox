@@ -1080,8 +1080,9 @@ class EngineABC(ABC):  # noqa: B024
             if stride_shape is not None:
                 ioconfig.stride_shape = stride_shape
             if input_resolutions is not None:
-                if input_resolutions[0]["units"] == "baseline":
-                    ioconfig = ioconfig.to_baseline()
+                for input_resolutions_ in input_resolutions:
+                    if input_resolutions_["units"] == "baseline":
+                        ioconfig = ioconfig.to_baseline()
                 ioconfig.input_resolutions = input_resolutions
 
             return ioconfig
