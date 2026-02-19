@@ -1462,6 +1462,7 @@ def segment_on_box() -> None:
         save_dir=tmp_save_dir / "hover_out",
         patch_mode=False,
         device=select_device(on_gpu=torch.cuda.is_available()),
+        output_type="annotationstore",
     )
 
     fname = out_[UI["vstate"].slide_path]
