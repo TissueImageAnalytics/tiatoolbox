@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import multiprocessing
 import os
 import sys
 import tempfile
@@ -1445,9 +1446,8 @@ def segment_on_box() -> None:
     mask[y : y + height, x : x + width] = 1
 
     inst_segmentor = NucleusInstanceSegmentor(
-        pretrained_model="hovernet_fast-pannuke",
-        num_loader_workers=4,
-        num_postproc_workers=8,
+        model="hovernet_fast-pannuke",
+        num_workers=multiprocessing.cpu_count(),
         batch_size=24,
     )
     tmp_save_dir = Path(tempfile.mkdtemp())
@@ -1456,16 +1456,15 @@ def segment_on_box() -> None:
 
     # Run hovernet inside the box
     UI["vstate"].model_mpp = inst_segmentor.ioconfig.save_resolution["resolution"]
-    inst_segmentor.predict(
-        [UI["vstate"].slide_path],
-        [tmp_mask_dir / "mask.png"],
+    out_ = inst_segmentor.run(
+        images=[UI["vstate"].slide_path],
+        masks=[tmp_mask_dir / "mask.png"],
         save_dir=tmp_save_dir / "hover_out",
-        mode="wsi",
+        patch_mode=False,
         device=select_device(on_gpu=torch.cuda.is_available()),
-        crash_on_exception=True,
     )
 
-    fname = make_safe_name(tmp_save_dir / "hover_out" / "0.dat")
+    fname = out_[UI["vstate"].slide_path]
     resp = UI["s"].put(
         f"http://{host2}:{port}/tileserver/annotations",
         data={"file_path": fname, "model_mpp": json.dumps(UI["vstate"].model_mpp)},
