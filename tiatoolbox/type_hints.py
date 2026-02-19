@@ -17,7 +17,7 @@ IntPair = tuple[int, int]
 
 # WSIReader
 Resolution = SupportsFloat | NumPair | np.ndarray | Sequence[SupportsFloat]
-Units = Literal["mpp"], Literal["power"], Literal["baseline"], Literal["level"]
+Units = Literal["mpp", "power", "baseline", "level"]
 Bounds = tuple[SupportsFloat, SupportsFloat, SupportsFloat, SupportsFloat]
 IntBounds = tuple[int, int, int, int]
 
