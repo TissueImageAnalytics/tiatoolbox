@@ -1,6 +1,6 @@
-"""Tissue Mask Detection Model Architecture.
+"""Tissue Mask Segmentation Model Architecture.
 
-This module defines a tissue detection model based on an EfficientNet-UNet
+This module defines a tissue segmentation model based on an EfficientNet-UNet
 architecture for identifying tissue regions in digital pathology images.
 The model implements an EfficientNetB0 encoder with a UNet-style decoder
 and segmentation head for high-resolution tissue segmentation.
@@ -32,7 +32,7 @@ Features:
 
 Example:
     >>> from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
-    >>> segmentor = SemanticSegmentor(model="tissue_mask_detection")
+    >>> segmentor = SemanticSegmentor(model="efficientunet-tissue_mask")
     >>> results = segmentor.run(
     ...     ["/example_wsi.svs"],
     ...     masks=None,
@@ -741,12 +741,13 @@ class SegmentationHead(nn.Sequential):
         )
 
 
-class EfficientNetUnet(ModelABC):
-    """EfficientNet-UNet Tissue Detection Model.
+class EfficientUNetTissueMaskModel(ModelABC):
+    """EfficientNet-UNet Tissue Segmentation Model.
 
     This model implements a UNet architecture with an EfficientNetB0 encoder
-    for tissue detection in whole slide images (WSIs). It is designed to
-    identify tissue regions and background areas in digital pathology workflows.
+    for tissue segmentation in whole slide images (WSIs). TIAToolBox pretrain model
+    was trained on WSIs from TCGA. It is designed to
+    identify tissue regions, excluding artifacts such as pen marks and air bubbles.
 
     The model uses ImageNet normalization during preprocessing and applies
     morphological postprocessing to generate clean tissue masks.
@@ -761,7 +762,7 @@ class EfficientNetUnet(ModelABC):
 
     Example:
         >>> from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
-        >>> segmentor = SemanticSegmentor(model="tissue_mask")
+        >>> segmentor = SemanticSegmentor(model="efficientunet-tissue_mask")
         >>> results = segmentor.run(
         ...     ["/example_wsi.svs"],
         ...     masks=None,
@@ -774,7 +775,9 @@ class EfficientNetUnet(ModelABC):
     """
 
     def __init__(
-        self: EfficientNetUnet, num_classes: int = 1, threshold: float = 0.95
+        self: EfficientUNetTissueMaskModel,
+        num_classes: int = 1,
+        threshold: float = 0.95,
     ) -> None:
         """Initialize EfficientNetUnet.
 
@@ -795,7 +798,7 @@ class EfficientNetUnet(ModelABC):
         self.threshold = threshold
 
     def forward(  # skipcq: PYL-W0613
-        self: EfficientNetUnet,
+        self: EfficientUNetTissueMaskModel,
         x: torch.Tensor,
         *args: tuple[Any, ...],  # noqa: ARG002
         **kwargs: dict,  # noqa: ARG002
@@ -848,7 +851,7 @@ class EfficientNetUnet(ModelABC):
         return (image / 255.0 - mean) / std
 
     def postproc(  # skipcq: PYL-W0221
-        self: EfficientNetUnet, image: np.ndarray
+        self: EfficientUNetTissueMaskModel, image: np.ndarray
     ) -> np.ndarray:
         """Postprocess model output to generate tissue mask.
 
@@ -883,7 +886,7 @@ class EfficientNetUnet(ModelABC):
 
     @staticmethod
     def infer_batch(
-        model: EfficientNetUnet,
+        model: EfficientUNetTissueMaskModel,
         batch_data: torch.Tensor,
         *,
         device: str,

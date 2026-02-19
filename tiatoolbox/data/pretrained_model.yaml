@@ -969,7 +969,7 @@ grandqc_tissue_detection:
 efficientunet-tissue_mask:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
-        class: tissue_mask_model.EfficientNetUnet
+        class: efficientunet_tissue_mask_model.EfficientUNetTissueMaskModel
         kwargs:
             num_classes: 1
             threshold: 0.95

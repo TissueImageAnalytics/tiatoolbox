@@ -13,11 +13,11 @@ from tiatoolbox.models.architecture import (
     fetch_pretrained_weights,
     get_pretrained_model,
 )
-from tiatoolbox.models.architecture.tissue_mask_model import (
+from tiatoolbox.models.architecture.efficientunet_tissue_mask_model import (
     Conv2dReLU,
     Conv2dStaticSamePadding,
     EfficientNetEncoder,
-    EfficientNetUnet,
+    EfficientUNetTissueMaskModel,
     MBConvBlock,
     SegmentationHead,
     UnetDecoder,
@@ -38,7 +38,7 @@ def test_functional_efficientnetunet() -> None:
     assert pretrained_weights is not None
 
     # test creation
-    model = EfficientNetUnet(num_classes=1)
+    model = EfficientUNetTissueMaskModel(num_classes=1)
     assert model is not None
 
     # load pretrained weights
@@ -47,7 +47,7 @@ def test_functional_efficientnetunet() -> None:
 
     # test get pretrained model
     model, ioconfig = get_pretrained_model("efficientunet-tissue_mask")
-    assert isinstance(model, EfficientNetUnet)
+    assert isinstance(model, EfficientUNetTissueMaskModel)
     assert isinstance(ioconfig, IOSegmentorConfig)
 
     # test inference
@@ -281,7 +281,7 @@ def test_efficientnetunet_preproc_imagenet_norm() -> None:
     """Test EfficientNetUnet preprocessing with ImageNet normalization."""
     # Create a test image with known values
     img = np.ones((256, 256, 3), dtype=np.uint8) * 128
-    processed = EfficientNetUnet.preproc(img)
+    processed = EfficientUNetTissueMaskModel.preproc(img)
 
     # Check that normalization is applied correctly
     mean = np.array([0.485, 0.456, 0.406])
@@ -293,7 +293,7 @@ def test_efficientnetunet_preproc_imagenet_norm() -> None:
 
 def test_efficientnetunet_postproc_threshold() -> None:
     """Test EfficientNetUnet postprocessing with different thresholds."""
-    model = EfficientNetUnet(num_classes=1, threshold=0.5)
+    model = EfficientUNetTissueMaskModel(num_classes=1, threshold=0.5)
 
     # Create probability map with values above and below threshold
     probs = np.array([[[0.3]], [[0.7]], [[0.5]], [[0.9]]])
@@ -309,7 +309,7 @@ def test_efficientnetunet_postproc_threshold() -> None:
 
 def test_efficientnetunet_postproc_with_dask() -> None:
     """Test EfficientNetUnet postprocessing with dask arrays."""
-    model = EfficientNetUnet(num_classes=1)
+    model = EfficientUNetTissueMaskModel(num_classes=1)
 
     # Create dask array
     probs = da.random.random((256, 256, 1), chunks=(128, 128, 1))
@@ -321,7 +321,7 @@ def test_efficientnetunet_postproc_with_dask() -> None:
 
 def test_efficientnetunet_infer_batch() -> None:
     """Test EfficientNetUnet batch inference."""
-    model = EfficientNetUnet(num_classes=1)
+    model = EfficientUNetTissueMaskModel(num_classes=1)
 
     # Create batch of images
     batch = torch.randn(4, 256, 256, 3)
