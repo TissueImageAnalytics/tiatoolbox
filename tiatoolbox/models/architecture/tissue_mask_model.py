@@ -847,9 +847,9 @@ class EfficientNetUnet(ModelABC):
         std = np.array([0.229, 0.224, 0.225])
         return (image / 255.0 - mean) / std
 
-    def postproc(
+    def postproc(  # skipcq: PYL-W0221
         self: EfficientNetUnet, image: np.ndarray
-    ) -> np.ndarray:  # skipcq: PYL-W0221
+    ) -> np.ndarray:
         """Postprocess model output to generate tissue mask.
 
         Applies thresholding and morphological operations to classify pixels
