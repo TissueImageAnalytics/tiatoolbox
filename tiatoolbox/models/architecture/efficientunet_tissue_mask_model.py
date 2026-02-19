@@ -21,7 +21,7 @@ Key Components:
     Decoder with skip connections for UNet architecture.
 - SegmentationHead:
     Final layer for segmentation output.
-- EfficientNetUnet:
+- EfficientUNetTissueMaskModel:
     Main model class implementing encoder-decoder architecture for tissue detection.
 
 Features:
@@ -747,8 +747,8 @@ class EfficientUNetTissueMaskModel(ModelABC):
     """EfficientNet-UNet Tissue Segmentation Model.
 
     This model implements a UNet architecture with an EfficientNetB0 encoder
-    for tissue segmentation in whole slide images (WSIs). TIAToolBox pretrain model
-    was trained on WSIs from TCGA. It is designed to
+    for tissue segmentation in whole slide images (WSIs). The TIAToolbox
+    pretrained model was trained on WSIs from TCGA. It is designed to
     identify tissue regions, excluding artifacts such as pen marks and air bubbles.
 
     The model uses ImageNet normalization during preprocessing and applies
@@ -781,7 +781,7 @@ class EfficientUNetTissueMaskModel(ModelABC):
         num_classes: int = 1,
         threshold: float = 0.95,
     ) -> None:
-        """Initialize EfficientNetUnet.
+        """Initialize EfficientUNetTissueMaskModel.
 
         Sets up the UNet decoder, EfficientNet encoder, and segmentation head
         for tissue detection.
@@ -805,7 +805,7 @@ class EfficientUNetTissueMaskModel(ModelABC):
         *args: tuple[Any, ...],  # noqa: ARG002
         **kwargs: dict,  # noqa: ARG002
     ) -> torch.Tensor:
-        """Forward pass through the EfficientNetUnet model.
+        """Forward pass through the EfficientUNetTissueMaskModel model.
 
         Sequentially processes the input tensor through the encoder, decoder,
         and segmentation head to produce tissue segmentation predictions.
@@ -843,7 +843,7 @@ class EfficientUNetTissueMaskModel(ModelABC):
 
         Example:
             >>> img = np.random.randint(0, 255, (256, 256, 3), dtype=np.uint8)
-            >>> processed = EfficientNetUnet.preproc(img)
+            >>> processed = EfficientUNetTissueMaskModel.preproc(img)
             >>> processed.shape
             (256, 256, 3)
 
@@ -869,7 +869,7 @@ class EfficientUNetTissueMaskModel(ModelABC):
                 Binary tissue mask where 1 = Tissue and 0 = Background.
 
         Example:
-            >>> model = EfficientNetUnet(num_classes=1, threshold=0.95)
+            >>> model = EfficientUNetTissueMaskModel(num_classes=1, threshold=0.95)
             >>> mask = model.postproc(probs)
             >>> mask.shape
             (256, 256)
@@ -899,8 +899,8 @@ class EfficientUNetTissueMaskModel(ModelABC):
         forward pass, and returns sigmoid probabilities.
 
         Args:
-            model (EfficientNetUnet):
-                EfficientNetUnet model instance.
+            model (EfficientUNetTissueMaskModel):
+                EfficientUNetTissueMaskModel model instance.
             batch_data (torch.Tensor):
                 Batch of input images in NHWC format.
             device (str):
@@ -912,7 +912,9 @@ class EfficientUNetTissueMaskModel(ModelABC):
 
         Example:
             >>> batch = torch.randn(4, 256, 256, 3)
-            >>> probs = EfficientNetUnet.infer_batch(model, batch, device="cpu")
+            >>> probs = EfficientUNetTissueMaskModel.infer_batch(
+            ...     model, batch, device="cpu"
+            ... )
             >>> probs.shape
             (4, 256, 256, 1)
 
