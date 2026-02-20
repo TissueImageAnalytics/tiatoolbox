@@ -53,6 +53,7 @@ from typing import TYPE_CHECKING
 import dask.array as da
 import numpy as np
 import zarr
+from matplotlib import pyplot as plt
 from shapely.geometry import Point
 from tqdm.auto import tqdm
 
@@ -62,7 +63,11 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
 )
-from tiatoolbox.utils.misc import tqdm_dask_progress_bar
+from tiatoolbox.utils.misc import (
+    save_annotations,
+    save_qupath_json,
+    tqdm_dask_progress_bar,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
@@ -212,7 +217,8 @@ class NucleusDetector(SemanticSegmentor):
         drop_keys (list):
             Keys to exclude from model output when saving results.
         output_type (str):
-            Output format (``"dict"``, ``"zarr"``, or ``"annotationstore"``).
+            Output format (``"dict"``, ``"zarr"``, ``"qupath"``,
+            or ``"annotationstore"``).
 
     Examples:
         >>> from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
@@ -520,7 +526,8 @@ class NucleusDetector(SemanticSegmentor):
                         - ``"probabilities"`` (da.Array):
                             detection probabilities.
             output_type (str):
-                Desired output format: ``"dict"``, ``"zarr"``, or ``"annotationstore"``.
+                Desired output format: ``"dict"``, ``"zarr"``, ``"qupath"``
+                or ``"annotationstore"``.
             save_path (Path | None):
                 Path at which to save the output file(s). Required for file outputs
                 (e.g., Zarr or SQLite .db). If ``None`` and ``output_type="dict"``,
@@ -576,6 +583,10 @@ class NucleusDetector(SemanticSegmentor):
                     returns a Python dictionary of predictions.
                 - If ``output_type="zarr"``:
                     returns the path to the saved ``.zarr`` group.
+                - If ``output_type="qupath"``:
+                    returns QuPath JSON or the path(s) to saved
+                    ``.json`` file(s). In patch mode, a list of per-image paths
+                    may be returned.
                 - If ``output_type="annotationstore"``:
                     returns an AnnotationStore handle or the path(s) to saved
                     ``.db`` file(s). In patch mode, a list of per-image paths
@@ -587,7 +598,7 @@ class NucleusDetector(SemanticSegmentor):
               TIAToolbox engines.
 
         """
-        if output_type.lower() != "annotationstore":
+        if output_type.lower() not in ["qupath", "annotationstore"]:
             out = super().save_predictions(
                 processed_predictions,
                 output_type,
@@ -602,11 +613,12 @@ class NucleusDetector(SemanticSegmentor):
             if class_dict is None:
                 class_dict = self._get_model_attr("output_class_dict")
 
-            out = self._save_predictions_annotation_store(
+            out = self._save_predictions_qupath_json_annotations_db(
                 processed_predictions,
                 save_path=save_path,
                 scale_factor=scale_factor,
                 class_dict=class_dict,
+                output_type=output_type,
             )
 
             # Remove cached centroid maps if wsi mode
@@ -619,12 +631,13 @@ class NucleusDetector(SemanticSegmentor):
 
         return out
 
-    def _save_predictions_annotation_store(
+    def _save_predictions_qupath_json_annotations_db(
         self: NucleusDetector,
         processed_predictions: dict,
         save_path: Path | None = None,
         scale_factor: tuple[float, float] = (1.0, 1.0),
         class_dict: dict | None = None,
+        output_type: str = "annotationstore",
     ) -> AnnotationStore | Path | list[Path]:
         """Save nucleus detections to an AnnotationStore (.db).
 
@@ -664,6 +677,8 @@ class NucleusDetector(SemanticSegmentor):
                 Scaling factors applied to x and y coordinates prior to writing.
                 Typically corresponds to ``model_mpp / slide_mpp``.
                 Defaults to ``(1.0, 1.0)``.
+            output_type (str):
+                Desired output format: ``"qupath"`` or ``"annotationstore"``.
             class_dict (dict or None):
                 Optional mapping from original class IDs to class names or remapped IDs.
                 If ``None``, an identity mapping based on present classes is used.
@@ -686,11 +701,12 @@ class NucleusDetector(SemanticSegmentor):
             save_paths = []
 
             num_patches = len(processed_predictions["x"])
+            suffix = ".json" if output_type == "qupath" else ".db"
             for i in range(num_patches):
                 if isinstance(self.images[i], Path):
-                    output_path = save_path.parent / (self.images[i].stem + ".db")
+                    output_path = save_path.parent / (self.images[i].stem + suffix)
                 else:
-                    output_path = save_path.parent / (str(i) + ".db")
+                    output_path = save_path.parent / (str(i) + suffix)
 
                 detection_arrays = {
                     "x": processed_predictions["x"][i],
@@ -699,17 +715,34 @@ class NucleusDetector(SemanticSegmentor):
                     "probabilities": processed_predictions["probabilities"][i],
                 }
 
-                out_file = self.save_detection_arrays_to_store(
-                    detection_arrays=detection_arrays,
-                    scale_factor=scale_factor,
-                    class_dict=class_dict,
-                    save_path=output_path,
+                out_file = (
+                    save_detection_arrays_to_qupath_json(
+                        detection_arrays=detection_arrays,
+                        scale_factor=scale_factor,
+                        class_dict=class_dict,
+                        save_path=output_path,
+                    )
+                    if output_type == "qupath"
+                    else save_detection_arrays_to_store(
+                        detection_arrays=detection_arrays,
+                        scale_factor=scale_factor,
+                        class_dict=class_dict,
+                        save_path=output_path,
+                    )
                 )
 
                 save_paths.append(out_file)
             return save_paths
 
-        return self.save_detection_arrays_to_store(
+        if output_type == "qupath":
+            return save_detection_arrays_to_qupath_json(
+                detection_arrays=processed_predictions,
+                scale_factor=scale_factor,
+                save_path=save_path,
+                class_dict=class_dict,
+            )
+
+        return save_detection_arrays_to_store(
             detection_arrays=processed_predictions,
             scale_factor=scale_factor,
             save_path=save_path,
@@ -824,186 +857,6 @@ class NucleusDetector(SemanticSegmentor):
             "classes": da.from_array(classes, chunks="auto"),
             "probabilities": da.from_array(probs, chunks="auto"),
         }
-
-    @staticmethod
-    def _write_detection_arrays_to_store(
-        detection_arrays: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
-        store: SQLiteStore,
-        scale_factor: tuple[float, float],
-        class_dict: dict[int, str | int] | None,
-        batch_size: int = 5000,
-        *,
-        verbose: bool = True,
-    ) -> int:
-        """Write detection arrays to an AnnotationStore in batches.
-
-        Converts coordinate, class, and probability arrays into `Annotation`
-        objects and appends them to an SQLite-backed store in configurable
-        batch sizes. Coordinates are scaled to baseline slide resolution using
-        the provided `scale_factor`, and optional class-ID remapping is applied
-        via `class_dict`.
-
-        Args:
-            detection_arrays (tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]):
-                Tuple of arrays in the order:
-                `(x_coords, y_coords, class_ids, probabilities)`.
-                Each element must be a 1-D NumPy array of equal length.
-            store (SQLiteStore):
-                Target `AnnotationStore` instance to receive the detections.
-            scale_factor (tuple[float, float]):
-                Factors applied to `(x, y)` coordinates prior to writing,
-                typically `(model_mpp / slide_mpp)`. The scaled coordinates are
-                rounded to `np.uint32`.
-            class_dict (dict[int, str | int] | None):
-                Optional mapping from original class IDs to names or remapped IDs.
-                If `None`, an identity mapping is used for the set of present classes.
-            batch_size (int):
-                Number of records to write per batch. Default is `5000`.
-            verbose (bool):
-                Whether to display logs and progress bar.
-
-        Returns:
-            int:
-                Total number of detection records written to the store.
-
-        Notes:
-            - Coordinates are scaled and rounded to integers to ensure consistent
-              geometry creation for `Annotation` points.
-            - Class mapping is applied per-record; unmapped IDs fall back to their
-              original values.
-            - Writing in batches reduces memory pressure and improves throughput
-              on large number of detections.
-
-        """
-        xs, ys, classes, probs = detection_arrays
-        n = len(xs)
-        if n == 0:
-            return 0  # nothing to write
-
-        # scale coordinates
-        xs = np.rint(xs * scale_factor[0]).astype(np.uint32, copy=False)
-        ys = np.rint(ys * scale_factor[1]).astype(np.uint32, copy=False)
-
-        # class mapping
-        if class_dict is None:
-            # identity over actually-present types
-            uniq = np.unique(classes)
-            class_dict = {int(k): int(k) for k in uniq}
-        labels = np.array(
-            [class_dict.get(int(k), int(k)) for k in classes], dtype=object
-        )
-
-        def make_points(xs_batch: np.ndarray, ys_batch: np.ndarray) -> list[Point]:
-            """Create Shapely Point geometries from coordinate arrays in batches."""
-            return [
-                Point(int(xx), int(yy))
-                for xx, yy in zip(xs_batch, ys_batch, strict=True)
-            ]
-
-        tqdm_loop = tqdm(
-            range(0, n, batch_size),
-            leave=False,
-            desc="Writing detections to store",
-            disable=not verbose,
-        )
-        written = 0
-        for i in tqdm_loop:
-            j = min(i + batch_size, n)
-            pts = make_points(xs[i:j], ys[i:j])
-
-            anns = [
-                Annotation(
-                    geometry=pt, properties={"type": lbl, "probability": float(pp)}
-                )
-                for pt, lbl, pp in zip(pts, labels[i:j], probs[i:j], strict=True)
-            ]
-            store.append_many(anns)
-            written += j - i
-        return written
-
-    @staticmethod
-    def save_detection_arrays_to_store(
-        detection_arrays: dict[str, da.Array | np.ndarray],
-        scale_factor: tuple[float, float] = (1.0, 1.0),
-        class_dict: dict | None = None,
-        save_path: Path | None = None,
-        batch_size: int = 5000,
-    ) -> Path | SQLiteStore:
-        """Write nucleus detection arrays to an SQLite-backed AnnotationStore.
-
-        Converts the detection arrays into NumPy form, applies coordinate scaling
-        and optional class-ID remapping, and writes the results into an in-memory
-        SQLiteStore. If `save_path` is provided, the store is committed and saved
-        to disk as a `.db` file. This method provides a unified interface for
-        converting Dask-based detection outputs into persistent annotation storage.
-
-        Args:
-            detection_arrays (dict[str, da.Array]):
-                A dictionary containing the detection fields:
-                - ``"x"``: dask array of x coordinates (``np.uint32``).
-                - ``"y"``: dask array of y coordinates (``np.uint32``).
-                - ``"classes"``: dask array of class IDs (``np.uint32``).
-                - ``"probabilities"``: dask array of detection scores (``np.float32``).
-            scale_factor (tuple[float, float], optional):
-                Multiplicative factors applied to the x and y coordinates before
-                saving. The scaled coordinates are rounded to integer pixel
-                locations. Defaults to ``(1.0, 1.0)``.
-            class_dict (dict or None):
-                Optional mapping of class IDs to class names or remapped IDs.
-                If ``None``, an identity mapping is used based on the detected
-                class IDs.
-            save_path (Path or None):
-                Destination path for saving the `.db` file. If ``None``, the
-                resulting SQLiteStore is returned in memory. If provided, the
-                parent directory is created if needed, and the final store is
-                written as ``save_path.with_suffix(".db")``.
-            batch_size (int):
-                Number of detection records to write per batch. Defaults to ``5000``.
-
-        Returns:
-            Path or SQLiteStore:
-                - If `save_path` is provided: the path to the saved `.db` file.
-                - If `save_path` is ``None``: an in-memory `SQLiteStore` containing
-                  all detections.
-
-        Notes:
-            - The heavy lifting is delegated to
-              :meth:`NucleusDetector._write_detection_arrays_to_store`,
-              which performs coordinate scaling, class mapping, and batch writing.
-
-        """
-        xs = detection_arrays["x"]
-        ys = detection_arrays["y"]
-        classes = detection_arrays["classes"]
-        probs = detection_arrays["probabilities"]
-
-        xs = np.atleast_1d(np.asarray(xs))
-        ys = np.atleast_1d(np.asarray(ys))
-        classes = np.atleast_1d(np.asarray(classes))
-        probs = np.atleast_1d(np.asarray(probs))
-
-        if not len(xs) == len(ys) == len(classes) == len(probs):
-            msg = "Detection record lengths are misaligned."
-            raise ValueError(msg)
-
-        store = SQLiteStore()
-        total_written = NucleusDetector._write_detection_arrays_to_store(
-            (xs, ys, classes, probs),
-            store,
-            scale_factor,
-            class_dict,
-            batch_size,
-        )
-        logger.info("Total detections written to store: %s", total_written)
-
-        if save_path:
-            save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
-            save_path = save_path.parent.absolute() / (save_path.stem + ".db")
-            store.commit()
-            store.dump(save_path)
-            return save_path
-
-        return store
 
     def run(
         self: NucleusDetector,
@@ -1140,3 +993,285 @@ class NucleusDetector(SemanticSegmentor):
             output_type=output_type,
             **kwargs,
         )
+
+
+def save_detection_arrays_to_qupath_json(
+    detection_arrays: dict[str, da.Array],
+    scale_factor: tuple[float, float] = (1.0, 1.0),
+    class_dict: dict | None = None,
+    save_path: Path | None = None,
+) -> dict | Path:
+    """Write nucleus detection arrays to QuPath JSON.
+
+    Produces a FeatureCollection where each detection is represented as a
+    Point geometry with classification metadata and probability score.
+
+    Args:
+        detection_arrays (dict[str, da.Array]):
+            A dictionary containing the detection fields:
+            - ``"x"``: dask array of x coordinates (``np.uint32``).
+            - ``"y"``: dask array of y coordinates (``np.uint32``).
+            - ``"classes"``: dask array of class IDs (``np.uint32``).
+            - ``"probabilities"``: dask array of detection scores (``np.float32``).
+        scale_factor (tuple[float, float], optional):
+            Multiplicative factors applied to the x and y coordinates before
+            saving. The scaled coordinates are rounded to integer pixel
+            locations. Defaults to ``(1.0, 1.0)``.
+        class_dict (dict or None):
+            Optional mapping of class IDs to class names or remapped IDs.
+            If ``None``, an identity mapping is used based on the detected
+            class IDs.
+        save_path (Path or None):
+            Destination path for saving the QuPath-compatible ``.json`` file.
+            If ``None``, an in-memory JSON-compatible representation of all
+            detections is returned instead of writing to disk.
+
+    Returns:
+        Path or QuPath:
+            - If ``save_path`` is provided: the path to the saved ``.json`` file.
+            - If ``save_path`` is ``None``: an in-memory dict representing
+              QuPath JSON containing all detections.
+
+    """
+    xs, ys, classes, probs = _validate_detections_for_saving_to_json(
+        detection_arrays=detection_arrays,
+    )
+
+    # Determine class dictionary
+    unique_classes = np.unique(classes).tolist()
+    if class_dict is None:
+        class_dict = {int(i): int(i) for i in unique_classes}
+
+    # Color map for classes
+    num_classes = len(class_dict)
+    cmap = plt.cm.get_cmap("tab20", num_classes)
+    class_colors = {
+        class_idx: [
+            int(cmap(class_idx)[0] * 255),
+            int(cmap(class_idx)[1] * 255),
+            int(cmap(class_idx)[2] * 255),
+        ]
+        for class_idx in class_dict
+    }
+
+    features: list[dict] = []
+
+    for i, _ in enumerate(xs):
+        # Scale coordinates
+        x = float(xs[i]) * scale_factor[0]
+        y = float(ys[i]) * scale_factor[1]
+
+        class_id = int(classes[i])
+        class_label = class_dict.get(class_id, class_id)
+        prob = float(probs[i])
+
+        # QuPath point geometry
+        point_geo = {
+            "type": "Point",
+            "coordinates": [x, y],
+        }
+
+        feature = {
+            "type": "Feature",
+            "id": f"detection_{i}",
+            "geometry": point_geo,
+            "properties": {
+                "classification": {
+                    "name": class_label,
+                    "color": class_colors[class_id],
+                },
+                "probability": prob,
+            },
+            "objectType": "detection",
+            "name": class_label,
+            "class_value": class_id,
+        }
+
+        features.append(feature)
+
+    qupath_json = {"type": "FeatureCollection", "features": features}
+
+    if save_path:
+        return save_qupath_json(save_path=save_path, qupath_json=qupath_json)
+
+    return qupath_json
+
+
+def save_detection_arrays_to_store(
+    detection_arrays: dict[str, da.Array],
+    scale_factor: tuple[float, float] = (1.0, 1.0),
+    class_dict: dict | None = None,
+    save_path: Path | None = None,
+    batch_size: int = 5000,
+) -> Path | SQLiteStore:
+    """Write nucleus detection arrays to an SQLite-backed AnnotationStore.
+
+    Converts the detection arrays into NumPy form, applies coordinate scaling
+    and optional class-ID remapping, and writes the results into an in-memory
+    SQLiteStore. If `save_path` is provided, the store is committed and saved
+    to disk as a `.db` file. This method provides a unified interface for
+    converting Dask-based detection outputs into persistent annotation storage.
+
+    Args:
+        detection_arrays (dict[str, da.Array]):
+            A dictionary containing the detection fields:
+            - ``"x"``: dask array of x coordinates (``np.uint32``).
+            - ``"y"``: dask array of y coordinates (``np.uint32``).
+            - ``"classes"``: dask array of class IDs (``np.uint32``).
+            - ``"probabilities"``: dask array of detection scores (``np.float32``).
+        scale_factor (tuple[float, float], optional):
+            Multiplicative factors applied to the x and y coordinates before
+            saving. The scaled coordinates are rounded to integer pixel
+            locations. Defaults to ``(1.0, 1.0)``.
+        class_dict (dict or None):
+            Optional mapping of class IDs to class names or remapped IDs.
+            If ``None``, an identity mapping is used based on the detected
+            class IDs.
+        save_path (Path or None):
+            Destination path for saving the `.db` file. If ``None``, the
+            resulting SQLiteStore is returned in memory. If provided, the
+            parent directory is created if needed, and the final store is
+            written as ``save_path.with_suffix(".db")``.
+        batch_size (int):
+            Number of detection records to write per batch. Defaults to ``5000``.
+
+    Returns:
+        Path or SQLiteStore:
+            - If `save_path` is provided: the path to the saved `.db` file.
+            - If `save_path` is ``None``: an in-memory `SQLiteStore` containing
+              all detections.
+
+    Notes:
+        - The heavy lifting is delegated to
+          :meth:`_write_detection_arrays_to_store`,
+          which performs coordinate scaling, class mapping, and batch writing.
+
+    """
+    xs, ys, classes, probs = _validate_detections_for_saving_to_json(
+        detection_arrays=detection_arrays,
+    )
+
+    store = SQLiteStore()
+    total_written = _write_detection_arrays_to_store(
+        detection_arrays=(xs, ys, classes, probs),
+        store=store,
+        scale_factor=scale_factor,
+        class_dict=class_dict,
+        batch_size=batch_size,
+    )
+    logger.info("Total detections written to store: %s", total_written)
+
+    if save_path:
+        return save_annotations(
+            save_path=save_path,
+            store=store,
+        )
+
+    return store
+
+
+def _validate_detections_for_saving_to_json(
+    detection_arrays: dict[str, da.Array],
+) -> tuple:
+    """Validates x, y,  classes and probs for writing to QuPath or AnnotationStore."""
+    xs = np.atleast_1d(np.asarray(detection_arrays["x"]))
+    ys = np.atleast_1d(np.asarray(detection_arrays["y"]))
+    classes = np.atleast_1d(np.asarray(detection_arrays["classes"]))
+    probs = np.atleast_1d(np.asarray(detection_arrays["probabilities"]))
+
+    if not len(xs) == len(ys) == len(classes) == len(probs):
+        msg = "Detection record lengths are misaligned."
+        raise ValueError(msg)
+
+    return xs, ys, classes, probs
+
+
+def _write_detection_arrays_to_store(
+    detection_arrays: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+    store: SQLiteStore,
+    scale_factor: tuple[float, float],
+    class_dict: dict[int, str | int] | None,
+    batch_size: int = 5000,
+    *,
+    verbose: bool = True,
+) -> int:
+    """Write detection arrays to an AnnotationStore in batches.
+
+    Converts coordinate, class, and probability arrays into `Annotation`
+    objects and appends them to an SQLite-backed store in configurable
+    batch sizes. Coordinates are scaled to baseline slide resolution using
+    the provided `scale_factor`, and optional class-ID remapping is applied
+    via `class_dict`.
+
+    Args:
+        detection_arrays (tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]):
+            Tuple of arrays in the order:
+            `(x_coords, y_coords, class_ids, probabilities)`.
+            Each element must be a 1-D NumPy array of equal length.
+        store (SQLiteStore):
+            Target `AnnotationStore` instance to receive the detections.
+        scale_factor (tuple[float, float]):
+            Factors applied to `(x, y)` coordinates prior to writing,
+            typically `(model_mpp / slide_mpp)`. The scaled coordinates are
+            rounded to `np.uint32`.
+        class_dict (dict[int, str | int] | None):
+            Optional mapping from original class IDs to names or remapped IDs.
+            If `None`, an identity mapping is used for the set of present classes.
+        batch_size (int):
+            Number of records to write per batch. Default is `5000`.
+        verbose (bool):
+            Whether to display logs and progress bar.
+
+    Returns:
+        int:
+            Total number of detection records written to the store.
+
+    Notes:
+        - Coordinates are scaled and rounded to integers to ensure consistent
+          geometry creation for `Annotation` points.
+        - Class mapping is applied per-record; unmapped IDs fall back to their
+          original values.
+        - Writing in batches reduces memory pressure and improves throughput
+          on large number of detections.
+
+    """
+    xs, ys, classes, probs = detection_arrays
+    n = len(xs)
+    if n == 0:
+        return 0  # nothing to write
+
+    # scale coordinates
+    xs = np.rint(xs * scale_factor[0]).astype(np.uint32, copy=False)
+    ys = np.rint(ys * scale_factor[1]).astype(np.uint32, copy=False)
+
+    # class mapping
+    if class_dict is None:
+        # identity over actually-present types
+        uniq = np.unique(classes)
+        class_dict = {int(k): int(k) for k in uniq}
+    labels = np.array([class_dict.get(int(k), int(k)) for k in classes], dtype=object)
+
+    def make_points(xs_batch: np.ndarray, ys_batch: np.ndarray) -> list[Point]:
+        """Create Shapely Point geometries from coordinate arrays in batches."""
+        return [
+            Point(int(xx), int(yy)) for xx, yy in zip(xs_batch, ys_batch, strict=True)
+        ]
+
+    tqdm_loop = tqdm(
+        range(0, n, batch_size),
+        leave=False,
+        desc="Writing detections to store",
+        disable=not verbose,
+    )
+    written = 0
+    for i in tqdm_loop:
+        j = min(i + batch_size, n)
+        pts = make_points(xs[i:j], ys[i:j])
+
+        anns = [
+            Annotation(geometry=pt, properties={"type": lbl, "probability": float(pp)})
+            for pt, lbl, pp in zip(pts, labels[i:j], probs[i:j], strict=True)
+        ]
+        store.append_many(anns)
+        written += j - i
+    return written

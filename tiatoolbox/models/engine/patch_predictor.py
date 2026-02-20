@@ -241,7 +241,7 @@ class PatchPredictor(EngineABC):
         drop_keys (list):
             Keys to exclude from model output.
         output_type (str):
-            Format of output ("dict", "zarr", "annotationstore").
+            Format of output ("dict", "zarr", "qupath", "annotationstore").
 
     Example:
         >>> # list of 2 image patches as input
@@ -479,7 +479,8 @@ class PatchPredictor(EngineABC):
             ioconfig (IOPatchPredictorConfig | None):
                 IO configuration for patch extraction and resolution.
             output_type (str):
-                Desired output format: "dict", "zarr", or "annotationstore".
+                Desired output format: "dict", "zarr", "qupath"
+                or "annotationstore".
             overwrite (bool):
                 Whether to overwrite existing output files. Default is False.
             patch_mode (bool):
@@ -589,8 +590,8 @@ class PatchPredictor(EngineABC):
             overwrite (bool):
                 Whether to overwrite existing output files. Default is False.
             output_type (str):
-                Desired output format: "dict", "zarr", or "annotationstore".
-                Default value is "zarr".
+                Desired output format: "dict", "zarr", "qupath"
+                or "annotationstore". Default value is "zarr".
             **kwargs (PredictorRunParams):
                 Additional runtime parameters to configure prediction.
 

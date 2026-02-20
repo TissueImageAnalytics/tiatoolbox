@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
@@ -19,6 +20,7 @@ from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.engine.multi_task_segmentor import (
+    DaskDelayedJSONStore,
     MultiTaskSegmentor,
     _clear_zarr,
     _get_sel_indices_margin_lines,
@@ -140,9 +142,10 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
 
     assert len(output_ann) == 6
 
+    fields_nuclei = ["box", "centroid", "contours", "prob", "type"]
+    fields_layer = ["contours", "type"]
+
     for task_name in mtsegmentor.tasks:
-        fields_nuclei = ["box", "centroid", "contours", "prob", "type"]
-        fields_layer = ["contours", "type"]
         fields = fields_nuclei if task_name == "nuclei_segmentation" else fields_layer
         output_ann_ = [p for p in output_ann if p.name.endswith(f"{task_name}.db")]
         expected_counts = (
@@ -159,6 +162,37 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
             expected_counts=expected_counts,
             task_name=task_name,
             class_dict=mtsegmentor._get_model_attr("class_dict"),
+        )
+
+    # QuPath JSON does not have fields
+    fields_nuclei = ["contours", "prob", "type"]
+    # QuPath output comparison
+    output_json = mtsegmentor.run(
+        images=patches,
+        patch_mode=True,
+        device=device,
+        output_type="QuPath",
+        save_dir=track_tmp_path / "patch_output_qupath",
+    )
+
+    assert len(output_json) == 6
+
+    for task_name in mtsegmentor.tasks:
+        fields = fields_nuclei if task_name == "nuclei_segmentation" else fields_layer
+        output_json_ = [p for p in output_json if p.name.endswith(f"{task_name}.json")]
+        expected_counts = (
+            expected_counts_nuclei
+            if task_name == "nuclei_segmentation"
+            else expected_counts_layer
+        )
+        assert_qupath_json_patch_output(
+            inputs=patches,
+            output_json=output_json_,
+            output_dict=output_dict[task_name],
+            track_tmp_path=track_tmp_path,
+            fields=fields,
+            expected_counts=expected_counts,
+            task_name=task_name,
         )
 
 
@@ -279,7 +313,49 @@ def test_single_task_mtsegmentor(
     for field in fields:
         assert field not in zarr_group
 
-    assert "Probability maps cannot be saved as AnnotationStore" in caplog.text
+    assert "Probability maps cannot be saved as AnnotationStore or JSON" in caplog.text
+
+    # QuPath output comparison
+
+    # Reinitialize to check for probabilities in output.
+    mtsegmentor.drop_keys = []
+    output_json = mtsegmentor.run(
+        images=inputs,
+        patch_mode=True,
+        device=device,
+        output_type="QuPath",
+        save_dir=track_tmp_path / "patch_output_qupath",
+        return_probabilities=True,
+    )
+
+    assert len(output_json) == 3
+
+    assert_qupath_json_patch_output(
+        inputs=inputs,
+        output_json=output_json,
+        output_dict=output_dict,
+        track_tmp_path=track_tmp_path,
+        fields=["box", "centroid", "contours", "prob", "type"],
+        expected_counts=expected_counts_nuclei,
+        task_name=None,
+    )
+
+    zarr_file = track_tmp_path / "patch_output_qupath" / "output.zarr"
+
+    assert zarr_file.exists()
+
+    zarr_group = zarr.open(
+        str(zarr_file),
+        mode="r",
+    )
+
+    assert "probabilities" in zarr_group
+
+    fields = ["box", "centroid", "contours", "prob", "type", "predictions"]
+    for field in fields:
+        assert field not in zarr_group
+
+    assert "Probability maps cannot be saved as AnnotationStore or JSON" in caplog.text
 
 
 def test_wsi_mtsegmentor_correct_nonsquare_shape(
@@ -510,6 +586,44 @@ def test_wsi_segmentor_annotationstore(
     assert store_file_path.exists()
     assert store_file_path == output[wsi4_512_512_svs][0]
 
+
+def test_wsi_segmentor_qupath(remote_sample: Callable, track_tmp_path: Path) -> None:
+    """Test MultiTaskSegmentor for WSIs with AnnotationStore output."""
+    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
+    # testing different configuration for hovernet.
+    # kumar only has two probability maps
+    # Need to test Null values in JSON output.
+    model_name = "hovernet_original-kumar"
+    mtsegmentor = MultiTaskSegmentor(
+        model=model_name,
+        batch_size=32,
+        verbose=False,
+    )
+
+    class_dict = mtsegmentor.model.class_dict
+
+    # Return Probabilities is False
+    output = mtsegmentor.run(
+        images=[wsi4_512_512_svs],
+        return_probabilities=False,
+        device=device,
+        patch_mode=False,
+        save_dir=track_tmp_path / "wsi_out_check",
+        verbose=True,
+        output_type="qupath",
+        class_dict=class_dict,
+        memory_threshold=0,
+    )
+
+    for output_ in output[wsi4_512_512_svs]:
+        assert output_.suffix != ".zarr"
+
+    json_file_name = f"{wsi4_512_512_svs.stem}.json"
+    json_file_name = track_tmp_path / "wsi_out_check" / json_file_name
+    assert json_file_name.exists()
+    assert json_file_name == output[wsi4_512_512_svs][0]
+
+    # Weights not used after this test
     weights_path = Path(fetch_pretrained_weights(model_name=model_name))
     weights_path.unlink()
 
@@ -536,7 +650,7 @@ def test_wsi_segmentor_annotationstore_probabilities(
         output_type="annotationstore",
     )
 
-    assert "Probability maps cannot be saved as AnnotationStore." in caplog.text
+    assert "Probability maps cannot be saved as AnnotationStore or JSON." in caplog.text
     zarr_group = zarr.open(output[wsi4_512_512_svs][0], mode="r")
     assert "probabilities" in zarr_group
 
@@ -682,6 +796,121 @@ def test_vertical_save_branch_without_patch(
     assert np.array_equal(new_zarr[idx][:], np.array([[1, 2, 3]]))
 
 
+def test_qupath_feature_class_dict_lookup_fails() -> None:
+    """Test qupath_feature_class_dict lookup fails."""
+    qupath_json = DaskDelayedJSONStore.__new__(DaskDelayedJSONStore)
+    qupath_json._contours = [np.array([[0, 0], [1, 0], [1, 1]])]
+    qupath_json._processed_predictions = {"type": np.array([5], dtype=object)}
+
+    class_dict = {0: "A", 1: "B"}  # does NOT contain 5
+    class_colors = {0: [255, 0, 0], 1: [0, 255, 0]}  # also does NOT contain 5
+
+    feat = qupath_json._build_single_qupath_feature(
+        i=0,
+        class_dict=class_dict,
+        origin=(0, 0),
+        scale_factor=(1, 1),
+        class_colors=class_colors,
+    )
+
+    # type should fall back to raw value (5)
+    assert feat["properties"]["type"] == 5
+    # classification block should NOT appear
+    assert "classification" not in feat["properties"]
+
+
+def test_qupath_feature_classification_block_skipped() -> None:
+    """Test qupath_feature_classification_block_skipped fails."""
+    qupath_json = DaskDelayedJSONStore.__new__(DaskDelayedJSONStore)
+    qupath_json._contours = [np.array([[0, 0], [1, 0], [1, 1]])]
+    qupath_json._processed_predictions = {"type": np.array([1], dtype=object)}
+
+    class_dict = {1: "Tumor"}
+    class_colors = {0: [255, 0, 0]}  # does NOT contain 1
+
+    feat = qupath_json._build_single_qupath_feature(
+        i=0,
+        class_dict=class_dict,
+        origin=(0, 0),
+        scale_factor=(1, 1),
+        class_colors=class_colors,
+    )
+
+    assert feat["properties"]["type"] == "Tumor"
+    assert "classification" not in feat["properties"]
+
+
+def test_compute_qupath_json_valid_ids_not_empty(track_tmp_path: Path) -> None:
+    """Test compute_qupath_json valid ids not empty."""
+    store = DaskDelayedJSONStore.__new__(DaskDelayedJSONStore)
+
+    # One simple contour
+    store._contours = [np.array([[0, 0], [10, 0], [10, 10], [0, 10]])]
+
+    # Mixed type array → valid_ids = [1, 2]
+    store._processed_predictions = {"type": np.array([1, None, 2], dtype=object)}
+
+    out_path = track_tmp_path / "out.json"
+    result_path = store.compute_qupath_json(
+        class_dict=None,
+        save_path=out_path,
+        verbose=False,
+    )
+
+    # Load JSON
+    data = json.loads(Path(result_path).read_text())
+    props = data["features"][0]["properties"]
+
+    # 1. class_dict should have been inferred as {0:0, 1:1, 2:2}
+    assert props["type"] in (1, 2)
+
+    # 2. type must NOT be null
+    assert props["type"] is not None
+
+    # 3. classification block should exist only if class_value in class_colours
+    assert "null" not in json.dumps(data)
+
+
+def test_compute_qupath_json_string_class_names(track_tmp_path: Path) -> None:
+    """Test compute_qupath_json string class names not empty and str."""
+    store = DaskDelayedJSONStore.__new__(DaskDelayedJSONStore)
+
+    # One simple contour
+    store._contours = [np.array([[0, 0], [10, 0], [10, 10], [0, 10]])]
+
+    # String class names → triggers the "already class names" branch
+    store._processed_predictions = {
+        "type": np.array(["Tumor", None, "Stroma"], dtype=object)
+    }
+
+    # Run compute_qupath_json with class_dict=None
+    out_path = track_tmp_path / "out.json"
+    result_path = store.compute_qupath_json(
+        class_dict=None,
+        save_path=out_path,
+        verbose=False,
+    )
+
+    # Load JSON
+    data = json.loads(Path(result_path).read_text())
+    props = data["features"][0]["properties"]
+
+    # --- Assertions ---
+
+    # 1. type must be one of the string class names
+    assert props["type"] in ("Tumor", "Stroma")
+
+    # 2. type must NOT be null
+    assert props["type"] is not None
+
+    # 3. class_dict should have been inferred as identity mapping
+    #    "Stroma": "Stroma", "Tumor": "Tumor"
+    #    So classification block should exist only if class_colours
+    #    contains the key, but we don't enforce that here — just
+    #    ensure no nulls
+    assert "null" not in json.dumps(data)
+
+
 # HELPER functions
 def assert_output_lengths(
     output: OutputType, expected_counts: Sequence[int], fields: list[str]
@@ -806,6 +1035,108 @@ def assert_annotation_store_patch_output(
         else:
             assert annotations_geometry_type == []
             assert annotations_list == []
+
+
+def assert_qupath_json_patch_output(  # skipcq: PY-R1000
+    inputs: list | np.ndarray,
+    output_json: list[Path],
+    task_name: str | None,
+    track_tmp_path: Path,
+    expected_counts: Sequence[int],
+    output_dict: dict,
+    fields: list[str],
+) -> None:
+    """Helper function to test QuPath JSON output."""
+    for patch_idx, json_path in enumerate(output_json):
+        # --- 1. Verify filename matches expected pattern ---
+        if isinstance(inputs[patch_idx], Path):
+            file_name = (
+                f"{inputs[patch_idx].stem}.json"
+                if task_name is None
+                else f"{inputs[patch_idx].stem}_{task_name}.json"
+            )
+        else:
+            file_name = (
+                f"{patch_idx}.json"
+                if task_name is None
+                else f"{patch_idx}_{task_name}.json"
+            )
+
+        assert json_path == track_tmp_path / "patch_output_qupath" / file_name
+
+        # --- 2. Load JSON ---
+        with Path.open(json_path, "r") as f:
+            qupath_json = json.load(f)
+
+        features = qupath_json.get("features", [])
+        assert isinstance(features, list)
+
+        # --- 3. Zero-object case ---
+        if expected_counts[patch_idx] == 0:
+            assert len(features) == 0
+            continue
+
+        # --- 4. Non-zero case ---
+        assert len(features) == expected_counts[patch_idx]
+
+        # Extract results from JSON
+        result = {field: [] for field in fields}
+
+        for feat in features:
+            props = feat.get("properties", {})
+
+            # non-geometric fields (box, centroid, prob, type, etc.)
+            for field in fields:
+                if field == "contours":
+                    continue
+                if field in props:
+                    result[field].append(props[field])
+
+            # contours from geometry
+            if "contours" in fields:
+                geom = feat["geometry"]
+                coords = geom["coordinates"][0]  # exterior ring
+                coords = [(int(x), int(y)) for x, y in coords]
+                result["contours"].append(coords)
+
+        # Wrap for compatibility with assert_output_lengths
+        result_wrapped = {field: [result[field]] for field in fields}
+
+        # --- 5. Length check ---
+        assert_output_lengths(
+            result_wrapped,
+            expected_counts=[expected_counts[patch_idx]],
+            fields=fields,
+        )
+
+        # --- 6. Equality check for non-contour fields ---
+        fields_no_contours = fields.copy()
+        if "contours" in fields_no_contours:
+            fields_no_contours.remove("contours")
+
+        assert_output_equal(
+            result_wrapped,
+            output_dict,
+            fields=fields_no_contours,
+            indices_a=[0],
+            indices_b=[patch_idx],
+        )
+
+        # --- 7. Contour comparison ---
+        if "contours" in fields:
+            matches = []
+            for a, b in zip(
+                result["contours"],
+                output_dict["contours"][patch_idx],
+                strict=False,
+            ):
+                # Discard last point (closed polygon)
+                a_arr = np.array(a[:-1], dtype=int)
+                b_arr = np.array(b, dtype=int)
+                matches.append(np.array_equal(a_arr, b_arr))
+
+            # Allow small geometric differences
+            assert sum(matches) / len(matches) >= 0.95
 
 
 # -------------------------------------------------------------------------------------

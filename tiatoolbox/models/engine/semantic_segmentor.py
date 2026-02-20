@@ -232,7 +232,7 @@ class SemanticSegmentor(PatchPredictor):
         drop_keys (list):
             Keys to exclude from model output.
         output_type (str):
-            Format of output ("dict", "zarr", "annotationstore").
+            Format of output ("dict", "zarr", "qupath", "annotationstore").
         output_locations (list | None):
             Coordinates of output patches used during WSI processing.
 
@@ -620,9 +620,10 @@ class SemanticSegmentor(PatchPredictor):
             processed_predictions (dict):
                 Dictionary containing processed model predictions.
             output_type (str):
-                Desired output format: "dict", "zarr", or "annotationstore".
+                Desired output format: "dict", "zarr", "qupath" or "annotationstore".
             save_path (Path | None):
-                Path to save the output file. Required for "zarr" and "annotationstore".
+                Path to save the output file. Required for "zarr", "qupath"
+                and "annotationstore".
             **kwargs (SemanticSegmentorRunParams):
                 Additional runtime parameters to configure segmentation.
 
@@ -666,12 +667,14 @@ class SemanticSegmentor(PatchPredictor):
             dict | AnnotationStore | Path | list[Path]:
                 - If output_type is "dict": returns predictions as a dictionary.
                 - If output_type is "zarr": returns path to saved Zarr file.
+                - If output_type is "qupath": returns QuPath JSON
+                  or path or list of paths to .json file.
                 - If output_type is "annotationstore": returns AnnotationStore
                   or path or list of paths to .db file.
 
         """
         # Conversion to annotationstore uses a different function for SemanticSegmentor
-        if output_type.lower() != "annotationstore":
+        if output_type.lower() not in ["qupath", "annotationstore"]:
             return super().save_predictions(
                 processed_predictions, output_type, save_path=save_path, **kwargs
             )
@@ -701,17 +704,20 @@ class SemanticSegmentor(PatchPredictor):
         # Need to add support for zarr conversion.
         save_paths = []
 
-        logger.info("Saving predictions as AnnotationStore.")
+        suffix = ".json" if output_type.lower() == "qupath" else ".db"
+        msg = f"Saving predictions as {output_type} in {suffix} format."
+        logger.info(msg)
         if self.patch_mode:
             for i, predictions in enumerate(processed_predictions["predictions"]):
                 if isinstance(self.images[i], Path):
-                    output_path = save_path.parent / (self.images[i].stem + ".db")
+                    output_path = save_path.parent / (self.images[i].stem + suffix)
                 else:
-                    output_path = save_path.parent / (str(i) + ".db")
+                    output_path = save_path.parent / (str(i) + suffix)
 
                 out_file = dict_to_store_semantic_segmentor(
                     patch_output={"predictions": predictions},
                     scale_factor=scale_factor,
+                    output_type=output_type,
                     class_dict=class_dict,
                     save_path=output_path,
                     verbose=self.verbose,
@@ -722,15 +728,16 @@ class SemanticSegmentor(PatchPredictor):
             out_file = dict_to_store_semantic_segmentor(
                 patch_output=processed_predictions,
                 scale_factor=scale_factor,
+                output_type=output_type,
                 class_dict=class_dict,
-                save_path=save_path.with_suffix(".db"),
+                save_path=save_path.with_suffix(suffix),
                 verbose=self.verbose,
             )
             save_paths = out_file
 
         if return_probabilities:
             msg = (
-                f"Probability maps cannot be saved as AnnotationStore. "
+                f"Probability maps cannot be saved as AnnotationStore or JSON. "
                 f"To visualise heatmaps in TIAToolbox Visualization tool,"
                 f"convert heatmaps in {save_path} to ome.tiff using"
                 f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
@@ -779,7 +786,8 @@ class SemanticSegmentor(PatchPredictor):
             ioconfig (ModelIOConfigABC | None):
                 IO configuration for patch extraction and resolution.
             output_type (str):
-                Desired output format: "dict", "zarr", or "annotationstore".
+                Desired output format: "dict", "zarr", "qupath",
+                or "annotationstore".
             overwrite (bool):
                 Whether to overwrite existing output files. Default is False.
             patch_mode (bool):
@@ -895,8 +903,8 @@ class SemanticSegmentor(PatchPredictor):
             overwrite (bool):
                 Whether to overwrite existing output files. Default is False.
             output_type (str):
-                Desired output format: "dict", "zarr", or "annotationstore". Default
-                is "dict".
+                Desired output format: "dict", "zarr", "qupath",
+                or "annotationstore". Default is "dict".
             **kwargs (SemanticSegmentorRunParams):
                 Additional runtime parameters to configure segmentation.
 
