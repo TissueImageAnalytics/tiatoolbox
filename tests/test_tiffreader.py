@@ -25,6 +25,7 @@ def test_ome_missing_instrument_ref(
     """Test that an OME-TIFF can be read without instrument reference."""
     sample = remote_sample("ome-brightfield-small-level-0")
     wsi = wsireader.TIFFWSIReader(sample)
+    assert wsi.info.objective_power == 20.0
     page = wsi.tiff.pages[0]
     description = page.description
     tree = ElementTree.fromstring(description)
@@ -39,7 +40,8 @@ def test_ome_missing_instrument_ref(
     new_description = ElementTree.tostring(tree, encoding="unicode")
     monkeypatch.setattr(page, "description", new_description)
     monkeypatch.setattr(wsi, "_m_info", None)
-    assert wsi.info.objective_power is None
+    assert monkeypatch._setattr[1][2].objective_power == 20.0
+    assert np.all(monkeypatch._setattr[1][2].mpp == [0.499, 0.499])
 
 
 def test_ome_missing_physicalsize(

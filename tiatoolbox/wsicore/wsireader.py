@@ -505,7 +505,8 @@ class WSIReader:
         last_suffix = suffixes[-1]
 
         reader = (
-            WSIReader.try_dicom(input_path, mpp, power, post_proc)
+            WSIReader.try_openslide(input_path, last_suffix, mpp, power)
+            or WSIReader.try_dicom(input_path, mpp, power, post_proc)
             or WSIReader.try_fsspec(input_img, mpp, power)
             or WSIReader.try_annotation_store(
                 input_path, last_suffix, post_proc, kwargs
@@ -521,6 +522,24 @@ class WSIReader:
             reader = _handle_virtual_wsi(last_suffix, input_path, mpp, power)
 
         return reader
+
+    @staticmethod
+    def try_openslide(
+        input_path: Path,
+        last_suffix: str,
+        mpp: tuple[Number, Number] | None,
+        power: Number | None,
+    ) -> OpenSlideWSIReader | None:
+        """Try to create a DICOMWSIReader if the input is a DICOM file."""
+        if last_suffix in (".tif", ".tiff"):
+            try:
+                return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
+            except (
+                openslide.OpenSlideUnsupportedFormatError,
+                openslide.OpenSlideError,
+            ):
+                return None
+        return None
 
     @staticmethod
     def try_dicom(
@@ -4235,6 +4254,28 @@ class TIFFWSIReader(WSIReader):
             )
         filetype_params["raw"]["TIFF Tags"] = tiff_tags
 
+        # Fallback to calculating objective power from mpp
+        objective_power = filetype_params["objective_power"]
+        mpp = np.asarray(filetype_params["mpp"]).astype(float)
+        if objective_power is None:
+            if mpp is not None:  # pragma: no cover
+                objective_power = utils.misc.mpp2common_objective_power(
+                    float(np.mean(mpp)),
+                )
+                logger.warning(
+                    "Metadata: Objective power inferred from microns-per-pixel (MPP).",
+                )
+                filetype_params["objective_power"] = objective_power
+            else:
+                logger.warning("Metadata: Unable to determine objective power.")
+
+        # Updating for mypy checks
+        slide_dimensions = (slide_dimensions[0], slide_dimensions[1])
+        level_dimensions = [
+            (level_dimensions_[0], level_dimensions_[1])
+            for level_dimensions_ in level_dimensions
+        ]
+
         return WSIMeta(
             file_path=self.input_path,
             slide_dimensions=slide_dimensions,
@@ -7412,7 +7453,7 @@ class TransformedWSIReader(WSIReader):
                 A transformed region/patch.
 
         Example:
-            >>> from tiatoolbox.wsicore import TransformedWSIReader
+            >>> from tiatoolbox.wsicore.wsireader import TransformedWSIReader
             >>> wsi = TransformedWSIReader(
             ...    input_img="cmu-1.ndpi", target_img="cmu-1.ndpi",
             ...    transform="transform.mha"
