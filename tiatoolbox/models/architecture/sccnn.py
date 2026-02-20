@@ -94,7 +94,7 @@ class SCCNN(ModelABC):
         radius: int = 12,
         min_distance: int = 6,
         threshold_abs: float = 0.20,
-        postproc_tile_shape: tuple[int, int] = (2048, 2048),
+        tile_shape: tuple[int, int] = (2048, 2048),
         class_dict: dict[int, str] | None = None,
     ) -> None:
         """Initialize :class:`SCCNN`."""
@@ -104,8 +104,8 @@ class SCCNN(ModelABC):
         self.in_ch = num_input_channels
         self.out_height = out_height
         self.out_width = out_width
-        self.postproc_tile_shape = postproc_tile_shape
-        self.output_class_dict = class_dict
+        self.tile_shape = tile_shape
+        self.class_dict = class_dict
 
         # Create mesh grid and convert to 3D vector
         x, y = torch.meshgrid(

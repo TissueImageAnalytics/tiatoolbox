@@ -349,11 +349,12 @@ The input output configuration is as follows:
 
    .. code-block:: python
 
-        from tiatoolbox.models import IOPatchPredictorConfig
-        ioconfig = IOPatchPredictorConfig(
+        from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+        ioconfig = IOSegmentorConfig(
             patch_input_shape=(31, 31),
+            patch_output_shape=(13, 13),
             stride_shape=(8, 8),
-            input_resolutions=[{"resolution": 0.5, "units": "mpp"}]
+            input_resolutions=[{"resolution": 0.25, "units": "mpp"}],
         )
 
 
@@ -365,8 +366,8 @@ The input output configuration is as follows:
 
    .. code-block:: python
 
-        from tiatoolbox.models import IOPatchPredictorConfig
-        ioconfig = IOPatchPredictorConfig(
+        from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+        ioconfig = IOSegmentorConfig(
             patch_input_shape=(252, 252),
             stride_shape=(150, 150),
             input_resolutions=[{"resolution": 0.5, "units": "mpp"}]
@@ -389,11 +390,12 @@ The input output configuration is as follows:
 
    .. code-block:: python
 
-        from tiatoolbox.models import IOPatchPredictorConfig
-        ioconfig = IOPatchPredictorConfig(
+        from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+        ioconfig = IOSegmentorConfig(
             patch_input_shape=(31, 31),
+            patch_output_shape=(13, 13),
             stride_shape=(8, 8),
-            input_resolutions=[{"resolution": 0.5, "units": "mpp"}]
+            input_resolutions=[{"resolution": 0.25, "units": "mpp"}]
         )
 
 
@@ -405,8 +407,8 @@ The input output configuration is as follows:
 
    .. code-block:: python
 
-        from tiatoolbox.models import IOPatchPredictorConfig
-        ioconfig = IOPatchPredictorConfig(
+        from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+        ioconfig = IOSegmentorConfig(
             patch_input_shape=(252, 252),
             stride_shape=(150, 150),
             input_resolutions=[{"resolution": 0.5, "units": "mpp"}]
@@ -417,6 +419,135 @@ The input output configuration is as follows:
 
     - mapde-conic
 
+.. collapse:: Input Output Configuration Details
+
+   .. code-block:: python
+
+        from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+        ioconfig = IOSegmentorConfig(
+            patch_input_shape=(256, 256),
+            stride_shape=(248, 248),
+            input_resolutions=[{"resolution": 0.5, "units": "mpp"}],
+            save_resolution={'units': 'baseline', 'resolution': 1.0}
+        )
+
+
+.. collapse:: Model names
+
+    - KongNet_CoNIC_1
+
+PanNuke Dataset
+--------------
+
+We provide the following models trained using the `PanNuke dataset <https://warwick.ac.uk/fac/cross_fac/tia/data/pannuke>`_.
+All model weights trained on PanNuke are held under the `Creative Commons Attribution-NonCommercial-ShareAlike Version 4 (CC BY-NC-SA 4.0) License <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_.
+The input output configuration is as follows:
+
+.. collapse:: Input Output Configuration Details
+
+   .. code-block:: python
+
+        from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+        ioconfig = IOSegmentorConfig(
+            patch_input_shape=(256, 256),
+            stride_shape=(240, 240),
+            input_resolutions=[{"resolution": 0.25, "units": "mpp"}],
+            save_resolution={'units': 'baseline', 'resolution': 1.0}
+        )
+
+
+.. collapse:: Model names
+
+    - KongNet_PanNuke_1
+
+MONKEY Dataset
+--------------
+
+We provide the following models trained using the `MONKEY dataset <https://zenodo.org/records/13794656>`_.
+All model weights trained on MONKEY are held under the `Creative Commons Attribution International Version 4 (CC BY 4.0) License <https://creativecommons.org/licenses/by/4.0/legalcode>`_.
+The input output configuration is as follows:
+
+.. collapse:: Input Output Configuration Details
+
+   .. code-block:: python
+
+        from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+        ioconfig = IOSegmentorConfig(
+            patch_input_shape=(256, 256),
+            stride_shape=(224, 224),
+            input_resolutions=[{"resolution": 0.25, "units": "mpp"}],
+            save_resolution={'units': 'baseline', 'resolution': 1.0}
+        )
+
+
+.. collapse:: Model names
+
+    - KongNet_MONKEY_1
+
+PUMA Dataset
+--------------
+
+We provide the following models trained using the `PUMA dataset <https://zenodo.org/records/14869398>`_.
+All model weights trained on PUMA are held under the `Creative Commons Zero v1.0 Universal (CC0 1.0) License <https://creativecommons.org/publicdomain/zero/1.0/legalcode>`_.
+The input output configuration is as follows:
+
+.. collapse:: Input Output Configuration Details
+
+   .. code-block:: python
+
+        from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+        ioconfig = IOSegmentorConfig(
+            patch_input_shape=(256, 256),
+            stride_shape=(224, 224),
+            input_resolutions=[{"resolution": 0.25, "units": "mpp"}],
+            save_resolution={'units': 'baseline', 'resolution': 1.0}
+        )
+
+
+.. collapse:: Model names
+
+    - KongNet_PUMA_T1_3
+
+.. collapse:: Input Output Configuration Details
+
+   .. code-block:: python
+
+        from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+        ioconfig = IOSegmentorConfig(
+            patch_input_shape=(256, 256),
+            stride_shape=(224, 224),
+            input_resolutions=[{"resolution": 0.25, "units": "mpp"}],
+            save_resolution={'units': 'baseline', 'resolution': 1.0}
+        )
+
+
+.. collapse:: Model names
+
+    - KongNet_PUMA_T2_3
+
+MIDOG 2025
+--------------
+
+We provide the following models trained using the `MIDOG 2025 datasets <https://zenodo.org/records/15077361>`_.
+All model weights trained on MIDOG 2025 datasets are held under the `Creative Commons Attribution International Version 4 (CC BY 4.0) License <https://creativecommons.org/licenses/by/4.0/legalcode>`_.
+The input output configuration is as follows:
+
+.. collapse:: Input Output Configuration Details
+
+   .. code-block:: python
+
+        from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+        ioconfig = IOSegmentorConfig(
+            patch_input_shape=(512, 512),
+            stride_shape=(492, 492),
+            input_resolutions=[{"resolution": 0.5, "units": "mpp"}],
+            save_resolution={'units': 'baseline', 'resolution': 1.0}
+        )
+
+
+.. collapse:: Model names
+
+    - KongNet_Det_MIDOG_1
 
 Multi-Task Segmentation
 ^^^^^^^^^^^^^^^^^^^^^^^

@@ -463,6 +463,7 @@ class EngineABC(ABC):  # noqa: B024
             batch_size=self.batch_size,
             drop_last=False,
             shuffle=False,
+            persistent_workers=self.num_workers > 0,
         )
 
     def _get_coordinates(self: EngineABC, batch_data: dict) -> np.ndarray:
