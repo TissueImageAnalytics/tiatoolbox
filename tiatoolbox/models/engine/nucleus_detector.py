@@ -603,7 +603,7 @@ class NucleusDetector(SemanticSegmentor):
             # class_dict set from kwargs
             class_dict = kwargs.get("class_dict")
             if class_dict is None:
-                class_dict = self.model.class_dict
+                class_dict = self._get_model_attr("class_dict")
 
             out = self._save_predictions_annotation_store(
                 processed_predictions,
