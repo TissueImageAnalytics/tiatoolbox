@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import multiprocessing
 import os
 import sys
 import tempfile
@@ -1447,7 +1446,6 @@ def segment_on_box() -> None:
 
     inst_segmentor = NucleusInstanceSegmentor(
         model="hovernet_fast-pannuke",
-        num_workers=multiprocessing.cpu_count(),
         batch_size=24,
     )
     tmp_save_dir = Path(tempfile.mkdtemp())
@@ -1464,9 +1462,10 @@ def segment_on_box() -> None:
         device=select_device(on_gpu=torch.cuda.is_available()),
         output_type="annotationstore",
         auto_get_mask=False,
+        num_workers=0,
     )
 
-    fname = make_safe_name(out_[UI["vstate"].slide_path])
+    fname = make_safe_name(out_[UI["vstate"].slide_path][0])
     resp = UI["s"].put(
         f"http://{host2}:{port}/tileserver/annotations",
         data={"file_path": fname, "model_mpp": json.dumps(UI["vstate"].model_mpp)},
