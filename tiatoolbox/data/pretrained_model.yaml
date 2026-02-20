@@ -1149,3 +1149,22 @@ KongNet_Det_MIDOG_1:
             patch_output_shape: [512, 512]
             stride_shape: [492, 492]
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
+
+efficientunet-tissue_mask:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    architecture:
+        class: efficientunet_tissue_mask_model.EfficientUNetTissueMaskModel
+        kwargs:
+            num_classes: 1
+            threshold: 0.95
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 8.0}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 8.0}
+            patch_input_shape: [512, 512]
+            patch_output_shape: [512, 512]
+            stride_shape: [480, 480]
+            save_resolution: {'units': 'mpp', 'resolution': 8.0}
