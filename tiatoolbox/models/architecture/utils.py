@@ -7,7 +7,9 @@ from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import torch
+from scipy import ndimage
 from skimage.feature import peak_local_max
+from skimage.measure import label, regionprops
 from torch import nn
 
 from tiatoolbox import logger
@@ -237,6 +239,149 @@ class UpSample2x(nn.Module):
         return ret.reshape((-1, input_shape[1], input_shape[2] * 2, input_shape[3] * 2))
 
 
+class SegmentationHead(nn.Sequential):
+    """Segmentation head for UNet++ architecture.
+
+    This class defines the final segmentation layer for the UNet++ model.
+    It applies a convolution followed by optional upsampling and activation
+    to produce the segmentation output.
+
+    Attributes:
+        conv2d (nn.Conv2d):
+            Convolutional layer for feature transformation.
+        upsampling_layer (nn.Module):
+            Upsampling layer (bilinear interpolation or identity).
+        activation (nn.Module):
+            Activation function applied after upsampling.
+
+    Example:
+        >>> head = SegmentationHead(in_channels=64, out_channels=2)
+        >>> x = torch.randn(1, 64, 128, 128)
+        >>> output = head(x)
+        >>> output.shape
+        ... torch.Size([1, 2, 128, 128])
+
+    """
+
+    def __init__(
+        self: SegmentationHead,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int = 3,
+        activation: nn.Module | None = None,
+        upsampling: int = 1,
+    ) -> None:
+        """Initialize the SegmentationHead module.
+
+        This method sets up the segmentation head by creating a convolutional layer,
+        an optional upsampling layer, and an activation function. It is typically
+        used as the final stage in UNet++ architectures for semantic segmentation.
+
+        Args:
+            in_channels (int):
+                Number of input channels to the segmentation head.
+            out_channels (int):
+                Number of output channels (usually equal to the number of classes).
+            kernel_size (int):
+                Size of the convolution kernel. Defaults to 3.
+            activation (nn.Module | None):
+                Activation function applied after convolution. Defaults to None.
+            upsampling (int):
+                Upsampling factor applied to the output. Defaults to 1.
+
+        """
+        conv2d = nn.Conv2d(
+            in_channels, out_channels, kernel_size=kernel_size, padding=kernel_size // 2
+        )
+        upsampling_layer = (
+            nn.UpsamplingBilinear2d(scale_factor=upsampling)
+            if upsampling > 1
+            else nn.Identity()
+        )
+        if activation is None:
+            activation = nn.Identity()
+        super().__init__(conv2d, upsampling_layer, activation)
+
+
+class AttentionModule(nn.Module):
+    """Attention module to apply attention mechanism on feature maps."""
+
+    def __init__(self, name: str | None, in_channels: int, reduction: int = 16) -> None:
+        """Initialize the Attention module.
+
+        Args:
+            name (str | None):
+                Name of the attention mechanism.
+                Only "scse" is implemented. If None, identity is used.
+            in_channels (int):
+                Number of input channels.
+            reduction (int):
+                Reduction ratio for channel attention.
+
+        """
+        super().__init__()
+
+        if name is None:
+            self.attention = nn.Identity()
+        elif name == "scse":
+            self.attention = SCSEModule(in_channels=in_channels, reduction=reduction)
+        else:
+            msg = f"Attention {name} is not implemented"
+            raise ValueError(msg)
+
+    def forward(self: AttentionModule, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass of the Attention module.
+
+        Args:
+            x (torch.Tensor):
+                Input feature map of shape (N, C, H, W).
+
+        Returns:
+            torch.Tensor:
+                Output feature map after applying attention.
+
+        """
+        return self.attention(x)
+
+
+class SCSEModule(nn.Module):
+    """Spatial and Channel Squeeze & Excitation (SCSE) module."""
+
+    def __init__(self, in_channels: int, reduction: int = 16) -> None:
+        """Initialize the SCSE module.
+
+        Args:
+            in_channels (int):
+                Number of input channels.
+            reduction (int):
+                Reduction ratio for channel attention.
+
+        """
+        super().__init__()
+        self.cSE = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            nn.Conv2d(in_channels, in_channels // reduction, 1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels // reduction, in_channels, 1),
+            nn.Sigmoid(),
+        )
+        self.sSE = nn.Sequential(nn.Conv2d(in_channels, 1, 1), nn.Sigmoid())
+
+    def forward(self: SCSEModule, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass of the SCSE module.
+
+        Args:
+            x (torch.Tensor):
+                Input feature map of shape (N, C, H, W).
+
+        Returns:
+            torch.Tensor:
+                Output feature map after applying SCSE attention.
+
+        """
+        return x * self.cSE(x) + x * self.sSE(x)
+
+
 def argmax_last_axis(image: np.ndarray) -> np.ndarray:
     """Define the post-processing of this class of model.
 
@@ -262,11 +407,14 @@ def peak_detection_map_overlap(
     block_info: dict | None = None,
     depth_h: int = 0,
     depth_w: int = 0,
+    *,
+    return_probability: bool = False,
 ) -> np.ndarray:
     """Post-processing function for peak detection.
 
     Builds a processed mask per input channel. Runs peak_local_max then
-    writes 1.0 at peak pixels.
+    writes 1.0 at peak pixels if return_probability is False, otherwise writes
+    the confidence scores at peak locations.
 
     Can be called from dask.da.map_overlap on a padded NumPy block
     (h_pad, w_pad, C) to process large prediction maps in chunks with overlap.
@@ -276,19 +424,32 @@ def peak_detection_map_overlap(
     Returns same spatial shape as the input block
 
     Args:
-        block: NumPy array (H, W, C).
-        min_distance: Minimum number of pixels separating peaks.
-        threshold_abs: Minimum intensity of peaks. By default, None.
-        threshold_rel: Minimum relative intensity of peaks. By default, None.
-        block_info: Dask block info dict.
+        block:
+            NumPy array (H, W, C).
+        min_distance:
+            Minimum number of pixels separating peaks.
+        threshold_abs:
+            Minimum intensity of peaks. By default, None.
+        threshold_rel:
+            Minimum relative intensity of peaks. By default, None.
+        block_info:
+            Dask block info dict.
             Only used when called from dask.array.map_overlap.
-        depth_h: Halo size in pixels for height (rows).
+        depth_h:
+            Halo size in pixels for height (rows).
             Only used when called from dask.array.map_overlap.
-        depth_w: Halo size in pixels for width (cols).
+        depth_w:
+            Halo size in pixels for width (cols).
             Only used when it's called from dask.array.map_overlap.
+        return_probability:
+            If True, returns the confidence scores at peak
+            locations instead of binary peak map.
 
     Returns:
-        out: NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere.
+        out:
+            NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere
+            if return_probability is False, otherwise with confidence
+            scores at peak locations.
 
     """
     block_height, block_width, block_channels = block.shape
@@ -307,12 +468,16 @@ def peak_detection_map_overlap(
     cmin, cmax = depth_w, depth_w + core_w
 
     out = np.zeros((block_height, block_width, block_channels), dtype=np.float32)
+    if return_probability:
+        out_probs = np.zeros(
+            (block_height, block_width, block_channels), dtype=np.float32
+        )
 
     for ch in range(block_channels):
-        img = np.asarray(block[..., ch])  # NumPy 2D view
+        probs_map = np.asarray(block[..., ch])  # NumPy 2D view
 
         coords = peak_local_max(
-            img,
+            probs_map,
             min_distance=min_distance,
             threshold_abs=threshold_abs,
             threshold_rel=threshold_rel,
@@ -323,4 +488,54 @@ def peak_detection_map_overlap(
             if (rmin <= r < rmax) and (cmin <= c < cmax):
                 out[r, c, ch] = 1.0
 
-    return out
+        if return_probability:
+            labeled_peaks = label(out[..., ch])
+            peak_stats = regionprops(labeled_peaks, intensity_image=probs_map)
+            for peak in peak_stats:
+                centroid = peak["centroid"]
+                r, c, confidence = (
+                    centroid[0],
+                    centroid[1],
+                    peak["mean_intensity"],
+                )
+                out_probs[int(r), int(c), ch] = confidence
+
+    return out if not return_probability else out_probs
+
+
+def nms_on_detection_maps(
+    detection_maps: np.ndarray,
+    min_distance: int,
+) -> np.ndarray:
+    """Apply NMS to pre-processed peak maps to handle cross-channel conflicts.
+
+    Args:
+        detection_maps (np.ndarray):
+            (H, W, C) where pixels are already local peaks.
+        min_distance (int):
+            Minimum distance required between ANY detections.
+
+    Returns:
+        np.ndarray:
+            The filtered maps with cross-channel suppression applied.
+
+    """
+    # 1. Collapse channels to find the "Global Best" at every spatial location
+    # Contains the highest probability found across all classes at each pixel.
+    max_across_channels = np.max(detection_maps, axis=2)
+
+    # 2. Handle Spatial Conflicts Across Channels (Global NMS)
+    filter_size = 2 * min_distance + 1
+    dilated_global_max = ndimage.maximum_filter(
+        max_across_channels, size=filter_size, mode="constant", cval=0.0
+    )
+
+    # 3. Create the Keep Mask
+    # A pixel is kept IF:
+    # A) It is the max value across its own channels
+    # B) It is the max value in its spatial neighborhood
+    # C) It is non-zero
+    keep_mask = (detection_maps == dilated_global_max[..., None]) & (detection_maps > 0)
+
+    # Apply mask
+    return np.where(keep_mask, detection_maps, 0)

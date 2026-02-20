@@ -78,7 +78,7 @@ class MapDe(MicroNet):
         min_distance: int = 4,
         threshold_abs: float = 250,
         num_classes: int = 1,
-        postproc_tile_shape: tuple[int, int] = (2048, 2048),
+        tile_shape: tuple[int, int] = (2048, 2048),
         class_dict: dict[int, str] | None = None,
     ) -> None:
         """Initialize :class:`MapDe`."""
@@ -87,8 +87,8 @@ class MapDe(MicroNet):
             num_input_channels=num_input_channels,
             out_activation="relu",
         )
-        self.output_class_dict = class_dict
-        self.postproc_tile_shape = postproc_tile_shape
+        self.class_dict = class_dict
+        self.tile_shape = tile_shape
 
         dist_filter = np.array(
             [

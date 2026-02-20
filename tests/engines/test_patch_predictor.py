@@ -199,7 +199,7 @@ def test_patch_predictor_api(
     processed_predictions["coordinates"] = np.asarray(
         [[0, 0, 224, 224], [0, 0, 224, 224]]
     )
-
+    (track_tmp_path / "patch_out_check").mkdir()
     output_ = predictor.save_predictions(
         processed_predictions=processed_predictions,
         output_type="annotationstore",
@@ -210,47 +210,6 @@ def test_patch_predictor_api(
     output_ann = _extract_probabilities_from_annotation_store(output_)
     assert np.all(np.array(output_ann["probabilities"]) <= 1)
     assert np.all(np.array(output_ann["probabilities"]) >= 0)
-
-
-def test_patch_predictor_patch_mode_no_probabilities(
-    sample_patch1: Path,
-    sample_patch2: Path,
-    track_tmp_path: Path,
-) -> None:
-    """Test the output of patch classification models on Kather100K dataset."""
-    inputs = [Path(sample_patch1), Path(sample_patch2)]
-
-    predictor = PatchPredictor(
-        model="alexnet-kather100k",
-        batch_size=32,
-        verbose=False,
-    )
-
-    output = predictor.run(
-        images=inputs,
-        return_probabilities=False,
-        return_labels=False,
-        device=device,
-        patch_mode=True,
-    )
-
-    assert "probabilities" not in output
-
-    processed_predictions = {k: v for k, v in output.items() if k != "labels"}
-    processed_predictions["coordinates"] = np.asarray(
-        [[0, 0, 224, 224], [0, 0, 224, 224]]
-    )
-
-    output_ = predictor.save_predictions(
-        processed_predictions=processed_predictions,
-        output_type="annotationstore",
-        save_path=track_tmp_path / "patch_out_check" / "output.db",
-    )
-
-    assert output_.exists()
-    output_ann = _extract_probabilities_from_annotation_store(output_)
-    assert np.all(output_ann["predictions"] == [6, 3])
-    assert "probabilities" not in output
 
 
 def test_wsi_predictor_api(
@@ -391,6 +350,92 @@ def test_wsi_predictor_zarr(
     assert "Output file saved at " in caplog.text
 
 
+def test_patch_predictor_patch_mode_annotation_store(
+    sample_patch1: Path,
+    sample_patch2: Path,
+    track_tmp_path: Path,
+) -> None:
+    """Test the output of patch classification models on Kather100K dataset."""
+    inputs = [Path(sample_patch1), Path(sample_patch2)]
+
+    predictor = PatchPredictor(
+        model="alexnet-kather100k",
+        batch_size=32,
+        verbose=False,
+    )
+    # don't run test on GPU
+    output = predictor.run(
+        images=inputs,
+        return_probabilities=True,
+        return_labels=False,
+        device=device,
+        patch_mode=True,
+        save_dir=track_tmp_path / "patch_out_check",
+        output_type="annotationstore",
+    )
+
+    assert output.exists()
+    output = _extract_probabilities_from_annotation_store(output)
+    assert np.all(output["predictions"] == [6, 3])
+    assert np.all(np.array(output["probabilities"]) <= 1)
+    assert np.all(np.array(output["probabilities"]) >= 0)
+
+
+def test_patch_predictor_patch_mode_no_probabilities(
+    sample_patch1: Path,
+    sample_patch2: Path,
+    track_tmp_path: Path,
+) -> None:
+    """Test the output of patch classification models on Kather100K dataset."""
+    inputs = [Path(sample_patch1), Path(sample_patch2)]
+
+    predictor = PatchPredictor(
+        model="alexnet-kather100k",
+        batch_size=32,
+        verbose=False,
+    )
+
+    output = predictor.run(
+        images=inputs,
+        return_probabilities=False,
+        return_labels=False,
+        device=device,
+        patch_mode=True,
+    )
+
+    assert "probabilities" not in output
+
+    processed_predictions = {k: v for k, v in output.items() if k != "labels"}
+    processed_predictions["coordinates"] = np.asarray(
+        [[0, 0, 224, 224], [0, 0, 224, 224]]
+    )
+
+    (track_tmp_path / "patch_out_check").mkdir()
+
+    output_ = predictor.save_predictions(
+        processed_predictions=processed_predictions,
+        output_type="annotationstore",
+        save_path=track_tmp_path / "patch_out_check" / "output.db",
+    )
+
+    assert output_.exists()
+    output_ann = _extract_probabilities_from_annotation_store(output_)
+    assert np.all(output_ann["predictions"] == [6, 3])
+    assert "probabilities" not in output
+
+    # QuPath Output
+    output_ = predictor.save_predictions(
+        processed_predictions=processed_predictions,
+        output_type="qupath",
+        save_path=track_tmp_path / "patch_out_check" / "output.json",
+    )
+
+    assert output_.exists()
+    output_ann = _extract_from_qupath_json(output_)
+    assert np.all(output_ann["predictions"] == [6, 3])
+    assert "probabilities" not in output
+
+
 def test_engine_run_wsi_annotation_store(
     sample_wsi_dict: dict,
     track_tmp_path: Path,
@@ -429,6 +474,54 @@ def test_engine_run_wsi_annotation_store(
     assert output_.exists()
     assert output_.suffix == ".db"
     output_ = _extract_probabilities_from_annotation_store(output_)
+
+    # prediction for each patch
+    assert np.array(output_["predictions"]).shape == (69,)
+    assert _validate_probabilities(output_)
+
+    assert "Output file saved at " in caplog.text
+
+    shutil.rmtree(save_dir)
+
+
+def test_engine_run_wsi_qupath(
+    sample_wsi_dict: dict,
+    track_tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test the engine run for Whole slide images."""
+    # convert to pathlib Path to prevent wsireader complaint
+    mini_wsi_svs = Path(sample_wsi_dict["wsi2_4k_4k_svs"])
+    mini_wsi_msk = Path(sample_wsi_dict["wsi2_4k_4k_msk"])
+
+    eng = PatchPredictor(model="alexnet-kather100k")
+
+    patch_size = np.array([224, 224])
+    save_dir = f"{track_tmp_path}/model_wsi_output"
+
+    kwargs = {
+        "patch_input_shape": patch_size,
+        "stride_shape": patch_size,
+        "resolution": 0.5,
+        "save_dir": save_dir,
+        "units": "mpp",
+        "scale_factor": (2.0, 2.0),
+    }
+
+    output = eng.run(
+        images=[mini_wsi_svs],
+        masks=[mini_wsi_msk],
+        patch_mode=False,
+        output_type="QuPath",
+        batch_size=4,
+        **kwargs,
+    )
+
+    output_ = output[mini_wsi_svs]
+
+    assert output_.exists()
+    assert output_.suffix == ".json"
+    output_ = _extract_from_qupath_json(output_)
 
     # prediction for each patch
     assert np.array(output_["predictions"]).shape == (69,)
@@ -655,6 +748,28 @@ def _extract_probabilities_from_annotation_store(dbfile: str | Path) -> dict:
             if "proba_0" in probs_dict:
                 output["probabilities"].append(probs_dict.pop("prob_0"))
             output["predictions"].append(probs_dict.pop("type"))
+
+    return output
+
+
+def _extract_from_qupath_json(json_file: str) -> dict:
+    """Extract predictions (and optionally coordinates) from QuPath GeoJSON."""
+    with Path.open(json_file, "r") as f:
+        data = json.load(f)
+
+    output = {"predictions": [], "coordinates": []}
+
+    for feature in data.get("features", []):
+        props = feature.get("properties", {})
+        cls = props.get("classification", {})
+
+        # prediction - class name
+        output["predictions"].append(cls.get("name"))
+
+        # geometry - polygon
+        geom = feature.get("geometry", {})
+        coords = geom.get("coordinates", [[]])[0]  # first ring of polygon
+        output["coordinates"].append(coords)
 
     return output
 

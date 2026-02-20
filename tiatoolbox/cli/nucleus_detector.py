@@ -162,7 +162,7 @@ def nucleus_detector(
         min_distance=min_distance,
         threshold_abs=threshold_abs,
         threshold_rel=threshold_rel,
-        postproc_tile_shape=postproc_tile_shape,
+        tile_shape=postproc_tile_shape,
         overwrite=overwrite,
         verbose=verbose,
     )
