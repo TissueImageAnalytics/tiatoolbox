@@ -482,21 +482,30 @@ class TileServer(Flask):
 
         for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
-                add_from_dat(
-                    layer.store,
-                    file_path,
-                    np.array(model_mpp) / np.array(self.slide_mpps[session_id]),
-                )
+                if file_path.suffix == ".db":
+                    to_add = SQLiteStore(file_path)
+                    layer.store.append_many(list(to_add.values()))
+                    to_add.close()
+                else:
+                    add_from_dat(
+                        layer.store,
+                        file_path,
+                        np.array(model_mpp) / np.array(self.slide_mpps[session_id]),
+                    )
                 types = self.update_types(layer.store)
                 return json.dumps(types)
 
-        sq = store_from_dat(
-            file_path,
-            np.array(model_mpp) / np.array(self.slide_mpps[session_id]),
-        )
-        tmp_path = Path(tempfile.gettempdir()) / f"temp_{session_id}.db"
-        sq.dump(tmp_path)
-        sq = SQLiteStore(tmp_path)
+        if file_path.suffix == ".db":
+            sq = SQLiteStore(file_path)
+        else:
+            # assume its a dat
+            sq = store_from_dat(
+                file_path,
+                np.array(model_mpp) / np.array(self.slide_mpps[session_id]),
+            )
+            tmp_path = Path(tempfile.gettempdir()) / f"temp_{session_id}.db"
+            sq.dump(tmp_path)
+            sq = SQLiteStore(tmp_path)
         self.pyramids[session_id]["overlay"] = AnnotationTileGenerator(
             self.layers[session_id]["slide"].info,
             sq,
