@@ -1463,9 +1463,10 @@ def segment_on_box() -> None:
         patch_mode=False,
         device=select_device(on_gpu=torch.cuda.is_available()),
         output_type="annotationstore",
+        auto_get_mask=False,
     )
 
-    fname = out_[UI["vstate"].slide_path]
+    fname = make_safe_name(out_[UI["vstate"].slide_path])
     resp = UI["s"].put(
         f"http://{host2}:{port}/tileserver/annotations",
         data={"file_path": fname, "model_mpp": json.dumps(UI["vstate"].model_mpp)},
