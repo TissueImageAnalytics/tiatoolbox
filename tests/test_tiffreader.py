@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
+from unittest.mock import MagicMock
+
 from tiatoolbox.wsicore import wsireader
 
 
@@ -690,3 +692,44 @@ def test_handle_tiff_wsi_openslide_success(
             post_proc="auto",
         )
         assert isinstance(result, wsireader.OpenSlideWSIReader)
+
+
+def test_info_logs_unable_to_determine_objective_power(
+    caplog: pytest.CaptureFixture,
+) -> None:
+    """Test to check warning is logged if no mpp."""
+    reader = MagicMock()
+    reader._axes = "YXS"
+    reader.input_path = "/fake/path"
+
+    # Fake level arrays
+    fake_page = MagicMock()
+    fake_page.array.shape = (100, 200, 3)
+    reader.level_arrays = {0: fake_page}
+
+    # Fake TIFF object
+    reader.tiff = MagicMock()
+    reader.tiff.is_svs = False
+    reader.tiff.is_ome = False
+
+    # Fake tags
+    tag = MagicMock()
+    tag.value = "v"
+    tag.name = "n"
+    tag.count = 1
+    tag.dtype = "dtype"
+    reader.tiff.pages = [MagicMock()]
+    reader.tiff.pages[0].tags.items.return_value = [(256, tag)]
+
+    # Force generic TIFF metadata to return None objective + None mpp
+    with patch(
+        "tiatoolbox.wsicore.wsireader.TIFFWSIReaderDelegate.parse_generic_tiff_metadata",
+        return_value={"objective_power": None, "mpp": None, "raw": {}},
+    ):
+        # Call the method
+        wsireader.TIFFWSIReader._info(reader)
+
+    # Assert the warning was logged
+    assert any(
+        "Unable to determine objective power" in message for message in caplog.messages
+    )

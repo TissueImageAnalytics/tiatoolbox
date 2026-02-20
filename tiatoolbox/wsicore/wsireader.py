@@ -4256,7 +4256,11 @@ class TIFFWSIReader(WSIReader):
 
         # Fallback to calculating objective power from mpp
         objective_power = filetype_params["objective_power"]
-        mpp = np.asarray(filetype_params["mpp"]).astype(float)
+        mpp = (
+            np.asarray(filetype_params["mpp"]).astype(float)
+            if filetype_params["mpp"] is not None
+            else None
+        )
         if objective_power is None:
             if mpp is not None:  # pragma: no cover
                 objective_power = utils.misc.mpp2common_objective_power(
