@@ -730,7 +730,7 @@ class EngineABC(ABC):  # noqa: B024
             # scale_factor set from kwargs
             scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
             # class_dict set from kwargs
-            class_dict = kwargs.get("class_dict", self.model.class_dict)
+            class_dict = kwargs.get("class_dict", self._get_model_attr("class_dict"))
 
             return dict_to_store_patch_predictions(
                 processed_predictions,
@@ -1080,6 +1080,9 @@ class EngineABC(ABC):  # noqa: B024
             if stride_shape is not None:
                 ioconfig.stride_shape = stride_shape
             if input_resolutions is not None:
+                for input_resolutions_ in input_resolutions:
+                    if input_resolutions_["units"] == "baseline":
+                        ioconfig = ioconfig.to_baseline()
                 ioconfig.input_resolutions = input_resolutions
 
             return ioconfig
