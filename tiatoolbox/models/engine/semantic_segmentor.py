@@ -696,7 +696,7 @@ class SemanticSegmentor(PatchPredictor):
         # scale_factor set from kwargs
         scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
         # class_dict set from kwargs
-        class_dict = kwargs.get("class_dict", self.model.class_dict)
+        class_dict = kwargs.get("class_dict", self._get_model_attr("class_dict"))
 
         # Need to add support for zarr conversion.
         save_paths = []
