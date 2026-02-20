@@ -8,8 +8,6 @@ Please cite the paper [1], if you use this model.
 
 Key Components:
 ---------------
-- SegmentationHead:
-    Final layer for segmentation output.
 - Conv2dReLU:
     Convolutional block with BatchNorm and ReLU activation.
 - DecoderBlock:
@@ -60,75 +58,8 @@ import torch
 from torch import nn
 
 from tiatoolbox.models.architecture.timm_efficientnet import EfficientNetEncoder
+from tiatoolbox.models.architecture.utils import SegmentationHead
 from tiatoolbox.models.models_abc import ModelABC
-
-
-class SegmentationHead(nn.Sequential):
-    """Segmentation head for UNet++ architecture.
-
-    This class defines the final segmentation layer for the UNet++ model.
-    It applies a convolution followed by optional upsampling and activation
-    to produce the segmentation output.
-
-    Attributes:
-        conv2d (nn.Conv2d):
-            Convolutional layer for feature transformation.
-        upsampling_layer (nn.Module):
-            Upsampling layer (bilinear interpolation or identity).
-        activation (nn.Module):
-            Activation function applied after upsampling.
-
-    Example:
-        >>> head = SegmentationHead(in_channels=64, out_channels=2)
-        >>> x = torch.randn(1, 64, 128, 128)
-        >>> output = head(x)
-        >>> output.shape
-        ... torch.Size([1, 2, 128, 128])
-
-    """
-
-    def __init__(
-        self: SegmentationHead,
-        in_channels: int,
-        out_channels: int,
-        kernel_size: int = 3,
-        activation: nn.Module | None = None,
-        upsampling: int = 1,
-    ) -> None:
-        """Initialize the SegmentationHead module.
-
-        This method sets up the segmentation head by creating a convolutional layer,
-        an optional upsampling layer, and an activation function. It is typically
-        used as the final stage in UNet++ architectures for semantic segmentation.
-
-        Args:
-            in_channels (int):
-                Number of input channels to the segmentation head.
-            out_channels (int):
-                Number of output channels (usually equal to the number of classes).
-            kernel_size (int):
-                Size of the convolution kernel. Defaults to 3.
-            activation (nn.Module | None):
-                Activation function applied after convolution. Defaults to None.
-            upsampling (int):
-                Upsampling factor applied to the output. Defaults to 1.
-
-        Raises:
-            ValueError:
-                If `kernel_size` or `upsampling` is not a positive integer.
-
-        """
-        conv2d = nn.Conv2d(
-            in_channels, out_channels, kernel_size=kernel_size, padding=kernel_size // 2
-        )
-        upsampling_layer = (
-            nn.UpsamplingBilinear2d(scale_factor=upsampling)
-            if upsampling > 1
-            else nn.Identity()
-        )
-        if activation is None:
-            activation = nn.Identity()
-        super().__init__(conv2d, upsampling_layer, activation)
 
 
 class Conv2dReLU(nn.Sequential):

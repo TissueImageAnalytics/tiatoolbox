@@ -124,7 +124,7 @@ class NucleusInstanceSegmentor(MultiTaskSegmentor):
     """
 
     def __init__(
-        self: MultiTaskSegmentor,
+        self: NucleusInstanceSegmentor,
         model: str | ModelABC,
         batch_size: int = 8,
         num_workers: int = 0,

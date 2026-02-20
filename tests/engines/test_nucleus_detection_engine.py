@@ -1,5 +1,6 @@
 """Tests for NucleusDetector."""
 
+import json
 from collections.abc import Callable
 from pathlib import Path
 
@@ -13,6 +14,9 @@ from tiatoolbox import cli
 from tiatoolbox.annotation.storage import SQLiteStore
 from tiatoolbox.models.engine.nucleus_detector import (
     NucleusDetector,
+    _write_detection_arrays_to_store,
+    save_detection_arrays_to_qupath_json,
+    save_detection_arrays_to_store,
 )
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import imwrite
@@ -50,7 +54,7 @@ def test_write_detection_arrays_to_store() -> None:
         "probabilities": np.array([1.0, 0.5], dtype=np.float32),
     }
 
-    store = NucleusDetector.save_detection_arrays_to_store(detection_arrays)
+    store = save_detection_arrays_to_store(detection_arrays)
     assert len(store.values()) == 2
 
     detection_arrays = {
@@ -63,7 +67,32 @@ def test_write_detection_arrays_to_store() -> None:
         ValueError,
         match=r"Detection record lengths are misaligned.",
     ):
-        _ = NucleusDetector.save_detection_arrays_to_store(detection_arrays)
+        _ = save_detection_arrays_to_store(detection_arrays)
+
+
+def test_write_detection_arrays_to_qupath() -> None:
+    """Test writing detection arrays to QuPath JSON."""
+    detection_arrays = {
+        "x": np.array([1, 3], dtype=np.uint32),
+        "y": np.array([1, 2], dtype=np.uint32),
+        "classes": np.array([0, 1], dtype=np.uint32),
+        "probabilities": np.array([1.0, 0.5], dtype=np.float32),
+    }
+
+    json_ = save_detection_arrays_to_qupath_json(detection_arrays)
+    assert len(json_.values()) == 2
+
+    detection_arrays = {
+        "x": np.array([1], dtype=np.uint32),
+        "y": np.array([1, 2], dtype=np.uint32),
+        "classes": np.array([0], dtype=np.uint32),
+        "probabilities": np.array([1.0, 0.5], dtype=np.float32),
+    }
+    with pytest.raises(
+        ValueError,
+        match=r"Detection record lengths are misaligned.",
+    ):
+        _ = save_detection_arrays_to_store(detection_arrays)
 
 
 def test_write_detection_records_to_store_no_class_dict() -> None:
@@ -71,7 +100,7 @@ def test_write_detection_records_to_store_no_class_dict() -> None:
     detection_records = (np.array([1]), np.array([2]), np.array([0]), np.array([1.0]))
 
     dummy_store = SQLiteStore()
-    total = NucleusDetector._write_detection_arrays_to_store(
+    total = _write_detection_arrays_to_store(
         detection_records, store=dummy_store, scale_factor=(1.0, 1.0), class_dict=None
     )
     assert len(dummy_store.values()) == 1
@@ -141,6 +170,27 @@ def test_nucleus_detector_patch_annotation_store_output(
     store_2 = SQLiteStore.open(save_dir / "patch_1.db")
     assert len(store_2.values()) == 0
     store_2.close()
+
+    _ = nucleus_detector.run(
+        patch_mode=True,
+        device=device,
+        output_type="qupath",
+        memory_threshold=50,
+        images=[image_dir / "patch_0.png", image_dir / "patch_1.png"],
+        save_dir=save_dir,
+        overwrite=True,
+    )
+
+    with Path.open(save_dir / "patch_0.json", "r") as f:
+        data_1 = json.load(f)
+    features_1 = data_1.get("features", [])
+    assert len(features_1) == 1
+
+    with Path.open(save_dir / "patch_1.json", "r") as f:
+        data_2 = json.load(f)
+    features_2 = data_2.get("features", [])
+
+    assert len(features_2) == 0
 
     rm_dir(save_dir)
 
@@ -257,7 +307,7 @@ def test_nucleus_detector_wsi(
         batch_size=8,
         class_dict={0: "test_nucleus"},
         min_distance=5,
-        postproc_tile_shape=(2048, 2048),
+        tile_shape=(2048, 2048),
     )
 
     store = SQLiteStore.open(save_dir / "wsi4_512_512.db")
@@ -265,6 +315,30 @@ def test_nucleus_detector_wsi(
     annotation = next(iter(store.values()))
     assert annotation.properties["type"] == "test_nucleus"
     store.close()
+
+    # QuPath
+    nucleus_detector.drop_keys = []
+    _ = nucleus_detector.run(
+        patch_mode=False,
+        device=device,
+        output_type="qupath",
+        memory_threshold=50,
+        images=[mini_wsi_svs],
+        save_dir=save_dir,
+        overwrite=True,
+        batch_size=8,
+        class_dict={0: "test_nucleus"},
+        min_distance=5,
+        postproc_tile_shape=(2048, 2048),
+    )
+
+    with Path.open(save_dir / "wsi4_512_512.json", "r") as f:
+        qupath_json = json.load(f)
+    features: list[dict] = qupath_json.get("features", [])
+    assert 245 <= len(features) <= 255
+    first = features[0]
+    # Classification name
+    assert first["properties"]["classification"]["name"] == "test_nucleus"
 
     # Check cached centroid maps are removed
     temp_zarr_files = save_dir / "wsi4_512_512.zarr"
