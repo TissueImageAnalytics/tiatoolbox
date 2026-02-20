@@ -234,7 +234,7 @@ class EngineABC(ABC):  # noqa: B024
         drop_keys (list):
             Keys to exclude from model output.
         output_type (Any):
-            Format of output ("dict", "zarr", "AnnotationStore").
+            Format of output ("dict", "zarr", "qupath", "AnnotationStore").
         verbose (bool):
             Whether to enable verbose logging.
 
@@ -650,7 +650,7 @@ class EngineABC(ABC):  # noqa: B024
                 Dictionary containing processed model predictions.
             output_type (str):
                 Desired output format.
-                Supported values are "dict", "zarr", and "annotationstore".
+                Supported values are "dict", "zarr", "qupath" and "annotationstore".
             save_path (Path | None):
                 Path to save the output file.
                 Required for "zarr" and "annotationstore" formats.
@@ -695,6 +695,8 @@ class EngineABC(ABC):  # noqa: B024
             dict | AnnotationStore | Path:
                 - If output_type is "dict": returns predictions as a dictionary.
                 - If output_type is "zarr": returns path to saved zarr file.
+                - If output_type is "qupath": returns a QuPath JSON
+                  or path to .json file.
                 - If output_type is "annotationstore": returns an AnnotationStore
                   or path to .db file.
 
@@ -725,8 +727,11 @@ class EngineABC(ABC):  # noqa: B024
         if output_type.lower() == "dict":
             return processed_predictions
 
-        if output_type.lower() == "annotationstore":
-            save_path = Path(kwargs.get("output_file", save_path.parent / "output.db"))
+        if output_type.lower() in ["qupath", "annotationstore"]:
+            suffix = ".json" if output_type.lower() == "qupath" else ".db"
+            save_path = Path(
+                kwargs.get("output_file", save_path.parent / ("output" + suffix))
+            )
 
             # scale_factor set from kwargs
             scale_factor = kwargs.get("scale_factor", (1.0, 1.0))
@@ -738,6 +743,7 @@ class EngineABC(ABC):  # noqa: B024
                 scale_factor,
                 class_dict,
                 save_path,
+                output_type=output_type,
                 verbose=self.verbose,
             )
 
@@ -1220,7 +1226,7 @@ class EngineABC(ABC):  # noqa: B024
             ioconfig (ModelIOConfigABC | None):
                 IO configuration for patch extraction and resolution settings.
             output_type (str):
-                Desired output format: "dict", "zarr", or "annotationstore".
+                Desired output format: "dict", "zarr", "qupath" or "annotationstore".
             overwrite (bool):
                 Whether to overwrite existing output files. Default is False.
             patch_mode (bool):
@@ -1272,7 +1278,7 @@ class EngineABC(ABC):  # noqa: B024
             ValueError:
                 If required configuration or input parameters are missing.
             ValueError:
-                If save_dir is not provided and output_type is "zarr"
+                If save_dir is not provided and output_type is "zarr", "qupath"
                 or "annotationstore".
 
         """
@@ -1296,8 +1302,8 @@ class EngineABC(ABC):  # noqa: B024
         self.patch_mode = patch_mode
 
         self._validate_input_numbers(images=images, masks=masks, labels=self.labels)
-        if output_type.lower() not in ["dict", "zarr", "annotationstore"]:
-            msg = "output_type must be 'dict' or 'zarr' or 'annotationstore'."
+        if output_type.lower() not in ["dict", "zarr", "qupath", "annotationstore"]:
+            msg = "output_type must be 'dict' or 'zarr', 'qupath' or 'annotationstore'."
             raise TypeError(msg)
 
         self.output_type = output_type
@@ -1305,6 +1311,7 @@ class EngineABC(ABC):  # noqa: B024
         if save_dir is not None and output_type.lower() not in [
             "zarr",
             "annotationstore",
+            "qupath",
         ]:
             self.output_type = "zarr"
             msg = (
@@ -1314,7 +1321,11 @@ class EngineABC(ABC):  # noqa: B024
             )
             logger.info(msg)
 
-        if save_dir is None and output_type.lower() in ["zarr", "annotationstore"]:
+        if save_dir is None and output_type.lower() in [
+            "zarr",
+            "qupath",
+            "annotationstore",
+        ]:
             msg = f"Please provide save_dir for output_type={output_type}"
             raise ValueError(msg)
 
@@ -1353,7 +1364,7 @@ class EngineABC(ABC):  # noqa: B024
         Args:
             output_type (str):
                 Desired output format. Supported values are "dict", "zarr",
-                and "annotationstore".
+                "qupath" and "annotationstore".
             save_dir (Path):
                 Directory to save the output files.
             **kwargs (EngineABCRunParams):
@@ -1397,6 +1408,8 @@ class EngineABC(ABC):  # noqa: B024
             dict | AnnotationStore | Path:
                 - If output_type is "dict": returns predictions as a dictionary.
                 - If output_type is "zarr": returns path to saved zarr file.
+                - If output_type is "qupath": returns a QuPath JSON
+                  or path to .json file.
                 - If output_type is "annotationstore": returns an AnnotationStore
                   or path to .db file.
 
@@ -1418,7 +1431,7 @@ class EngineABC(ABC):  # noqa: B024
         )
         raw_predictions = self.infer_patches(
             dataloader=self.dataloader,
-            return_coordinates=output_type == "annotationstore",
+            return_coordinates=output_type.lower() in ["annotationstore", "qupath"],
         )
 
         processed_predictions = self.post_process_patches(
@@ -1506,7 +1519,7 @@ class EngineABC(ABC):  # noqa: B024
         Args:
             output_type (str):
                 Desired output format. Supported values are "dict", "zarr",
-                and "annotationstore".
+                "qupath" and "annotationstore".
             save_dir (Path):
                 Directory to save the output files.
             **kwargs (EngineABCRunParams):
@@ -1553,8 +1566,10 @@ class EngineABC(ABC):  # noqa: B024
 
         """
         suffix = ".zarr"
-        if output_type == "AnnotationStore":
+        if output_type.lower() == "annotationstore":
             suffix = ".db"
+        if output_type.lower() == "qupath":
+            suffix = ".json"
 
         def get_path(image: Path | WSIReader) -> Path:
             """Return path to output file."""
@@ -1664,7 +1679,7 @@ class EngineABC(ABC):  # noqa: B024
             overwrite (bool):
                 Whether to overwrite existing output files. Default is False.
             output_type (str):
-                Desired output format: "dict", "zarr", or "annotationstore".
+                Desired output format: "dict", "zarr", "qupath", or "annotationstore".
             **kwargs (EngineABCRunParams):
                 Additional runtime parameters to update engine attributes.
 

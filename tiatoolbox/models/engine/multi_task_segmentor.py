@@ -130,6 +130,9 @@ import shapely
 import torch
 import zarr
 from dask import delayed
+from matplotlib import pyplot as plt
+from shapely import Polygon
+from shapely.geometry import mapping
 from shapely.geometry import shape as feature2geometry
 from shapely.strtree import STRtree
 from tqdm.auto import tqdm
@@ -142,6 +145,7 @@ from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.misc import (
     create_smart_array,
     make_valid_poly,
+    save_qupath_json,
     tqdm_dask_progress_bar,
     update_tqdm_desc,
 )
@@ -1614,11 +1618,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
             )
         return save_path
 
-    def _save_predictions_as_annotationstore(
+    def _save_predictions_as_json_store(
         self: MultiTaskSegmentor,
         processed_predictions: dict,
         task_name: str | None = None,
         save_path: Path | None = None,
+        output_type: str = "annotationstore",
         **kwargs: Unpack[MultiTaskSegmentorRunParams],
     ) -> dict | AnnotationStore | Path | list[Path]:
         """Helper function to save predictions as annotationstore."""
@@ -1656,13 +1661,14 @@ class MultiTaskSegmentor(SemanticSegmentor):
         if self.patch_mode:
             for idx, curr_image in enumerate(self.images):
                 values = [processed_predictions[key][idx] for key in keys_to_compute]
-                output_path = _save_annotation_store(
+                predictions = dict(zip(keys_to_compute, values, strict=False))
+                output_path = _save_annotation_json_store(
                     curr_image=curr_image,
-                    keys_to_compute=keys_to_compute,
-                    values=values,
+                    predictions=predictions,
                     task_name=task_name,
                     idx=idx,
                     save_path=save_path,
+                    output_type=output_type,
                     class_dict=class_dict,
                     scale_factor=scale_factor,
                     num_workers=num_workers,
@@ -1672,14 +1678,15 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         else:
             values = [processed_predictions[key] for key in keys_to_compute]
+            predictions = dict(zip(keys_to_compute, values, strict=False))
             save_paths = [
-                _save_annotation_store(
+                _save_annotation_json_store(
                     curr_image=save_path,
-                    keys_to_compute=keys_to_compute,
-                    values=values,
+                    predictions=predictions,
                     task_name=task_name,
                     idx=0,
                     save_path=save_path,
+                    output_type=output_type,
                     class_dict=class_dict,
                     scale_factor=scale_factor,
                     num_workers=num_workers,
@@ -1693,7 +1700,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         return_probabilities = kwargs.get("return_probabilities", False)
         if return_probabilities:
             msg = (
-                f"Probability maps cannot be saved as AnnotationStore. "
+                f"Probability maps cannot be saved as AnnotationStore or JSON. "
                 f"To visualise heatmaps in TIAToolbox Visualization tool,"
                 f"convert heatmaps in {save_path} to ome.tiff using"
                 f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
@@ -1868,10 +1875,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         **processed_predictions[task_name],
                         "coordinates": processed_predictions["coordinates"],
                     }
-                out_path = self._save_predictions_as_annotationstore(
+                out_path = self._save_predictions_as_json_store(
                     processed_predictions=dict_for_store,
                     task_name=task_name,
                     save_path=save_path,
+                    output_type=output_type,
                     **kwargs,
                 )
                 save_paths += out_path
@@ -1880,10 +1888,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
             return save_paths
 
-        return self._save_predictions_as_annotationstore(
+        return self._save_predictions_as_json_store(
             processed_predictions=processed_predictions,
             task_name=None,
             save_path=save_path,
+            output_type=output_type,
             **kwargs,
         )
 
@@ -2643,20 +2652,20 @@ def _check_and_update_for_memory_overload(
     return canvas, count, canvas_zarr, count_zarr, tqdm_loop
 
 
-def _save_annotation_store(
+def _save_annotation_json_store(
     curr_image: Path | None,
-    keys_to_compute: list[str],
-    values: list[da.Array | list[da.Array]],
+    predictions: dict[str, da.Array | list[da.Array]],
     task_name: str,
     idx: int,
     save_path: Path,
+    output_type: str,
     class_dict: dict,
     scale_factor: tuple[float, float],
     num_workers: int,
     *,
     verbose: bool = True,
 ) -> Path:
-    """Helper function to save to annotation store."""
+    """Helper function to save to QuPath JSON or Annotation store."""
     if isinstance(curr_image, Path):
         store_file_name = (
             f"{curr_image.stem}.db"
@@ -2665,26 +2674,21 @@ def _save_annotation_store(
         )
     else:
         store_file_name = f"{idx}.db" if task_name is None else f"{idx}_{task_name}.db"
-    predictions_ = dict(zip(keys_to_compute, values, strict=False))
-    output_path = save_path.parent / store_file_name
+    suffix = ".json" if output_type.lower() == "qupath" else ".db"
+    output_path = (save_path.parent / store_file_name).with_suffix(suffix)
     # Patch mode indexes the "coordinates" while calculating "values" variable.
     origin = (0.0, 0.0)
-    _ = predictions_.pop("coordinates")
-    store = SQLiteStore()
-    store = dict_to_store(
-        store=store,
-        processed_predictions=predictions_,
+    _ = predictions.pop("coordinates")
+    return dict_to_json_store(
+        processed_predictions=predictions,
         class_dict=class_dict,
         scale_factor=scale_factor,
         origin=origin,
         num_workers=num_workers,
         verbose=verbose,
+        output_path=output_path,
+        output_type=output_type,
     )
-
-    store.commit()
-    store.dump(output_path)
-
-    return output_path
 
 
 def _process_instance_predictions(
@@ -3119,17 +3123,18 @@ def _compute_info_dict_for_merge(
     )
 
 
-def dict_to_store(
-    store: SQLiteStore,
+def dict_to_json_store(
     processed_predictions: dict,
+    output_path: Path,
+    output_type: str,
     class_dict: dict | None = None,
     origin: tuple[float, float] = (0, 0),
     scale_factor: tuple[float, float] = (1, 1),
     num_workers: int = multiprocessing.cpu_count(),
     *,
     verbose: bool = True,
-) -> AnnotationStore:
-    """Write polygonal multitask predictions into an SQLite-backed AnnotationStore.
+) -> Path:
+    """Write polygonal multitask predictions into an QuPath JSON or AnnotationStore.
 
     Converts a task dictionary (with per-object fields) into `Annotation` records,
     applying coordinate scaling and translation to move predictions into the slide's
@@ -3148,12 +3153,14 @@ def dict_to_store(
           with list-like values aligned to `contours` length.
 
     Args:
-        store (SQLiteStore):
-            Target annotation store that will receive the converted annotations.
         processed_predictions (dict):
             Dictionary containing per-object fields. Must include `"contours"`;
             may include `"geom_type"` and any number of additional fields to be
             written as properties.
+        output_path (Path):
+            Path to save the output.
+        output_type (str):
+            Desired output format: "qupath" or "annotationstore".
         class_dict (dict | None):
             Optional mapping for the `"type"` field. When provided and when
             `"type"` is present in `processed_predictions`, each `"type"` value is
@@ -3194,12 +3201,24 @@ def dict_to_store(
         for key, arr in processed_predictions.items()
     }
     contours = processed_predictions.pop("contours")
-    delayed_tasks = DaskDelayedAnnotationStore(
+    delayed_tasks = DaskDelayedJSONStore(
         contours=contours,
         processed_predictions=processed_predictions,
     )
 
-    return delayed_tasks.compute_annotations(
+    if output_type.lower() == "qupath":
+        return delayed_tasks.compute_qupath_json(
+            class_dict=class_dict,
+            origin=origin,
+            scale_factor=scale_factor,
+            batch_size=100,
+            num_workers=num_workers,
+            verbose=verbose,
+            save_path=output_path.with_suffix(".json"),
+        )
+
+    store = SQLiteStore()
+    store = delayed_tasks.compute_annotations(
         store=store,
         class_dict=class_dict,
         origin=origin,
@@ -3209,8 +3228,13 @@ def dict_to_store(
         verbose=verbose,
     )
 
+    store.commit()
+    store.dump(output_path)
 
-class DaskDelayedAnnotationStore:
+    return output_path
+
+
+class DaskDelayedJSONStore:
     """Compute and write TIAToolbox annotations using batched Dask Delayed tasks.
 
     This class parallelizes annotation construction using Dask Delayed while
@@ -3221,7 +3245,7 @@ class DaskDelayedAnnotationStore:
     """
 
     def __init__(
-        self: DaskDelayedAnnotationStore,
+        self: DaskDelayedJSONStore,
         contours: np.ndarray,
         processed_predictions: dict,
     ) -> None:
@@ -3244,7 +3268,7 @@ class DaskDelayedAnnotationStore:
         self._processed_predictions = processed_predictions
 
     def _build_single_annotation(
-        self: DaskDelayedAnnotationStore,
+        self: DaskDelayedJSONStore,
         i: int,
         class_dict: dict[int, str] | None,
         origin: tuple[float, float],
@@ -3298,8 +3322,102 @@ class DaskDelayedAnnotationStore:
 
         return Annotation(geom, properties)
 
+    def _build_single_qupath_feature(
+        self: DaskDelayedJSONStore,
+        i: int,
+        class_dict: dict | None,
+        origin: tuple[float, float],
+        scale_factor: tuple[float, float],
+        class_colors: dict,
+    ) -> dict:
+        """Build a single feature for index ``i``.
+
+        This method performs:
+        - geometry creation
+        - coordinate scaling and translation
+        - per-object property extraction
+        - optional class label mapping
+
+        Args:
+            i (int):
+                Index of the object to convert into an annotation.
+
+            class_dict (dict[int, str] | None):
+                Optional mapping from integer class IDs to string labels.
+                If ``None``, raw integer class IDs are used.
+
+            origin (tuple[float, float]):
+                Translation offset ``(x, y)`` applied after scaling.
+
+            scale_factor (tuple[float, float]):
+                Scaling factors ``(sx, sy)`` applied to contour coordinates.
+
+            class_colors (dict):
+                Maps classes to specific colors.
+
+        Returns:
+            dict:
+                A fully constructed Feature dictionary instance for writing
+                to QuPath JSON.
+
+        """
+        contour = np.array(self._contours[i], dtype=float)
+        contour[:, 0] = contour[:, 0] * scale_factor[0] + origin[0]
+        contour[:, 1] = contour[:, 1] * scale_factor[1] + origin[1]
+
+        poly = Polygon(contour)
+        poly_geo = mapping(poly)
+
+        props = {}
+        class_value = None
+        class_name = None
+
+        for key, arr in self._processed_predictions.items():
+            value = arr[i].tolist() if hasattr(arr[i], "tolist") else arr[i]
+
+            if key == "type":
+                # Handle None class name
+                if value is None:
+                    # Assign default class 0
+                    class_value = 0
+                    class_name = class_dict.get(0, 0)
+                    props["type"] = class_name
+                    continue
+
+                # Safe class lookup
+                if class_dict is not None and value in class_dict:
+                    class_name = class_dict[value]
+                else:
+                    # Already a name or no mapping available
+                    class_name = value
+
+                props["type"] = class_name
+                class_value = value
+            else:
+                if value is None:
+                    continue
+                props[key] = np.array(value).tolist()
+
+        # Classification block
+        if class_name is not None and class_value in class_colors:
+            color = class_colors[class_value]
+            props["classification"] = {
+                "name": class_name,
+                "color": color,
+            }
+            props["class_value"] = class_value
+
+        return {
+            "type": "Feature",
+            "id": f"object_{i}",
+            "geometry": poly_geo,
+            "properties": props,
+            "objectType": "annotation",
+            "name": class_name if class_name is not None else "object",
+        }
+
     def compute_annotations(
-        self: DaskDelayedAnnotationStore,
+        self: DaskDelayedJSONStore,
         store: SQLiteStore,
         class_dict: dict[int, str] | None,
         origin: tuple[float, float] = (0, 0),
@@ -3377,3 +3495,86 @@ class DaskDelayedAnnotationStore:
                 )
             )
         return store
+
+    def compute_qupath_json(
+        self: DaskDelayedJSONStore,
+        class_dict: dict[int, str] | None,
+        origin: tuple[float, float] = (0, 0),
+        scale_factor: tuple[float, float] = (1, 1),
+        save_path: Path | None = None,
+        batch_size: int = 100,
+        num_workers: int = 0,
+        *,
+        verbose: bool = True,
+    ) -> Path:
+        """Compute annotations in batches and return/save QuPath JSON."""
+        num_contours = len(self._contours)
+        features: list[dict] = []
+
+        if class_dict is None:
+            type_arr = self._processed_predictions.get("type")
+
+            # Extract only valid class IDs/names
+            valid_ids = [v for v in type_arr if v is not None]
+
+            if len(valid_ids) == 0:
+                # No class info at all → fallback
+                class_dict = {0: 0}
+            # Numeric class IDs
+            elif all(isinstance(v, (int, np.integer)) for v in valid_ids):
+                max_class = int(max(valid_ids))
+                class_dict = {i: i for i in range(max_class + 1)}
+            else:
+                # Already class names
+                unique_names = sorted(set(valid_ids))
+                class_dict = {name: name for name in unique_names}
+
+        # Enumerate class_dict keys to assign stable integer color indices
+        class_keys = list(class_dict.keys())
+        num_classes = len(class_keys)
+        cmap = plt.cm.get_cmap("tab20", num_classes)
+
+        class_colors = {
+            key: [
+                int(cmap(i)[0] * 255),
+                int(cmap(i)[1] * 255),
+                int(cmap(i)[2] * 255),
+            ]
+            for i, key in enumerate(class_keys)
+        }
+
+        # Batch processing (mirrors compute_annotations)
+        for batch_id in tqdm(
+            range(0, num_contours, batch_size),
+            leave=False,
+            desc="Calculating QuPath features in batches.",
+            disable=not verbose,
+        ):
+            delayed_tasks = [
+                delayed(self._build_single_qupath_feature)(
+                    i,
+                    class_dict,
+                    origin,
+                    scale_factor,
+                    class_colors,
+                )
+                for i in tqdm(
+                    range(batch_id, min(batch_id + batch_size, num_contours)),
+                    leave=False,
+                    desc="Creating delayed tasks for QuPath JSON",
+                    disable=not verbose,
+                )
+            ]
+
+            # Compute batch immediately
+            batch_features = tqdm_dask_progress_bar(
+                write_tasks=delayed_tasks,
+                desc="Computing QuPath features",
+                verbose=verbose,
+                num_workers=num_workers,
+            )
+            features.extend(batch_features)
+
+        qupath_json = {"type": "FeatureCollection", "features": features}
+
+        return save_qupath_json(save_path=save_path, qupath_json=qupath_json)
