@@ -380,11 +380,11 @@ class EfficientNetEncoder(nn.Module):
         >>> x = torch.randn(1, 3, 224, 224)
         >>> features = encoder(x)
         >>> len(features)
-        5
+        ... 5
         >>> [f.shape for f in features]
-        [torch.Size([1, 32, 112, 112]), torch.Size([1, 24, 56, 56]),
-         torch.Size([1, 40, 28, 28]), torch.Size([1, 80, 14, 14]),
-         torch.Size([1, 112, 14, 14])]
+        ... [torch.Size([1, 32, 112, 112]), torch.Size([1, 24, 56, 56]),
+        ...  torch.Size([1, 40, 28, 28]), torch.Size([1, 80, 14, 14]),
+        ...  torch.Size([1, 112, 14, 14])]
 
     """
 
