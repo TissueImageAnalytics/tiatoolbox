@@ -131,6 +131,39 @@ def test_semantic_segmentor_patches(
     _test_store_output_patch(output_seg[0])
 
 
+def _test_qupath_output_patch(output: Path) -> None:
+    """Helper function to test QuPath JSON output for a patch."""
+    with Path.open(output) as f:
+        data = json.load(f)
+
+    assert "features" in data
+    features = data["features"]
+    assert len(features) > 0
+
+    geometry_types = []
+    class_values = set()
+
+    for feat in features:
+        # geometry type
+        geom = feat.get("geometry", {})
+        geometry_types.append(geom.get("type"))
+
+        # class index (you stored this as class_value)
+        class_val = feat.get("class_value")
+        if class_val is not None:
+            class_values.add(class_val)
+
+    # Check geometry type
+    assert "Polygon" in geometry_types
+
+    # When class_dict is None, types are assigned as 0, 1, ...
+    assert 0 in class_values
+    assert 1 in class_values
+
+    # Basic sanity check
+    assert features is not None
+
+
 def test_semantic_segmentor_tiles(track_tmp_path: Path) -> None:
     """Tests SemanticSegmentor on image tiles with no mpp metadata."""
     segmentor = SemanticSegmentor(
@@ -165,6 +198,33 @@ def test_semantic_segmentor_tiles(track_tmp_path: Path) -> None:
     sample_image.unlink()
 
 
+def test_save_qupath_json(remote_sample: Callable, track_tmp_path: Path) -> None:
+    """Test for saving output as annotation store."""
+    segmentor = SemanticSegmentor(
+        model="fcn-tissue_mask", batch_size=32, verbose=False, device=device
+    )
+
+    # Test str input
+    sample_image = remote_sample("thumbnail-1k-1k")
+
+    inputs = [Path(sample_image)]
+
+    output = segmentor.run(
+        images=inputs,
+        return_probabilities=False,
+        return_labels=False,
+        device=device,
+        patch_mode=True,
+        save_dir=track_tmp_path / "output1",
+        output_type="qupath",
+        verbose=True,
+    )
+
+    assert output[0] == track_tmp_path / "output1" / (sample_image.stem + ".json")
+    assert len(output) == 1
+    _test_qupath_output_patch(output[0])
+
+
 def test_save_annotation_store_nparray(
     remote_sample: Callable, track_tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -196,7 +256,7 @@ def test_save_annotation_store_nparray(
     zarr_group = zarr.open(str(track_tmp_path / "output1" / "output.zarr"), mode="r")
     assert "probabilities" in zarr_group
 
-    assert "Probability maps cannot be saved as AnnotationStore." in caplog.text
+    assert "Probability maps cannot be saved as AnnotationStore" in caplog.text
 
     _test_store_output_patch(output[0])
     _test_store_output_patch(output[1])
@@ -460,7 +520,7 @@ def test_wsi_segmentor_zarr(
     assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
 
 
-def test_wsi_segmentor_annotationstore(
+def test_wsi_segmentor_annotationstore_qupath(
     remote_sample: Callable, track_tmp_path: Path, caplog: pytest.CaptureFixture
 ) -> None:
     """Test SemanticSegmentor for WSIs with AnnotationStore output."""
@@ -493,6 +553,7 @@ def test_wsi_segmentor_annotationstore(
         verbose=False,
     )
     # Return Probabilities is True
+    # Check QuPath output
     output = segmentor.run(
         images=[wsi4_512_512_svs],
         return_probabilities=True,
@@ -501,17 +562,17 @@ def test_wsi_segmentor_annotationstore(
         patch_mode=False,
         save_dir=track_tmp_path / "wsi_prob_out_check",
         verbose=True,
-        output_type="annotationstore",
+        output_type="QuPath",
     )
 
     assert output[wsi4_512_512_svs] == track_tmp_path / "wsi_prob_out_check" / (
-        wsi4_512_512_svs.stem + ".db"
+        wsi4_512_512_svs.stem + ".json"
     )
     assert output[wsi4_512_512_svs].with_suffix(".zarr").exists()
 
     zarr_group = zarr.open(output[wsi4_512_512_svs].with_suffix(".zarr"), mode="r")
     assert "probabilities" in zarr_group
-    assert "Probability maps cannot be saved as AnnotationStore." in caplog.text
+    assert "Probability maps cannot be saved as AnnotationStore or JSON." in caplog.text
 
 
 def test_prepare_full_batch_low_memory(track_tmp_path: Path) -> None:

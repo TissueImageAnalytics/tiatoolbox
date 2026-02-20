@@ -814,7 +814,7 @@ mapde-crchisto:
             min_distance: 4
             threshold_abs: 250
             num_classes: 1
-            postproc_tile_shape: [ 2048, 2048 ]
+            tile_shape: [ 2048, 2048 ]
             class_dict: {
                 0: "nucleus"
             }
@@ -840,7 +840,7 @@ mapde-conic:
             min_distance: 3
             threshold_abs: 205
             num_classes: 1
-            postproc_tile_shape: [ 2048, 2048 ]
+            tile_shape: [ 2048, 2048 ]
             class_dict: {
                 0: "nucleus"
             }
@@ -866,7 +866,7 @@ sccnn-crchisto:
             min_distance: 6
             threshold_abs: 0.20
             patch_output_shape: [ 13, 13 ]
-            postproc_tile_shape: [ 2048, 2048 ]
+            tile_shape: [ 2048, 2048 ]
             class_dict: {
                 0: "nucleus"
             }
@@ -892,7 +892,7 @@ sccnn-conic:
             min_distance: 5
             threshold_abs: 0.05
             patch_output_shape: [ 13, 13 ]
-            postproc_tile_shape: [ 2048, 2048 ]
+            tile_shape: [ 2048, 2048 ]
             class_dict: {
                 0: "nucleus"
             }
@@ -965,3 +965,187 @@ grandqc_tissue_detection:
             patch_output_shape: [512, 512]
             stride_shape: [256, 256]
             save_resolution: {'units': 'mpp', 'resolution': 10.0}
+
+KongNet_CoNIC_1:
+    hf_repo_id: TIACentre/KongNet_pretrained_weights
+    architecture:
+        class: kongnet.KongNet
+        kwargs:
+            num_heads: 6
+            num_channels_per_head: [3, 3, 3, 3, 3, 3]
+            target_channels: [2, 5, 8, 11, 14, 17]
+            wide_decoder: False
+            min_distance: 5
+            threshold_abs: 0.5
+            class_dict: {
+                0: "Neutrophil",
+                1: "Epithelial",
+                2: "Lymphocyte",
+                3: "Plasma",
+                4: "Eosinophil",
+                5: "Connective",
+            }
+            tile_shape: [2048, 2048]
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 0.5}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 0.5}
+            patch_input_shape: [256, 256]
+            patch_output_shape: [256, 256]
+            stride_shape: [248, 248]
+            save_resolution: {'units': 'baseline', 'resolution': 1.0}
+
+KongNet_PanNuke_1:
+    hf_repo_id: TIACentre/KongNet_pretrained_weights
+    architecture:
+        class: kongnet.KongNet
+        kwargs:
+            num_heads: 6
+            num_channels_per_head: [3, 3, 3, 3, 3, 3]
+            target_channels: [5, 8, 11, 14, 17]
+            wide_decoder: False
+            min_distance: 11
+            threshold_abs: 0.5
+            class_dict: {
+                0: "Neoplastic",
+                1: "Inflammatory",
+                2: "Connective",
+                3: "Dead",
+                4: "Epithelial",
+            }
+            tile_shape: [2048, 2048]
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            patch_input_shape: [256, 256]
+            patch_output_shape: [256, 256]
+            stride_shape: [240, 240]
+            save_resolution: {'units': 'baseline', 'resolution': 1.0}
+
+KongNet_MONKEY_1:
+    hf_repo_id: TIACentre/KongNet_pretrained_weights
+    architecture:
+        class: kongnet.KongNet
+        kwargs:
+            num_heads: 3
+            num_channels_per_head: [3, 3, 3]
+            target_channels: [2, 5, 8]
+            wide_decoder: True
+            min_distance: 11
+            threshold_abs: 0.5
+            class_dict: {
+                0: "Overall_Inflammatory",
+                1: "Lymphocyte",
+                2: "Monocyte",
+            }
+            tile_shape: [2048, 2048]
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            patch_input_shape: [256, 256]
+            patch_output_shape: [256, 256]
+            stride_shape: [224, 224]
+            save_resolution: {'units': 'baseline', 'resolution': 1.0}
+
+KongNet_PUMA_T1_3:
+    hf_repo_id: TIACentre/KongNet_pretrained_weights
+    architecture:
+        class: kongnet.KongNet
+        kwargs:
+            num_heads: 3
+            num_channels_per_head: [3, 3, 3]
+            target_channels: [2, 5, 8]
+            wide_decoder: False
+            min_distance: 13
+            threshold_abs: 0.5
+            class_dict: {
+                0: "Tumour_Cell",
+                1: "Lymphocyte",
+                2: "Other_Cell",
+            }
+            tile_shape: [2048, 2048]
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            patch_input_shape: [256, 256]
+            patch_output_shape: [256, 256]
+            stride_shape: [224, 224]
+            save_resolution: {'units': 'baseline', 'resolution': 1.0}
+
+KongNet_PUMA_T2_3:
+    hf_repo_id: TIACentre/KongNet_pretrained_weights
+    architecture:
+        class: kongnet.KongNet
+        kwargs:
+            num_heads: 10
+            num_channels_per_head: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
+            target_channels: [2, 5, 8, 11, 14, 17, 20, 23, 26, 29]
+            wide_decoder: False
+            min_distance: 13
+            threshold_abs: 0.5
+            class_dict: {
+                0: "Tumour_Cell",
+                1: "Lymphocyte",
+                2: "Plasma_Cell",
+                3: "Histiocyte",
+                4: "Melanophage",
+                5: "Neutrophil",
+                6: "Stroma_Cell",
+                7: "Epithelial_Cell",
+                8: "Endothelial_Cell",
+                9: "Apoptotic_Cell",
+            }
+            tile_shape: [2048, 2048]
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            patch_input_shape: [256, 256]
+            patch_output_shape: [256, 256]
+            stride_shape: [224, 224]
+            save_resolution: {'units': 'baseline', 'resolution': 1.0}
+
+KongNet_Det_MIDOG_1:
+    hf_repo_id: TIACentre/KongNet_pretrained_weights
+    architecture:
+        class: kongnet.KongNet
+        kwargs:
+            num_heads: 1
+            num_channels_per_head: [1]
+            target_channels: [0]
+            wide_decoder: False
+            min_distance: 21
+            threshold_abs: 0.99
+            class_dict: {
+                0: "Mitotic_Figure"
+            }
+            tile_shape: [2048, 2048]
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 0.5}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 0.5}
+            patch_input_shape: [512, 512]
+            patch_output_shape: [512, 512]
+            stride_shape: [492, 492]
+            save_resolution: {'units': 'baseline', 'resolution': 1.0}

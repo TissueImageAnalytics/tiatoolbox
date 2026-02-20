@@ -6,9 +6,11 @@ import pytest
 import torch
 
 from tiatoolbox.models.architecture.utils import (
+    AttentionModule,
     UpSample2x,
     centre_crop,
     centre_crop_to_shape,
+    nms_on_detection_maps,
     peak_detection_map_overlap,
 )
 
@@ -160,3 +162,38 @@ def test_peak_detection_map_overlap() -> None:
     assert peak_map[0, 0, 0] == 1.0
     assert peak_map[3, 3, 0] == 1.0
     assert np.sum(peak_map) == 2.0
+
+
+def test_nms_on_detection_maps() -> None:
+    """Test for NMS on detection maps."""
+    heatmap = np.zeros((7, 7, 3), dtype=np.float32)
+    nms_map = nms_on_detection_maps(heatmap, min_distance=3)
+    assert np.sum(nms_map) == 0.0  # No peaks
+
+    heatmap[0, 0, 0] = 0.9  # Peak in channel 0 (valid)
+    heatmap[0, 1, 0] = 0.6  # Peak in channel 0 (suppressed)
+    heatmap[0, 0, 1] = 0.8  # Peak in channel 1 (suppressed)
+
+    heatmap[5, 5, 2] = 0.9  # Peak in channel 2 (valid)
+    heatmap[4, 4, 1] = 0.7  # Peak in channel 1 (suppressed)
+
+    nms_map = nms_on_detection_maps(heatmap, min_distance=3)
+    assert nms_map[0, 0, 0] == 0.9
+    assert nms_map[5, 5, 2] == 0.9
+
+
+def test_attention_module() -> None:
+    """Test for Attention module."""
+    test_input = torch.zeros((1, 16, 32, 32), dtype=torch.float32)
+
+    # Default to identity
+    attention = AttentionModule(name=None, in_channels=16)
+    output = attention(test_input)
+    assert torch.sum(output - test_input) == 0
+
+    attention = AttentionModule(name="scse", in_channels=16, reduction=4)
+    output = attention(test_input)
+    assert output.shape == test_input.shape
+
+    with pytest.raises(ValueError, match=r"Attention random_name is not implemented"):
+        _ = AttentionModule(name="random_name", in_channels=16)
