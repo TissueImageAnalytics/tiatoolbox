@@ -431,10 +431,10 @@ class NucleusDetector(SemanticSegmentor):
         # min_distance and postproc_tile_shape cannot be None here
         min_distance = kwargs.get("min_distance")
         if min_distance is None:
-            min_distance = self.model.min_distance
+            min_distance = self._get_model_attr("min_distance")
         postproc_tile_shape = kwargs.get("postproc_tile_shape")
         if postproc_tile_shape is None:
-            postproc_tile_shape = self.model.postproc_tile_shape
+            postproc_tile_shape = self._get_model_attr("postproc_tile_shape")
 
         # Add halo (overlap) around each block for post-processing
         depth_h = min_distance
@@ -611,7 +611,7 @@ class NucleusDetector(SemanticSegmentor):
             # class_dict set from kwargs
             class_dict = kwargs.get("class_dict")
             if class_dict is None:
-                class_dict = self.model.output_class_dict
+                class_dict = self._get_model_attr("output_class_dict")
 
             out = self._save_predictions_qupath_json_annotations_db(
                 processed_predictions,

@@ -161,7 +161,7 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
             fields=fields,
             expected_counts=expected_counts,
             task_name=task_name,
-            class_dict=mtsegmentor.model.class_dict,
+            class_dict=mtsegmentor._get_model_attr("class_dict"),
         )
 
     # QuPath JSON does not have fields
@@ -286,6 +286,7 @@ def test_single_task_mtsegmentor(
 
     assert len(output_ann) == 3
 
+    class_dict_ = mtsegmentor._get_model_attr("class_dict")
     assert_annotation_store_patch_output(
         inputs=inputs,
         output_ann=output_ann,
@@ -294,7 +295,7 @@ def test_single_task_mtsegmentor(
         fields=["box", "centroid", "contours", "prob", "type"],
         expected_counts=expected_counts_nuclei,
         task_name=None,
-        class_dict=mtsegmentor.model.class_dict["nuclei_segmentation"],
+        class_dict=class_dict_["nuclei_segmentation"],
     )
 
     zarr_file = track_tmp_path / "patch_output_annotationstore" / "output.zarr"
@@ -562,7 +563,7 @@ def test_wsi_segmentor_annotationstore(
         verbose=False,
     )
 
-    class_dict = mtsegmentor.model.class_dict
+    class_dict = mtsegmentor._get_model_attr("class_dict")
 
     # Return Probabilities is False
     output = mtsegmentor.run(
