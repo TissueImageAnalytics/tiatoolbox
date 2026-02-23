@@ -74,6 +74,7 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
         return_labels=False,
         device=device,
         patch_mode=True,
+        return_predictions=(True, True),
     )
 
     expected_counts_nuclei = [95, 33, 0]
@@ -103,28 +104,28 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
         output_type="zarr",
         save_dir=track_tmp_path / "patch_output_zarr",
     )
-    output_zarr = zarr.open(output_zarr, mode="r")
+    output_zarr_ = zarr.open(output_zarr, mode="r")
 
     assert_output_lengths(
-        output_zarr["nuclei_segmentation"],
+        output_zarr_["nuclei_segmentation"],
         expected_counts_nuclei,
         fields=["box", "centroid", "contours", "prob", "type"],
     )
     assert_output_lengths(
-        output_zarr["layer_segmentation"],
+        output_zarr_["layer_segmentation"],
         expected_counts_layer,
         fields=["contours", "type"],
     )
 
     assert_output_equal(
-        output_zarr["nuclei_segmentation"],
+        output_zarr_["nuclei_segmentation"],
         output_dict["nuclei_segmentation"],
         fields=["box", "centroid", "contours", "prob", "type"],
         indices_a=[0, 1, 2],
         indices_b=[0, 1, 2],
     )
     assert_output_equal(
-        output_zarr["layer_segmentation"],
+        output_zarr_["layer_segmentation"],
         output_dict["layer_segmentation"],
         fields=["contours", "type"],
         indices_a=[0, 1, 2],
@@ -132,12 +133,16 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
     )
 
     # AnnotationStore output comparison
-    output_ann = mtsegmentor.run(
-        images=patches,
-        patch_mode=True,
-        device=device,
+    processed_predictions = convert_to_dask(output_dict)
+
+    output_ann = mtsegmentor.save_predictions(
+        processed_predictions=processed_predictions,
         output_type="annotationstore",
-        save_dir=track_tmp_path / "patch_output_annotationstore",
+        save_path=track_tmp_path
+        / "patch_output_annotationstore"
+        / (output_zarr.stem + "_ann.db"),
+        return_probabilities=False,
+        return_predictions=(True, True),
     )
 
     assert len(output_ann) == 6
@@ -165,14 +170,17 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
         )
 
     # QuPath JSON does not have fields
+    processed_predictions = convert_to_dask(output_dict)
     fields_nuclei = ["contours", "prob", "type"]
     # QuPath output comparison
-    output_json = mtsegmentor.run(
-        images=patches,
-        patch_mode=True,
-        device=device,
-        output_type="QuPath",
-        save_dir=track_tmp_path / "patch_output_qupath",
+    output_json = mtsegmentor.save_predictions(
+        processed_predictions=processed_predictions,
+        output_type="qupath",
+        save_path=track_tmp_path
+        / "patch_output_qupath"
+        / (output_zarr.stem + "_qupath.db"),
+        return_probabilities=False,
+        return_predictions=(True, True),
     )
 
     assert len(output_json) == 6
@@ -1137,6 +1145,23 @@ def assert_qupath_json_patch_output(  # skipcq: PY-R1000
 
             # Allow small geometric differences
             assert sum(matches) / len(matches) >= 0.95
+
+
+def convert_to_dask(output_dict: dict | list[dict]) -> dict | list[dict]:
+    """Helper function to convert dict with np arrays into a dict with dask arrays."""
+    if isinstance(output_dict, dict):
+        return {k: convert_to_dask(v) for k, v in output_dict.items()}
+    if isinstance(output_dict, list):
+        if all(isinstance(x, str) for x in output_dict):
+            arr = np.array(output_dict, dtype=object)
+            return da.from_array(arr, chunks=(len(arr),))
+        return [convert_to_dask(x) for x in output_dict]
+    if isinstance(output_dict, np.ndarray):
+        if output_dict.dtype == object:
+            # Force chunking for object arrays
+            return da.from_array(output_dict, chunks=(1,) * output_dict.ndim)
+        return da.from_array(output_dict)
+    return output_dict
 
 
 # -------------------------------------------------------------------------------------

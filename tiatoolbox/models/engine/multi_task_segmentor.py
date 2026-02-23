@@ -2678,7 +2678,7 @@ def _save_annotation_json_store(
     output_path = (save_path.parent / store_file_name).with_suffix(suffix)
     # Patch mode indexes the "coordinates" while calculating "values" variable.
     origin = (0.0, 0.0)
-    _ = predictions.pop("coordinates")
+    _ = predictions.pop("coordinates") if "coordinates" in predictions else None
     return dict_to_json_store(
         processed_predictions=predictions,
         class_dict=class_dict,
