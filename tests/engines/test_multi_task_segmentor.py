@@ -26,8 +26,8 @@ from tiatoolbox.models.engine.multi_task_segmentor import (
     _get_sel_indices_margin_lines,
     _save_multitask_vertical_to_cache,
 )
+from tiatoolbox.utils import download_data, imwrite
 from tiatoolbox.utils import env_detection as toolbox_env
-from tiatoolbox.utils import imwrite
 from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
@@ -201,6 +201,41 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
             expected_counts=expected_counts,
             task_name=task_name,
         )
+
+
+def test_mtsegmentor_tiles_no_metadata(track_tmp_path: Path) -> None:
+    """Tests MultiTaskSegmentor on a tile with no metadata."""
+    img_file_name = track_tmp_path / "tcga_hnscc.png"
+    download_data(
+        "https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/sample_imgs/tcga_hnscc.png",
+        img_file_name,
+    )
+    # Tile prediction
+    multi_segmentor = MultiTaskSegmentor(
+        model="hovernetplus-oed",
+        num_workers=0,
+        batch_size=4,
+    )
+
+    tile_output = multi_segmentor.run(
+        [img_file_name],
+        save_dir=track_tmp_path / "sample_tile_results",
+        patch_mode=False,
+        device=device,
+        auto_get_mask=False,
+        wsireader_kwargs={"mpp": 0.25},
+    )
+
+    assert tile_output[img_file_name].exists()
+    output_zarr = zarr.open(tile_output[img_file_name], mode="r")
+    assert "nuclei_segmentation" in output_zarr
+    assert "layer_segmentation" in output_zarr
+    fields_layer = ["contours", "type"]
+    assert (field in output_zarr["layer_segmentation"] for field in fields_layer)
+    fields_nuclei = ["box", "centroid", "contours", "prob", "type"]
+    assert (field in output_zarr["nuclei_segmentation"] for field in fields_nuclei)
+    assert len(output_zarr["layer_segmentation"]["contours"]) == 12
+    assert len(output_zarr["nuclei_segmentation"]["contours"]) == 1299
 
 
 def test_single_task_mtsegmentor(
