@@ -97,13 +97,15 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
     )
 
     # Zarr output comparison
-    output_zarr = mtsegmentor.run(
-        images=patches,
-        patch_mode=True,
-        device=device,
+    processed_predictions = convert_to_dask(output_dict)
+    output_zarr = mtsegmentor.save_predictions(
+        processed_predictions=processed_predictions.copy(),
         output_type="zarr",
-        save_dir=track_tmp_path / "patch_output_zarr",
+        save_path=track_tmp_path / "patch_output_zarr" / "output.zarr",
+        return_probabilities=False,
+        return_predictions=(True, True),
     )
+
     output_zarr_ = zarr.open(output_zarr, mode="r")
 
     assert_output_lengths(
@@ -133,10 +135,8 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
     )
 
     # AnnotationStore output comparison
-    processed_predictions = convert_to_dask(output_dict)
-
     output_ann = mtsegmentor.save_predictions(
-        processed_predictions=processed_predictions,
+        processed_predictions=processed_predictions.copy(),
         output_type="annotationstore",
         save_path=track_tmp_path
         / "patch_output_annotationstore"
@@ -170,11 +170,10 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
         )
 
     # QuPath JSON does not have fields
-    processed_predictions = convert_to_dask(output_dict)
     fields_nuclei = ["contours", "prob", "type"]
     # QuPath output comparison
     output_json = mtsegmentor.save_predictions(
-        processed_predictions=processed_predictions,
+        processed_predictions=processed_predictions.copy(),
         output_type="qupath",
         save_path=track_tmp_path
         / "patch_output_qupath"
@@ -255,15 +254,27 @@ def test_single_task_mtsegmentor(
     )
     assert_predictions_and_boxes(output_dict, expected_counts_nuclei, is_zarr=False)
 
+    assert next(iter(mtsegmentor.tasks)) == "nuclei_segmentation"
+    assert len(mtsegmentor.tasks) == 1
+
     # Zarr output comparison
-    output_zarr = mtsegmentor.run(
-        images=inputs,
-        patch_mode=True,
-        device=device,
-        output_type="zarr",
-        save_dir=track_tmp_path / "patch_output_zarr",
+    processed_predictions = convert_to_dask_single_task(
+        output_dict=output_dict,
+        task_name="nuclei_segmentation",
     )
-    output_zarr = zarr.open(output_zarr, mode="r")
+
+    _ = zarr.open(str(track_tmp_path / "patch_output_zarr" / "output.zarr"), mode="w")
+
+    output_zarr = zarr.open(
+        mtsegmentor.save_predictions(
+            processed_predictions=processed_predictions.copy(),
+            output_type="zarr",
+            save_path=track_tmp_path / "patch_output_zarr" / "output.zarr",
+            return_probabilities=False,
+            return_predictions=(True, True),
+        ),
+        mode="r",
+    )
 
     assert_output_lengths(
         output_zarr,
@@ -280,16 +291,13 @@ def test_single_task_mtsegmentor(
     )
 
     # AnnotationStore output comparison
-
-    # Reinitialize to check for probabilities in output.
     mtsegmentor.drop_keys = []
-    output_ann = mtsegmentor.run(
-        images=inputs,
-        patch_mode=True,
-        device=device,
+    output_ann = mtsegmentor.save_predictions(
+        processed_predictions=processed_predictions.copy(),
         output_type="annotationstore",
-        save_dir=track_tmp_path / "patch_output_annotationstore",
+        save_path=(track_tmp_path / "patch_output_annotationstore" / "output_ann.db"),
         return_probabilities=True,
+        return_predictions=(True,),
     )
 
     assert len(output_ann) == 3
@@ -306,12 +314,12 @@ def test_single_task_mtsegmentor(
         class_dict=class_dict_["nuclei_segmentation"],
     )
 
-    zarr_file = track_tmp_path / "patch_output_annotationstore" / "output.zarr"
-
-    assert zarr_file.exists()
+    assert (
+        track_tmp_path / "patch_output_annotationstore" / "output_ann.zarr"
+    ).exists()
 
     zarr_group = zarr.open(
-        str(zarr_file),
+        str(track_tmp_path / "patch_output_annotationstore" / "output_ann.zarr"),
         mode="r",
     )
 
@@ -324,16 +332,13 @@ def test_single_task_mtsegmentor(
     assert "Probability maps cannot be saved as AnnotationStore or JSON" in caplog.text
 
     # QuPath output comparison
-
-    # Reinitialize to check for probabilities in output.
     mtsegmentor.drop_keys = []
-    output_json = mtsegmentor.run(
-        images=inputs,
-        patch_mode=True,
-        device=device,
-        output_type="QuPath",
-        save_dir=track_tmp_path / "patch_output_qupath",
+    output_json = mtsegmentor.save_predictions(
+        processed_predictions=processed_predictions.copy(),
+        output_type="qupath",
+        save_path=track_tmp_path / "patch_output_qupath" / "output_qupath.db",
         return_probabilities=True,
+        return_predictions=(True,),
     )
 
     assert len(output_json) == 3
@@ -348,12 +353,10 @@ def test_single_task_mtsegmentor(
         task_name=None,
     )
 
-    zarr_file = track_tmp_path / "patch_output_qupath" / "output.zarr"
-
-    assert zarr_file.exists()
+    assert (track_tmp_path / "patch_output_qupath" / "output_qupath.zarr").exists()
 
     zarr_group = zarr.open(
-        str(zarr_file),
+        str(track_tmp_path / "patch_output_qupath" / "output_qupath.zarr"),
         mode="r",
     )
 
@@ -1162,6 +1165,28 @@ def convert_to_dask(output_dict: dict | list[dict]) -> dict | list[dict]:
             return da.from_array(output_dict, chunks=(1,) * output_dict.ndim)
         return da.from_array(output_dict)
     return output_dict
+
+
+def convert_to_dask_single_task(
+    output_dict: dict | list[dict], task_name: str
+) -> dict | list[dict]:
+    """Helper to convert a dict into a dict with dask arrays for single task."""
+    processed_predictions = {task_name: {}}
+    for k, v in output_dict.items():
+        if k == "probabilities":
+            processed_predictions[k] = [da.from_array(v_) for v_ in v]
+            continue
+        if isinstance(v, np.ndarray):
+            processed_predictions[task_name][k] = da.from_array(v)
+        if isinstance(v, list):
+            processed_predictions[task_name][k] = []
+            for v_ in v:
+                chunks = (len(v_),) if v_.dtype == object else "auto"
+                processed_predictions[task_name][k].append(
+                    da.from_array(v_, chunks=chunks)
+                )
+
+    return processed_predictions
 
 
 # -------------------------------------------------------------------------------------
