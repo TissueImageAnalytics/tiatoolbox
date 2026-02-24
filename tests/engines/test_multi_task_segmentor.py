@@ -24,6 +24,7 @@ from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.engine.multi_task_segmentor import (
     DaskDelayedJSONStore,
     MultiTaskSegmentor,
+    _apply_postproc_spatial_offset,
     _clear_zarr,
     _filter_tile_metadata_by_sparse_outputs,
     _get_sel_indices_margin_lines,
@@ -1087,6 +1088,151 @@ def test_filter_tile_metadata_by_sparse_outputs_keeps_seam_tiles() -> None:
 
     assert len(filtered_tile_metadata) == 3
     assert [tile_mode for _, _, tile_mode in filtered_tile_metadata] == [0, 1, 0]
+
+
+def test_infer_wsi_sparse_stitching_uses_inferred_patches_only(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test sparse WSI stitching without full-grid densification."""
+    segmentor = MultiTaskSegmentor(
+        model="hovernetplus-oed", batch_size=2, verbose=False, device=device
+    )
+
+    def fake_get_model_attr(name: str) -> Callable:
+        if name == "infer_batch":
+            return lambda _model, batch, device: (  # noqa: ARG005
+                np.ones((batch.shape[0], 2, 2, 1), dtype=np.float32),
+                np.ones((batch.shape[0], 2, 2, 1), dtype=np.float32) * 2,
+            )
+        return lambda *args, **kwargs: None  # noqa: ARG005
+
+    monkeypatch.setattr(segmentor, "_get_model_attr", fake_get_model_attr)
+
+    def raise_if_called(*_args: list, **_kwargs: dict) -> None:
+        raise AssertionError
+
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.multi_task_segmentor.prepare_multitask_full_batch",
+        raise_if_called,
+    )
+
+    outputs = np.array([[10, 10, 12, 12], [14, 10, 16, 12]], dtype=np.int32)
+    dataset = MagicMock()
+    dataset.__getitem__.return_value = {"image": np.zeros((16, 16, 3), dtype=np.uint8)}
+    dataset.outputs = outputs
+    dataset.full_outputs = np.array(
+        [[0, 10, 2, 12], [10, 10, 12, 12], [14, 10, 16, 12], [18, 10, 20, 12]],
+        dtype=np.int32,
+    )
+    dataset.wsi_shape = (20, 20)
+
+    dataloader = MagicMock()
+    dataloader.dataset = dataset
+    dataloader.__len__.return_value = 1
+    dataloader.__iter__.return_value = iter(
+        [
+            {
+                "image": torch.randn(2, 3, 16, 16),
+                "output_locs": torch.tensor(outputs),
+                "coords": outputs,
+            }
+        ]
+    )
+
+    raw_predictions = segmentor.infer_wsi(
+        dataloader=dataloader,
+        save_path=track_tmp_path / "sparse_out.zarr",
+        memory_threshold=100,
+    )
+
+    assert np.array_equal(
+        raw_predictions["probabilities_origin"],
+        np.array([10, 10], dtype=np.int32),
+    )
+
+    probabilities = raw_predictions["probabilities"]
+    assert len(probabilities) == 2
+    for idx, probabilities_ in enumerate(probabilities):
+        prob_np = probabilities_.compute()
+        expected_value = 1 if idx == 0 else 2
+        assert prob_np.shape == (2, 6, 1)
+        assert np.all(prob_np[:, 0:2, :] == expected_value)
+        assert np.all(prob_np[:, 2:4, :] == 0)
+        assert np.all(prob_np[:, 4:6, :] == expected_value)
+
+
+def test_compute_tile_pads_partial_overlap_for_cropped_probabilities() -> None:
+    """Test tile extraction keeps original tile frame for cropped probability maps."""
+
+    class DummySegmentor:
+        """Minimal object exposing attrs used by `_compute_tile`."""
+
+        def __init__(self: DummySegmentor) -> None:
+            """Initialize cropped probabilities and origin."""
+            self._probabilities_origin = (1, 1)
+            self._probabilities = [
+                da.from_array(
+                    np.array([[[1], [2]], [[3], [4]]], dtype=np.float32),
+                    chunks=(2, 2, 1),
+                )
+            ]
+
+        @staticmethod
+        def _get_model_attr(name: str) -> Callable:
+            if name == "postproc_func":
+                return lambda head_raws: tuple(head_raws)
+            msg = f"Unexpected model attribute request: {name}"
+            raise AssertionError(msg)
+
+    output = MultiTaskSegmentor._compute_tile(DummySegmentor(), (0, 0, 3, 3)).compute()
+    tile = output[0]
+
+    expected = np.zeros((3, 3, 1), dtype=np.float32)
+    expected[1:, 1:, :] = np.array([[[1], [2]], [[3], [4]]], dtype=np.float32)
+    assert np.array_equal(tile, expected)
+
+
+def test_apply_postproc_spatial_offset_handles_dask_object_arrays() -> None:
+    """Test postproc offsetting supports dask object arrays in info_dict."""
+    boxes_np = np.empty(2, dtype=object)
+    boxes_np[0] = np.array([1, 2, 3, 4])
+    boxes_np[1] = np.array([5, 6, 7, 8])
+    boxes = da.from_array(boxes_np, chunks=(2,))
+
+    centroids_np = np.empty(2, dtype=object)
+    centroids_np[0] = np.array([2, 3])
+    centroids_np[1] = np.array([6, 7])
+    centroids = da.from_array(centroids_np, chunks=(2,))
+
+    contours_np = np.empty(2, dtype=object)
+    contours_np[0] = np.array([[1, 1], [2, 2]], dtype=np.int32)
+    contours_np[1] = np.array([[3, 3], [4, 4]], dtype=np.int32)
+    contours = da.from_array(contours_np, chunks=(2,))
+    postproc_output = [
+        {
+            "task_type": "instance",
+            "info_dict": {
+                "box": boxes,
+                "centroid": centroids,
+                "contours": contours,
+            },
+        }
+    ]
+
+    shifted = _apply_postproc_spatial_offset(
+        post_process_predictions=postproc_output,
+        probabilities_origin=(10, 20),
+    )
+
+    shifted_info = shifted[0]["info_dict"]
+    assert isinstance(shifted_info["box"], da.Array)
+    assert np.array_equal(shifted_info["box"].compute()[0], np.array([11, 22, 13, 24]))
+    assert np.array_equal(shifted_info["centroid"].compute()[1], np.array([16, 27]))
+    assert np.array_equal(
+        shifted_info["contours"].compute()[0],
+        np.array([[11, 21], [12, 22]], dtype=np.int32),
+    )
 
 
 class FakeSeg(MultiTaskSegmentor):

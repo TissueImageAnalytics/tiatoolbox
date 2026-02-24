@@ -605,15 +605,20 @@ class MultiTaskSegmentor(SemanticSegmentor):
         count_zarr = [None for _ in range(num_expected_output)]
 
         output_locs_y_, output_locs = None, None
-
-        full_output_locs = (
-            dataloader.dataset.full_outputs
-            if hasattr(dataloader.dataset, "full_outputs")
-            else dataloader.dataset.outputs
+        sparse_output_locs = _get_sparse_output_locs(dataloader.dataset)
+        active_output_locs = (
+            sparse_output_locs
+            if sparse_output_locs is not None
+            else np.asarray(dataloader.dataset.outputs)
         )
+        canvas_x_start = int(np.min(active_output_locs[:, 0]))
+        canvas_x_end = int(np.max(active_output_locs[:, 2]))
+        canvas_width = canvas_x_end - canvas_x_start
+        canvas_y_start = int(np.min(active_output_locs[:, 1]))
+        canvas_y_end = int(np.max(active_output_locs[:, 3]))
 
         infer_batch = self._get_model_attr("infer_batch")
-        for batch_idx, batch_data in enumerate(tqdm_loop):
+        for batch_data in tqdm_loop:
             batch_output = infer_batch(
                 self.model,
                 batch_data["image"],
@@ -621,24 +626,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
             )
 
             batch_locs = batch_data["output_locs"].numpy()
+            output_locs = concatenate_none(old_arr=output_locs, new_arr=batch_locs)
 
-            # Interpolate outputs for masked regions
-            full_batch_output, full_output_locs, output_locs = (
-                prepare_multitask_full_batch(
-                    batch_output=batch_output,
-                    batch_locs=batch_locs,
-                    full_output_locs=full_output_locs,
-                    output_locs=output_locs,
-                    canvas_np=canvas_np,
-                    save_path=save_path.with_name("full_batch_tmp"),
-                    memory_threshold=memory_threshold,
-                    is_last=(batch_idx == (len(dataloader) - 1)),
-                )
-            )
-
-            for idx, full_batch_output_ in enumerate(full_batch_output):
+            for idx, batch_output_ in enumerate(batch_output):
                 canvas_np[idx] = concatenate_none(
-                    old_arr=canvas_np[idx], new_arr=full_batch_output_
+                    old_arr=canvas_np[idx], new_arr=batch_output_
                 )
 
             # Determine if dataloader is moved to next row of patches
@@ -654,6 +646,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         canvas_np,
                         output_locs,
                         change_indices,
+                        x_offset=canvas_x_start,
+                        canvas_width=canvas_width,
                     )
                 )
 
@@ -684,9 +678,15 @@ class MultiTaskSegmentor(SemanticSegmentor):
             canvas_np,
             output_locs,
             change_indices=[len(output_locs)],
+            x_offset=canvas_x_start,
+            canvas_width=canvas_width,
         )
 
-        output_shape = get_wsi_output_shape(dataloader.dataset)
+        output_shape = (
+            (canvas_y_end - canvas_y_start, canvas_x_end - canvas_x_start)
+            if sparse_output_locs is not None
+            else get_wsi_output_shape(dataloader.dataset)
+        )
 
         raw_predictions["probabilities"] = _calculate_probabilities(
             canvas_zarr=canvas_zarr,
@@ -701,6 +701,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
         )
 
         raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
+        raw_predictions["probabilities_origin"] = np.array(
+            [canvas_x_start, canvas_y_start], dtype=np.int32
+        )
 
         if save_path.with_name("full_batch_tmp").exists():
             shutil.rmtree(save_path.with_name("full_batch_tmp"))
@@ -908,6 +911,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         """
         probabilities = raw_predictions["probabilities"]
+        probabilities_origin = tuple(
+            raw_predictions.get("probabilities_origin", (0, 0))
+        )
+        if not kwargs.get("return_probabilities", False):
+            raw_predictions.pop("probabilities_origin", None)
 
         tile_h, tile_w = self._ioconfig.tile_shape
 
@@ -930,11 +938,13 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 save_path=save_path.with_suffix(".zarr"),
                 memory_threshold=kwargs.get("memory_threshold", 80),
                 return_predictions=kwargs.get("return_predictions"),
+                probabilities_origin=probabilities_origin,
             )
         else:
             post_process_predictions = self._process_full_wsi(
                 probabilities=probabilities,
                 return_predictions=return_predictions,
+                probabilities_origin=probabilities_origin,
             )
 
         tasks = set()
@@ -965,6 +975,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         probabilities: list[da.Array | np.ndarray],
         *,
         return_predictions: tuple[bool, ...] | None = None,
+        probabilities_origin: tuple[int, int] = (0, 0),
     ) -> list[dict] | None:
         """Convert full-WSI probability maps into task-specific outputs in memory.
 
@@ -987,6 +998,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 ``None``, no task predictions are returned (all ``"predictions"``
                 keys are removed). The tuple length must match the number of
                 task dictionaries returned by ``postproc_func``.
+            probabilities_origin (tuple[int, int]):
+                Top-left offset ``(x, y)`` of the stitched probability map in
+                slide coordinates. Spatial outputs are shifted by this offset.
 
         Returns:
             list[dict] | None:
@@ -1018,7 +1032,10 @@ class MultiTaskSegmentor(SemanticSegmentor):
             if not return_predictions_:
                 del post_process_predictions[idx]["predictions"]
 
-        return post_process_predictions
+        return _apply_postproc_spatial_offset(
+            post_process_predictions=post_process_predictions,
+            probabilities_origin=probabilities_origin,
+        )
 
     def _process_tile_mode(
         self: MultiTaskSegmentor,
@@ -1027,6 +1044,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         memory_threshold: float = 80,
         *,
         return_predictions: tuple[bool, ...] | None = None,
+        probabilities_origin: tuple[int, int] = (0, 0),
     ) -> list[dict] | None:
         """Convert WSI probability maps into outputs using tile-mode processing.
 
@@ -1064,6 +1082,10 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 prediction arrays are retained (i.e., they are set to ``None`` and not
                 allocated). The tuple length must match the number of task dictionaries
                 produced by ``postproc_func``.
+            probabilities_origin (tuple[int, int]):
+                Top-left offset ``(x, y)`` of the stitched probability map in
+                slide coordinates. Used to slice global tile bounds from cropped
+                probability arrays.
 
         Returns:
             list[dict] | None:
@@ -1133,6 +1155,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         # Only used for delayed processing.
         self._probabilities = probabilities  # skipcq: PYL-W0201  # skipcq: PYL-W0201
+        self._probabilities_origin = probabilities_origin  # skipcq: PYL-W0201
 
         # Calculate batch size for dask compute
         vm = psutil.virtual_memory()
@@ -1250,6 +1273,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 )
             wsi_info_dict[idx]["info_dict"] = dict_info_wsi
         delattr(self, "_probabilities")
+        delattr(self, "_probabilities_origin")
         return wsi_info_dict
 
     @delayed
@@ -1275,12 +1299,34 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 - "predictions": np.ndarray
                 - "info_dict": dict
         """
-        head_raws = [
-            p[
-                tile_bounds[1] : tile_bounds[3], tile_bounds[0] : tile_bounds[2], :
-            ].compute()
-            for p in self._probabilities
-        ]
+        origin_x, origin_y = self._probabilities_origin
+        tile_x0, tile_y0, tile_x1, tile_y1 = map(int, tile_bounds)
+        tile_h = max(tile_y1 - tile_y0, 0)
+        tile_w = max(tile_x1 - tile_x0, 0)
+
+        head_raws = []
+        for p in self._probabilities:
+            h, w = p.shape[:2]
+            g_x0 = max(tile_x0, origin_x)
+            g_y0 = max(tile_y0, origin_y)
+            g_x1 = min(tile_x1, origin_x + w)
+            g_y1 = min(tile_y1, origin_y + h)
+
+            tile_raw = np.zeros((tile_h, tile_w, p.shape[2]), dtype=p.dtype)
+            if g_x1 > g_x0 and g_y1 > g_y0:
+                src_x0 = g_x0 - origin_x
+                src_y0 = g_y0 - origin_y
+                src_x1 = g_x1 - origin_x
+                src_y1 = g_y1 - origin_y
+                tile_patch = p[src_y0:src_y1, src_x0:src_x1, :].compute()
+
+                dst_x0 = g_x0 - tile_x0
+                dst_y0 = g_y0 - tile_y0
+                dst_x1 = dst_x0 + tile_patch.shape[1]
+                dst_y1 = dst_y0 + tile_patch.shape[0]
+                tile_raw[dst_y0:dst_y1, dst_x0:dst_x1, :] = tile_patch
+
+            head_raws.append(tile_raw)
         postproc_func = self._get_model_attr("postproc_func")
         return postproc_func(head_raws)
 
@@ -2177,6 +2223,8 @@ def merge_multitask_horizontal(
     canvas_np: list[np.ndarray],
     output_locs: np.ndarray,
     change_indices: np.ndarray | list[int],
+    x_offset: int | None = None,
+    canvas_width: int | None = None,
 ) -> tuple[list[da.Array], list[da.Array], list[np.ndarray], np.ndarray, np.ndarray]:
     """Merge horizontally a run of patch outputs into per-head row blocks.
 
@@ -2228,6 +2276,10 @@ def merge_multitask_horizontal(
             Sorted indices (relative to the current ``output_locs``) where a
             **row change** occurs. Each index marks the end of a contiguous row
             segment to be merged in this call.
+        x_offset (int | None):
+            Optional shared x-origin used for sparse-region stitching.
+        canvas_width (int | None):
+            Optional shared row width used for sparse-region stitching.
 
     Returns:
         tuple[list[da.Array], list[da.Array], list[np.ndarray], np.ndarray, np.ndarray]:
@@ -2271,6 +2323,8 @@ def merge_multitask_horizontal(
                 output_locs_y=output_locs_y,
                 output_locs=output_locs,
                 change_indices=change_indices,
+                x_offset=x_offset,
+                canvas_width=canvas_width,
             )
         )
 
@@ -2445,7 +2499,7 @@ def merge_multitask_vertical_chunkwise(
 
     """
     y0s, y1s = np.unique(output_locs_y_[:, 0]), np.unique(output_locs_y_[:, 1])
-    overlaps = np.append(y1s[:-1] - y0s[1:], 0)
+    overlaps = np.append(y1s[:-1] - y0s[1:], 0).astype(np.int32)
 
     probabilities_zarr = [None for _ in range(len(canvas))]
     probabilities_da = [None for _ in range(len(canvas))]
@@ -2466,10 +2520,12 @@ def merge_multitask_vertical_chunkwise(
             desc=f"Merging rows for probability map {idx}",
             disable=not verbose,
         )
-        for i, overlap in enumerate(tqdm_loop):
-            if next_chunk is not None and overlap > 0:
-                curr_chunk[-overlap:] += next_chunk[:overlap]
-                curr_count[-overlap:] += next_count[:overlap]
+        for i, overlap_ in enumerate(tqdm_loop):
+            overlap = int(overlap_)
+            positive_overlap = max(overlap, 0)
+            if next_chunk is not None and positive_overlap > 0:
+                curr_chunk[-positive_overlap:] += next_chunk[:positive_overlap]
+                curr_count[-positive_overlap:] += next_count[:positive_overlap]
 
             # Normalize
             curr_count = np.where(curr_count == 0, 1, curr_count)
@@ -2503,8 +2559,53 @@ def merge_multitask_vertical_chunkwise(
                 memory_threshold=memory_threshold,
             )
 
+            if overlap < 0:
+                gap_height = -overlap
+                gap_probabilities = np.zeros(
+                    (gap_height, *probabilities.shape[1:]),
+                    dtype=probabilities.dtype,
+                )
+
+                (
+                    gap_probabilities,
+                    written_height,
+                    should_stop,
+                ) = clip_probabilities_to_shape(
+                    probabilities=gap_probabilities,
+                    output_shape=output_shape,
+                    written_height=written_height,
+                )
+                if should_stop:
+                    break
+
+                probabilities_zarr[idx], probabilities_da[idx] = store_probabilities(
+                    probabilities=gap_probabilities,
+                    chunk_shape=chunk_shape,
+                    probabilities_zarr=probabilities_zarr[idx],
+                    probabilities_da=probabilities_da[idx],
+                    zarr_group=zarr_group,
+                    name=f"probabilities/{idx}",
+                )
+
+                (
+                    probabilities_zarr,
+                    probabilities_da,
+                ) = _save_multitask_vertical_to_cache(
+                    probabilities_zarr=probabilities_zarr,
+                    probabilities_da=probabilities_da,
+                    probabilities=gap_probabilities,
+                    idx=idx,
+                    tqdm_loop=tqdm_loop,
+                    save_path=save_path,
+                    chunk_shape=chunk_shape,
+                    memory_threshold=memory_threshold,
+                )
+
             if next_chunk is not None:
-                curr_chunk, curr_count = next_chunk[overlap:], next_count[overlap:]
+                curr_chunk, curr_count = (
+                    next_chunk[positive_overlap:],
+                    next_count[positive_overlap:],
+                )
 
             if i + 2 < num_chunks:
                 next_chunk = canvas_.blocks[i + 2, 0].compute()
@@ -3190,6 +3291,65 @@ def _filter_tile_metadata_by_sparse_outputs(
             filtered_tile_metadata.append(tile_meta)
 
     return filtered_tile_metadata
+
+
+def _apply_postproc_spatial_offset(
+    post_process_predictions: list[dict],
+    probabilities_origin: tuple[int, int],
+) -> list[dict]:
+    """Apply a global xy-offset to post-processing spatial outputs."""
+    if tuple(probabilities_origin) == (0, 0):
+        return post_process_predictions
+
+    offset_xy = np.asarray(probabilities_origin, dtype=np.int32)
+    offset_box = np.concatenate([offset_xy, offset_xy])
+    for task_output in post_process_predictions:
+        _offset_spatial_fields(task_output, offset_xy, offset_box)
+        info_dict = task_output.get("info_dict")
+        if isinstance(info_dict, dict):
+            _offset_spatial_fields(info_dict, offset_xy, offset_box)
+
+    return post_process_predictions
+
+
+def _offset_spatial_fields(
+    output_dict: dict,
+    offset_xy: np.ndarray,
+    offset_box: np.ndarray,
+) -> None:
+    """Offset known spatial fields in-place."""
+    if "box" in output_dict:
+        output_dict["box"] = _add_offset(output_dict["box"], offset_box)
+    if "centroid" in output_dict:
+        output_dict["centroid"] = _add_offset(output_dict["centroid"], offset_xy)
+    if "contours" in output_dict:
+        output_dict["contours"] = _add_offset(output_dict["contours"], offset_xy)
+
+
+def _add_offset(
+    value: np.ndarray | da.Array | list | tuple,
+    offset: np.ndarray,
+) -> np.ndarray | da.Array | list:
+    """Add an offset to an array-like value while preserving object arrays."""
+    if isinstance(value, da.Array):
+        if value.dtype != object:
+            return value + offset
+        return value.map_blocks(_offset_dask_object_block, offset=offset, dtype=object)
+
+    if isinstance(value, np.ndarray):
+        if value.dtype != object:
+            return value + offset
+        return np.array([np.asarray(v) + offset for v in value], dtype=object)
+
+    if isinstance(value, (list, tuple)):
+        return [np.asarray(v) + offset for v in value]
+
+    return np.asarray(value) + offset
+
+
+def _offset_dask_object_block(block: np.ndarray, offset: np.ndarray) -> np.ndarray:
+    """Offset one dask object-array block element-wise."""
+    return np.array([np.asarray(v) + offset for v in block], dtype=object)
 
 
 def _compute_info_dict_for_merge(

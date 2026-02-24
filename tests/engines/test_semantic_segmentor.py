@@ -363,6 +363,23 @@ def test_merge_batch_to_canvas_with_dask_arrays() -> None:
     assert isinstance(count, np.ndarray)
 
 
+def test_merge_batch_to_canvas_with_x_offset() -> None:
+    """Test merge_batch_to_canvas with non-zero x-offset."""
+    blocks = np.array([np.ones((2, 2, 1), dtype=np.float32)])
+    output_locations = np.array([[10, 0, 12, 2]])
+    merged_shape = (2, 2, 1)
+
+    canvas, count = semantic_segmentor.merge_batch_to_canvas(
+        blocks=blocks,
+        output_locations=output_locations,
+        merged_shape=merged_shape,
+        x_offset=10,
+    )
+
+    assert np.array_equal(canvas, np.ones((2, 2, 1), dtype=np.float32))
+    assert np.array_equal(count, np.ones((2, 2, 1), dtype=np.uint8))
+
+
 def test_merge_vertical_chunkwise_memory_threshold_triggered() -> None:
     """Test merge vertical chunkwise for memory threshold."""
     # Create dummy canvas and count arrays with 3 vertical chunks
@@ -400,6 +417,35 @@ def test_merge_vertical_chunkwise_memory_threshold_triggered() -> None:
 
         zarr_group = zarr.open(tmpdir, mode="r")
         assert np.all(zarr_group["probabilities"][:] == data)
+
+
+def test_merge_vertical_chunkwise_inserts_zero_rows_for_gaps() -> None:
+    """Test vertical merge inserts zero rows when there are y-gaps between rows."""
+    chunk_a = np.full((2, 2, 1), 2, dtype=np.float32)
+    chunk_b = np.full((2, 2, 1), 4, dtype=np.float32)
+    canvas = da.from_array(
+        np.concatenate([chunk_a, chunk_b], axis=0),
+        chunks=(2, 2, 1),
+    )
+    count = da.from_array(np.ones(canvas.shape, dtype=np.float32), chunks=(2, 2, 1))
+    output_locs_y_ = np.array([[0, 2], [4, 6]])
+
+    result = merge_vertical_chunkwise(
+        canvas=canvas,
+        count=count,
+        output_locs_y_=output_locs_y_,
+        zarr_group=None,
+        save_path=Path(),
+        memory_threshold=100,
+        output_shape=(6, 2),
+        verbose=False,
+    ).compute()
+
+    expected = np.concatenate(
+        [chunk_a, np.zeros((2, 2, 1), dtype=np.float32), chunk_b],
+        axis=0,
+    )
+    assert np.array_equal(result, expected)
 
 
 def test_raise_value_error_return_labels_wsi(

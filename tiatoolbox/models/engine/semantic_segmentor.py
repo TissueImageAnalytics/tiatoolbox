@@ -1034,6 +1034,7 @@ def merge_batch_to_canvas(
     blocks: np.ndarray,
     output_locations: np.ndarray,
     merged_shape: tuple[int, int, int],
+    x_offset: int = 0,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Merge patch-level predictions into a single canvas.
 
@@ -1049,6 +1050,9 @@ def merge_batch_to_canvas(
             [start_x, start_y, end_x, end_y] with shape (N, 4).
         merged_shape (tuple[int, int, int]):
             Shape of the final merged canvas (H, W, C).
+        x_offset (int):
+            Horizontal offset subtracted from each patch x-coordinate before
+            writing into ``canvas``. Defaults to 0.
 
     Returns:
         tuple[np.ndarray, np.ndarray]:
@@ -1067,6 +1071,8 @@ def merge_batch_to_canvas(
     count = np.zeros((*merged_shape[:2], 1), dtype=np.uint8)
     for i, block in enumerate(blocks):
         xs, ys, xe, ye = output_locations[i]
+        xs -= x_offset
+        xe -= x_offset
         if not np.any(block):
             continue
         # To deal with edge cases
@@ -1082,6 +1088,8 @@ def merge_horizontal(
     canvas_np: np.ndarray,
     output_locs: np.ndarray,
     change_indices: np.ndarray | list[int],
+    x_offset: int | None = None,
+    canvas_width: int | None = None,
 ) -> tuple[da.Array, da.Array, np.ndarray, np.ndarray, np.ndarray]:
     """Merge horizontal patches incrementally for each row of patches.
 
@@ -1103,6 +1111,12 @@ def merge_horizontal(
             Array of output locations for each patch.
         change_indices (np.ndarray | list[np.ndarray]):
             Indices indicating where to flush and merge patches.
+        x_offset (int | None):
+            Optional global x-origin used to place sparse rows into a shared
+            cropped canvas. If ``None``, uses each row's minimum x.
+        canvas_width (int | None):
+            Optional fixed canvas width for each merged row. If ``None``,
+            uses each row's local span.
 
     Returns:
         tuple:
@@ -1117,15 +1131,22 @@ def merge_horizontal(
 
         # Compute span only for the current row to avoid allocating a canvas
         # covering the entire slide width.
-        batch_xs = np.min(output_locs_[:, 0], axis=0)
-        batch_xe = np.max(output_locs_[:, 2], axis=0)
+        batch_xs = (
+            int(x_offset) if x_offset is not None else int(np.min(output_locs_[:, 0]))
+        )
+        merged_width = (
+            int(canvas_width)
+            if canvas_width is not None
+            else int(np.max(output_locs_[:, 2]) - batch_xs)
+        )
 
-        merged_shape = (canvas_np_.shape[1], batch_xe - batch_xs, canvas_np.shape[3])
+        merged_shape = (canvas_np_.shape[1], merged_width, canvas_np.shape[3])
 
         canvas_merge, count_merge = merge_batch_to_canvas(
             blocks=canvas_np_,
             output_locations=output_locs_,
             merged_shape=merged_shape,
+            x_offset=batch_xs,
         )
 
         canvas_merge = da.from_array(canvas_merge, chunks=canvas_merge.shape)
@@ -1273,7 +1294,7 @@ def get_wsi_output_shape(dataset: object) -> tuple[int, int] | None:
     return int(wsi_shape[1]), int(wsi_shape[0])
 
 
-def merge_vertical_chunkwise(
+def merge_vertical_chunkwise(  # noqa: PLR0912, PLR0915
     canvas: da.Array,
     count: da.Array,
     output_locs_y_: np.ndarray,
@@ -1320,7 +1341,7 @@ def merge_vertical_chunkwise(
 
     """
     y0s, y1s = np.unique(output_locs_y_[:, 0]), np.unique(output_locs_y_[:, 1])
-    overlaps = np.append(y1s[:-1] - y0s[1:], 0)
+    overlaps = np.append(y1s[:-1] - y0s[1:], 0).astype(np.int32)
 
     num_chunks = canvas.numblocks[0]
     probabilities_zarr, probabilities_da = None, None
@@ -1343,10 +1364,12 @@ def merge_vertical_chunkwise(
 
     probabilities = np.empty(0)
 
-    for i, overlap in enumerate(tqdm_loop):
-        if next_chunk is not None and overlap > 0:
-            curr_chunk[-overlap:] += next_chunk[:overlap]
-            curr_count[-overlap:] += next_count[:overlap]
+    for i, overlap_ in enumerate(tqdm_loop):
+        overlap = int(overlap_)
+        positive_overlap = max(overlap, 0)
+        if next_chunk is not None and positive_overlap > 0:
+            curr_chunk[-positive_overlap:] += next_chunk[:positive_overlap]
+            curr_count[-positive_overlap:] += next_count[:positive_overlap]
 
         # Normalize
         curr_count = np.where(curr_count == 0, 1, curr_count)
@@ -1392,8 +1415,62 @@ def merge_vertical_chunkwise(
             probabilities_da = None
             update_tqdm_desc(tqdm_loop=tqdm_loop, desc=desc)
 
+        if overlap < 0:
+            gap_height = -overlap
+            gap_probabilities = np.zeros(
+                (gap_height, *probabilities.shape[1:]),
+                dtype=probabilities.dtype,
+            )
+
+            (
+                gap_probabilities,
+                written_height,
+                should_stop,
+            ) = clip_probabilities_to_shape(
+                probabilities=gap_probabilities,
+                output_shape=output_shape,
+                written_height=written_height,
+            )
+            if should_stop:
+                break
+
+            probabilities_zarr, probabilities_da = store_probabilities(
+                probabilities=gap_probabilities,
+                chunk_shape=chunk_shape,
+                probabilities_zarr=probabilities_zarr,
+                probabilities_da=probabilities_da,
+                zarr_group=zarr_group,
+            )
+
+            if probabilities_da is not None:
+                vm = psutil.virtual_memory()
+                used_percent = (probabilities_da.nbytes / vm.free) * 100
+            if probabilities_zarr is None and used_percent > memory_threshold:
+                desc = tqdm_loop.desc if hasattr(tqdm_loop, "desc") else ""
+                msg = (
+                    f"Current Memory usage: {used_percent} %  "
+                    f"exceeds specified threshold: {memory_threshold}. "
+                    f"Saving intermediate results to disk."
+                )
+                update_tqdm_desc(tqdm_loop=tqdm_loop, desc=msg)
+                zarr_group = zarr.open(str(save_path), mode="a")
+                probabilities_zarr = zarr_group.create_dataset(
+                    name="probabilities",
+                    shape=probabilities_da.shape,
+                    chunks=(chunk_shape[0], *gap_probabilities.shape[1:]),
+                    dtype=gap_probabilities.dtype,
+                    overwrite=True,
+                )
+                probabilities_zarr[:] = probabilities_da.compute()
+
+                probabilities_da = None
+                update_tqdm_desc(tqdm_loop=tqdm_loop, desc=desc)
+
         if next_chunk is not None:
-            curr_chunk, curr_count = next_chunk[overlap:], next_count[overlap:]
+            curr_chunk, curr_count = (
+                next_chunk[positive_overlap:],
+                next_count[positive_overlap:],
+            )
 
         if i + 2 < num_chunks:
             next_chunk = canvas.blocks[i + 2, 0].compute()
