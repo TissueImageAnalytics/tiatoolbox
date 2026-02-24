@@ -261,15 +261,15 @@ def test_single_task_mtsegmentor(
     )
     patch3 = np.zeros_like(patch1)
 
-    patch1_path = track_tmp_path / "patch1.png"
-    patch2_path = track_tmp_path / "patch2.png"
-    patch3_path = track_tmp_path / "patch3.png"
+    imwrite(track_tmp_path / "patch1.png", patch1)
+    imwrite(track_tmp_path / "patch2.png", patch2)
+    imwrite(track_tmp_path / "patch3.png", patch3)
 
-    imwrite(patch1_path, patch1)
-    imwrite(patch2_path, patch2)
-    imwrite(patch3_path, patch3)
-
-    inputs = [Path(patch1_path), Path(patch2_path), Path(patch3_path)]
+    inputs = [
+        track_tmp_path / "patch1.png",
+        track_tmp_path / "patch2.png",
+        track_tmp_path / "patch3.png",
+    ]
 
     assert not mtsegmentor.patch_mode
 
@@ -327,12 +327,17 @@ def test_single_task_mtsegmentor(
 
     # AnnotationStore output comparison
     mtsegmentor.drop_keys = []
-    output_ann = mtsegmentor.save_predictions(
-        processed_predictions=processed_predictions.copy(),
-        output_type="annotationstore",
-        save_path=(track_tmp_path / "patch_output_annotationstore" / "output_ann.db"),
+
+    # Triggers Return Coordinates for patch inference
+    output_ann = mtsegmentor.run(
+        images=inputs,
         return_probabilities=True,
+        return_labels=False,
+        device=device,
+        patch_mode=True,
+        save_dir=track_tmp_path / "patch_output_annotationstore",
         return_predictions=(True,),
+        output_type="annotationstore",
     )
 
     assert len(output_ann) == 3
@@ -349,18 +354,17 @@ def test_single_task_mtsegmentor(
         class_dict=class_dict_["nuclei_segmentation"],
     )
 
-    assert (
-        track_tmp_path / "patch_output_annotationstore" / "output_ann.zarr"
-    ).exists()
+    assert (track_tmp_path / "patch_output_annotationstore" / "output.zarr").exists()
 
     zarr_group = zarr.open(
-        str(track_tmp_path / "patch_output_annotationstore" / "output_ann.zarr"),
+        str(track_tmp_path / "patch_output_annotationstore" / "output.zarr"),
         mode="r",
     )
 
     assert "probabilities" in zarr_group
+    assert "predictions" in zarr_group
 
-    fields = ["box", "centroid", "contours", "prob", "type", "predictions"]
+    fields = ["box", "centroid", "contours", "prob", "type"]
     for field in fields:
         assert field not in zarr_group
 
@@ -397,7 +401,7 @@ def test_single_task_mtsegmentor(
 
     assert "probabilities" in zarr_group
 
-    fields = ["box", "centroid", "contours", "prob", "type", "predictions"]
+    fields = ["box", "centroid", "contours", "prob", "type"]
     for field in fields:
         assert field not in zarr_group
 
