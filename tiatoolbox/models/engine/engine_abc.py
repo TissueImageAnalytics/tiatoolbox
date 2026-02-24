@@ -73,6 +73,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import IntPair, Resolution, Units
+    from tiatoolbox.wsicore import WSIReaderParams
 
 
 class EngineABCRunParams(TypedDict, total=False):
@@ -109,6 +110,8 @@ class EngineABCRunParams(TypedDict, total=False):
             Stride used during WSI processing, at requested read resolution.
             Must be positive. Defaults to `patch_input_shape` if not
             provided.
+        wsireader_kwargs (WSIReaderParams):
+            Specify processing images with no mpp or power in the metadata.
         verbose (bool):
             Whether to enable verbose logging.
 
@@ -125,6 +128,7 @@ class EngineABCRunParams(TypedDict, total=False):
     return_labels: bool
     scale_factor: tuple[float, float]
     stride_shape: IntPair
+    wsireader_kwargs: dict
     verbose: bool
 
 
@@ -394,6 +398,7 @@ class EngineABC(ABC):  # noqa: B024
         *,
         patch_mode: bool = True,
         auto_get_mask: bool = True,
+        wsireader_kwargs: WSIReaderParams | None = None,
     ) -> torch.utils.data.DataLoader:
         """Pre-process images and masks and return a DataLoader for inference.
 
@@ -412,6 +417,8 @@ class EngineABC(ABC):  # noqa: B024
                 IO configuration object specifying patch size, stride, and resolution.
             patch_mode (bool):
                 Whether to treat input as patches (`True`) or WSIs (`False`).
+            wsireader_kwargs (WSIReaderParams):
+                Specify processing images with no mpp or power in the metadata.
             auto_get_mask (bool):
                 Whether to automatically generate a tissue mask using
                 `wsireader.tissue_mask()` when `patch_mode` is False.
@@ -436,6 +443,7 @@ class EngineABC(ABC):  # noqa: B024
                 resolution=ioconfig.input_resolutions[0]["resolution"],
                 units=ioconfig.input_resolutions[0]["units"],
                 auto_get_mask=auto_get_mask,
+                wsireader_kwargs=wsireader_kwargs,
             )
 
             dataset.preproc_func = self._get_model_attr("preproc_func")
@@ -623,6 +631,8 @@ class EngineABC(ABC):  # noqa: B024
                         Stride used during WSI processing, at requested read resolution.
                         Must be positive. Defaults to `patch_input_shape` if not
                         provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 
@@ -688,6 +698,8 @@ class EngineABC(ABC):  # noqa: B024
                         Stride used during WSI processing, at requested read resolution.
                         Must be positive. Defaults to `patch_input_shape` if not
                         provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 
@@ -908,6 +920,8 @@ class EngineABC(ABC):  # noqa: B024
                         Stride used during WSI processing, at requested read resolution.
                         Must be positive. Defaults to `patch_input_shape` if not
                         provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 
@@ -976,6 +990,8 @@ class EngineABC(ABC):  # noqa: B024
                         Stride used during WSI processing, at requested read resolution.
                         Must be positive. Defaults to `patch_input_shape` if not
                         provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 
@@ -1265,6 +1281,8 @@ class EngineABC(ABC):  # noqa: B024
                         Stride used during WSI processing, at requested read resolution.
                         Must be positive. Defaults to `patch_input_shape` if not
                         provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 
@@ -1401,6 +1419,8 @@ class EngineABC(ABC):  # noqa: B024
                         Stride used during WSI processing, at requested read resolution.
                         Must be positive. Defaults to `patch_input_shape` if not
                         provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 
@@ -1428,6 +1448,7 @@ class EngineABC(ABC):  # noqa: B024
             labels=self.labels,
             patch_mode=True,
             ioconfig=self._ioconfig,
+            wsireader_kwargs=kwargs.get("wsireader_kwargs"),
         )
         raw_predictions = self.infer_patches(
             dataloader=self.dataloader,
@@ -1556,6 +1577,8 @@ class EngineABC(ABC):  # noqa: B024
                         Stride used during WSI processing, at requested read resolution.
                         Must be positive. Defaults to `patch_input_shape` if not
                         provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 
@@ -1602,6 +1625,7 @@ class EngineABC(ABC):  # noqa: B024
                 patch_mode=False,
                 ioconfig=self._ioconfig,
                 auto_get_mask=kwargs.get("auto_get_mask", True),
+                wsireader_kwargs=kwargs.get("wsireader_kwargs"),
             )
 
             scale_factor = self._calculate_scale_factor(dataloader=self.dataloader)
@@ -1714,6 +1738,8 @@ class EngineABC(ABC):  # noqa: B024
                         Stride used during WSI processing, at requested read resolution.
                         Must be positive. Defaults to `patch_input_shape` if not
                         provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 

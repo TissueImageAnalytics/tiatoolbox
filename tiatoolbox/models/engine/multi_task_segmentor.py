@@ -540,6 +540,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     stride_shape (tuple[int, int]):
                         Stride used during WSI processing.
                         Defaults to `patch_input_shape` if not provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 
@@ -767,6 +769,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     stride_shape (tuple[int, int]):
                         Stride used during WSI processing.
                         Defaults to `patch_input_shape` if not provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 
@@ -875,6 +879,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     stride_shape (tuple[int, int]):
                         Stride used during WSI processing.
                         Defaults to `patch_input_shape` if not provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 
@@ -1791,6 +1797,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     stride_shape (tuple[int, int]):
                         Stride used during WSI processing.
                         Defaults to `patch_input_shape` if not provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 
@@ -1980,6 +1988,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     stride_shape (tuple[int, int]):
                         Stride used during WSI processing.
                         Defaults to `patch_input_shape` if not provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 
@@ -2678,7 +2688,7 @@ def _save_annotation_json_store(
     output_path = (save_path.parent / store_file_name).with_suffix(suffix)
     # Patch mode indexes the "coordinates" while calculating "values" variable.
     origin = (0.0, 0.0)
-    _ = predictions.pop("coordinates")
+    _ = predictions.pop("coordinates") if "coordinates" in predictions else None
     return dict_to_json_store(
         processed_predictions=predictions,
         class_dict=class_dict,

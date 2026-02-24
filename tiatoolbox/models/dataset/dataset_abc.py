@@ -22,6 +22,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from typing import TypeGuard
 
     from tiatoolbox.type_hints import IntPair, Resolution, Units
+    from tiatoolbox.wsicore import WSIReaderParams
 
 input_type = list[str | Path | np.ndarray] | np.ndarray
 
@@ -212,7 +213,7 @@ class WSIPatchDataset(PatchDatasetABC):
 
     """
 
-    def __init__(  # skipcq: PY-R1000
+    def __init__(  # skipcq: PY-R1000  # noqa: PLR0913
         self: WSIPatchDataset,
         input_img: str | Path | WSIReader,
         mask_path: str | Path | None = None,
@@ -223,6 +224,7 @@ class WSIPatchDataset(PatchDatasetABC):
         units: Units = None,
         min_mask_ratio: float = 0,
         preproc_func: Callable | None = None,
+        wsireader_kwargs: WSIReaderParams | None = None,
         *,
         auto_get_mask: bool = True,
     ) -> None:
@@ -265,6 +267,8 @@ class WSIPatchDataset(PatchDatasetABC):
                 Preprocessing function used to transform the input data. If
                 supplied, the function will be called on each patch before
                 returning it.
+            wsireader_kwargs (WSIReaderParams):
+                Specify processing images with no mpp or power in the metadata.
 
         Examples:
             >>> # A user defined preproc func and expected behavior
@@ -300,10 +304,11 @@ class WSIPatchDataset(PatchDatasetABC):
             input_img if not isinstance(input_img, WSIReader) else input_img.input_path
         )
         self.img_path = Path(img_path)
+        wsireader_kwargs = {} if wsireader_kwargs is None else wsireader_kwargs
         reader = (
             input_img
             if isinstance(input_img, WSIReader)
-            else WSIReader.open(self.img_path)
+            else WSIReader.open(self.img_path, **wsireader_kwargs)
         )
         # To support multi-threading on Windows
         # Helps pickle using Path

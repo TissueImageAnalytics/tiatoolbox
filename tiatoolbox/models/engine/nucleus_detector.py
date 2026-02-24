@@ -954,6 +954,8 @@ class NucleusDetector(SemanticSegmentor):
                     stride_shape (tuple[int, int]):
                         Stride used during WSI processing.
                         Defaults to patch_input_shape.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to output logging information.
 
