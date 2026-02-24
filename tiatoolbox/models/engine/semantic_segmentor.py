@@ -83,6 +83,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.models.engine.io_config import IOSegmentorConfig
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import IntPair, Resolution, Units
+    from tiatoolbox.wsicore import WSIReaderParams
 
 
 class SemanticSegmentorRunParams(PredictorRunParams, total=False):
@@ -317,6 +318,7 @@ class SemanticSegmentor(PatchPredictor):
         *,
         patch_mode: bool = True,
         auto_get_mask: bool = True,
+        wsireader_kwargs: WSIReaderParams | None = None,
     ) -> torch.utils.data.DataLoader:
         """Pre-process images and masks and return a DataLoader for inference.
 
@@ -343,6 +345,8 @@ class SemanticSegmentor(PatchPredictor):
                 `wsireader.tissue_mask()` when `patch_mode` is False.
                 If `True`, only tissue regions are processed. If `False`,
                 all patches are processed. Default is `True`.
+            wsireader_kwargs (WSIReaderParams):
+                Specify processing images with no mpp or power in the metadata.
 
         Returns:
             torch.utils.data.DataLoader:
@@ -360,6 +364,7 @@ class SemanticSegmentor(PatchPredictor):
                 resolution=ioconfig.input_resolutions[0]["resolution"],
                 units=ioconfig.input_resolutions[0]["units"],
                 auto_get_mask=auto_get_mask,
+                wsireader_kwargs=wsireader_kwargs,
             )
 
             dataset.preproc_func = self._get_model_attr("preproc_func")
@@ -380,6 +385,7 @@ class SemanticSegmentor(PatchPredictor):
             labels=labels,
             ioconfig=ioconfig,
             patch_mode=patch_mode,
+            wsireader_kwargs=wsireader_kwargs,
         )
 
     def infer_wsi(
@@ -437,6 +443,8 @@ class SemanticSegmentor(PatchPredictor):
                     stride_shape (tuple[int, int]):
                         Stride used during WSI processing.
                         Defaults to `patch_input_shape` if not provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 
@@ -660,6 +668,8 @@ class SemanticSegmentor(PatchPredictor):
                     stride_shape (tuple[int, int]):
                         Stride used during WSI processing.
                         Defaults to `patch_input_shape` if not provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 
@@ -828,6 +838,8 @@ class SemanticSegmentor(PatchPredictor):
                     stride_shape (tuple[int, int]):
                         Stride used during WSI processing.
                         Defaults to `patch_input_shape` if not provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 
@@ -941,6 +953,8 @@ class SemanticSegmentor(PatchPredictor):
                     stride_shape (tuple[int, int]):
                         Stride used during WSI processing.
                         Defaults to `patch_input_shape` if not provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
                     verbose (bool):
                         Whether to enable verbose logging.
 

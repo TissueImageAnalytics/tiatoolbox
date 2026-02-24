@@ -12,6 +12,7 @@ from . import (
 __all__ = [
     "deep_feature_extractor",
     "engine_abc",
+    "multi_task_segmentor",
     "nucleus_detector",
     "nucleus_instance_segmentor",
     "patch_predictor",
