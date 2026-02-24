@@ -304,6 +304,7 @@ class WSIPatchDataset(PatchDatasetABC):
             input_img if not isinstance(input_img, WSIReader) else input_img.input_path
         )
         self.img_path = Path(img_path)
+        wsireader_kwargs = {} if wsireader_kwargs is None else wsireader_kwargs
         reader = (
             input_img
             if isinstance(input_img, WSIReader)

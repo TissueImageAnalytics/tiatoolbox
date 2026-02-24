@@ -6,6 +6,7 @@ import copy
 import logging
 import shutil
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import dask.array as da
 import numpy as np
@@ -26,6 +27,9 @@ from tiatoolbox.models.engine.engine_abc import (
     prepare_engines_save_dir,
 )
 from tiatoolbox.models.engine.io_config import ModelIOConfigABC
+
+if TYPE_CHECKING:
+    from tiatoolbox.wsicore import WSIReaderParams
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
@@ -559,12 +563,14 @@ class TestEngineABC(EngineABC):
 
     def get_dataloader(
         self: EngineABC,
-        images: Path | np.ndarray | list[np.ndarray],
+        images: str | Path | list[str | Path] | np.ndarray,
         masks: Path | None = None,
         labels: list | None = None,
         ioconfig: ModelIOConfigABC | None = None,
         *,
         patch_mode: bool = True,
+        auto_get_mask: bool = True,
+        wsireader_kwargs: WSIReaderParams | None = None,
     ) -> torch.utils.data.DataLoader:
         """Test pre process images."""
         return super().get_dataloader(
@@ -573,6 +579,8 @@ class TestEngineABC(EngineABC):
             labels,
             ioconfig,
             patch_mode=patch_mode,
+            wsireader_kwargs=wsireader_kwargs,
+            auto_get_mask=auto_get_mask,
         )
 
     def post_process_wsi(
@@ -592,7 +600,7 @@ class TestEngineABC(EngineABC):
         self: EngineABC,
         dataloader: torch.utils.data.DataLoader,
         save_path: Path,
-        **kwargs: dict,
+        **kwargs: Unpack[EngineABCRunParams],
     ) -> dict | np.ndarray:
         """Test infer_wsi."""
         return super().infer_wsi(  # skipcq: PYL-E1121
