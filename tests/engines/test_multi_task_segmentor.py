@@ -25,7 +25,9 @@ from tiatoolbox.models.engine.multi_task_segmentor import (
     DaskDelayedJSONStore,
     MultiTaskSegmentor,
     _clear_zarr,
+    _filter_tile_metadata_by_sparse_outputs,
     _get_sel_indices_margin_lines,
+    _get_sparse_output_locs,
     _save_multitask_vertical_to_cache,
 )
 from tiatoolbox.utils import download_data, imwrite
@@ -1014,6 +1016,77 @@ def test_get_tile_info_small_image_triggers_early_return(
     # flag should be zeros with shape (N, 4)
     assert flag.shape == (1, 4)
     assert np.all(flag == 0)
+
+
+def test_get_sparse_output_locs_detects_masked_subset() -> None:
+    """Test sparse output detection when outputs are mask-filtered."""
+
+    class DummyDataset:
+        """Dummy dataset with output coordinates."""
+
+    dataset = DummyDataset()
+    dataset.outputs = np.array([[0, 0, 164, 164], [164, 0, 328, 164]])
+    dataset.full_outputs = np.array(
+        [
+            [0, 0, 164, 164],
+            [164, 0, 328, 164],
+            [328, 0, 492, 164],
+        ]
+    )
+
+    sparse_output_locs = _get_sparse_output_locs(dataset)
+    assert sparse_output_locs is not None
+    assert np.array_equal(sparse_output_locs, dataset.outputs)
+
+
+def test_get_sparse_output_locs_returns_none_for_dense_outputs() -> None:
+    """Test sparse output detection returns None when outputs are not sparse."""
+
+    class DummyDataset:
+        """Dummy dataset with output coordinates."""
+
+    dataset = DummyDataset()
+    dataset.outputs = np.array([[0, 0, 164, 164], [164, 0, 328, 164]])
+    dataset.full_outputs = np.array([[0, 0, 164, 164], [164, 0, 328, 164]])
+
+    sparse_output_locs = _get_sparse_output_locs(dataset)
+    assert sparse_output_locs is None
+
+
+def test_filter_tile_metadata_by_sparse_outputs_reduces_tile_count() -> None:
+    """Test sparse output filtering removes non-overlapping tile tasks."""
+    tile_metadata = [
+        (np.array([0, 0, 100, 100]), np.array([0, 0, 0, 0]), 0),
+        (np.array([100, 0, 200, 100]), np.array([0, 0, 0, 0]), 0),
+        (np.array([0, 100, 100, 200]), np.array([0, 0, 0, 0]), 0),
+    ]
+    sparse_output_locs = np.array([[20, 20, 80, 80]])
+
+    filtered_tile_metadata = _filter_tile_metadata_by_sparse_outputs(
+        tile_metadata=tile_metadata,
+        sparse_output_locs=sparse_output_locs,
+    )
+
+    assert len(filtered_tile_metadata) == 1
+    assert np.array_equal(filtered_tile_metadata[0][0], np.array([0, 0, 100, 100]))
+
+
+def test_filter_tile_metadata_by_sparse_outputs_keeps_seam_tiles() -> None:
+    """Test sparse output filtering keeps seam tiles that intersect active outputs."""
+    tile_metadata = [
+        (np.array([0, 0, 100, 100]), np.array([0, 0, 0, 0]), 0),
+        (np.array([90, 0, 110, 100]), np.array([1, 1, 0, 0]), 1),
+        (np.array([100, 0, 200, 100]), np.array([0, 0, 0, 0]), 0),
+    ]
+    sparse_output_locs = np.array([[95, 20, 105, 80]])
+
+    filtered_tile_metadata = _filter_tile_metadata_by_sparse_outputs(
+        tile_metadata=tile_metadata,
+        sparse_output_locs=sparse_output_locs,
+    )
+
+    assert len(filtered_tile_metadata) == 3
+    assert [tile_mode for _, _, tile_mode in filtered_tile_metadata] == [0, 1, 0]
 
 
 class FakeSeg(MultiTaskSegmentor):

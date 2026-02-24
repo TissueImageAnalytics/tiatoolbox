@@ -1112,6 +1112,24 @@ class MultiTaskSegmentor(SemanticSegmentor):
             tile_info_sets=tile_info_sets,
             verbose=self.verbose,
         )
+        sparse_output_locs = _get_sparse_output_locs(self.dataloader.dataset)
+        if sparse_output_locs is not None:
+            total_tiles = len(tile_metadata)
+            filtered_tile_metadata = _filter_tile_metadata_by_sparse_outputs(
+                tile_metadata=tile_metadata,
+                sparse_output_locs=sparse_output_locs,
+            )
+            if len(filtered_tile_metadata) == 0:
+                logger.warning(
+                    "Sparse output tile filtering removed all tile tasks. "
+                    "Falling back to full-tile post-processing."
+                )
+            else:
+                tile_metadata = filtered_tile_metadata
+                logger.info(
+                    "Sparse output tile filtering kept "
+                    f"{len(tile_metadata)}/{total_tiles} tile tasks."
+                )
 
         # Only used for delayed processing.
         self._probabilities = probabilities  # skipcq: PYL-W0201  # skipcq: PYL-W0201
@@ -3101,6 +3119,77 @@ def _build_tile_tasks(
             tile_metadata.append((tile_bounds, tile_flag, set_idx))
 
     return tile_metadata
+
+
+def _get_sparse_output_locs(dataset: object) -> np.ndarray | None:
+    """Return sparse output locations when dataset outputs are mask-filtered.
+
+    Args:
+        dataset (object):
+            A dataset object expected to expose ``outputs`` and ``full_outputs``.
+
+    Returns:
+        np.ndarray | None:
+            ``outputs`` as a NumPy array when it is a strict subset of
+            ``full_outputs`` (masked/sparse run), otherwise ``None``.
+
+    """
+    output_locs = getattr(dataset, "outputs", None)
+    full_output_locs = getattr(dataset, "full_outputs", None)
+    if output_locs is None or full_output_locs is None:
+        return None
+
+    output_locs = np.asarray(output_locs)
+    full_output_locs = np.asarray(full_output_locs)
+    coord_ndim = 2
+    coord_width = 4
+    valid_shapes = (
+        output_locs.ndim == coord_ndim
+        and full_output_locs.ndim == coord_ndim
+        and output_locs.shape[1] == coord_width
+        and full_output_locs.shape[1] == coord_width
+    )
+    if not valid_shapes:
+        return None
+    if len(output_locs) == 0 or len(full_output_locs) == 0:
+        return None
+    if len(output_locs) >= len(full_output_locs):
+        return None
+
+    return output_locs
+
+
+def _filter_tile_metadata_by_sparse_outputs(
+    tile_metadata: list[tuple],
+    sparse_output_locs: np.ndarray | None,
+) -> list[tuple]:
+    """Filter tile metadata to tiles that intersect sparse output locations.
+
+    Args:
+        tile_metadata (list[tuple]):
+            Tile metadata tuples as ``(tile_bounds, tile_flag, tile_mode)``.
+        sparse_output_locs (np.ndarray | None):
+            Sparse output bounds in ``[x0, y0, x1, y1]`` format.
+
+    Returns:
+        list[tuple]:
+            Subset of ``tile_metadata`` that intersects any sparse output bound.
+
+    """
+    if sparse_output_locs is None or len(tile_metadata) == 0:
+        return tile_metadata
+
+    output_geometries = [shapely.box(*bounds) for bounds in sparse_output_locs]
+    output_rtree = STRtree(output_geometries)
+
+    filtered_tile_metadata = []
+    for tile_meta in tile_metadata:
+        tile_bounds = tile_meta[0]
+        tile_geometry = shapely.box(*tile_bounds)
+        if len(output_rtree.query(tile_geometry)) > 0:
+            filtered_tile_metadata.append(tile_meta)
+
+    return filtered_tile_metadata
 
 
 def _compute_info_dict_for_merge(
