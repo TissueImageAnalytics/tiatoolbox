@@ -280,3 +280,28 @@ def test_efficientnet_encoder_load_state_dict_drops_classifier_keys() -> None:
     assert not load_result.unexpected_keys
     assert "classifier.bias" not in encoder.state_dict()
     assert "classifier.weight" not in encoder.state_dict()
+
+
+def test_forward_skips_depth_1_branch() -> None:
+    """Tests forward skips depth 1 branch."""
+    # Create your real encoder
+    encoder = EfficientNetEncoder(
+        stage_idxs=[2, 3, 5],
+        out_channels=[3, 32, 24, 40, 112, 320],
+        channel_multiplier=1.0,
+        depth_multiplier=1.0,
+        drop_rate=0.2,
+    )  # whatever args your class needs
+
+    # Force depth < 1 so the branch is skipped
+    encoder._depth = 0
+
+    # Input tensor
+    x = torch.randn(1, 3, 32, 32)
+
+    # Run forward
+    features = encoder.forward(x)
+
+    # Only the original input should be returned
+    assert len(features) == 1
+    assert torch.equal(features[0], x)
