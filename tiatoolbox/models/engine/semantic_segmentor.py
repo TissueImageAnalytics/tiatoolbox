@@ -377,6 +377,7 @@ class SemanticSegmentor(PatchPredictor):
                 batch_size=self.batch_size,
                 drop_last=False,
                 shuffle=False,
+                persistent_workers=self.num_workers > 0,
             )
 
         return super().get_dataloader(
