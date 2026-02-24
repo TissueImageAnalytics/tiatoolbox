@@ -6,6 +6,7 @@ import json
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
+from unittest.mock import MagicMock
 
 import dask.array as da
 import numpy as np
@@ -18,6 +19,7 @@ from tqdm.auto import tqdm
 
 from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
+from tiatoolbox.models import IOSegmentorConfig
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.engine.multi_task_segmentor import (
     DaskDelayedJSONStore,
@@ -32,6 +34,8 @@ from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
+
+    from _pytest.monkeypatch import MonkeyPatch
 
 OutputType = dict[str, Any] | Any
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
@@ -965,6 +969,114 @@ def test_compute_qupath_json_string_class_names(track_tmp_path: Path) -> None:
     #    contains the key, but we don't enforce that here — just
     #    ensure no nulls
     assert "null" not in json.dumps(data)
+
+
+def test_get_tile_info_small_image_triggers_early_return(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    """Tests _get_tile_info.
+
+    Ensures that when image_shape <= tile_shape, the function returns
+    [[boxes, flag]] with flag = zeros.
+
+    """
+    # --- Arrange ---
+    # Make image smaller than tile_shape
+    image_shape = [100, 100]
+
+    # Configure tile_shape so that tile_shape >= image_shape
+    ioconfig = IOSegmentorConfig(
+        tile_shape=[200, 200],
+        patch_output_shape=[200, 200],
+        margin=None,
+        input_resolutions=[{"units": "mpp", "resolution": 0.25}],
+        patch_input_shape=(200, 200),
+    )
+
+    # Patch PatchExtractor.get_coordinates to return predictable boxes
+    fake_boxes = np.array([[0, 0, 100, 100]])
+    monkeypatch.setattr(
+        "tiatoolbox.tools.patchextraction.PatchExtractor.get_coordinates",
+        lambda **kwargs: (None, fake_boxes),  # noqa: ARG005
+    )
+
+    # --- Act ---
+    result = MultiTaskSegmentor._get_tile_info(image_shape, ioconfig)
+
+    # --- Assert ---
+    assert isinstance(result, list)
+    assert len(result) == 1  # early return path
+    boxes, flag = result[0]
+
+    # boxes should be exactly what we patched
+    assert np.array_equal(boxes, fake_boxes)
+
+    # flag should be zeros with shape (N, 4)
+    assert flag.shape == (1, 4)
+    assert np.all(flag == 0)
+
+
+class FakeSeg(MultiTaskSegmentor):
+    """Minimal subclass that allows us to override internals cleanly."""
+
+    def __init__(self: FakeSeg) -> None:
+        """Initialize the FakeSeg."""
+        # Pretend we have one task
+        self.tasks = {"instance"}
+        self.return_predictions_dict = {"instance": True}
+
+    def _get_model_attr(self: FakeSeg, name: str = "a") -> dict:
+        # Pretend the model has a class_dict
+        return {"instance": {name: 1}}
+
+    # These will be patched in the test
+    _save_predictions_as_dict_zarr = MagicMock()
+    _save_predictions_as_json_store = MagicMock()
+
+
+def test_save_predictions_includes_coordinates(track_tmp_path: Path) -> None:
+    """Test save predictions includes coordinates.
+
+    Ensures that when 'coordinates' is present in processed_predictions,
+    the method merges it into dict_for_store before calling
+    _save_predictions_as_json_store.
+
+    """
+    seg = FakeSeg()
+
+    # processed_predictions returned by _save_predictions_as_dict_zarr
+    processed_predictions = {
+        "instance": {"predictions": [1, 2, 3]},
+        "coordinates": [10, 20, 30],
+    }
+
+    # Make the dict-zarr saver return our processed_predictions
+    seg._save_predictions_as_dict_zarr.return_value = processed_predictions
+
+    # Make the json-store saver return a fake path list
+    seg._save_predictions_as_json_store.return_value = [track_tmp_path / "out.db"]
+
+    save_path = track_tmp_path / "result"
+
+    # --- Act ---
+    seg.save_predictions(
+        processed_predictions=processed_predictions,
+        output_type="annotationstore",
+        save_path=save_path,
+        return_probabilities=False,
+        return_predictions=(False,),  # ensures output_type_ becomes "dict"
+    )
+
+    # --- Assert ---
+    assert seg._save_predictions_as_json_store.called
+
+    # Extract the dict passed to the JSON store saver
+    call_args = seg._save_predictions_as_json_store.call_args.kwargs
+    dict_for_store = call_args["processed_predictions"]
+
+    # Must contain both the task predictions and the coordinates
+    assert dict_for_store["predictions"] == [1, 2, 3]
+    assert dict_for_store["coordinates"] == [10, 20, 30]
 
 
 # HELPER functions
