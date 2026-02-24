@@ -224,12 +224,15 @@ def test_mtsegmentor_tiles_no_metadata(track_tmp_path: Path) -> None:
         device=device,
         auto_get_mask=False,
         wsireader_kwargs={"mpp": 0.25},  # use this mpp to run test faster
+        return_predictions=(True, True),
     )
 
     assert tile_output[img_file_name].exists()
     output_zarr = zarr.open(tile_output[img_file_name], mode="r")
     assert "nuclei_segmentation" in output_zarr
     assert "layer_segmentation" in output_zarr
+    assert "predictions" in output_zarr["layer_segmentation"]
+    assert "predictions" in output_zarr["nuclei_segmentation"]
     fields_layer = ["contours", "type"]
     assert (field in output_zarr["layer_segmentation"] for field in fields_layer)
     fields_nuclei = ["box", "centroid", "contours", "prob", "type"]
