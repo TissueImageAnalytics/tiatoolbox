@@ -223,7 +223,7 @@ def test_mtsegmentor_tiles_no_metadata(track_tmp_path: Path) -> None:
         patch_mode=False,
         device=device,
         auto_get_mask=False,
-        wsireader_kwargs={"mpp": 0.25},
+        wsireader_kwargs={"mpp": 0.25},  # use this mpp to run test faster
     )
 
     assert tile_output[img_file_name].exists()
@@ -372,12 +372,15 @@ def test_single_task_mtsegmentor(
 
     # QuPath output comparison
     mtsegmentor.drop_keys = []
-    output_json = mtsegmentor.save_predictions(
-        processed_predictions=processed_predictions.copy(),
-        output_type="qupath",
-        save_path=track_tmp_path / "patch_output_qupath" / "output_qupath.db",
+    output_json = mtsegmentor.run(
+        images=inputs,
         return_probabilities=True,
-        return_predictions=(True,),
+        return_labels=False,
+        device=device,
+        patch_mode=True,
+        save_dir=track_tmp_path / "patch_output_qupath",
+        return_predictions=(False,),
+        output_type="qupath",
     )
 
     assert len(output_json) == 3
@@ -392,16 +395,16 @@ def test_single_task_mtsegmentor(
         task_name=None,
     )
 
-    assert (track_tmp_path / "patch_output_qupath" / "output_qupath.zarr").exists()
+    assert (track_tmp_path / "patch_output_qupath" / "output.zarr").exists()
 
     zarr_group = zarr.open(
-        str(track_tmp_path / "patch_output_qupath" / "output_qupath.zarr"),
+        str(track_tmp_path / "patch_output_qupath" / "output.zarr"),
         mode="r",
     )
 
     assert "probabilities" in zarr_group
 
-    fields = ["box", "centroid", "contours", "prob", "type"]
+    fields = ["box", "centroid", "contours", "prob", "type", "predictions"]
     for field in fields:
         assert field not in zarr_group
 
