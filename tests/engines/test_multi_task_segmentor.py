@@ -1022,11 +1022,12 @@ class FakeSeg(MultiTaskSegmentor):
     def __init__(self: FakeSeg) -> None:
         """Initialize the FakeSeg."""
         # Pretend we have one task
+        super().__init__(model="hovernetplus-oed")
         self.tasks = {"instance"}
         self.return_predictions_dict = {"instance": True}
 
     def _get_model_attr(self: FakeSeg, name: str = "a") -> dict:
-        # Pretend the model has a class_dict
+        """Pretend the model has a class_dict."""
         return {"instance": {name: 1}}
 
     # These will be patched in the test
