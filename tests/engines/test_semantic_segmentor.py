@@ -419,8 +419,8 @@ def test_merge_vertical_chunkwise_memory_threshold_triggered() -> None:
         assert np.all(zarr_group["probabilities"][:] == data)
 
 
-def test_merge_vertical_chunkwise_inserts_zero_rows_for_gaps() -> None:
-    """Test vertical merge inserts zero rows when there are y-gaps between rows."""
+def test_merge_vertical_chunkwise_ignores_negative_overlap_gaps() -> None:
+    """Test negative overlaps do not add extra rows during vertical merge."""
     chunk_a = np.full((2, 2, 1), 2, dtype=np.float32)
     chunk_b = np.full((2, 2, 1), 4, dtype=np.float32)
     canvas = da.from_array(
@@ -441,10 +441,7 @@ def test_merge_vertical_chunkwise_inserts_zero_rows_for_gaps() -> None:
         verbose=False,
     ).compute()
 
-    expected = np.concatenate(
-        [chunk_a, np.zeros((2, 2, 1), dtype=np.float32), chunk_b],
-        axis=0,
-    )
+    expected = np.concatenate([chunk_a, chunk_b], axis=0)
     assert np.array_equal(result, expected)
 
 

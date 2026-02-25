@@ -1295,7 +1295,7 @@ def get_wsi_output_shape(dataset: object) -> tuple[int, int] | None:
     return int(wsi_shape[1]), int(wsi_shape[0])
 
 
-def merge_vertical_chunkwise(  # noqa: PLR0912, PLR0915
+def merge_vertical_chunkwise(
     canvas: da.Array,
     count: da.Array,
     output_locs_y_: np.ndarray,
@@ -1415,57 +1415,6 @@ def merge_vertical_chunkwise(  # noqa: PLR0912, PLR0915
 
             probabilities_da = None
             update_tqdm_desc(tqdm_loop=tqdm_loop, desc=desc)
-
-        if overlap < 0:
-            gap_height = -overlap
-            gap_probabilities = np.zeros(
-                (gap_height, *probabilities.shape[1:]),
-                dtype=probabilities.dtype,
-            )
-
-            (
-                gap_probabilities,
-                written_height,
-                should_stop,
-            ) = clip_probabilities_to_shape(
-                probabilities=gap_probabilities,
-                output_shape=output_shape,
-                written_height=written_height,
-            )
-            if should_stop:
-                break
-
-            probabilities_zarr, probabilities_da = store_probabilities(
-                probabilities=gap_probabilities,
-                chunk_shape=chunk_shape,
-                probabilities_zarr=probabilities_zarr,
-                probabilities_da=probabilities_da,
-                zarr_group=zarr_group,
-            )
-
-            if probabilities_da is not None:
-                vm = psutil.virtual_memory()
-                used_percent = (probabilities_da.nbytes / vm.free) * 100
-            if probabilities_zarr is None and used_percent > memory_threshold:
-                desc = tqdm_loop.desc if hasattr(tqdm_loop, "desc") else ""
-                msg = (
-                    f"Current Memory usage: {used_percent} %  "
-                    f"exceeds specified threshold: {memory_threshold}. "
-                    f"Saving intermediate results to disk."
-                )
-                update_tqdm_desc(tqdm_loop=tqdm_loop, desc=msg)
-                zarr_group = zarr.open(str(save_path), mode="a")
-                probabilities_zarr = zarr_group.create_dataset(
-                    name="probabilities",
-                    shape=probabilities_da.shape,
-                    chunks=(chunk_shape[0], *gap_probabilities.shape[1:]),
-                    dtype=gap_probabilities.dtype,
-                    overwrite=True,
-                )
-                probabilities_zarr[:] = probabilities_da.compute()
-
-                probabilities_da = None
-                update_tqdm_desc(tqdm_loop=tqdm_loop, desc=desc)
 
         if next_chunk is not None:
             curr_chunk, curr_count = (
