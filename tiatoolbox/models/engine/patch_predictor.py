@@ -552,7 +552,7 @@ class PatchPredictor(EngineABC):
         self: PatchPredictor,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         *,
-        masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        masks: list[os.PathLike | Path | np.ndarray] | np.ndarray | None = None,
         input_resolutions: list[dict[Units, Resolution]] | None = None,
         patch_input_shape: IntPair | None = None,
         ioconfig: IOPatchPredictorConfig | None = None,

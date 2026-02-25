@@ -216,7 +216,7 @@ class WSIPatchDataset(PatchDatasetABC):
     def __init__(  # skipcq: PY-R1000  # noqa: PLR0913
         self: WSIPatchDataset,
         input_img: str | Path | WSIReader,
-        mask_path: str | Path | None = None,
+        input_mask: str | Path | None = None,
         patch_input_shape: IntPair = None,
         patch_output_shape: IntPair = None,
         stride_shape: IntPair = None,
@@ -233,7 +233,7 @@ class WSIPatchDataset(PatchDatasetABC):
         Args:
             input_img (str or Path or WSIReader):
                 Valid path to a whole-slide image class:`WSIReader`.
-            mask_path (str or Path):
+            input_mask (str or Path):
                 Valid mask image.
             patch_input_shape:
                 A tuple (int, int) or ndarray of shape (2,). Expected
@@ -319,6 +319,7 @@ class WSIPatchDataset(PatchDatasetABC):
         self.reader_info = reader.info
 
         # use all patches, as long as it overlaps source image
+        self.outputs = []
         if patch_output_shape is not None:
             self.inputs, self.outputs = PatchExtractor.get_coordinates(
                 image_shape=wsi_shape,
@@ -335,7 +336,7 @@ class WSIPatchDataset(PatchDatasetABC):
             )
 
         mask_reader = self._setup_mask_reader(
-            mask_path=mask_path,
+            input_mask=input_mask,
             reader=reader,
             auto_get_mask=auto_get_mask,
         )
@@ -348,7 +349,7 @@ class WSIPatchDataset(PatchDatasetABC):
                 min_mask_ratio=min_mask_ratio,
             )
             self.inputs = self.inputs[selected]
-            if hasattr(self, "outputs"):
+            if len(self.outputs) > 0:
                 self.full_outputs = self.outputs  # Full list of outputs
                 self.outputs = self.outputs[selected]
 
@@ -363,18 +364,23 @@ class WSIPatchDataset(PatchDatasetABC):
 
     def _setup_mask_reader(
         self: WSIPatchDataset,
-        mask_path: str | Path | None,
+        input_mask: str | Path | None,
         reader: WSIReader,
         *,
         auto_get_mask: bool,
     ) -> VirtualWSIReader | None:
         """Create a mask reader for WSIPatchDataset if requested."""
-        if mask_path is not None:
-            mask_path = Path(mask_path)
-            if not Path.is_file(mask_path):
+        if isinstance(input_mask, np.ndarray):
+            mask_reader = VirtualWSIReader(input_mask)
+            mask_reader.info = self.reader_info
+            return mask_reader
+
+        if isinstance(input_mask, (str, Path)):
+            mask = Path(input_mask)
+            if not Path.is_file(mask):
                 msg = "`mask_path` must be a valid file path."
                 raise ValueError(msg)
-            mask = imread(mask_path)  # assume to be gray
+            mask = imread(mask)  # assume to be gray
             mask = cv2.cvtColor(mask, cv2.COLOR_RGB2GRAY)
             mask = np.array(mask > 0, dtype=np.uint8)
 
@@ -382,7 +388,7 @@ class WSIPatchDataset(PatchDatasetABC):
             mask_reader.info = self.reader_info
             return mask_reader
 
-        if auto_get_mask and mask_path is None:
+        if auto_get_mask and input_mask is None:
             # if no mask provided and `wsi` mode, generate basic tissue
             # mask on the fly
             try:
@@ -411,7 +417,7 @@ class WSIPatchDataset(PatchDatasetABC):
         """Get an item from the dataset."""
         coords = self.inputs[idx]
         output_locs = None
-        if hasattr(self, "outputs"):
+        if len(self.outputs) > 0:
             output_locs = self.outputs[idx]
 
         # Read image patch from the whole-slide image
