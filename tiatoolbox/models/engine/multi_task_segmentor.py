@@ -605,17 +605,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
         count_zarr = [None for _ in range(num_expected_output)]
 
         output_locs_y_, output_locs = None, None
-        sparse_output_locs = _get_sparse_output_locs(dataloader.dataset)
-        active_output_locs = (
-            sparse_output_locs
-            if sparse_output_locs is not None
-            else np.asarray(dataloader.dataset.outputs)
-        )
+        active_output_locs = _get_dataset_output_locs(dataloader.dataset)
         canvas_x_start = int(np.min(active_output_locs[:, 0]))
         canvas_x_end = int(np.max(active_output_locs[:, 2]))
         canvas_width = canvas_x_end - canvas_x_start
         canvas_y_start = int(np.min(active_output_locs[:, 1]))
-        canvas_y_end = int(np.max(active_output_locs[:, 3]))
 
         infer_batch = self._get_model_attr("infer_batch")
         for batch_data in tqdm_loop:
@@ -682,10 +676,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
             canvas_width=canvas_width,
         )
 
-        output_shape = (
-            (canvas_y_end - canvas_y_start, canvas_x_end - canvas_x_start)
-            if sparse_output_locs is not None
-            else get_wsi_output_shape(dataloader.dataset)
+        output_shape = _get_output_shape_from_dataset_outputs(
+            dataset=dataloader.dataset,
+            output_locs=active_output_locs,
         )
 
         raw_predictions["probabilities"] = _calculate_probabilities(
@@ -1134,22 +1127,22 @@ class MultiTaskSegmentor(SemanticSegmentor):
             tile_info_sets=tile_info_sets,
             verbose=self.verbose,
         )
-        sparse_output_locs = _get_sparse_output_locs(self.dataloader.dataset)
-        if sparse_output_locs is not None:
+        active_output_locs = _get_dataset_output_locs(self.dataloader.dataset)
+        if len(active_output_locs) < len(tile_metadata):
             total_tiles = len(tile_metadata)
             filtered_tile_metadata = _filter_tile_metadata_by_sparse_outputs(
                 tile_metadata=tile_metadata,
-                sparse_output_locs=sparse_output_locs,
+                sparse_output_locs=active_output_locs,
             )
             if len(filtered_tile_metadata) == 0:
                 logger.warning(
-                    "Sparse output tile filtering removed all tile tasks. "
+                    "Output tile filtering removed all tile tasks. "
                     "Falling back to full-tile post-processing."
                 )
-            else:
+            elif len(filtered_tile_metadata) < total_tiles:
                 tile_metadata = filtered_tile_metadata
                 logger.info(
-                    "Sparse output tile filtering kept "
+                    "Output tile filtering kept "
                     f"{len(tile_metadata)}/{total_tiles} tile tasks."
                 )
 
@@ -3222,42 +3215,39 @@ def _build_tile_tasks(
     return tile_metadata
 
 
-def _get_sparse_output_locs(dataset: object) -> np.ndarray | None:
-    """Return sparse output locations when dataset outputs are mask-filtered.
-
-    Args:
-        dataset (object):
-            A dataset object expected to expose ``outputs`` and ``full_outputs``.
-
-    Returns:
-        np.ndarray | None:
-            ``outputs`` as a NumPy array when it is a strict subset of
-            ``full_outputs`` (masked/sparse run), otherwise ``None``.
-
-    """
-    output_locs = getattr(dataset, "outputs", None)
-    full_output_locs = getattr(dataset, "full_outputs", None)
-    if output_locs is None or full_output_locs is None:
-        return None
-
-    output_locs = np.asarray(output_locs)
-    full_output_locs = np.asarray(full_output_locs)
-    coord_ndim = 2
-    coord_width = 4
-    valid_shapes = (
-        output_locs.ndim == coord_ndim
-        and full_output_locs.ndim == coord_ndim
-        and output_locs.shape[1] == coord_width
-        and full_output_locs.shape[1] == coord_width
-    )
-    if not valid_shapes:
-        return None
-    if len(output_locs) == 0 or len(full_output_locs) == 0:
-        return None
-    if len(output_locs) >= len(full_output_locs):
-        return None
-
+def _get_dataset_output_locs(dataset: object) -> np.ndarray:
+    """Return dataset output locations as a validated ``[N, 4]`` NumPy array."""
+    output_locs = np.asarray(getattr(dataset, "outputs", None))
+    valid_shape = output_locs.ndim == 2 and output_locs.shape[1] == 4  # noqa: PLR2004
+    if not valid_shape or len(output_locs) == 0:
+        msg = "Dataset must expose non-empty `outputs` with shape [N, 4]."
+        raise ValueError(msg)
     return output_locs
+
+
+def _get_output_shape_from_dataset_outputs(
+    dataset: object,
+    output_locs: np.ndarray,
+) -> tuple[int, int]:
+    """Compute stitched output shape from active output locations.
+
+    The stitched canvas is always defined by the active output-location bounds.
+    When WSI shape metadata is available, the shape is clipped to the valid
+    image extent relative to that same canvas origin.
+    """
+    x_start = int(np.min(output_locs[:, 0]))
+    x_end = int(np.max(output_locs[:, 2]))
+    y_start = int(np.min(output_locs[:, 1]))
+    y_end = int(np.max(output_locs[:, 3]))
+
+    output_shape = (y_end - y_start, x_end - x_start)
+    wsi_shape = get_wsi_output_shape(dataset)
+    if wsi_shape is None:
+        return output_shape
+
+    max_h = max(int(wsi_shape[0]) - y_start, 0)
+    max_w = max(int(wsi_shape[1]) - x_start, 0)
+    return min(output_shape[0], max_h), min(output_shape[1], max_w)
 
 
 def _filter_tile_metadata_by_sparse_outputs(

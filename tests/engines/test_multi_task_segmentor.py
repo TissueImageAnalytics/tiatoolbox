@@ -27,8 +27,9 @@ from tiatoolbox.models.engine.multi_task_segmentor import (
     _apply_postproc_spatial_offset,
     _clear_zarr,
     _filter_tile_metadata_by_sparse_outputs,
+    _get_dataset_output_locs,
+    _get_output_shape_from_dataset_outputs,
     _get_sel_indices_margin_lines,
-    _get_sparse_output_locs,
     _save_multitask_vertical_to_cache,
 )
 from tiatoolbox.utils import download_data, imwrite
@@ -1019,39 +1020,46 @@ def test_get_tile_info_small_image_triggers_early_return(
     assert np.all(flag == 0)
 
 
-def test_get_sparse_output_locs_detects_masked_subset() -> None:
-    """Test sparse output detection when outputs are mask-filtered."""
+def test_get_dataset_output_locs_returns_outputs() -> None:
+    """Test dataset output-location helper returns `outputs` unchanged."""
 
     class DummyDataset:
         """Dummy dataset with output coordinates."""
 
     dataset = DummyDataset()
     dataset.outputs = np.array([[0, 0, 164, 164], [164, 0, 328, 164]])
-    dataset.full_outputs = np.array(
-        [
-            [0, 0, 164, 164],
-            [164, 0, 328, 164],
-            [328, 0, 492, 164],
-        ]
-    )
-
-    sparse_output_locs = _get_sparse_output_locs(dataset)
-    assert sparse_output_locs is not None
-    assert np.array_equal(sparse_output_locs, dataset.outputs)
+    output_locs = _get_dataset_output_locs(dataset)
+    assert np.array_equal(output_locs, dataset.outputs)
 
 
-def test_get_sparse_output_locs_returns_none_for_dense_outputs() -> None:
-    """Test sparse output detection returns None when outputs are not sparse."""
+def test_get_dataset_output_locs_raises_for_invalid_shape() -> None:
+    """Test output-location helper validates shape."""
 
     class DummyDataset:
         """Dummy dataset with output coordinates."""
 
     dataset = DummyDataset()
-    dataset.outputs = np.array([[0, 0, 164, 164], [164, 0, 328, 164]])
-    dataset.full_outputs = np.array([[0, 0, 164, 164], [164, 0, 328, 164]])
+    dataset.outputs = np.array([[0, 0, 164]])
 
-    sparse_output_locs = _get_sparse_output_locs(dataset)
-    assert sparse_output_locs is None
+    with pytest.raises(
+        ValueError,
+        match=r"Dataset must expose non-empty `outputs` with.",
+    ):
+        _get_dataset_output_locs(dataset)
+
+
+def test_get_output_shape_from_dataset_outputs_clips_to_wsi_shape() -> None:
+    """Test stitched output shape is clipped to valid WSI extent."""
+
+    class DummyDataset:
+        """Dummy dataset with WSI shape metadata."""
+
+    dataset = DummyDataset()
+    dataset.wsi_shape = (300, 150)  # (width, height)
+    output_locs = np.array([[0, 0, 164, 164], [164, 0, 328, 164]])
+
+    output_shape = _get_output_shape_from_dataset_outputs(dataset, output_locs)
+    assert output_shape == (150, 300)
 
 
 def test_filter_tile_metadata_by_sparse_outputs_reduces_tile_count() -> None:
