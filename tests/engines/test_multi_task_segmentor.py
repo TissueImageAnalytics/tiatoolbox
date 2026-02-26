@@ -423,7 +423,17 @@ def test_wsi_mtsegmentor_correct_nonsquare_shape(
     track_tmp_path: Path,
 ) -> None:
     """Test MultiTaskSegmentor output shape for non-square WSIs with zarr output."""
+    # Using this image to check for non-square output.
     svs_1_small = remote_sample("svs-1-small")
+
+    # masking the image for shorter runtime
+    svs_1_small = WSIReader.open(svs_1_small)
+    mask = np.zeros(
+        svs_1_small.slide_dimensions(resolution=1.25, units="power")[::-1],
+        dtype=np.uint8,
+    )
+    mask[150:160, 50:75] = 1
+
     mtsegmentor = MultiTaskSegmentor(
         model="hovernetplus-oed",
         batch_size=64,
@@ -431,11 +441,12 @@ def test_wsi_mtsegmentor_correct_nonsquare_shape(
         num_workers=1,
     )
     ioconfig = mtsegmentor.ioconfig
-    # Return Probabilities is False
+    # Return Probabilities is True
     output_full = mtsegmentor.run(
         # Use rectangular (not square) to test output shape
         images=[svs_1_small],
-        return_probabilities=False,
+        masks=[mask],
+        return_probabilities=True,
         return_labels=False,
         device=device,
         patch_mode=False,
@@ -446,18 +457,17 @@ def test_wsi_mtsegmentor_correct_nonsquare_shape(
         return_predictions=(True, True),  # True for both tasks.
     )
 
-    output_full_ = zarr.open(output_full[svs_1_small], mode="r")
-    assert 12 < np.mean(output_full_["nuclei_segmentation"]["predictions"][:]) < 16
-    assert 0.42 < np.mean(output_full_["layer_segmentation"]["predictions"][:]) < 0.46
-    assert "probabilities" not in output_full_
+    output_full_ = zarr.open(output_full[svs_1_small.input_path], mode="r")
+    assert 0.24 < np.mean(output_full_["nuclei_segmentation"]["predictions"][:]) < 0.26
+    assert 0.03 < np.mean(output_full_["layer_segmentation"]["predictions"][:]) < 0.04
+    assert "probabilities" in output_full_
     assert "canvas" not in output_full_["nuclei_segmentation"]
     assert "count" not in output_full_["nuclei_segmentation"]
     assert "canvas" not in output_full_["layer_segmentation"]
     assert "count" not in output_full_["layer_segmentation"]
 
     # Verify output shape
-    reader = WSIReader.open(svs_1_small)
-    expected_shape = reader.slide_dimensions(
+    expected_shape = svs_1_small.slide_dimensions(
         **mtsegmentor.ioconfig.highest_input_resolution
     )[::-1]
     assert np.all(
@@ -465,6 +475,47 @@ def test_wsi_mtsegmentor_correct_nonsquare_shape(
     )
     assert np.all(
         output_full_["layer_segmentation"]["predictions"][:].shape == expected_shape
+    )
+
+    # Redefine tile size to force tile-based processing.
+    # 350 x 350 forces tile mode 3 (overlap)
+    ioconfig.tile_shape = (500, 500)
+    mtsegmentor.drop_keys = []
+
+    # Return Probabilities is False
+    output_tile = mtsegmentor.run(
+        # Use rectangular (not square) to test output shape
+        images=[svs_1_small],
+        masks=[mask],
+        return_probabilities=False,
+        return_labels=False,
+        device=device,
+        patch_mode=False,
+        save_dir=track_tmp_path / "wsi_out_tile",
+        batch_size=2,
+        output_type="zarr",
+        ioconfig=ioconfig,
+        return_predictions=(True, True),  # True for both tasks.
+    )
+
+    output_tile_ = zarr.open(output_tile[svs_1_small.input_path], mode="r")
+    assert 0.25 < np.mean(output_tile_["nuclei_segmentation"]["predictions"][:]) < 0.27
+    assert 0.03 < np.mean(output_tile_["layer_segmentation"]["predictions"][:]) < 0.04
+    assert "probabilities" not in output_tile_
+    assert "canvas" not in output_tile_["nuclei_segmentation"]
+    assert "count" not in output_tile_["nuclei_segmentation"]
+    assert "canvas" not in output_tile_["layer_segmentation"]
+    assert "count" not in output_tile_["layer_segmentation"]
+
+    # Verify output shape
+    expected_shape = svs_1_small.slide_dimensions(
+        **mtsegmentor.ioconfig.highest_input_resolution
+    )[::-1]
+    assert np.all(
+        output_tile_["nuclei_segmentation"]["predictions"][:].shape == expected_shape
+    )
+    assert np.all(
+        output_tile_["layer_segmentation"]["predictions"][:].shape == expected_shape
     )
 
 

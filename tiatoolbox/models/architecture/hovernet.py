@@ -618,6 +618,7 @@ class HoVerNet(ModelABC):
     def get_instance_info(
         pred_inst: np.ndarray,
         pred_type: np.ndarray = None,
+        offset: tuple[int, int] = (0, 0),
         *,
         verbose: bool = True,
     ) -> dict:
@@ -630,6 +631,9 @@ class HoVerNet(ModelABC):
             pred_type (:class:`numpy.ndarray`):
                 An image of shape (height, width, 1) which contains the
                 probabilities of a pixel being a certain type of nuclei.
+            offset (tuple[int, int]):
+                offset value to be added to output centroids, contours.
+                The offset should be in (x, y) / (column, row) order.
             verbose (bool):
                 Whether to display progress bar.
 
@@ -673,7 +677,7 @@ class HoVerNet(ModelABC):
         for inst_id in tqdm_loop:
             inst_map = pred_inst == inst_id
             inst_box = get_bounding_box(inst_map)
-            inst_box_tl = inst_box[:2]
+            inst_box_tl = inst_box[:2] + offset
             inst_map = inst_map[inst_box[1] : inst_box[3], inst_box[0] : inst_box[2]]
             inst_map = inst_map.astype(np.uint8)
             inst_moment = cv2.moments(inst_map)
@@ -701,6 +705,8 @@ class HoVerNet(ModelABC):
             inst_centroid = np.array(inst_centroid)
             inst_contour += inst_box_tl[None]
             inst_centroid += inst_box_tl  # X
+            inst_box[:2] = inst_box[:2] + offset
+            inst_box[2:] = inst_box[2:] + offset
             inst_info_dict[inst_id] = {  # inst_id should start at 1
                 "box": inst_box,
                 "centroid": inst_centroid,
@@ -712,7 +718,10 @@ class HoVerNet(ModelABC):
         if pred_type is not None:
             # * Get class of each instance id, stored at index id-1
             for inst_id in list(inst_info_dict.keys()):
-                c_min, r_min, c_max, r_max = inst_info_dict[inst_id]["box"]
+                inst_box_ = inst_info_dict[inst_id]["box"].copy()
+                inst_box_[:2] = inst_box_[:2] - offset
+                inst_box_[2:] = inst_box_[2:] - offset
+                c_min, r_min, c_max, r_max = inst_box_
                 inst_map_crop = pred_inst[r_min:r_max, c_min:c_max]
                 inst_type_crop = pred_type[r_min:r_max, c_min:c_max]
 
@@ -738,7 +747,11 @@ class HoVerNet(ModelABC):
         return inst_info_dict
 
     # skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(self: HoVerNet, raw_maps: list[np.ndarray]) -> tuple[dict, ...]:
+    def postproc(
+        self: HoVerNet,
+        raw_maps: list[np.ndarray],
+        offset: tuple[int, int],
+    ) -> tuple[dict, ...]:
         """Post-processing script for image tiles.
 
         Args:
@@ -746,6 +759,9 @@ class HoVerNet(ModelABC):
                 A list of prediction outputs of each head and assumed to
                 be in the order of [np, hv, tp] (match with the output
                 of `infer_batch`).
+            offset (tuple[int, int]):
+                offset value to be added to output centroids, contours.
+                The offset should be in (x, y) / (column, row) order.
 
         Returns:
             tuple:
@@ -810,7 +826,7 @@ class HoVerNet(ModelABC):
         pred_type = tp_map.compute() if tp_map is not None and is_dask else tp_map
 
         pred_inst = HoVerNet._proc_np_hv(np_map, hv_map)
-        nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
+        nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type, offset)
 
         nuc_inst_info_dict_ = {}
         if not nuc_inst_info_dict:
@@ -835,6 +851,7 @@ class HoVerNet(ModelABC):
             if isinstance(raw_maps[0], da.Array)
             else pred_inst,
             "info_dict": nuc_inst_info_dict_,
+            "seg_type": "instance",  # Helps with tile based post-processing.
         }
 
         return (nuclei_seg,)  # Ensure return type is tuple.

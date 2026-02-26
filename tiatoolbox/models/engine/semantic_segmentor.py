@@ -764,6 +764,7 @@ class SemanticSegmentor(PatchPredictor):
                         Whether to return labels with predictions.
                     return_probabilities (bool):
                         Whether to return per-class probabilities.
+                        Default is False.
                     scale_factor (tuple[float, float]):
                         Scale factor for annotations (model_mpp / slide_mpp).
                         Used to convert coordinates to baseline resolution.
@@ -1037,8 +1038,11 @@ class SemanticSegmentor(PatchPredictor):
                         is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
+                        Default is 80.
                     num_workers (int):
                         Number of workers for DataLoader and post-processing.
+                        Default is 0. Set to `multiprocessing.cpu_count()` for maximum
+                        usage.
                     output_file (str):
                         Filename for saving output (e.g., ".zarr" or ".db").
                     output_resolutions (Resolution):
@@ -1046,9 +1050,9 @@ class SemanticSegmentor(PatchPredictor):
                     patch_output_shape (tuple[int, int]):
                         Shape of output patches (height, width).
                     return_labels (bool):
-                        Whether to return labels with predictions.
+                        Whether to return labels with predictions. Default is False.
                     return_probabilities (bool):
-                        Whether to return per-class probabilities.
+                        Whether to return per-class probabilities. Default is False.
                     scale_factor (tuple[float, float]):
                         Scale factor for annotations (model_mpp / slide_mpp).
                         Used to convert coordinates to baseline resolution.

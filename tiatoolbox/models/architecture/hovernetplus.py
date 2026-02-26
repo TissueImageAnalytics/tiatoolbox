@@ -194,13 +194,16 @@ class HoVerNetPlus(HoVerNet):
         return ls_map.astype("uint8")
 
     @staticmethod
-    def _get_layer_info(pred_layer: np.ndarray) -> dict:
+    def _get_layer_info(pred_layer: np.ndarray, offset: tuple[int, int]) -> dict:
         """Transforms image layers/regions into contours to store in dictionary.
 
         Args:
             pred_layer (:class:`numpy.ndarray`):
                 Semantic segmentation map of different layers/regions
                 following processing.
+            offset (tuple[int, int]):
+                offset value to be added to output centroids, contours.
+                The offset should be in (x, y) / (column, row) order.
 
         Returns:
             dict:
@@ -247,7 +250,9 @@ class HoVerNetPlus(HoVerNet):
                 if len(contour_.shape) != 2:  # pragma: no cover  # noqa: PLR2004
                     continue
 
-                coords = layer[:, 0, :]
+                coords = layer[:, 0, :] + offset
+                bounding_box[:2] = bounding_box[:2] + offset
+                bounding_box[2:] = bounding_box[2:] + offset
                 layer_info_dict[count] = {
                     "box": bounding_box,
                     "contours": coords,
@@ -258,7 +263,11 @@ class HoVerNetPlus(HoVerNet):
         return layer_info_dict
 
     # skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(self: HoVerNetPlus, raw_maps: list[np.ndarray]) -> tuple[dict, ...]:
+    def postproc(
+        self: HoVerNetPlus,
+        raw_maps: list[np.ndarray],
+        offset: tuple[int, int],
+    ) -> tuple[dict, ...]:
         """Post-processing script for image tiles.
 
         Args:
@@ -266,6 +275,9 @@ class HoVerNetPlus(HoVerNet):
                 A list of prediction outputs of each head and assumed to
                 be in the order of [np, hv, tp, ls] (match with the
                 output of `infer_batch`).
+            offset (tuple[int, int]):
+                offset value to be added to output centroids, contours.
+                The offset should be in (x, y) / (column, row) order.
 
         Returns:
             tuple:
@@ -348,8 +360,8 @@ class HoVerNetPlus(HoVerNet):
         pred_layer = HoVerNetPlus._proc_ls(ls_map)
         pred_type = np.around(tp_map).astype("uint8")
 
-        nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type)
-        layer_info_dict = HoVerNetPlus._get_layer_info(pred_layer)
+        nuc_inst_info_dict = HoVerNet.get_instance_info(pred_inst, pred_type, offset)
+        layer_info_dict = HoVerNetPlus._get_layer_info(pred_layer, offset)
 
         nuc_inst_info_dict_ = {}
         if not nuc_inst_info_dict:
@@ -371,6 +383,7 @@ class HoVerNetPlus(HoVerNet):
             "task_type": self.tasks[0],
             "predictions": da.array(pred_inst) if is_dask else pred_inst,
             "info_dict": nuc_inst_info_dict_,
+            "seg_type": "instance",
         }
 
         layer_info_dict_ = {}
@@ -390,6 +403,7 @@ class HoVerNetPlus(HoVerNet):
             "task_type": self.tasks[1],
             "predictions": da.array(pred_layer) if is_dask else pred_layer,
             "info_dict": layer_info_dict_,
+            "seg_type": "semantic",
         }
 
         return nuclei_seg, layer_seg
