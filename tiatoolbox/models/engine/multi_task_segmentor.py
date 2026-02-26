@@ -1650,6 +1650,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
             if len(self.tasks) == 1:
                 task_output = processed_predictions.pop(next(iter(self.tasks)))
                 processed_predictions.update(task_output)
+                _ = (
+                    processed_predictions.pop("seg_type")
+                    if "seg_type" in processed_predictions
+                    else None
+                )
             return super().save_predictions(
                 processed_predictions, output_type, save_path=save_path, **kwargs
             )
@@ -1669,6 +1674,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
             processed_predictions_ = processed_predictions.pop(task_name)
             # If there is a single task simplify the output.
             task_name_ = None if len(self.tasks) == 1 else task_name
+            _ = (
+                processed_predictions_.pop("seg_type")
+                if "seg_type" in processed_predictions_
+                else None
+            )
             keys_to_compute = [
                 k for k in processed_predictions_ if k not in self.drop_keys
             ]
