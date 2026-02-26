@@ -385,12 +385,12 @@ class PatchPredictor(EngineABC):
         save_path: Path,  # noqa: ARG002
         **kwargs: Unpack[PredictorRunParams],
     ) -> dict[str, da.Array]:
-        """Post-process predictions from whole slide image (WSI) inference.
+        """Post-process probabilities from whole slide image (WSI) inference.
 
-        This method refines the raw patch-level predictions obtained from WSI inference.
-        It typically applies spatial smoothing or other contextual operations using
-        neighboring patch information. Internally, it delegates to
-        `post_process_patches()`.
+        This method refines the raw WSI-level predictions obtained from WSI inference.
+        It typically applies spatial smoothing, argmax()
+        or other contextual operations using neighboring patch information.
+        Internally, it delegates to `model.preproc_func()`.
 
         Args:
             raw_predictions (dict[str, da.Array]):
@@ -552,7 +552,7 @@ class PatchPredictor(EngineABC):
         self: PatchPredictor,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         *,
-        masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        masks: list[os.PathLike | Path | np.ndarray] | np.ndarray | None = None,
         input_resolutions: list[dict[Units, Resolution]] | None = None,
         patch_input_shape: IntPair | None = None,
         ioconfig: IOPatchPredictorConfig | None = None,
