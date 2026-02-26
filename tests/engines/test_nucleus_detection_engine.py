@@ -32,15 +32,17 @@ def test_centroid_maps_to_detection_arrays() -> None:
     detection_maps[2, 3, 1] = 0.5
     detection_maps = da.from_array(detection_maps, chunks=(2, 2, 2))
 
-    detections = NucleusDetector._centroid_maps_to_detection_arrays(detection_maps)
+    nucleus_detector = NucleusDetector(model="sccnn-conic")
+    nucleus_detector.mask_padding = (10, 20, 100, 100)
+    detections = nucleus_detector._centroid_maps_to_detection_arrays(detection_maps)
 
     xs = detections["x"]
     ys = detections["y"]
     classes = detections["classes"]
     probs = detections["probabilities"]
 
-    np.testing.assert_array_equal(xs, np.array([1, 3], dtype=np.uint32))
-    np.testing.assert_array_equal(ys, np.array([1, 2], dtype=np.uint32))
+    np.testing.assert_array_equal(xs, np.array([11, 13], dtype=np.uint32))
+    np.testing.assert_array_equal(ys, np.array([21, 22], dtype=np.uint32))
     np.testing.assert_array_equal(classes, np.array([0, 1], dtype=np.uint32))
     np.testing.assert_array_equal(probs, np.array([1.0, 0.5], dtype=np.float32))
 
