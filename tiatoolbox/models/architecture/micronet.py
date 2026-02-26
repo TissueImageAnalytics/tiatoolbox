@@ -577,7 +577,7 @@ class MicroNet(ModelABC):
     # skipcq: PYL-W0221  # noqa: ERA001
     def postproc(
         self: MicroNet,
-        raw_maps: list[np.ndarray | da.Array],
+        raw_maps: list[np.ndarray | da.Array] | np.ndarray | da.Array,
         offset: tuple[int, int],
         *,
         verbose: bool = True,

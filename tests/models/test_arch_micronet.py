@@ -41,7 +41,7 @@ def test_functionality(
     pretrained = torch.load(weights_path, map_location=map_location)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, device=map_location)
-    output_ = model.postproc(list(output[0]))
+    output_ = model.postproc(list(output[0]), offset=(0, 0))
     assert output_[0]["task_type"] == "nuclei_segmentation"
     assert np.max(np.unique(output_[0]["predictions"])) == 46
     assert len(output_[0]["info_dict"]["centroid"]) == 27
@@ -49,7 +49,7 @@ def test_functionality(
 
     # For test coverage pass probability map with
     # no cell segmentation instance
-    output_ = model.postproc(np.zeros((1, 252, 252, 2)))
+    output_ = model.postproc(raw_maps=[np.zeros([252, 252, 2])], offset=(0, 0))
     assert output_[0]["task_type"] == "nuclei_segmentation"
     assert np.max(np.unique(output_[0]["predictions"])) == 0
     assert len(output_[0]["info_dict"]["centroid"]) == 0
