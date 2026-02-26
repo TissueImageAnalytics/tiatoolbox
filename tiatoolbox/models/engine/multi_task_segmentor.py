@@ -1187,7 +1187,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         # batch size for dask compute should be greater than 0
         batch_size = max(int(available_memory // tile_memory), 1)
 
-        wsi_info_dict = None
+        wsi_info_dict, max_inst_value = None, None
         for i in tqdm(
             range(0, len(tile_metadata), batch_size),
             leave=False,
@@ -1240,11 +1240,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     return_predictions=return_predictions,
                 )
 
-                wsi_info_dict = _update_tile_based_predictions_array(
+                wsi_info_dict, max_inst_value = _update_tile_based_predictions_array(
                     post_process_output=post_process_output,
                     wsi_info_dict=wsi_info_dict,
                     bounds=tile_bounds,
                     offset=(self.mask_padding[0], self.mask_padding[1]),
+                    max_inst_value=max_inst_value,
                 )
 
                 inst_dicts = _get_inst_info_dicts(
@@ -3115,7 +3116,8 @@ def _update_tile_based_predictions_array(
     wsi_info_dict: tuple[dict, ...],
     bounds: tuple[int, int, int, int],
     offset: tuple[int, int],
-) -> tuple[dict, ...]:
+    max_inst_value: int | None = None,
+) -> tuple[tuple[dict, ...], int | None]:
     """Helper function to update tile based predictions array."""
     bounds = np.array(bounds)  # Tuple assignment not possible.
     bounds[:2] = bounds[:2] + offset
@@ -3126,22 +3128,38 @@ def _update_tile_based_predictions_array(
         if wsi_info_dict[idx]["predictions"] is None:
             continue
 
-        new_predictions_ = post_process_output_["predictions"]
-        # Update instance values
-        if post_process_output_["seg_type"] == "instance":
-            previous_predictions_ = wsi_info_dict[idx]["predictions"].copy()
-            max_inst_value = np.max(previous_predictions_[:])
-            new_predictions_[new_predictions_ > 0] = (
-                new_predictions_[new_predictions_ > 0] + max_inst_value
-            )
-
         max_h, max_w = wsi_info_dict[idx]["predictions"].shape
         x_end, y_end = min(x_end, max_w), min(y_end, max_h)
+        new_predictions_ = post_process_output_["predictions"][
+            0 : y_end - y_start, 0 : x_end - x_start
+        ]
+
+        # Update instance values
+        if post_process_output_["seg_type"] == "instance":
+            previous_predictions_ = wsi_info_dict[idx]["predictions"][
+                y_start:y_end, x_start:x_end
+            ]
+            overlap = (new_predictions_ > 0) & (previous_predictions_ > 0)
+            max_inst_value = 0 if max_inst_value is None else max_inst_value
+            keep_mask = new_predictions_ > 0
+            # Only update new ids if overlap
+            if np.any(overlap):
+                ids_to_remove = np.unique(new_predictions_[overlap])
+                ids_to_remove = ids_to_remove[ids_to_remove > 0]
+                keep_mask = (new_predictions_ > 0) & (
+                    ~np.isin(new_predictions_, ids_to_remove)
+                )
+
+            final_combined = previous_predictions_.copy()
+            final_combined[keep_mask] = new_predictions_[keep_mask] + max_inst_value
+            new_predictions_ = final_combined  # Update for final merge
+            max_inst_value = np.max(new_predictions_[:][:]) + max_inst_value
+
         wsi_info_dict[idx]["predictions"][y_start:y_end, x_start:x_end] = (
-            new_predictions_[0 : y_end - y_start, 0 : x_end - x_start]
+            new_predictions_
         )
 
-    return wsi_info_dict
+    return wsi_info_dict, max_inst_value
 
 
 def _build_tile_tasks(

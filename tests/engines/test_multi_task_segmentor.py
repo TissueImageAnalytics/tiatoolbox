@@ -499,7 +499,7 @@ def test_wsi_mtsegmentor_correct_nonsquare_shape(
     )
 
     output_tile_ = zarr.open(output_tile[svs_1_small.input_path], mode="r")
-    assert 0.25 < np.mean(output_tile_["nuclei_segmentation"]["predictions"][:]) < 0.27
+    assert 0.23 < np.mean(output_tile_["nuclei_segmentation"]["predictions"][:]) < 0.25
     assert 0.03 < np.mean(output_tile_["layer_segmentation"]["predictions"][:]) < 0.04
     assert "probabilities" not in output_tile_
     assert "canvas" not in output_tile_["nuclei_segmentation"]
@@ -593,12 +593,8 @@ def test_wsi_mtsegmentor_zarr(
     output_tile_ = zarr.open(output_tile[wsi4_1k_1k_svs], mode="r")
     assert "predictions" not in output_tile_["nuclei_segmentation"]
     assert 0.87 < np.mean(output_tile_["layer_segmentation"]["predictions"][:]) < 0.91
-    predictions_tile = output_tile_["layer_segmentation"]["predictions"]
-    # Full predictions are usually larger in size with extra padding as it's faster to
-    # process full arrays if they can be divided into rectangular chunks in dask/zarr
-    predictions_full = output_full_["layer_segmentation"]["predictions"][
-        0 : predictions_tile.shape[0], 0 : predictions_tile.shape[1]
-    ]
+    predictions_tile = output_tile_["layer_segmentation"]["predictions"][:]
+    predictions_full = output_full_["layer_segmentation"]["predictions"][:]
     overlap_pct = np.mean(predictions_full == predictions_tile) * 100
     assert overlap_pct > 99
     assert len(output_full_["layer_segmentation"]["contours"]) == len(
