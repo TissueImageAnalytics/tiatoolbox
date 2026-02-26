@@ -501,6 +501,7 @@ class SemanticSegmentor(PatchPredictor):
             )
         )
         min_x, min_y, _, _ = self.mask_padding
+        _, canvas_width = masked_output_shape
 
         infer_batch = self._get_model_attr("infer_batch")
         for batch_idx, batch_data in enumerate(tqdm_loop):
@@ -538,12 +539,13 @@ class SemanticSegmentor(PatchPredictor):
             if change_indices.size > 0:
                 canvas, count, canvas_np, output_locs, output_locs_y_ = (
                     merge_horizontal(
-                        canvas,
-                        count,
-                        output_locs_y_,
-                        canvas_np,
-                        output_locs,
-                        change_indices,
+                        canvas=canvas,
+                        count=count,
+                        output_locs_y=output_locs_y_,
+                        canvas_np=canvas_np,
+                        output_locs=output_locs,
+                        change_indices=change_indices,
+                        canvas_width=canvas_width,
                     )
                 )
 
@@ -587,12 +589,13 @@ class SemanticSegmentor(PatchPredictor):
             )
 
         canvas, count, _, _, output_locs_y_ = merge_horizontal(
-            canvas,
-            count,
-            output_locs_y_,
-            canvas_np,
-            output_locs,
+            canvas=canvas,
+            count=count,
+            output_locs_y=output_locs_y_,
+            canvas_np=canvas_np,
+            output_locs=output_locs,
             change_indices=[len(output_locs)],
+            canvas_width=canvas_width,
         )
 
         zarr_group = None
@@ -626,6 +629,85 @@ class SemanticSegmentor(PatchPredictor):
             shutil.rmtree(save_path.with_name("full_batch_tmp"))
 
         return raw_predictions
+
+    def post_process_wsi(
+        self: SemanticSegmentor,
+        raw_predictions: dict[str, da.Array],
+        save_path: Path,
+        **kwargs: Unpack[PredictorRunParams],
+    ) -> dict[str, da.Array]:
+        """Post-process probabilities from whole slide image (WSI) inference.
+
+        This method refines the raw WSI-level predictions obtained from WSI inference.
+        Internally, it delegates `model.preproc_func()`.
+
+        Args:
+            raw_predictions (dict[str, da.Array]):
+                Dictionary containing raw model predictions as Dask arrays.
+            save_path (Path):
+                Path to save the intermediate output. The intermediate output is saved
+                in a zarr file.
+            **kwargs (PredictorRunParams):
+                Additional runtime parameters to configure prediction.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities in the output.
+                        If False, only predicted labels are returned.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
+                    verbose (bool):
+                        Whether to enable verbose logging.
+
+        Returns:
+            dask.array.Array: Post-processed predictions as a Dask array.
+
+        """
+        pad_left, pad_top, pad_right, pad_bottom = self.mask_padding
+        probabilities = raw_predictions["probabilities"]
+
+        pad_width = build_pad_width(
+            probabilities, pad_top, pad_bottom, pad_left, pad_right
+        )
+
+        raw_predictions["probabilities"] = da.pad(
+            probabilities,
+            pad_width=pad_width,
+            mode="constant",
+            constant_values=0,
+        )
+
+        return super().post_process_wsi(
+            raw_predictions=raw_predictions,
+            save_path=save_path,
+            **kwargs,
+        )
 
     def save_predictions(
         self: SemanticSegmentor,
@@ -703,20 +785,6 @@ class SemanticSegmentor(PatchPredictor):
                   or path or list of paths to .db file.
 
         """
-        pad_left, pad_top, pad_right, pad_bottom = self.mask_padding
-
-        for key in ["probabilities", "predictions"]:
-            if key not in processed_predictions:
-                continue
-            arr = processed_predictions[key]
-            pad_width = build_pad_width(arr, pad_top, pad_bottom, pad_left, pad_right)
-            processed_predictions[key] = da.pad(
-                arr,
-                pad_width=pad_width,
-                mode="constant",
-                constant_values=0,
-            )
-
         # Conversion to annotationstore uses a different function for SemanticSegmentor
         if output_type.lower() not in ["qupath", "annotationstore"]:
             return super().save_predictions(
@@ -1116,6 +1184,7 @@ def merge_horizontal(
     canvas_np: np.ndarray,
     output_locs: np.ndarray,
     change_indices: np.ndarray | list[int],
+    canvas_width: int | None = None,
 ) -> tuple[da.Array, da.Array, np.ndarray, np.ndarray, np.ndarray]:
     """Merge horizontal patches incrementally for each row of patches.
 
@@ -1137,6 +1206,9 @@ def merge_horizontal(
             Array of output locations for each patch.
         change_indices (np.ndarray | list[np.ndarray]):
             Indices indicating where to flush and merge patches.
+        canvas_width (int | None):
+            Optional fixed canvas width for each merged row. If ``None``,
+            uses each row's local span.
 
     Returns:
         tuple:
@@ -1152,9 +1224,15 @@ def merge_horizontal(
         # Compute span only for the current row to avoid allocating a canvas
         # covering the entire slide width.
         batch_xs = np.min(output_locs_[:, 0], axis=0)
-        batch_xe = np.max(output_locs_[:, 2], axis=0)
 
-        merged_shape = (canvas_np_.shape[1], batch_xe - batch_xs, canvas_np.shape[3])
+        merged_width = (
+            int(canvas_width)
+            if canvas_width is not None
+            else int(np.max(output_locs_[:, 2]) - batch_xs)
+        )
+        output_locs_[:, 2] = np.minimum(output_locs_[:, 2], merged_width)
+
+        merged_shape = (canvas_np_.shape[1], merged_width, canvas_np.shape[3])
 
         canvas_merge, count_merge = merge_batch_to_canvas(
             blocks=canvas_np_,
