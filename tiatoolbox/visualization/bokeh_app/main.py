@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import multiprocessing
 import os
 import sys
 import tempfile
@@ -1454,6 +1455,7 @@ def segment_on_box() -> None:
 
     # Run hovernet inside the box
     UI["vstate"].model_mpp = inst_segmentor.ioconfig.save_resolution["resolution"]
+    num_workers = 0 if os.name == "nt" else multiprocessing.cpu_count()
     out_ = inst_segmentor.run(
         images=[UI["vstate"].slide_path],
         masks=[tmp_mask_dir / "mask.png"],
@@ -1462,7 +1464,7 @@ def segment_on_box() -> None:
         device=select_device(on_gpu=torch.cuda.is_available()),
         output_type="annotationstore",
         auto_get_mask=False,
-        num_workers=0,
+        num_workers=num_workers,
     )
 
     fname = make_safe_name(out_[UI["vstate"].slide_path][0])
