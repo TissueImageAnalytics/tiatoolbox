@@ -1474,7 +1474,6 @@ def segment_on_box() -> None:
     update_ui_on_new_annotations(ann_types)
 
     # Clean up temp files
-    rmtree(tmp_save_dir)
     rmtree(tmp_mask_dir)
 
 
