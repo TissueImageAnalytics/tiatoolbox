@@ -27,6 +27,7 @@ from tiatoolbox.models.engine.multi_task_segmentor import (
     _clear_zarr,
     _get_sel_indices_margin_lines,
     _save_multitask_vertical_to_cache,
+    merge_multitask_vertical_chunkwise,
 )
 from tiatoolbox.utils import download_data, imwrite
 from tiatoolbox.utils import env_detection as toolbox_env
@@ -34,8 +35,6 @@ from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
-
-    from _pytest.monkeypatch import MonkeyPatch
 
 OutputType = dict[str, Any] | Any
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
@@ -1019,7 +1018,7 @@ def test_compute_qupath_json_string_class_names(track_tmp_path: Path) -> None:
 
 
 def test_get_tile_info_small_image_triggers_early_return(
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Tests _get_tile_info.
 
@@ -1125,6 +1124,66 @@ def test_save_predictions_includes_coordinates(track_tmp_path: Path) -> None:
     # Must contain both the task predictions and the coordinates
     assert dict_for_store["predictions"] == [1, 2, 3]
     assert dict_for_store["coordinates"] == [10, 20, 30]
+
+
+def test_merge_stops_when_should_stop(
+    monkeypatch: pytest.MonkeyPatch, track_tmp_path: Path
+) -> None:
+    """Test should stop in multitask vertical merge."""
+    canvas = [da.from_array(np.ones((1, 4, 4, 1)), chunks=(1, 4, 4, 1))]
+    count = [da.from_array(np.ones((1, 4, 4, 1)), chunks=(1, 4, 4, 1))]
+
+    # output_locs_y_ → only one row, so overlaps=[0]
+    output_locs_y_ = np.array([[0, 4]])
+
+    # Zarr group
+    store = zarr.open_group(str(track_tmp_path / "test.zarr"), mode="w")
+
+    # --- Force should_stop=True on first iteration ---
+    output_shape = (0, 4)  # height=0 → remaining_height <= 0 → should_stop=True
+
+    # --- Mock functions that should NOT be called ---
+    called_store = False
+
+    def fake_store_probabilities(
+        *_: Any,  # noqa: ANN401
+        **__: Any,  # noqa: ANN401
+    ) -> tuple[zarr.Array | None, da.Array | None]:
+        nonlocal called_store
+        called_store = True
+        return None, None
+
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.semantic_segmentor.store_probabilities",
+        fake_store_probabilities,
+    )
+
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.multi_task_segmentor._save_multitask_vertical_to_cache",
+        lambda **__: (None, None),
+    )
+
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.multi_task_segmentor._clear_zarr",
+        lambda **__: da.zeros((0, 4, 1)),
+    )
+
+    # --- Act ---
+    result = merge_multitask_vertical_chunkwise(
+        canvas=canvas,
+        count=count,
+        output_locs_y_=output_locs_y_,
+        zarr_group=store,
+        save_path=track_tmp_path,
+        output_shape=output_shape,
+        verbose=False,
+    )
+
+    # store_probabilities should NOT be called because break happens first
+    assert called_store is False
+
+    # Returned array should be empty height
+    assert result[0].shape[0] == 0
 
 
 # HELPER functions
