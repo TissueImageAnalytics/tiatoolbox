@@ -15,6 +15,7 @@ import pytest
 import torch
 import zarr
 from click.testing import CliRunner
+from shapely import Point, STRtree
 from tqdm.auto import tqdm
 
 from tiatoolbox import cli
@@ -26,6 +27,7 @@ from tiatoolbox.models.engine.multi_task_segmentor import (
     MultiTaskSegmentor,
     _clear_zarr,
     _get_sel_indices_margin_lines,
+    _process_instance_predictions,
     _save_multitask_vertical_to_cache,
     merge_multitask_vertical_chunkwise,
 )
@@ -1208,6 +1210,37 @@ def assert_predictions_and_boxes(
         assert np.max(output["predictions"][idx][:]) == expected, (
             f"predictions[{idx}] mismatch"
         )
+
+
+def test_process_instance_predictions_empty_inst_dict() -> None:
+    """Test _process_instance_predictions, when no nuclei detected in input images."""
+    inst_dict = {}  # triggers the branch
+    ioconfig = IOSegmentorConfig(
+        input_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        output_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        patch_input_shape=(2048, 2048),
+        patch_output_shape=(1024, 1024),
+        stride_shape=(512, 512),
+    )
+    tile_shape = (256, 256)
+    tile_flag = (0, 0, 0, 0)
+    tile_mode = 0
+    tile_tl = (0, 0)
+    ref_inst_dict = {}
+    ref_inst_rtree = STRtree([Point(0, 0)])  # dummy tree, never used
+
+    result = _process_instance_predictions(
+        inst_dict=inst_dict,
+        ioconfig=ioconfig,
+        tile_shape=tile_shape,
+        tile_flag=tile_flag,
+        tile_mode=tile_mode,
+        tile_tl=tile_tl,
+        ref_inst_dict=ref_inst_dict,
+        ref_inst_rtree=ref_inst_rtree,
+    )
+
+    assert result == ({}, [])
 
 
 def assert_output_equal(
