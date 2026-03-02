@@ -31,7 +31,7 @@ Features:
 - Efficient inference pipeline for batch processing.
 
 Example:
-    >>> from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
+    >>> from tiatoolbox.models.engines.semantic_segmentor import SemanticSegmentor
     >>> segmentor = SemanticSegmentor(model="efficientunet-tissue_mask")
     >>> results = segmentor.run(
     ...     ["/example_wsi.svs"],
@@ -763,7 +763,7 @@ class EfficientUNetTissueMaskModel(ModelABC):
             Final segmentation layer.
 
     Example:
-        >>> from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
+        >>> from tiatoolbox.models.engines.semantic_segmentor import SemanticSegmentor
         >>> segmentor = SemanticSegmentor(model="efficientunet-tissue_mask")
         >>> results = segmentor.run(
         ...     ["/example_wsi.svs"],

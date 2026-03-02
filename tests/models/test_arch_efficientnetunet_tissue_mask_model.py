@@ -23,8 +23,8 @@ from tiatoolbox.models.architecture.efficientunet_tissue_mask_model import (
     UnetDecoder,
     UnetDecoderBlock,
 )
-from tiatoolbox.models.engine.io_config import IOSegmentorConfig
-from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
+from tiatoolbox.models.engines.io_config import IOSegmentorConfig
+from tiatoolbox.models.engines.semantic_segmentor import SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader
 

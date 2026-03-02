@@ -21,7 +21,7 @@ from tiatoolbox import cli, logger, rcParam
 from tiatoolbox.models import IOPatchPredictorConfig
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.vanilla import CNNModel
-from tiatoolbox.models.engine.patch_predictor import PatchPredictor
+from tiatoolbox.models.engines.patch_predictor import PatchPredictor
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import download_data, get_zarr_array, imwrite
 

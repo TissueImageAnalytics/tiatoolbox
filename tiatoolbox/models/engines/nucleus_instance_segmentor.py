@@ -16,7 +16,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class NucleusInstanceSegmentor(MultiTaskSegmentor):
-    """NucleusInstanceSegmentor is segmentation engine to run models like hovernet.
+    """NucleusInstanceSegmentor is segmentation engines to run models like hovernet.
 
     .. deprecated:: 2.1.0
        `NucleusInstanceSegmentor` will be removed in a future release.
@@ -41,7 +41,7 @@ class NucleusInstanceSegmentor(MultiTaskSegmentor):
         weights (str | Path | None):
             Path to model weights. If None, default weights are used.
 
-            >>> engine = NucleusInstanceSegmentor(
+            >>> engines = NucleusInstanceSegmentor(
             ...    model="pretrained-model",
             ...    weights="/path/to/pretrained-local-weights.pth"
             ... )

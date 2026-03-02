@@ -41,7 +41,7 @@ Features:
 - Efficient inference pipeline for batch processing.
 
 Example:
-    >>> from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
+    >>> from tiatoolbox.models.engines.nucleus_detector import NucleusDetector
     >>> detector = NucleusDetector(model="KongNet_CoNIC_1")
     >>> results = detector.run(
     ...     ["/example_wsi.svs"],
@@ -644,7 +644,7 @@ class KongNet(ModelABC):
             Tile shape for post-processing with dask
 
     Example:
-        >>> from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
+        >>> from tiatoolbox.models.engines.nucleus_detector import NucleusDetector
         >>> detector = NucleusDetector(model="KongNet_CoNIC_1")
         >>> results = detector.run(
         ...     ["/example_wsi.svs"],

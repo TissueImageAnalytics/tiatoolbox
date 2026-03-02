@@ -26,7 +26,7 @@ Features:
 - Efficient inference pipeline for batch processing.
 
 Example:
-    >>> from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
+    >>> from tiatoolbox.models.engines.semantic_segmentor import SemanticSegmentor
     >>> segmentor = SemanticSegmentor(model="grandqc_tissue_detection_mpp10")
     >>> results = segmentor.run(
     ...     ["/example_wsi.svs"],
@@ -451,7 +451,7 @@ class GrandQCModel(ModelABC):
     tissue masks.
 
     Example:
-        >>> from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
+        >>> from tiatoolbox.models.engines.semantic_segmentor import SemanticSegmentor
         >>> segmentor = SemanticSegmentor(model="grandqc_tissue_detection")
         >>> results = segmentor.run(
         ...     ["/example_wsi.svs"],
