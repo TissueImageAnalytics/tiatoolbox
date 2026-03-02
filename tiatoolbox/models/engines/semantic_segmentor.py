@@ -1,7 +1,7 @@
 """Semantic Segmentation Engine for Whole Slide Images (WSIs) using TIAToolbox.
 
 This module defines the `SemanticSegmentor` class, which extends the `PatchPredictor`
-engine to support semantic segmentation workflows on digital pathology images.
+engines to support semantic segmentation workflows on digital pathology images.
 It leverages deep learning models from TIAToolbox to perform patch-level and
 WSI-level inference, and includes utilities for preprocessing, postprocessing,
 and saving predictions in various formats.
@@ -12,7 +12,7 @@ Classes:
 - SemanticSegmentorRunParams:
     Configuration parameters for controlling runtime behavior during segmentation.
 - SemanticSegmentor:
-    Core engine for performing semantic segmentation on image patches or WSIs.
+    Core engines for performing semantic segmentation on image patches or WSIs.
 
 Functions:
 - concatenate_none:
@@ -29,7 +29,7 @@ Functions:
     Align patch-level predictions with global output locations.
 
 Example:
->>> from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
+>>> from tiatoolbox.models.engines.semantic_segmentor import SemanticSegmentor
 >>> segmentor = SemanticSegmentor(model="fcn_resnet50_unet-bcss")
 >>> wsis = ["slide1.svs", "slide2.svs"]
 >>> output = segmentor.run(wsis, patch_mode=False)
@@ -80,7 +80,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from torch.utils.data import DataLoader
 
     from tiatoolbox.annotation import AnnotationStore
-    from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+    from tiatoolbox.models.engines.io_config import IOSegmentorConfig
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import IntPair, Resolution, Units
     from tiatoolbox.wsicore import WSIReaderParams
@@ -134,7 +134,7 @@ class SemanticSegmentorRunParams(PredictorRunParams, total=False):
 
 
 class SemanticSegmentor(PatchPredictor):
-    r"""Semantic segmentation engine for digital histology images.
+    r"""Semantic segmentation engines for digital histology images.
 
     This class extends `PatchPredictor` to support semantic segmentation tasks
     using pretrained or custom models from TIAToolbox. It supports both patch-level
@@ -187,7 +187,7 @@ class SemanticSegmentor(PatchPredictor):
         weights (str | Path | None):
             Path to model weights. If None, default weights are used.
 
-            >>> engine = SemanticSegmentor(
+            >>> engines = SemanticSegmentor(
             ...    model="pretrained-model",
             ...    weights="/path/to/pretrained-local-weights.pth"
             ... )
@@ -773,7 +773,7 @@ class SemanticSegmentor(PatchPredictor):
         patch_mode: bool,
         **kwargs: Unpack[SemanticSegmentorRunParams],
     ) -> Path | None:
-        """Update runtime parameters for the SemanticSegmentor engine.
+        """Update runtime parameters for the SemanticSegmentor engines.
 
         This method sets internal attributes such as caching, batch size,
         IO configuration, and output format based on user input and keyword arguments.
@@ -886,7 +886,7 @@ class SemanticSegmentor(PatchPredictor):
         output_type: str = "dict",
         **kwargs: Unpack[SemanticSegmentorRunParams],
     ) -> AnnotationStore | Path | str | dict | list[Path]:
-        """Run the semantic segmentation engine on input images.
+        """Run the semantic segmentation engines on input images.
 
         This method orchestrates the full inference pipeline, including preprocessing,
         model inference, post-processing, and saving results. It supports both

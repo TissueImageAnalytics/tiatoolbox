@@ -18,7 +18,7 @@ from .vanilla import CNNBackbone, TimmBackbone, timm_arch_dict, torch_cnn_backbo
 if TYPE_CHECKING:  # pragma: no cover
     import torch
 
-    from tiatoolbox.models.engine.io_config import ModelIOConfigABC
+    from tiatoolbox.models.engines.io_config import ModelIOConfigABC
 
 __all__ = ["fetch_pretrained_weights", "get_pretrained_model"]
 PRETRAINED_INFO = rcParam["pretrained_model_info"]

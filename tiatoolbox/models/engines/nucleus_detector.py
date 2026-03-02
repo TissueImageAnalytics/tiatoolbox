@@ -13,11 +13,11 @@ Classes
 NucleusDetectorRunParams
     TypedDict specifying runtime configuration keys for detection.
 NucleusDetector
-    Core engine for nucleus detection on image patches or WSIs.
+    Core engines for nucleus detection on image patches or WSIs.
 
 Examples:
 --------
->>> from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
+>>> from tiatoolbox.models.engines.nucleus_detector import NucleusDetector
 >>> detector = NucleusDetector(model="mapde-conic")
 >>> # WSI workflow: save to AnnotationStore (.db)
 >>> out = detector.run(
@@ -59,7 +59,7 @@ from tqdm.auto import tqdm
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, SQLiteStore
-from tiatoolbox.models.engine.semantic_segmentor import (
+from tiatoolbox.models.engines.semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
 )
@@ -142,7 +142,7 @@ class NucleusDetectorRunParams(SemanticSegmentorRunParams, total=False):
 
 
 class NucleusDetector(SemanticSegmentor):
-    r"""Nucleus detection engine for digital histology images.
+    r"""Nucleus detection engines for digital histology images.
 
     This class extends :class:`SemanticSegmentor` to support instance-level
     nucleus detection using pretrained or custom models from TIAToolbox.
@@ -155,7 +155,7 @@ class NucleusDetector(SemanticSegmentor):
     model zoo documentation:
     https://tia-toolbox.readthedocs.io/en/latest/pretrained.html
 
-    The class integrates seamlessly with the TIAToolbox engine interface,
+    The class integrates seamlessly with the TIAToolbox engines interface,
     inheriting the data loading, inference orchestration, memory-aware
     chunking, and output-saving conventions of :class:`SemanticSegmentor`,
     while overriding only the nucleus-specific post-processing and export
@@ -189,7 +189,7 @@ class NucleusDetector(SemanticSegmentor):
 
     Attributes:
         images (list[str or Path] or np.ndarray):
-            Input images supplied to the engine, either as WSI paths or
+            Input images supplied to the engines, either as WSI paths or
             NHWC-formatted patches.
         masks (list[str or Path] or np.ndarray):
             Optional tissue masks for WSI processing. Only used when
@@ -221,7 +221,7 @@ class NucleusDetector(SemanticSegmentor):
             or ``"annotationstore"``).
 
     Examples:
-        >>> from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
+        >>> from tiatoolbox.models.engines.nucleus_detector import NucleusDetector
         >>> model_name = "mapde-conic"
         >>> detector = NucleusDetector(model=model_name, batch_size=16, num_workers=8)
         >>> detector.run(
@@ -250,7 +250,7 @@ class NucleusDetector(SemanticSegmentor):
     ) -> None:
         """Initialize :class:`NucleusDetector`.
 
-        This constructor follows the standard TIAToolbox engine initialization
+        This constructor follows the standard TIAToolbox engines initialization
         workflow. A model may be provided either as a string referring to a
         pretrained TIAToolbox architecture or as a custom ``torch.nn.Module``.
         When ``model`` is a string, the corresponding pretrained weights are
@@ -597,7 +597,7 @@ class NucleusDetector(SemanticSegmentor):
 
         Notes:
             - For non-AnnotationStore outputs, this method delegates to the
-              base engine's saving function to preserve consistency across
+              base engines's saving function to preserve consistency across
               TIAToolbox engines.
 
         """
@@ -875,7 +875,7 @@ class NucleusDetector(SemanticSegmentor):
         output_type: str = "dict",
         **kwargs: Unpack[NucleusDetectorRunParams],
     ) -> AnnotationStore | Path | str | dict | list[Path]:
-        """Run the nucleus detection engine on input images.
+        """Run the nucleus detection engines on input images.
 
         This method orchestrates the full inference pipeline, including preprocessing,
         model inference, post-processing, and saving results. It supports both
@@ -966,7 +966,7 @@ class NucleusDetector(SemanticSegmentor):
                   to its output path.
 
         Examples:
-            >>> from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
+            >>> from tiatoolbox.models.engines.nucleus_detector import NucleusDetector
             >>> detector = NucleusDetector(model="mapde-conic")
             >>> # WSI workflow: save to AnnotationStore (.db)
             >>> out = detector.run(
