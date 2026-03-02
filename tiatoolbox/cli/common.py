@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, TypeVar
 import click
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.models.engine.io_config import ModelIOConfigABC
+    from tiatoolbox.models.engines.io_config import ModelIOConfigABC
     from tiatoolbox.type_hints import IntPair
 
 F = TypeVar("F", bound=Callable[..., Any])

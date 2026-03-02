@@ -22,7 +22,7 @@ from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models import IOSegmentorConfig
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.engine.multi_task_segmentor import (
+from tiatoolbox.models.engines.multi_task_segmentor import (
     DaskDelayedJSONStore,
     MultiTaskSegmentor,
     _clear_zarr,

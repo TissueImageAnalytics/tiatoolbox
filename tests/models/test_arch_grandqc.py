@@ -19,8 +19,8 @@ from tiatoolbox.models.architecture.grandqc import (
     SegmentationHead,
     UnetPlusPlusDecoder,
 )
-from tiatoolbox.models.engine.io_config import IOSegmentorConfig
-from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
+from tiatoolbox.models.engines.io_config import IOSegmentorConfig
+from tiatoolbox.models.engines.semantic_segmentor import SemanticSegmentor
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader
 
