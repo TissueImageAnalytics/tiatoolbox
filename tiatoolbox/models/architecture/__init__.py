@@ -152,7 +152,7 @@ def get_pretrained_model(
     # Get model class form module
     model_class = getattr(arch_module, model_name)
     model = model_class(**arch_info["kwargs"])
-    # TODO(TBC): Dictionary of dataset specific or transformation?  # noqa: FIX002,TD003
+
     if "dataset" in info:
         # ! this is a hack currently, need another PR to clean up
         # ! associated pre-processing coming from dataset (Kumar, Kather, etc.)
@@ -171,7 +171,7 @@ def get_pretrained_model(
     io_module_name = str(".".join(io_class_info.split(".")[:-1]))
     io_class_name = str(io_class_info.split(".")[-1])
 
-    engine_module = locate(f"tiatoolbox.models.engine.{io_module_name}")
+    engine_module = locate(f"tiatoolbox.models.engines.{io_module_name}")
     engine_class = getattr(engine_module, io_class_name)
 
     ioconfig = engine_class(**io_info["kwargs"])
