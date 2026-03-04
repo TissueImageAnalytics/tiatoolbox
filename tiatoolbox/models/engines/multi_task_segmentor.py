@@ -154,7 +154,7 @@ from tiatoolbox.wsicore.wsireader import is_zarr
 from .semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,
-    build_pad_width,
+    build_da_pad_width,
     clip_probabilities_to_shape,
     concatenate_none,
     get_full_output_locs_inside_mask,
@@ -982,12 +982,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
         if kwargs.get("return_probabilities", False):
             for idx, probabilities_ in enumerate(probabilities):
                 pad_left, pad_top, pad_right, pad_bottom = self.mask_padding
-                pad_width = build_pad_width(
+                da_pad_width = build_da_pad_width(
                     probabilities_, pad_top, pad_bottom, pad_left, pad_right
                 )
                 raw_predictions["probabilities"][idx] = da.pad(
                     probabilities_,
-                    pad_width=pad_width,
+                    pad_width=da_pad_width,
                     mode="constant",
                     constant_values=0,
                 )
@@ -1059,7 +1059,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             if not return_predictions_:
                 del post_process_predictions[idx]["predictions"]
             else:
-                pad_width = build_pad_width(
+                da_pad_width = build_da_pad_width(
                     post_process_predictions[idx]["predictions"],
                     pad_top,
                     pad_bottom,
@@ -1068,7 +1068,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 )
                 post_process_predictions[idx]["predictions"] = da.pad(
                     post_process_predictions[idx]["predictions"],
-                    pad_width=pad_width,
+                    pad_width=da_pad_width,
                     mode="constant",
                     constant_values=0,
                 )

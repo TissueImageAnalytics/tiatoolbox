@@ -750,7 +750,7 @@ class HoVerNet(ModelABC):
     def postproc(
         self: HoVerNet,
         raw_maps: list[np.ndarray],
-        offset: tuple[int, int],
+        offset: tuple[int, int] = (0, 0),
     ) -> tuple[dict, ...]:
         """Post-processing script for image tiles.
 
@@ -762,6 +762,7 @@ class HoVerNet(ModelABC):
             offset (tuple[int, int]):
                 offset value to be added to output centroids, contours.
                 The offset should be in (x, y) / (column, row) order.
+                Default is (0, 0).
 
         Returns:
             tuple:

@@ -521,7 +521,7 @@ class MicroNet(ModelABC):
     def forward(  # skipcq: PYL-W0221
         self: MicroNet,
         input_tensor: torch.Tensor,
-    ) -> list[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
@@ -572,13 +572,13 @@ class MicroNet(ModelABC):
         out = torch.cat(tensors=(fm1, fm2, fm3), dim=1)
         out = self.layer["out"](out)
 
-        return [out, aux1, aux2, aux3]
+        return out, aux1, aux2, aux3
 
     # skipcq: PYL-W0221  # noqa: ERA001
     def postproc(
         self: MicroNet,
         raw_maps: list[np.ndarray | da.Array] | np.ndarray | da.Array,
-        offset: tuple[int, int],
+        offset: tuple[int, int] = (0, 0),
         *,
         verbose: bool = True,
     ) -> tuple[dict]:

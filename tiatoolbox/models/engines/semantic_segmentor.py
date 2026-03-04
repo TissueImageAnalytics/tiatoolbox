@@ -692,13 +692,13 @@ class SemanticSegmentor(PatchPredictor):
         pad_left, pad_top, pad_right, pad_bottom = self.mask_padding
         probabilities = raw_predictions["probabilities"]
 
-        pad_width = build_pad_width(
+        da_pad_width = build_da_pad_width(
             probabilities, pad_top, pad_bottom, pad_left, pad_right
         )
 
         raw_predictions["probabilities"] = da.pad(
             probabilities,
-            pad_width=pad_width,
+            pad_width=da_pad_width,
             mode="constant",
             constant_values=0,
         )
@@ -1796,7 +1796,7 @@ def get_full_output_locs_inside_mask(
     return inside, mask_padding, masked_output_shape
 
 
-def build_pad_width(
+def build_da_pad_width(
     arr: np.ndarray | da.Array,
     pad_top: int,
     pad_bottom: int,
@@ -1804,12 +1804,12 @@ def build_pad_width(
     pad_right: int,
 ) -> tuple[tuple, ...]:
     """Build pad width for dask padding."""
-    pad_width = []
+    da_pad_width = []
     for axis in range(arr.ndim):
         if axis == 0:  # height
-            pad_width.append((pad_top, pad_bottom))
+            da_pad_width.append((pad_top, pad_bottom))
         elif axis == 1:  # width
-            pad_width.append((pad_left, pad_right))
+            da_pad_width.append((pad_left, pad_right))
         else:  # channels or other dims
-            pad_width.append((0, 0))
-    return tuple(pad_width)
+            da_pad_width.append((0, 0))
+    return tuple(da_pad_width)

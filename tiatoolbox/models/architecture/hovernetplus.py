@@ -266,7 +266,7 @@ class HoVerNetPlus(HoVerNet):
     def postproc(
         self: HoVerNetPlus,
         raw_maps: list[np.ndarray],
-        offset: tuple[int, int],
+        offset: tuple[int, int] = (0, 0),
     ) -> tuple[dict, ...]:
         """Post-processing script for image tiles.
 
