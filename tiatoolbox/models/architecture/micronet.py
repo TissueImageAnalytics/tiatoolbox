@@ -521,7 +521,7 @@ class MicroNet(ModelABC):
     def forward(  # skipcq: PYL-W0221
         self: MicroNet,
         input_tensor: torch.Tensor,
-    ) -> list[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Logic for using layers defined in init.
 
         This method defines how layers are used in forward operation.
@@ -572,12 +572,13 @@ class MicroNet(ModelABC):
         out = torch.cat(tensors=(fm1, fm2, fm3), dim=1)
         out = self.layer["out"](out)
 
-        return [out, aux1, aux2, aux3]
+        return out, aux1, aux2, aux3
 
     # skipcq: PYL-W0221  # noqa: ERA001
     def postproc(
         self: MicroNet,
-        raw_maps: list[np.ndarray | da.Array],
+        raw_maps: list[np.ndarray | da.Array] | np.ndarray | da.Array,
+        offset: tuple[int, int] = (0, 0),
         *,
         verbose: bool = True,
     ) -> tuple[dict]:
@@ -586,6 +587,9 @@ class MicroNet(ModelABC):
         Args:
             raw_maps (list[ndarray | da.Array]):
                 A list of prediction outputs of each head from inference model.
+            offset (tuple[int, int]):
+                offset value to be added to output centroids, contours.
+                The offset should be in (x, y) / (column, row) order.
             verbose (bool):
                 Whether to display progress bar.
 
@@ -624,7 +628,7 @@ class MicroNet(ModelABC):
             # Paste back into canvas
             canvas[y1:y2, x1:x2][filled] = inst_id
 
-        nuc_inst_info_dict = HoVerNet.get_instance_info(canvas)
+        nuc_inst_info_dict = HoVerNet.get_instance_info(canvas, offset=offset)
 
         nuc_inst_info_dict_ = {}
         if not nuc_inst_info_dict:
@@ -646,10 +650,11 @@ class MicroNet(ModelABC):
 
         nuclei_seg = {
             "task_type": self.tasks[0],
-            "predictions": da.array(pred_inst)
-            if isinstance(raw_maps[0], da.Array)
-            else pred_inst,
+            "predictions": (
+                da.array(pred_inst) if isinstance(raw_maps[0], da.Array) else pred_inst
+            ),
             "info_dict": nuc_inst_info_dict_,
+            "seg_type": "instance",
         }
         return (nuclei_seg,)
 

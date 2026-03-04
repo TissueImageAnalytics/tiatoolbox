@@ -308,6 +308,7 @@ class SemanticSegmentor(PatchPredictor):
             verbose=verbose,
         )
         self.output_locations: list | None = None
+        self.mask_padding: tuple[int, int, int, int] = (0, 0, 0, 0)
 
     def get_dataloader(
         self: SemanticSegmentor,
@@ -357,7 +358,7 @@ class SemanticSegmentor(PatchPredictor):
         if not patch_mode:
             dataset = WSIPatchDataset(
                 input_img=images,
-                mask_path=masks,
+                input_mask=masks,
                 patch_input_shape=ioconfig.patch_input_shape,
                 patch_output_shape=ioconfig.patch_output_shape,
                 stride_shape=ioconfig.stride_shape,
@@ -486,6 +487,22 @@ class SemanticSegmentor(PatchPredictor):
             else dataloader.dataset.outputs
         )
 
+        output_shape = get_wsi_output_shape(dataloader.dataset)
+        self.mask_bounds = (
+            (0, 0, output_shape[1], output_shape[0])
+            if self.mask_bounds is None
+            else self.mask_bounds
+        )
+        full_output_locs, self.mask_padding, masked_output_shape = (
+            get_full_output_locs_inside_mask(
+                full_output_locs=full_output_locs,
+                mask_bounds=self.mask_bounds,
+                output_shape=output_shape,
+            )
+        )
+        min_x, min_y, _, _ = self.mask_padding
+        _, canvas_width = masked_output_shape
+
         infer_batch = self._get_model_attr("infer_batch")
         for batch_idx, batch_data in enumerate(tqdm_loop):
             batch_output = infer_batch(
@@ -495,6 +512,11 @@ class SemanticSegmentor(PatchPredictor):
             )
 
             batch_locs = batch_data["output_locs"].numpy()
+            # Subtract mask origin
+            batch_locs[:, 0] -= min_x  # start_x
+            batch_locs[:, 1] -= min_y  # start_y
+            batch_locs[:, 2] -= min_x  # end_x
+            batch_locs[:, 3] -= min_y  # end_y
 
             # Interpolate outputs for masked regions
             full_batch_output, full_output_locs, output_locs = prepare_full_batch(
@@ -517,12 +539,13 @@ class SemanticSegmentor(PatchPredictor):
             if change_indices.size > 0:
                 canvas, count, canvas_np, output_locs, output_locs_y_ = (
                     merge_horizontal(
-                        canvas,
-                        count,
-                        output_locs_y_,
-                        canvas_np,
-                        output_locs,
-                        change_indices,
+                        canvas=canvas,
+                        count=count,
+                        output_locs_y=output_locs_y_,
+                        canvas_np=canvas_np,
+                        output_locs=output_locs,
+                        change_indices=change_indices,
+                        canvas_width=canvas_width,
                     )
                 )
 
@@ -566,12 +589,13 @@ class SemanticSegmentor(PatchPredictor):
             )
 
         canvas, count, _, _, output_locs_y_ = merge_horizontal(
-            canvas,
-            count,
-            output_locs_y_,
-            canvas_np,
-            output_locs,
+            canvas=canvas,
+            count=count,
+            output_locs_y=output_locs_y_,
+            canvas_np=canvas_np,
+            output_locs=output_locs,
             change_indices=[len(output_locs)],
+            canvas_width=canvas_width,
         )
 
         zarr_group = None
@@ -588,8 +612,6 @@ class SemanticSegmentor(PatchPredictor):
             count = da.from_zarr(count_zarr, chunks=count_zarr.chunks)
             zarr_group = zarr.open(canvas_zarr.store.path, mode="a")
 
-        output_shape = get_wsi_output_shape(dataloader.dataset)
-
         # Final vertical merge
         raw_predictions["probabilities"] = merge_vertical_chunkwise(
             canvas,
@@ -598,7 +620,7 @@ class SemanticSegmentor(PatchPredictor):
             zarr_group,
             save_path,
             memory_threshold,
-            output_shape=output_shape,
+            output_shape=masked_output_shape,
             verbose=self.verbose,
         )
         raw_predictions["coordinates"] = da.concatenate(coordinates, axis=0)
@@ -607,6 +629,85 @@ class SemanticSegmentor(PatchPredictor):
             shutil.rmtree(save_path.with_name("full_batch_tmp"))
 
         return raw_predictions
+
+    def post_process_wsi(
+        self: SemanticSegmentor,
+        raw_predictions: dict[str, da.Array],
+        save_path: Path,
+        **kwargs: Unpack[PredictorRunParams],
+    ) -> dict[str, da.Array]:
+        """Post-process probabilities from whole slide image (WSI) inference.
+
+        This method refines the raw WSI-level predictions obtained from WSI inference.
+        Internally, it delegates `model.preproc_func()`.
+
+        Args:
+            raw_predictions (dict[str, da.Array]):
+                Dictionary containing raw model predictions as Dask arrays.
+            save_path (Path):
+                Path to save the intermediate output. The intermediate output is saved
+                in a zarr file.
+            **kwargs (PredictorRunParams):
+                Additional runtime parameters to configure prediction.
+
+                Optional Keys:
+                    auto_get_mask (bool):
+                        Automatically generate segmentation masks using
+                        `wsireader.tissue_mask()` during processing.
+                    batch_size (int):
+                        Number of image patches per forward pass.
+                    class_dict (dict):
+                        Mapping of classification outputs to class names.
+                    device (str):
+                        Device to run the model on (e.g., "cpu", "cuda").
+                    labels (list):
+                        Optional labels for input images. Only a single label per image
+                        is supported.
+                    memory_threshold (int):
+                        Memory usage threshold (percentage) to trigger caching behavior.
+                    num_workers (int):
+                        Number of workers for DataLoader and post-processing.
+                    output_file (str):
+                        Filename for saving output (e.g., ".zarr" or ".db").
+                    return_labels (bool):
+                        Whether to return labels with predictions.
+                    return_probabilities (bool):
+                        Whether to return per-class probabilities in the output.
+                        If False, only predicted labels are returned.
+                    scale_factor (tuple[float, float]):
+                        Scale factor for annotations (model_mpp / slide_mpp).
+                        Used to convert coordinates to baseline resolution.
+                    stride_shape (tuple[int, int]):
+                        Stride used during WSI processing.
+                        Defaults to `patch_input_shape` if not provided.
+                    wsireader_kwargs (WSIReaderParams):
+                        Specify processing images with no mpp or power in the metadata.
+                    verbose (bool):
+                        Whether to enable verbose logging.
+
+        Returns:
+            dask.array.Array: Post-processed predictions as a Dask array.
+
+        """
+        pad_left, pad_top, pad_right, pad_bottom = self.mask_padding
+        probabilities = raw_predictions["probabilities"]
+
+        da_pad_width = build_da_pad_width(
+            probabilities, pad_top, pad_bottom, pad_left, pad_right
+        )
+
+        raw_predictions["probabilities"] = da.pad(
+            probabilities,
+            pad_width=da_pad_width,
+            mode="constant",
+            constant_values=0,
+        )
+
+        return super().post_process_wsi(
+            raw_predictions=raw_predictions,
+            save_path=save_path,
+            **kwargs,
+        )
 
     def save_predictions(
         self: SemanticSegmentor,
@@ -663,6 +764,7 @@ class SemanticSegmentor(PatchPredictor):
                         Whether to return labels with predictions.
                     return_probabilities (bool):
                         Whether to return per-class probabilities.
+                        Default is False.
                     scale_factor (tuple[float, float]):
                         Scale factor for annotations (model_mpp / slide_mpp).
                         Used to convert coordinates to baseline resolution.
@@ -876,7 +978,7 @@ class SemanticSegmentor(PatchPredictor):
         self: SemanticSegmentor,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         *,
-        masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        masks: list[os.PathLike | Path | np.ndarray] | np.ndarray | None = None,
         input_resolutions: list[dict[Units, Resolution]] | None = None,
         patch_input_shape: IntPair | None = None,
         ioconfig: IOSegmentorConfig | None = None,
@@ -936,8 +1038,11 @@ class SemanticSegmentor(PatchPredictor):
                         is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
+                        Default is 80.
                     num_workers (int):
                         Number of workers for DataLoader and post-processing.
+                        Default is 0. Set to `multiprocessing.cpu_count()` for maximum
+                        usage.
                     output_file (str):
                         Filename for saving output (e.g., ".zarr" or ".db").
                     output_resolutions (Resolution):
@@ -945,9 +1050,9 @@ class SemanticSegmentor(PatchPredictor):
                     patch_output_shape (tuple[int, int]):
                         Shape of output patches (height, width).
                     return_labels (bool):
-                        Whether to return labels with predictions.
+                        Whether to return labels with predictions. Default is False.
                     return_probabilities (bool):
-                        Whether to return per-class probabilities.
+                        Whether to return per-class probabilities. Default is False.
                     scale_factor (tuple[float, float]):
                         Scale factor for annotations (model_mpp / slide_mpp).
                         Used to convert coordinates to baseline resolution.
@@ -1083,6 +1188,7 @@ def merge_horizontal(
     canvas_np: np.ndarray,
     output_locs: np.ndarray,
     change_indices: np.ndarray | list[int],
+    canvas_width: int | None = None,
 ) -> tuple[da.Array, da.Array, np.ndarray, np.ndarray, np.ndarray]:
     """Merge horizontal patches incrementally for each row of patches.
 
@@ -1104,6 +1210,9 @@ def merge_horizontal(
             Array of output locations for each patch.
         change_indices (np.ndarray | list[np.ndarray]):
             Indices indicating where to flush and merge patches.
+        canvas_width (int | None):
+            Optional fixed canvas width for each merged row. If ``None``,
+            uses each row's local span.
 
     Returns:
         tuple:
@@ -1119,9 +1228,15 @@ def merge_horizontal(
         # Compute span only for the current row to avoid allocating a canvas
         # covering the entire slide width.
         batch_xs = np.min(output_locs_[:, 0], axis=0)
-        batch_xe = np.max(output_locs_[:, 2], axis=0)
 
-        merged_shape = (canvas_np_.shape[1], batch_xe - batch_xs, canvas_np.shape[3])
+        merged_width = (
+            int(canvas_width)
+            if canvas_width is not None
+            else int(np.max(output_locs_[:, 2]) - batch_xs)
+        )
+        output_locs_[:, 2] = np.minimum(output_locs_[:, 2], merged_width)
+
+        merged_shape = (canvas_np_.shape[1], merged_width, canvas_np.shape[3])
 
         canvas_merge, count_merge = merge_batch_to_canvas(
             blocks=canvas_np_,
@@ -1535,6 +1650,7 @@ def prepare_full_batch(
             Output locations corresponding to `batch_output`.
         full_output_locs (np.ndarray):
             Remaining global output locations to be matched.
+            The format is [start_x, start_y, end_x, end_y].
         output_locs (np.ndarray):
             Accumulated output location array across batches.
         canvas_np (np.ndarray | zarr.Array | None):
@@ -1629,3 +1745,71 @@ def prepare_full_batch(
         )
 
     return full_batch_output, full_output_locs, output_locs
+
+
+def get_full_output_locs_inside_mask(
+    full_output_locs: np.ndarray,
+    mask_bounds: tuple[int, int, int, int],
+    output_shape: tuple[int, int],
+) -> tuple[np.ndarray, tuple[int, int, int, int], tuple[int, int]]:
+    """Get full output locations within the mask.
+
+    This function helps build a set of location within mask bounds.
+
+    Mask bounds need to be padded to dask array at the end of the run.
+
+    """
+    mask_start_x, mask_start_y, mask_end_x, mask_end_y = mask_bounds
+
+    inside = []
+    for loc in full_output_locs:
+        sx, sy, ex, ey = loc
+        # Check if completely outside mask bounds
+        if not (
+            ex < mask_start_x or sx > mask_end_x or ey < mask_start_y or sy > mask_end_y
+        ):
+            inside.append(loc)
+    inside = np.array(inside)
+
+    min_x = inside[:, 0].min()  # pad start_x
+    min_y = inside[:, 1].min()  # pad start_y
+    max_x = inside[:, 2].max()  # pad end_x
+    max_y = inside[:, 3].max()  # pad end_y
+
+    pad_bottom = max(output_shape[0] - max_y, 0)
+    pad_right = max(output_shape[1] - max_x, 0)
+
+    mask_padding = (min_x, min_y, pad_right, pad_bottom)
+
+    # Subtract mask origin
+    inside[:, 0] -= min_x  # start_x
+    inside[:, 1] -= min_y  # start_y
+    inside[:, 2] -= min_x  # end_x
+    inside[:, 3] -= min_y  # end_y
+
+    # Recalculate new output shape
+    # for centre crop region
+    masked_output_shape: tuple[int, int] = tuple(
+        np.array(output_shape) - (min_y, min_x) - (pad_bottom, pad_right)
+    )
+
+    return inside, mask_padding, masked_output_shape
+
+
+def build_da_pad_width(
+    arr: np.ndarray | da.Array,
+    pad_top: int,
+    pad_bottom: int,
+    pad_left: int,
+    pad_right: int,
+) -> tuple[tuple, ...]:
+    """Build pad width for dask padding."""
+    da_pad_width = []
+    for axis in range(arr.ndim):
+        if axis == 0:  # height
+            da_pad_width.append((pad_top, pad_bottom))
+        elif axis == 1:  # width
+            da_pad_width.append((pad_left, pad_right))
+        else:  # channels or other dims
+            da_pad_width.append((0, 0))
+    return tuple(da_pad_width)

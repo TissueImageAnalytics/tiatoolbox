@@ -752,8 +752,8 @@ class NucleusDetector(SemanticSegmentor):
             class_dict=class_dict,
         )
 
-    @staticmethod
     def _centroid_maps_to_detection_arrays(
+        self: NucleusDetector,
         detection_maps: da.Array,
         *,
         verbose: bool = True,
@@ -855,8 +855,8 @@ class NucleusDetector(SemanticSegmentor):
             probs = np.array([], dtype=np.float32)
 
         return {
-            "y": da.from_array(ys, chunks="auto"),
-            "x": da.from_array(xs, chunks="auto"),
+            "y": da.from_array(ys + self.mask_padding[1], chunks="auto"),
+            "x": da.from_array(xs + self.mask_padding[0], chunks="auto"),
             "classes": da.from_array(classes, chunks="auto"),
             "probabilities": da.from_array(probs, chunks="auto"),
         }

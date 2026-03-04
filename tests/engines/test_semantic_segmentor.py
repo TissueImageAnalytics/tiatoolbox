@@ -188,12 +188,12 @@ def test_semantic_segmentor_tiles(track_tmp_path: Path) -> None:
         patch_mode=False,
         auto_get_mask=False,
         save_dir=track_tmp_path / "output",
-        input_resolutions=[{"units": "baseline", "resolution": 1.0}],
         patch_input_shape=(1024, 1024),
+        wsireader_kwargs={"mpp": 0.25},
     )
     output = zarr.open(output[sample_image], mode="r")
 
-    assert output["predictions"].shape == (2048, 3584)
+    assert output["predictions"].shape == (500, 500)
 
     sample_image.unlink()
 
@@ -470,10 +470,21 @@ def test_wsi_segmentor_zarr(
         num_workers=1,
     )
     # Return Probabilities is True
+    # Apply mask
     # Testing with WSIReader
+    # Create a tiny mask.
     reader = WSIReader.open(sample_svs)
+    mask = np.zeros(
+        reader.slide_dimensions(resolution=1.25, units="power")[::-1], dtype=np.uint8
+    )
+    mask[100:102, 35:37] = 1
+    ioconfig = segmentor.ioconfig
+    # To ensure Mask is applied to selected region.
+    ioconfig.input_resolutions = [{"units": "mpp", "resolution": 0.5}]
+    ioconfig.output_resolutions = [{"units": "mpp", "resolution": 0.5}]
     output = segmentor.run(
         images=[reader],
+        masks=[mask],
         return_probabilities=True,
         return_labels=False,
         device=device,
@@ -484,10 +495,10 @@ def test_wsi_segmentor_zarr(
         memory_threshold=1,
     )
 
-    shape_at_2mpp = reader.slide_dimensions(resolution=2, units="mpp")
+    shape_at_p5mpp = reader.slide_dimensions(resolution=0.5, units="mpp")
     output_ = zarr.open(output[sample_svs], mode="r")
-    assert 0.36 < np.mean(output_["predictions"][:]) < 0.46
-    assert np.all(output_["predictions"].shape == shape_at_2mpp[::-1])
+    assert 0.03 < np.mean(output_["predictions"][:]) < 0.04
+    assert np.all(output_["predictions"].shape == shape_at_p5mpp[::-1])
     assert "probabilities" in output_
     assert "canvas" not in output_
     assert "count" not in output_

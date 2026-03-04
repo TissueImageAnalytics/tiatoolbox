@@ -221,6 +221,9 @@ class EngineABC(ABC):  # noqa: B024
         labels (list | None):
             Optional labels for input images. Only a single label per image is
             supported.
+        mask_bounds (tuple (int, int, int, int)) | None:
+            mask bounds for processing. top, left, bottom, right.
+            When no mask is set, mask_bounds is None.
         num_workers (int):
             Number of workers for data loading.
         patch_input_shape (IntPair | None):
@@ -327,7 +330,8 @@ class EngineABC(ABC):  # noqa: B024
         self.verbose: bool = verbose
         self.dataloader: DataLoader | None = None
         self.drop_keys: list = []
-        self.output_type = None
+        self.output_type: str | None = None
+        self.mask_bounds: tuple[int, int, int, int] | None = None
 
     @staticmethod
     def _initialize_model_ioconfig(
@@ -437,7 +441,7 @@ class EngineABC(ABC):  # noqa: B024
         if not patch_mode:
             dataset = WSIPatchDataset(
                 input_img=images,
-                mask_path=masks,
+                input_mask=masks,
                 patch_input_shape=ioconfig.patch_input_shape,
                 stride_shape=ioconfig.stride_shape,
                 resolution=ioconfig.input_resolutions[0]["resolution"],
@@ -1441,6 +1445,13 @@ class EngineABC(ABC):  # noqa: B024
 
         duplicate_filter = DuplicateFilter()
         logger.addFilter(duplicate_filter)
+        # Set mask bounds to size of input patch if patch prediction
+        # else size of output patch
+        self.mask_bounds = (
+            self._ioconfig.patch_output_shape
+            if hasattr(self._ioconfig, "patch_output_shape")
+            else self._ioconfig.patch_input_shape
+        )
 
         self.dataloader = self.get_dataloader(
             images=self.images,
@@ -1630,6 +1641,19 @@ class EngineABC(ABC):  # noqa: B024
 
             scale_factor = self._calculate_scale_factor(dataloader=self.dataloader)
 
+            # WSI mode uses WSIPatchDataSet for dataloader
+            output_locations = np.asarray(self.dataloader.dataset.outputs)
+            self.mask_bounds = (
+                None
+                if len(output_locations) == 0
+                else (
+                    output_locations[:, 0].min(),
+                    output_locations[:, 1].min(),
+                    output_locations[:, 2].max(),
+                    output_locations[:, 3].max(),
+                )
+            )
+
             raw_predictions = self.infer_wsi(
                 dataloader=self.dataloader,
                 save_path=save_path[get_path(image)],
@@ -1660,7 +1684,7 @@ class EngineABC(ABC):  # noqa: B024
         self: EngineABC,
         images: list[os.PathLike | Path | WSIReader] | np.ndarray,
         *,
-        masks: list[os.PathLike | Path] | np.ndarray | None = None,
+        masks: list[os.PathLike | Path | np.ndarray] | np.ndarray | None = None,
         input_resolutions: list[dict[Units, Resolution]] | None = None,
         patch_input_shape: IntPair | None = None,
         ioconfig: ModelIOConfigABC | None = None,
@@ -1711,6 +1735,7 @@ class EngineABC(ABC):  # noqa: B024
                     auto_get_mask (bool):
                         Automatically generate segmentation masks using
                         `wsireader.tissue_mask()` during processing.
+                        EngineABC defaults to True.
                     batch_size (int):
                         Number of image patches per forward pass.
                     class_dict (dict):
@@ -1724,6 +1749,7 @@ class EngineABC(ABC):  # noqa: B024
                         is supported.
                     memory_threshold (int):
                         Memory usage threshold (percentage) to trigger caching behavior.
+                        Default is 80.
                     num_workers (int):
                         Number of workers for DataLoader and post-processing.
                     output_file (str):
