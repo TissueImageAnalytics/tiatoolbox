@@ -167,6 +167,7 @@ from .semantic_segmentor import (
 
 if TYPE_CHECKING:  # pragma: no cover
     import os
+    from collections.abc import Hashable
 
     from torch.utils.data import DataLoader
 
@@ -1082,7 +1083,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         memory_threshold: float = 80,
         *,
         return_predictions: tuple[bool, ...] | None = None,
-    ) -> list[dict] | None:
+    ) -> tuple[dict, ...] | None:
         """Convert WSI probability maps into outputs using tile-mode processing.
 
         This helper is used when WSI-scale probability maps are Zarr-backed or too
@@ -1276,6 +1277,28 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     for inst_uuid in remove_insts_in_origs:
                         wsi_info_dict[inst_id]["info_dict"].pop(inst_uuid, None)
 
+        wsi_info_dict = self._inst_dict_for_dask_processing(
+            wsi_info_dict=wsi_info_dict,
+            # uses default values for keys_to_shift
+        )
+
+        delattr(self, "_probabilities")
+        return wsi_info_dict
+
+    def _inst_dict_for_dask_processing(
+        self: MultiTaskSegmentor,
+        wsi_info_dict: tuple[dict, ...],
+        keys_to_shift: tuple[str] = ("centroid", "box", "contours"),
+    ) -> tuple[dict, ...]:
+        """Helper function to process dictionary to dask arrays.
+
+        This function has been separated from the main implementation for
+        flexibility in the future. Usually, ("centroid", "box", "contours")
+        need to be shifted only. Overriding this function will help
+        include not only further keys but also for more complex
+        structured outputs if necessary.
+
+        """
         for idx, wsi_info_dict_ in enumerate(
             tqdm(
                 wsi_info_dict,
@@ -1286,14 +1309,21 @@ class MultiTaskSegmentor(SemanticSegmentor):
         ):
             info_df = pd.DataFrame(wsi_info_dict_["info_dict"]).transpose()
             dict_info_wsi = {}
+            offset = np.array(self.mask_padding[:2])
             for key, col in info_df.items():
-                col_np = col.to_numpy()
+                col_np = apply_coordinate_offset(
+                    data_array=col.to_numpy(),
+                    offset=offset,
+                    key=key,
+                    keys_to_shift=keys_to_shift,
+                    verbose=self.verbose,
+                )
                 dict_info_wsi[key] = da.from_array(
                     col_np,
                     chunks=(len(col),),
                 )
             wsi_info_dict[idx]["info_dict"] = dict_info_wsi
-        delattr(self, "_probabilities")
+
         return wsi_info_dict
 
     @delayed
@@ -1326,7 +1356,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             for p in self._probabilities
         ]
         postproc_func = self._get_model_attr("postproc_func")
-        return postproc_func(head_raws, offset=self.mask_padding[:2])
+        return postproc_func(head_raws)  # offset is (0, 0) by default.
 
     @staticmethod
     def _get_tile_info(
@@ -3701,3 +3731,75 @@ class DaskDelayedJSONStore:
         qupath_json = {"type": "FeatureCollection", "features": features}
 
         return save_qupath_json(save_path=save_path, qupath_json=qupath_json)
+
+
+def apply_coordinate_offset(
+    data_array: np.ndarray,
+    offset: tuple[int, int] | np.ndarray | list[int],
+    key: str | Hashable,
+    keys_to_shift: tuple[str, ...] = ("centroid", "box", "contours"),
+    *,
+    verbose: bool = True,
+) -> np.ndarray:
+    """Apply Coordinate offset "info_dict" output.
+
+    Applies a 2D translation (dx, dy) to various geometric data structures
+    stored within a NumPy object array.
+
+    The function handles three specific structures:
+    - Centroids: Shape (2,) -> [x, y]
+    - Boxes: Shape (4,) -> [xmin, ymin, xmax, ymax]
+    - Contours: Shape (N, 2) -> [[x1, y1], [x2, y2], ...]
+
+    Args:
+        data_array (np.ndarray):
+            A NumPy array with dtype=object, where each
+            element is a NumPy array representing a centroid, box, or contour.
+        offset (tuple[int, int] | np.ndarray | list[int]):
+            A sequence of two values representing the [dx, dy] translation.
+        key (str):
+            Current key in the "info_dict" to process.
+        keys_to_shift (list (str)):
+            Tuple of keys to shift in x, y. Keys such as "probability" and
+            "type" do not need to be shifted.
+            Default is ["centroid", "box", "contours"].
+        verbose (bool):
+            Whether to display progress bar.
+
+    Returns:
+        np.ndarray:
+            A new NumPy array of dtype=object containing the translated
+            geometric data, preserving the original internal data types
+             (e.g., int32).
+
+    """
+    if key not in keys_to_shift:
+        return data_array
+
+    dx, dy = offset
+
+    # No need to run the loop.
+    if dx == dy == 0:
+        return data_array
+
+    # 1. Create the 'container' first to define the structure
+    result = np.empty(len(data_array), dtype=object)
+
+    # 2. Iterate and fill slots manually to prevent NumPy from collapsing rows
+    for i, item in enumerate(
+        tqdm(
+            data_array,
+            leave=False,
+            disable=not verbose,
+            desc=f"Applying coordinate offset for key: {key}.",
+        )
+    ):
+        if item.size == 4 and item.ndim == 1:  # noqa: PLR2004
+            shift_vector = np.array([dx, dy, dx, dy])
+        else:
+            shift_vector = np.array([dx, dy])
+
+        # Perform addition and place the resulting array object into the slot
+        result[i] = (item + shift_vector).astype(item.dtype)
+
+    return result

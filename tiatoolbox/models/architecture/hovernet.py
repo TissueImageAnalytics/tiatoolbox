@@ -652,7 +652,7 @@ class HoVerNet(ModelABC):
                                 y_max,
                             ],
                             "centroid": [x, y],
-                            "contour": [
+                            "contours": [
                                 [x, y],
                                 ...
                             ],
