@@ -67,7 +67,7 @@ def test_ome_missing_physicalsize(
     new_description = ElementTree.tostring(tree, encoding="unicode")
     monkeypatch.setattr(page, "description", new_description)
     monkeypatch.setattr(wsi, "_m_info", None)
-    assert wsi.info.mpp is None
+    assert np.all(wsi.info.mpp == np.array([0.5, 0.5]))
 
 
 def test_ome_missing_physicalsizey(
@@ -720,6 +720,9 @@ def test_info_logs_unable_to_determine_objective_power(
     tag.dtype = "dtype"
     reader.tiff.pages = [MagicMock()]
     reader.tiff.pages[0].tags.items.return_value = [(256, tag)]
+    reader._estimate_mpp_objective_power = (
+        wsireader.WSIReader._estimate_mpp_objective_power
+    )
 
     # Force generic TIFF metadata to return None objective + None mpp
     with patch(
@@ -731,5 +734,6 @@ def test_info_logs_unable_to_determine_objective_power(
 
     # Assert the warning was logged
     assert any(
-        "Unable to determine objective power" in message for message in caplog.messages
+        "Unable to determine objective power or microns-per-pixel (MPP)" in message
+        for message in caplog.messages
     )
