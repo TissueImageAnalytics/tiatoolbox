@@ -33,3 +33,23 @@ class MethodNotSupportedError(Exception):
     ) -> None:
         """Initialize :class:`MethodNotSupportedError`."""
         super().__init__(message)
+
+
+class DimensionMismatchError(Exception):
+    """Raise dimension mismatch error.
+
+    Args:
+        expected_dims (list or tuple) : Expected dimensions.
+        actual_dims (list or tuple) : Actual dimensions.
+
+    """
+
+    def __init__(
+        self: DimensionMismatchError,
+        expected_dims: list | tuple,
+        actual_dims: list | tuple,
+    ) -> None:
+        """Initialize :class:`DimensionMismatchError`."""
+        self.expected_dims = expected_dims
+        self.actual_dims = actual_dims
+        super().__init__(f"Expected dimensions {expected_dims}, but got {actual_dims}.")

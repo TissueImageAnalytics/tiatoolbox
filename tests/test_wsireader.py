@@ -278,7 +278,7 @@ def fsspec_wsi(sample_svs: Path, track_tmp_path: Path) -> FsspecJsonWSIReader:
 
     since loading the whole image using HTTP range requests from:
 
-    https://tiatoolbox.dcs.warwick.ac.uk/sample_wsis/CMU-1-Small-Region.svs
+    https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/sample_wsis/CMU-1-Small-Region.svs
 
     takes about 20 seconds.
 
@@ -295,9 +295,7 @@ def fsspec_wsi(sample_svs: Path, track_tmp_path: Path) -> FsspecJsonWSIReader:
     )
     svs_file_path = str(files_all[0])
     json_file_path = str(track_tmp_path / "fsspec.json")
-    final_url = (
-        "https://tiatoolbox.dcs.warwick.ac.uk/sample_wsis/CMU-1-Small-Region.svs"
-    )
+    final_url = "https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/sample_wsis/CMU-1-Small-Region.svs"
     tiff_to_fsspec.main(svs_file_path, json_file_path, final_url)
 
     _FSSPEC_WSI_CACHE[cache_key] = wsireader.FsspecJsonWSIReader(json_file_path)
@@ -3161,7 +3159,7 @@ def test_fsspec_wsireader_info_read(sample_svs: Path, track_tmp_path: Path) -> N
 
     Generate fsspec json file and load image from:
 
-    https://tiatoolbox.dcs.warwick.ac.uk/sample_wsis/CMU-1-Small-Region.svs
+    https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/sample_wsis/CMU-1-Small-Region.svs
 
     """
     wsi = fsspec_wsi(sample_svs, track_tmp_path)

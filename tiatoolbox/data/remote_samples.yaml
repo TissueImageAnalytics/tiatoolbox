@@ -26,6 +26,10 @@ files:
     hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
     subfolder: "sample_wsis"
     filename: "CMU-1-Small-Region.svs"
+  thumbnail-1k-1k:
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "CMU-2_1k_1k-thumbnail.png"
   tiled-tiff-1-small-jpeg:
     hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
     subfolder: "sample_wsis"

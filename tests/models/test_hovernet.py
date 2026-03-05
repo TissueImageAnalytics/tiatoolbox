@@ -37,8 +37,8 @@ def test_functionality(remote_sample: Callable) -> None:
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, device=select_device(on_gpu=False))
     output = [v[0] for v in output]
-    output = model.postproc(output)
-    assert len(output[1]) > 0, "Must have some nuclei."
+    output = model.postproc(output, offset=(0, 0))
+    assert len(output[0]["info_dict"]) > 0, "Must have some nuclei."
 
     # * test original mode on CoNSeP dataset (architecture used in HoVerNet paper)
     patch = reader.read_bounds(
@@ -54,8 +54,8 @@ def test_functionality(remote_sample: Callable) -> None:
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, device=select_device(on_gpu=False))
     output = [v[0] for v in output]
-    output = model.postproc(output)
-    assert len(output[1]) > 0, "Must have some nuclei."
+    output = model.postproc(output, offset=(0, 0))
+    assert len(output[0]["info_dict"]) > 0, "Must have some nuclei."
 
     # test crash when providing exotic mode
     with pytest.raises(ValueError, match=r".*Invalid mode.*"):
