@@ -1,5 +1,3 @@
-# This workflow will install the package as is on the GitHub default branch using pip
-
 name: pip Install
 
 on:
@@ -40,46 +38,51 @@ jobs:
     - name: Install Miniconda
       uses: conda-incubator/setup-miniconda@v3
       with:
-        python-version: ${{ matrix.python-version }}
-        auto-update-conda: true
-        activate-environment: test-env
-        environment-file: ""
         channels: conda-forge
         channel-priority: strict
+        auto-update-conda: true
 
-    - name: Install OpenJPEG + SQLite via conda
-      shell: bash
+    - name: Create conda environment with correct Python
+      shell: bash -l
       run: |
-        conda install -y -c conda-forge openjpeg sqlite
-        conda list | grep -E "openjpeg|sqlite"
+        conda create -y -n test-env python=${{ matrix.python-version }}
+        conda activate test-env
+        conda install -y openjpeg sqlite
 
     - name: Verify SQLite
-      shell: bash
+      shell: bash -l
       run: |
+        conda activate test-env
         sqlite3 --version
         sqlite3 ":memory:" -list ".output stdout" "pragma compile_options" ".exit"
 
     - name: Verify OpenJPEG
-      shell: bash
+      shell: bash -l
       run: |
+        conda activate test-env
         opj_dump -h || true
 
     - name: Install CPU-only PyTorch
-      shell: bash
+      shell: bash -l
       run: |
+        conda activate test-env
         pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
-    - name: pip Install From GitHub Repo
-      shell: bash
+    - name: Install tiatoolbox from GitHub
+      shell: bash -l
       run: |
+        conda activate test-env
         pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@${GITHUB_SHA}
 
     - name: Test Imports
-      shell: python
+      shell: bash -l
       run: |
+        conda activate test-env
+        python - << 'EOF'
         import tiatoolbox
-        print(tiatoolbox.__version__)
+        print("tiatoolbox:", tiatoolbox.__version__)
         import openslide
-        print(openslide.__version__)
+        print("openslide:", openslide.__version__)
         import torch
-        print(torch.__version__)
+        print("torch:", torch.__version__)
+        EOF
