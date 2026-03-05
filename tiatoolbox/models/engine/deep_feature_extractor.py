@@ -28,7 +28,7 @@ Features:
 
 Example:
 --------
->>> from tiatoolbox.models.engines.deep_feature_extractor import DeepFeatureExtractor
+>>> from tiatoolbox.models.engine.deep_feature_extractor import DeepFeatureExtractor
 >>> extractor = DeepFeatureExtractor(model="resnet18")
 >>> wsis = ["slide1.svs", "slide2.svs"]
 >>> output = extractor.run(wsis, patch_mode=False, output_type="zarr")
@@ -61,7 +61,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from torch.utils.data import DataLoader
 
     from tiatoolbox.annotation import AnnotationStore
-    from tiatoolbox.models.engines.io_config import IOPatchPredictorConfig
+    from tiatoolbox.models.engine.io_config import IOPatchPredictorConfig
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import IntPair, Resolution, Units
     from tiatoolbox.wsicore import WSIReader

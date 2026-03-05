@@ -36,7 +36,7 @@ if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
 
     from tiatoolbox.annotation import AnnotationStore
-    from tiatoolbox.models.engines.io_config import IOPatchPredictorConfig
+    from tiatoolbox.models.engine.io_config import IOPatchPredictorConfig
     from tiatoolbox.models.models_abc import ModelABC
     from tiatoolbox.type_hints import IntPair, Resolution, Units
     from tiatoolbox.wsicore import WSIReader

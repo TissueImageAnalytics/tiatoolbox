@@ -1,4 +1,4 @@
-"""Test tiatoolbox.models.engines.engine_abc."""
+"""Test tiatoolbox.models.engine.engine_abc."""
 
 from __future__ import annotations
 
@@ -21,12 +21,12 @@ from tiatoolbox.models.architecture import (
 )
 from tiatoolbox.models.architecture.vanilla import CNNModel
 from tiatoolbox.models.dataset import PatchDataset, WSIPatchDataset
-from tiatoolbox.models.engines.engine_abc import (
+from tiatoolbox.models.engine.engine_abc import (
     EngineABC,
     EngineABCRunParams,
     prepare_engines_save_dir,
 )
-from tiatoolbox.models.engines.io_config import ModelIOConfigABC
+from tiatoolbox.models.engine.io_config import ModelIOConfigABC
 
 if TYPE_CHECKING:
     from tiatoolbox.wsicore import WSIReaderParams
@@ -572,7 +572,7 @@ class TestEngineABC(EngineABC):
         auto_get_mask: bool = True,
         wsireader_kwargs: WSIReaderParams | None = None,
     ) -> torch.utils.data.DataLoader:
-        """Test pre-process images."""
+        """Test pre process images."""
         return super().get_dataloader(
             images,
             masks,

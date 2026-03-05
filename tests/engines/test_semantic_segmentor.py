@@ -21,8 +21,8 @@ from huggingface_hub import hf_hub_download
 from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models import WSIPatchDataset
-from tiatoolbox.models.engines import semantic_segmentor
-from tiatoolbox.models.engines.semantic_segmentor import (
+from tiatoolbox.models.engine import semantic_segmentor
+from tiatoolbox.models.engine.semantic_segmentor import (
     SemanticSegmentor,
     clip_probabilities_to_shape,
     get_wsi_output_shape,
@@ -379,7 +379,7 @@ def test_merge_vertical_chunkwise_memory_threshold_triggered() -> None:
 
         # Mock psutil to simulate low memory
         with mock.patch(
-            "tiatoolbox.models.engines.semantic_segmentor.psutil.virtual_memory"
+            "tiatoolbox.models.engine.semantic_segmentor.psutil.virtual_memory"
         ) as mock_vm:
             mock_vm.return_value.free = 1  # Very low free memory
 
