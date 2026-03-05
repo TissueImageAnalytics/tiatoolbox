@@ -7,8 +7,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt install software-properties-common -y &&\
     add-apt-repository ppa:deadsnakes/ppa -y && apt update &&\
-    apt-get install -y --no-install-recommends python3.9-venv &&\
-    apt-get install libpython3.13-de -y &&\
+    apt-get install -y --no-install-recommends python3.13-venv &&\
+    apt-get install libpython3.13-dev -y &&\
     apt-get install python3.13-dev -y &&\
     apt-get install build-essential -y &&\
     apt-get clean
@@ -26,5 +26,5 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 RUN pip install --no-cache-dir tiatoolbox
 
 # activate virtual environment
-ENV VIRTUAL_ENV=/opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+ENV VIRTUAL_ENV=/venv
+ENV PATH="/venv/bin:$PATH"
