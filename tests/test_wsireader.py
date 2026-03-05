@@ -3253,6 +3253,10 @@ def test_oob_read_dicom(sample_dicom: Path) -> None:
 
     """
     wsi = DICOMWSIReader(sample_dicom)
+
+    # assert reading of metadata
+    assert np.all(wsi.info.mpp == np.array([0.499, 0.499]))
+    assert wsi.info.objective_power == 20.0
     # Read a region that is out of bounds
     region = wsi.read_rect(
         location=(200000, 200),
@@ -3262,6 +3266,26 @@ def test_oob_read_dicom(sample_dicom: Path) -> None:
     assert region.shape == (100, 100, 3)
     # Check that the region is white (255)
     assert np.all(region == 255)
+
+
+def test_read_dicom_with_metadata(remote_sample: Callable) -> None:
+    """Test DICOMWSIReader when mpp and objective are available."""
+    wsi_path = remote_sample("dicom-2")
+    wsi = DICOMWSIReader(wsi_path)
+    wsi._info()
+
+    # Assert mpp and objective power are read correctly.
+    assert np.all(wsi.info.mpp == np.array([0.2498, 0.2498]))
+    assert wsi.info.objective_power == 40.0
+
+    wsi = DICOMWSIReader(wsi_path)
+    # Force delete attribute for objective power.
+    delattr(wsi.wsi.levels.base_level.datasets[0], "OpticalPathSequence")
+    wsi._info()
+
+    # Assert objective power inferred from mpp.
+    assert np.all(wsi.info.mpp == np.array([0.2498, 0.2498]))
+    assert wsi.info.objective_power == 40.0
 
 
 def test_read_rect_transformedreader_svs_baseline(

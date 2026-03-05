@@ -5228,11 +5228,17 @@ class DICOMWSIReader(WSIReader):
         mm_per_pixel = dataset.pixel_spacing
         mpp = (mm_per_pixel.width * 1e3, mm_per_pixel.height * 1e3)
 
+        objective_power = None
+        if hasattr(dataset, "OpticalPathSequence"):
+            ops = dataset.OpticalPathSequence[0]
+            if hasattr(ops, "ObjectiveLensPower"):
+                objective_power = ops.ObjectiveLensPower
+
         # Fallback to calculating objective power & mpp
         # Need to add test image with objective power metadata
         # in a separate PR.
         objective_power, mpp = self._estimate_mpp_objective_power(
-            objective_power=None,
+            objective_power=objective_power,
             mpp=mpp,
         )
 
