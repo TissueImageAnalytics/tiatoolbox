@@ -82,16 +82,15 @@ class PromptSegmentor:
         save_dir = Path(save_dir)
         save_dir.mkdir(parents=True, exist_ok=True)
         for i, _mask in enumerate(masks):
-            save_path = save_dir / f"{i}"
             mask = np.any(_mask[0], axis=0, keepdims=False)
             dict_to_store_semantic_segmentor(
                 patch_output={"predictions": mask[0]},
                 scale_factor=(self.scale, self.scale),
                 offset=self.offset,
-                save_path=Path(f"{save_path}.{i}.db"),
+                save_path=Path(f"{save_dir}/{i}.db"),
                 output_type="annotationstore",
             )
-            paths.append(Path(f"{save_path}.{i}.db"))
+            paths.append(Path(f"{save_dir}/{i}.db"))
         return paths
 
     def calc_mpp(

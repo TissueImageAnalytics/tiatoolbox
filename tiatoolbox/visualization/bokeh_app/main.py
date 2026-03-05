@@ -1564,7 +1564,7 @@ def sam_segment() -> None:
     prediction = prompt_segmentor.run(
         images=[roi],
         device=select_device(on_gpu=torch.cuda.is_available()),
-        save_dir=tmp_save_dir / "sam_out",
+        save_dir=tmp_save_dir,
         point_coords=point_coords,
         box_coords=box_coords,
     )
