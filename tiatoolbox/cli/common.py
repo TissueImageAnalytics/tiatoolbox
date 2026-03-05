@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import click
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Callable
+    from tiatoolbox.models.engine.io_config import ModelIOConfigABC
+    from tiatoolbox.type_hints import IntPair
 
-    from tiatoolbox.models.models_abc import IOConfigABC
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def add_default_to_usage_help(
@@ -78,6 +81,135 @@ def cli_output_path(
     )
 
 
+def cli_output_file(
+    usage_help: str = "Filename for saving output (e.g., '.zarr' or '.db').",
+    default: str | None = None,
+) -> Callable:
+    """Enables --output-file option for cli."""
+    return click.option(
+        "--output-file",
+        help=add_default_to_usage_help(usage_help, default=default),
+        type=str,
+        default=default,
+    )
+
+
+def cli_class_dict(
+    usage_help: str = (
+        "Mapping of classification outputs to class names. "
+        'Example: --class-dict \'{"1": "tumour", "2": "normal"}\''
+    ),
+    default: dict | None = None,
+) -> Callable:
+    """Enables --class-dict option for CLI.
+
+    The functions parse JSON into a dict with int keys if possible.
+
+    """
+
+    def _parse_json(
+        _ctx: click.Context, _param: click.Parameter, value: str | None
+    ) -> dict[int | str, Any] | None:
+        if value is None:
+            return default
+        try:
+            parsed = json.loads(value)
+            return {
+                int(k) if isinstance(k, str) and k.isdigit() else k: v
+                for k, v in parsed.items()
+            }
+        except json.JSONDecodeError as e:
+            msg = f"Invalid JSON: {e}"
+            raise click.BadParameter(msg) from e
+
+    return click.option(
+        "--class-dict",
+        help=usage_help,
+        callback=_parse_json,
+        default=default,
+    )
+
+
+def cli_input_resolutions(
+    usage_help: str = (
+        "Resolution settings for input heads. "
+        'Example: --input-resolutions \'[{"units": "mpp", "resolution": 0.25}]\''
+    ),
+    default: list[dict[str, Any]] | None = None,
+) -> Callable[[F], F]:
+    """Click option for --input-resolutions.
+
+    Parses a JSON list of dictionaries specifying resolution settings for input heads.
+    Supported units are 'level', 'power', and 'mpp'.
+    Example: --input-resolutions '[{"units": "mpp", "resolution": 0.25}]'
+
+    """
+
+    def _parse_json(
+        _ctx: click.Context,
+        _param: click.Parameter,
+        value: str | None,
+    ) -> list[dict[str, Any]] | None:
+        if value is None:
+            return default
+        try:
+            parsed = json.loads(value)
+            if not isinstance(parsed, list):
+                msg = "Must be a JSON list of dictionaries"
+                raise click.BadParameter(msg)
+            return parsed  # noqa: TRY300
+        except json.JSONDecodeError as e:
+            msg = f"Invalid JSON: {e}"
+            raise click.BadParameter(msg) from e
+
+    return click.option(
+        "--input-resolutions",
+        help=usage_help,
+        callback=_parse_json,
+        default=default,
+    )
+
+
+def cli_output_resolutions(
+    usage_help: str = (
+        "Resolution used for writing output predictions. "
+        'Example: --output-resolutions \'[{"units": "mpp", "resolution": 0.25}]\''
+    ),
+    default: list[dict[str, Any]] | None = None,
+) -> Callable[[F], F]:
+    """Click option for --output-resolutions.
+
+    Parses a JSON list of dictionaries specifying resolution settings for input heads.
+    Supported units are 'level', 'power', and 'mpp'.
+    Example: --output-resolutions '[{"units": "mpp", "resolution": 0.25}]'
+
+    """
+
+    def _parse_json(
+        _ctx: click.Context,
+        _param: click.Parameter,
+        value: str | None,
+    ) -> list[dict[str, Any]] | None:
+        if value is None:
+            return default
+        try:
+            parsed = json.loads(value)
+            if not isinstance(parsed, list):
+                msg = "Must be a JSON list of dictionaries"
+                raise click.BadParameter(msg)
+            return parsed  # noqa: TRY300
+        except json.JSONDecodeError as e:
+            msg = f"Invalid JSON: {e}"
+            raise click.BadParameter(msg) from e
+
+    return click.option(
+        "--output-resolutions",
+        help=usage_help,
+        callback=_parse_json,
+        default=default,
+    )
+
+
 def cli_file_type(
     usage_help: str = "File types to capture from directory.",
     default: str = "*.ndpi, *.svs, *.mrxs, *.jp2",
@@ -88,6 +220,26 @@ def cli_file_type(
         help=add_default_to_usage_help(usage_help, default=default),
         default=default,
         type=str,
+    )
+
+
+def cli_output_type(
+    usage_help: str = "The format of the output type. "
+    "'output_type' can be 'zarr' or 'AnnotationStore'. "
+    "Default value is 'AnnotationStore'.",
+    default: str = "AnnotationStore",
+    input_type: click.Choice | None = None,
+) -> Callable:
+    """Enables --file-types option for cli."""
+    click_choices = click.Choice(
+        choices=["zarr", "AnnotationStore"], case_sensitive=False
+    )
+    input_type = click_choices if input_type is None else input_type
+    return click.option(
+        "--output-type",
+        help=add_default_to_usage_help(usage_help, default=default),
+        default=default,
+        type=input_type,
     )
 
 
@@ -107,6 +259,20 @@ def cli_mode(
     )
 
 
+def cli_patch_mode(
+    usage_help: str = "Whether to run the model in patch mode or WSI mode.",
+    *,
+    default: bool = False,
+) -> Callable:
+    """Enables --return-probabilities option for cli."""
+    return click.option(
+        "--patch-mode",
+        type=bool,
+        help=add_default_to_usage_help(usage_help, default=default),
+        default=default,
+    )
+
+
 def cli_region(
     usage_help: str = "Image region in the whole slide image to read from. "
     "default=0 0 2000 2000",
@@ -116,6 +282,69 @@ def cli_region(
         "--region",
         type=int,
         nargs=4,
+        help=usage_help,
+    )
+
+
+def cli_patch_input_shape(
+    usage_help: str = "Shape of input patches (height, width). Patches are at "
+    "requested read resolution, not with respect to level 0,"
+    "and must be positive. default=None",
+    default: IntPair | None = None,
+) -> Callable:
+    """Enables --patch-input-shape option for cli."""
+    return click.option(
+        "--patch-input-shape",
+        type=int,
+        default=default,
+        nargs=2,
+        help=usage_help,
+    )
+
+
+def cli_patch_output_shape(
+    usage_help: str = "Shape of output patches (height, width). default=None",
+    default: IntPair | None = None,
+) -> Callable:
+    """Enables --patch-output-shape option for cli."""
+    return click.option(
+        "--patch-output-shape",
+        type=int,
+        default=default,
+        nargs=2,
+        help=usage_help,
+    )
+
+
+def cli_stride_shape(
+    usage_help: str = "Stride used during patch extraction. Stride is"
+    "at requested read resolution, not with respect to"
+    "level 0, and must be positive. If stride_shape is None"
+    "patch_input_shape is used for stride. If not provided,"
+    "`stride_shape=None`",
+    default: IntPair | None = None,
+) -> Callable:
+    """Enables --stride-shape option for cli."""
+    return click.option(
+        "--stride-shape",
+        type=int,
+        default=default,
+        nargs=2,
+        help=usage_help,
+    )
+
+
+def cli_scale_factor(
+    usage_help: str = "Scale factor for annotations (model_mpp / slide_mpp)."
+    "Used to convert coordinates to baseline resolution.",
+    default: tuple[float, float] | None = None,
+) -> Callable:
+    """Enables --scale-factor option for cli."""
+    return click.option(
+        "--scale-factor",
+        type=float,
+        default=default,
+        nargs=2,
         help=usage_help,
     )
 
@@ -206,7 +435,7 @@ def cli_method(
     )
 
 
-def cli_pretrained_model(
+def cli_model(
     usage_help: str = "Name of the predefined model used to process the data. "
     "The format is <model_name>_<dataset_trained_on>. For example, "
     "`resnet18-kather100K` is a resnet18 model trained on the Kather dataset. "
@@ -220,20 +449,20 @@ def cli_pretrained_model(
 ) -> Callable:
     """Enables --pretrained-model option for cli."""
     return click.option(
-        "--pretrained-model",
+        "--model",
         help=add_default_to_usage_help(usage_help, default=default),
         default=default,
     )
 
 
-def cli_pretrained_weights(
+def cli_weights(
     usage_help: str = "Path to the model weight file. If not supplied, the default "
     "pretrained weight will be used.",
     default: str | None = None,
 ) -> Callable:
     """Enables --pretrained-weights option for cli."""
     return click.option(
-        "--pretrained-weights",
+        "--weights",
         help=add_default_to_usage_help(usage_help, default=default),
         default=default,
     )
@@ -265,30 +494,67 @@ def cli_return_probabilities(
     )
 
 
-def cli_merge_predictions(
-    usage_help: str = "Whether to merge the predictions to form a 2-dimensional map.",
-    *,
-    default: bool = True,
-) -> Callable:
-    """Enables --merge-predictions option for cli."""
-    return click.option(
-        "--merge-predictions",
-        type=bool,
-        default=default,
-        help=add_default_to_usage_help(usage_help, default=default),
-    )
+def parse_bool_list(
+    _ctx: click.Context,
+    _param: click.Parameter,
+    value: str | None,
+) -> tuple[bool, ...] | None:
+    """Parse a comma-separated list of boolean values for a Click option.
+
+    This function is intended for use as a Click callback. It converts a
+    comma-separated string (e.g., ``"true,false,1,0"``) into a tuple of Python
+    booleans. Each item is stripped, lowercased, and validated against a set of
+    accepted truthy and falsy representations.
+
+    Accepted truthy values:
+        ``"true"``, ``"1"``, ``"yes"``, ``"y"``
+
+    Accepted falsy values:
+        ``"false"``, ``"0"``, ``"no"``, ``"n"``
+
+    Args:
+        ctx (click.Context):
+            The Click context object (unused but required by Click callback API).
+        param (click.Parameter):
+            The Click parameter object (unused but required by Click callback API).
+        value (str | None):
+            The raw string provided by the user. If ``None``, the function returns
+            ``None`` unchanged.
+
+    Returns:
+        tuple[bool, ...] | None:
+            A tuple of parsed boolean values, or ``None`` if no value was provided.
+
+    Raises:
+        click.BadParameter:
+            If any item in the comma-separated list is not a valid boolean string.
+    """
+    if value is None:
+        return None
+    items = value.split(",")
+    out = []
+    for item in items:
+        item_ = item.strip().lower()
+        if item_ in ("true", "1", "yes", "y"):
+            out.append(True)
+        elif item_ in ("false", "0", "no", "n"):
+            out.append(False)
+        else:
+            msg = f"Invalid boolean: {item_}"
+            raise click.BadParameter(msg)
+    return tuple(out)
 
 
-def cli_return_labels(
-    usage_help: str = "Whether to return raw model output as labels.",
+def cli_return_predictions(
+    usage_help: str = "Whether to return predictions for individual tasks.",
     *,
-    default: bool = True,
+    default: tuple[bool, ...] | None = None,
 ) -> Callable:
-    """Enables --return-labels option for cli."""
+    """Enables --return-predictions option for cli."""
     return click.option(
-        "--return-labels",
-        type=bool,
-        help=add_default_to_usage_help(usage_help, default=default),
+        "--return-predictions",
+        callback=parse_bool_list,
+        help=add_default_to_usage_help(usage_help, default=None),
         default=default,
     )
 
@@ -322,14 +588,28 @@ def cli_masks(
     )
 
 
-def cli_auto_generate_mask(
+def cli_memory_threshold(
+    usage_help: str = (
+        "Memory usage threshold (in percentage) to trigger caching behavior."
+    ),
+    default: int = 80,
+) -> Callable:
+    """Enables --batch-size option for cli."""
+    return click.option(
+        "--memory-threshold",
+        help=add_default_to_usage_help(usage_help, default=default),
+        default=default,
+    )
+
+
+def cli_auto_get_mask(
     usage_help: str = "Automatically generate tile/WSI tissue mask.",
     *,
     default: bool = False,
 ) -> Callable:
     """Enables --auto-generate-mask option for cli."""
     return click.option(
-        "--auto-generate-mask",
+        "--auto-get-mask",
         help=add_default_to_usage_help(usage_help, default=default),
         type=bool,
         default=default,
@@ -350,27 +630,69 @@ def cli_yaml_config_path(
     )
 
 
-def cli_num_loader_workers(
+def cli_min_distance(
+    usage_help: str = "Minimum distance separating two nuclei (in pixels).",
+    default: int | None = None,
+) -> Callable:
+    """Enables --min_distance option for cli."""
+    return click.option(
+        "--min_distance",
+        type=int,
+        help=add_default_to_usage_help(usage_help, default=default),
+        default=default,
+    )
+
+
+def cli_threshold_abs(
+    usage_help: str = "Absolute detection threshold applied to model outputs.",
+    default: float | None = None,
+) -> Callable:
+    """Enables --threshold_abs option for cli."""
+    return click.option(
+        "--threshold_abs",
+        type=float,
+        help=add_default_to_usage_help(usage_help, default=default),
+        default=default,
+    )
+
+
+def cli_threshold_rel(
+    usage_help: str = "Relative detection threshold"
+    " (e.g., with respect to local maxima).",
+    default: float | None = None,
+) -> Callable:
+    """Enables --threshold_rel option for cli."""
+    return click.option(
+        "--threshold_rel",
+        type=float,
+        help=add_default_to_usage_help(usage_help, default=default),
+        default=default,
+    )
+
+
+def cli_postproc_tile_shape(
+    usage_help: str = " Tile shape (height, width) used during post-processing "
+    "(in pixels) to control rechunking behavior.",
+    default: IntPair | None = None,
+) -> Callable:
+    """Enables --postproc_tile_shape option for cli."""
+    return click.option(
+        "--postproc_tile_shape",
+        type=int,
+        default=default,
+        nargs=2,
+        help=usage_help,
+    )
+
+
+def cli_num_workers(
     usage_help: str = "Number of workers to load the data. Please note that they will "
     "also perform preprocessing.",
     default: int = 0,
 ) -> Callable:
     """Enables --num-loader-workers option for cli."""
     return click.option(
-        "--num-loader-workers",
-        help=add_default_to_usage_help(usage_help, default=default),
-        type=int,
-        default=default,
-    )
-
-
-def cli_num_postproc_workers(
-    usage_help: str = "Number of workers to post-process the network output.",
-    default: int = 0,
-) -> Callable:
-    """Enables --num-postproc-workers option for cli."""
-    return click.option(
-        "--num-postproc-workers",
+        "--num-workers",
         help=add_default_to_usage_help(usage_help, default=default),
         type=int,
         default=default,
@@ -385,6 +707,20 @@ def cli_verbose(
     """Enables --verbose option for cli."""
     return click.option(
         "--verbose",
+        type=bool,
+        help=add_default_to_usage_help(usage_help, default=str(default)),
+        default=default,
+    )
+
+
+def cli_overwrite(
+    usage_help: str = "Whether to overwrite existing output files. Default is False.",
+    *,
+    default: bool = False,
+) -> Callable:
+    """Enables --overwrite option for cli."""
+    return click.option(
+        "--overwrite",
         type=bool,
         help=add_default_to_usage_help(usage_help, default=str(default)),
         default=default,
@@ -563,17 +899,17 @@ def prepare_model_cli(
 tiatoolbox_cli = TIAToolboxCLI()
 
 
-def prepare_ioconfig_seg(
-    segment_config_class: type[IOConfigABC],
+def prepare_ioconfig(
+    config_class: type[ModelIOConfigABC],
     pretrained_weights: str | Path | None,
     yaml_config_path: str | Path,
-) -> IOConfigABC | None:
-    """Prepare ioconfig for segmentation."""
+) -> ModelIOConfigABC | None:
+    """Prepare ioconfig for CLI."""
     import yaml  # noqa: PLC0415
 
     if pretrained_weights is not None:
         with Path(yaml_config_path).open() as registry_handle:
             ioconfig = yaml.safe_load(registry_handle)
-        return segment_config_class(**ioconfig)
+        return config_class(**ioconfig)
 
     return None

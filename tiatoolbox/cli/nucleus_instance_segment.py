@@ -2,77 +2,114 @@
 
 from __future__ import annotations
 
-import click
+from typing import TYPE_CHECKING
 
 from tiatoolbox.cli.common import (
-    cli_auto_generate_mask,
+    cli_auto_get_mask,
     cli_batch_size,
+    cli_class_dict,
     cli_device,
     cli_file_type,
     cli_img_input,
+    cli_input_resolutions,
     cli_masks,
-    cli_mode,
-    cli_num_loader_workers,
-    cli_num_postproc_workers,
+    cli_memory_threshold,
+    cli_model,
+    cli_num_workers,
+    cli_output_file,
     cli_output_path,
-    cli_pretrained_model,
-    cli_pretrained_weights,
+    cli_output_resolutions,
+    cli_output_type,
+    cli_overwrite,
+    cli_patch_input_shape,
+    cli_patch_mode,
+    cli_patch_output_shape,
+    cli_return_predictions,
+    cli_return_probabilities,
+    cli_scale_factor,
+    cli_stride_shape,
     cli_verbose,
+    cli_weights,
     cli_yaml_config_path,
-    prepare_ioconfig_seg,
+    prepare_ioconfig,
     prepare_model_cli,
     tiatoolbox_cli,
 )
+
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.type_hints import IntPair
 
 
 @tiatoolbox_cli.command()
 @cli_img_input()
 @cli_output_path(
-    usage_help="Output directory where model predictions will be saved.",
-    default="nucleus_instance_segmentation",
+    usage_help="Output directory where model output will be saved.",
+    default="nucleus_instance_segment",
 )
+@cli_output_file(default=None)
 @cli_file_type(
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
 )
-@cli_mode(
-    usage_help="Type of input file to process.",
-    default="wsi",
-    input_type=click.Choice(["patch", "wsi", "tile"], case_sensitive=False),
-)
-@cli_pretrained_model(default="hovernet_fast-pannuke")
-@cli_pretrained_weights(default=None)
+@cli_input_resolutions(default=None)
+@cli_output_resolutions(default=None)
+@cli_class_dict(default=None)
+@cli_model(default="hovernet_fast-pannuke")
+@cli_weights()
 @cli_device(default="cpu")
-@cli_batch_size()
+@cli_batch_size(default=64)
+@cli_yaml_config_path()
 @cli_masks(default=None)
-@cli_yaml_config_path(default=None)
-@cli_num_loader_workers()
+@cli_num_workers(default=0)
+@cli_output_type(
+    default="AnnotationStore",
+)
+@cli_memory_threshold(default=80)
+@cli_patch_input_shape(default=None)
+@cli_patch_output_shape(default=None)
+@cli_stride_shape(default=None)
+@cli_scale_factor(default=None)
+@cli_patch_mode(default=False)
+@cli_return_predictions(default=None)
+@cli_return_probabilities(default=True)
+@cli_auto_get_mask(default=True)
+@cli_overwrite(default=False)
 @cli_verbose(default=True)
-@cli_num_postproc_workers(default=0)
-@cli_auto_generate_mask(default=False)
 def nucleus_instance_segment(
-    pretrained_model: str,
-    pretrained_weights: str,
+    model: str,
+    weights: str,
     img_input: str,
     file_types: str,
+    class_dict: list[tuple[int, str]],
+    input_resolutions: list[dict],
+    output_resolutions: list[dict],
     masks: str | None,
-    mode: str,
     output_path: str,
+    patch_input_shape: IntPair | None,
+    patch_output_shape: tuple[int, int] | None,
+    stride_shape: IntPair | None,
+    scale_factor: tuple[float, float] | None,
     batch_size: int,
     yaml_config_path: str,
-    num_loader_workers: int,
-    num_postproc_workers: int,
+    num_workers: int,
     device: str,
+    output_type: str,
+    memory_threshold: int,
+    output_file: str | None,
     *,
-    auto_generate_mask: bool,
+    patch_mode: bool,
+    return_predictions: tuple[bool, ...] | None,
+    return_probabilities: bool,
+    auto_get_mask: bool,
     verbose: bool,
+    overwrite: bool,
 ) -> None:
-    """Process an image/directory of input images with a patch classification CNN."""
+    """Process a set of input images with a multitask segmentation engine."""
     from tiatoolbox.models import (  # noqa: PLC0415
         IOSegmentorConfig,
         NucleusInstanceSegmentor,
     )
-    from tiatoolbox.utils import save_as_json  # noqa: PLC0415
 
+    class_dict = dict(class_dict) if class_dict else None
     files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,
         output_path=output_path,
@@ -80,29 +117,39 @@ def nucleus_instance_segment(
         file_types=file_types,
     )
 
-    ioconfig = prepare_ioconfig_seg(
+    ioconfig = prepare_ioconfig(
         IOSegmentorConfig,
-        pretrained_weights,
-        yaml_config_path,
+        pretrained_weights=weights,
+        yaml_config_path=yaml_config_path,
     )
 
-    predictor = NucleusInstanceSegmentor(
-        pretrained_model=pretrained_model,
-        pretrained_weights=pretrained_weights,
+    nuc_inst_segmentor = NucleusInstanceSegmentor(
+        model=model,
+        weights=weights,
         batch_size=batch_size,
-        num_loader_workers=num_loader_workers,
-        num_postproc_workers=num_postproc_workers,
-        auto_generate_mask=auto_generate_mask,
+        num_workers=num_workers,
         verbose=verbose,
     )
 
-    output = predictor.predict(
-        imgs=files_all,
+    _ = nuc_inst_segmentor.run(
+        images=files_all,
         masks=masks_all,
-        mode=mode,
+        class_dict=class_dict,
+        patch_mode=patch_mode,
+        patch_input_shape=patch_input_shape,
+        patch_output_shape=patch_output_shape,
+        input_resolutions=input_resolutions,
+        output_resolutions=output_resolutions,
+        ioconfig=ioconfig,
         device=device,
         save_dir=output_path,
-        ioconfig=ioconfig,
+        output_type=output_type,
+        return_predictions=return_predictions,
+        return_probabilities=return_probabilities,
+        auto_get_mask=auto_get_mask,
+        memory_threshold=memory_threshold,
+        output_file=output_file,
+        scale_factor=scale_factor,
+        stride_shape=stride_shape,
+        overwrite=overwrite,
     )
-
-    save_as_json(output, str(output_path.joinpath("results.json")))
