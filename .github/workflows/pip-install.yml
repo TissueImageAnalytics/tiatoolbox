@@ -137,7 +137,7 @@ jobs:
       shell: pwsh
       run: |
         conda activate test-env
-        pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@${GITHUB_SHA}
+        pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@$env:GITHUB_SHA
 
     # -------------------------------
     # Test Imports

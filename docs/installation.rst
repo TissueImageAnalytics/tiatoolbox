@@ -17,18 +17,18 @@ On Linux, the prerequisite software can be installed using the following command
 
 .. code-block:: console
 
-    $ apt-get -y install libopenjp2-7-dev libopenjp2-tools
+    $ apt-get -y install libopenjp2-7-dev libopenjp2-tools sqlite3
 
 The same command is used when working on the Colab or Kaggle platforms. When working on Google Colab, we remove the packages ``datascience`` and ``albumentations`` because they conflict and produce an error message.
 
 Windows (10+)
 -------------
 
-On Windows, ``OpenJPEG`` can be installed using the following ``conda`` command:
+On Windows, ``OpenJPEG`` and ``SQLite`` can be installed using the following ``conda`` command:
 
 .. code-block:: console
 
-    C:\> conda install -c conda-forge openjpeg
+    C:\> conda install -c conda-forge openjpeg sqlite
 
 macOS
 -----
@@ -43,14 +43,14 @@ Homebrew
 
 .. code-block:: console
 
-    $ brew install openjpeg
+    $ brew install openjpeg sqlite
 
 MacPorts
 ^^^^^^^^
 
 .. code-block:: console
 
-    $ port install openjpeg
+    $ port install openjpeg sqlite
 
 Installing Stable Release
 =========================
