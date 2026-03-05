@@ -33,7 +33,7 @@ def test_functional() -> None:
         "mobilenet_v3_large",
         "mobilenet_v3_small",
     ]
-    assert CNNModel.postproc([1, 2]) == 1
+    assert CNNModel.postproc(np.array([1, 2])) == 1
 
     b = 4
     h = w = 512
@@ -60,7 +60,7 @@ def test_timm_functional() -> None:
     backbones = [
         "efficientnet_b0",
     ]
-    assert TimmModel.postproc([1, 2]) == 1
+    assert TimmModel.postproc(np.array([1, 2])) == 1
 
     b = 4
     h = w = 224

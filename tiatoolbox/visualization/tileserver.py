@@ -23,7 +23,8 @@ from shapely.geometry import Point
 from tiatoolbox import data, logger
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
 from tiatoolbox.tools.pyramid import AnnotationTileGenerator, ZoomifyGenerator
-from tiatoolbox.utils.misc import add_from_dat, store_from_dat
+from tiatoolbox.utils.misc import store_from_dat
+from tiatoolbox.utils.postproc_defs import MultichannelToRGB
 from tiatoolbox.utils.visualization import AnnotationRenderer, colourise_image
 from tiatoolbox.wsicore.wsireader import (
     OpenSlideWSIReader,
@@ -170,6 +171,9 @@ class TileServer(Flask):
         )
         self.route("/tileserver/tap_query/<x>/<y>")(self.tap_query)
         self.route("/tileserver/prop_range", methods=["PUT"])(self.prop_range)
+        self.route("/tileserver/channels", methods=["GET"])(self.get_channels)
+        self.route("/tileserver/channels", methods=["PUT"])(self.set_channels)
+        self.route("/tileserver/enhance", methods=["PUT"])(self.set_enhance)
         self.route("/tileserver/shutdown", methods=["POST"])(self.shutdown)
         self.route("/tileserver/sessions", methods=["GET"])(self.sessions)
         self.route("/tileserver/healthcheck", methods=["GET"])(self.healthcheck)
@@ -473,26 +477,18 @@ class TileServer(Flask):
         """
         session_id = self._get_session_id()
         file_path = request.form["file_path"]
-        model_mpp = json.loads(request.form["model_mpp"])
         file_path = self.decode_safe_name(file_path)
 
         for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
-                add_from_dat(
-                    layer.store,
-                    file_path,
-                    np.array(model_mpp) / np.array(self.slide_mpps[session_id]),
-                )
+                to_add = SQLiteStore(file_path)
+                layer.store.append_many(list(to_add.values()))
+                to_add.close()
                 types = self.update_types(layer.store)
                 return json.dumps(types)
 
-        sq = store_from_dat(
-            file_path,
-            np.array(model_mpp) / np.array(self.slide_mpps[session_id]),
-        )
-        tmp_path = Path(tempfile.gettempdir()) / f"temp_{session_id}.db"
-        sq.dump(tmp_path)
-        sq = SQLiteStore(tmp_path)
+        sq = SQLiteStore(file_path)
+
         self.pyramids[session_id]["overlay"] = AnnotationTileGenerator(
             self.layers[session_id]["slide"].info,
             sq,
@@ -812,6 +808,41 @@ class TileServer(Flask):
             return "done"
         minv, maxv = prop_range
         self.renderers[session_id].score_fn = lambda x: (x - minv) / (maxv - minv)
+        return "done"
+
+    def get_channels(self: TileServer) -> Response:
+        """Get the channels of the slide."""
+        session_id = self._get_session_id()
+        if isinstance(self.layers[session_id]["slide"].post_proc, MultichannelToRGB):
+            if not self.layers[session_id]["slide"].post_proc.is_validated:
+                _ = self.layers[session_id]["slide"].slide_thumbnail(
+                    resolution=8.0, units="mpp"
+                )
+            return jsonify(
+                {
+                    "channels": self.layers[session_id]["slide"].post_proc.color_dict,
+                    "active": self.layers[session_id]["slide"].post_proc.channels,
+                },
+            )
+        return jsonify({"channels": {}, "active": []})
+
+    def set_channels(self: TileServer) -> str:
+        """Set the channels of the slide."""
+        session_id = self._get_session_id()
+        if isinstance(self.layers[session_id]["slide"].post_proc, MultichannelToRGB):
+            channels = json.loads(request.form["channels"])
+            active = json.loads(request.form["active"])
+            self.layers[session_id]["slide"].post_proc.color_dict = channels
+            self.layers[session_id]["slide"].post_proc.channels = active
+            self.layers[session_id]["slide"].post_proc.is_validated = False
+        return "done"
+
+    def set_enhance(self: TileServer) -> str:
+        """Set the enhance factor of the slide."""
+        session_id = self._get_session_id()
+        enhance = json.loads(request.form["val"])
+        if isinstance(self.layers[session_id]["slide"].post_proc, MultichannelToRGB):
+            self.layers[session_id]["slide"].post_proc.enhance = enhance
         return "done"
 
     def sessions(self: TileServer) -> Response:

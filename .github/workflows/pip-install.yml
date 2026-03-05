@@ -1,72 +1,172 @@
-# This workflow will install the package as is on the github default branch using pip
-
 name: pip Install
 
 on:
-    push:
-        paths: [ "requirements*.yml", "conda-env-create.yml", "requirements/requirement*.txt", "setup*py", "setup*cfg", "pytproject*toml", "MANIFEST*in"]
-    pull_request:
-        paths: [ "requirements*.yml", "conda-env-create.yml", "requirements/requirement*.txt", "setup*py", "setup*cfg", "pytproject*toml", "MANIFEST*in"]
+  push:
+    paths:
+      - "requirements*.yml"
+      - "conda-env-create.yml"
+      - "requirements/requirement*.txt"
+      - "setup*py"
+      - "setup*cfg"
+      - "pyproject*toml"
+      - "MANIFEST*in"
+      - ".github/workflows/pip-install.yml"
+  pull_request:
+    paths:
+      - "requirements*.yml"
+      - "conda-env-create.yml"
+      - "requirements/requirement*.txt"
+      - "setup*py"
+      - "setup*cfg"
+      - "pyproject*toml"
+      - "MANIFEST*in"
+      - ".github/workflows/pip-install.yml"
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
         os: [ubuntu-24.04, windows-latest, macos-latest]
+
     steps:
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Miniconda
+      uses: conda-incubator/setup-miniconda@v3
       with:
-        python-version: ${{ matrix.python-version }}
-    - name: 🐧 Install OpenJPEG
-      if: runner.os == 'Linux'
+        channels: conda-forge
+        channel-priority: strict
+        auto-update-conda: true
+
+    # -------------------------------
+    # Create environment (Linux/macOS)
+    # -------------------------------
+    - name: Create conda environment (Linux/macOS)
+      if: runner.os != 'Windows'
+      shell: bash
       run: |
-        sudo apt update
-        sudo apt-get install -y libopenjp2-7 libopenjp2-tools
-        python -m pip install --upgrade pip
-    - name: 🍎 Install OpenJPEG
-      if: runner.os == 'macOS'
-      run: |
-        brew install openjpeg
-        python -m pip install --upgrade pip
-    - name: 🪟 Install OpenJPEG
+        source $CONDA/etc/profile.d/conda.sh
+        conda create -y -n test-env python=${{ matrix.python-version }}
+        conda activate test-env
+        conda install -y openjpeg sqlite
+
+    # -------------------------------
+    # Create environment (Windows)
+    # -------------------------------
+    - name: Create conda environment (Windows)
       if: runner.os == 'Windows'
+      shell: pwsh
       run: |
-        # Install OpenJPEG
-        git clone https://github.com/uclouvain/openjpeg.git
-        cd openjpeg
-        mkdir build
-        cd build
-        cmake -G "MinGW Makefiles" .. -DCMAKE_BUILD_TYPE=Release
-        ls
-        make -j4
-        make install
-        make clean
-    - name: 🪟 Install SQLite Shell
-      if: runner.os == 'Windows'
-      run: choco install sqlite.shell --no-progress
-    - name: SQLite Version Information
+        conda create -y -n test-env python=${{ matrix.python-version }}
+        conda activate test-env
+        conda install -y openjpeg sqlite
+
+    # -------------------------------
+    # Verify SQLite
+    # -------------------------------
+    - name: Verify SQLite (Linux/macOS)
+      if: runner.os != 'Windows'
+      shell: bash
       run: |
+        source $CONDA/etc/profile.d/conda.sh
+        conda activate test-env
         sqlite3 --version
         sqlite3 ":memory:" -list ".output stdout" "pragma compile_options" ".exit"
-    - name: OpenJPEG Version Information
-      continue-on-error: true  # This -h option has exit code 1 for some reason
-      run: opj_dump -h
-    - name: pip Install From GitHub Repo on Linux and macOS
-      if: runner.os != 'Windows'
-      run: python -m pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@${GITHUB_SHA}
-    - name: pip Install From GitHub on Windows
+
+    - name: Verify SQLite (Windows)
       if: runner.os == 'Windows'
-      run: python -m pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@$env:GITHUB_SHA
-    - name: Test Imports
-      shell: python
+      shell: pwsh
       run: |
+        conda activate test-env
+        sqlite3 --version
+        sqlite3 ":memory:" -list ".output stdout" "pragma compile_options" ".exit"
+
+    # -------------------------------
+    # Verify OpenJPEG
+    # -------------------------------
+    - name: Verify OpenJPEG (Linux/macOS)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        source $CONDA/etc/profile.d/conda.sh
+        conda activate test-env
+        opj_dump -h || true  # This -h option exits with code 1 for some reason
+
+    - name: Verify OpenJPEG (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        conda activate test-env
+        opj_dump -h || true  # This -h option exits with code 1 for some reason
+
+    # -------------------------------
+    # Install PyTorch
+    # -------------------------------
+    - name: Install CPU-only PyTorch (Linux/macOS)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        source $CONDA/etc/profile.d/conda.sh
+        conda activate test-env
+        pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+    - name: Install CPU-only PyTorch (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        conda activate test-env
+        pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+    # -------------------------------
+    # Install tiatoolbox
+    # -------------------------------
+    - name: Install tiatoolbox (Linux/macOS)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        source $CONDA/etc/profile.d/conda.sh
+        conda activate test-env
+        pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@${GITHUB_SHA}
+
+    - name: Install tiatoolbox (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        conda activate test-env
+        pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@$env:GITHUB_SHA
+
+    # -------------------------------
+    # Test Imports
+    # -------------------------------
+    - name: Test Imports (Linux/macOS)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        source $CONDA/etc/profile.d/conda.sh
+        conda activate test-env
+        python - << 'EOF'
         import tiatoolbox
-        print(tiatoolbox.__version__)
+        print("tiatoolbox:", tiatoolbox.__version__)
         import openslide
-        print(openslide.__version__)
+        print("openslide:", openslide.__version__)
         import torch
-        print(torch.__version__)
+        print("torch:", torch.__version__)
+        EOF
+
+    - name: Test Imports (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        conda activate test-env
+        @"
+        import tiatoolbox
+        print("tiatoolbox:", tiatoolbox.__version__)
+        import openslide
+        print("openslide:", openslide.__version__)
+        import torch
+        print("torch:", torch.__version__)
+        "@ | python -

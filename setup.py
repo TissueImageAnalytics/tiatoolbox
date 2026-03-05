@@ -21,7 +21,7 @@ install_requires = [
 dependency_links = []
 
 if sys.platform != "darwin":
-    dependency_links = ["https://download.pytorch.org/whl/cu118"]
+    dependency_links = ["https://download.pytorch.org/whl/cu126"]
 
 setup_requirements = [
     "pytest-runner",
@@ -33,7 +33,7 @@ test_requirements = [
 
 setup(
     author="TIA Centre",
-    author_email="tia@dcs.warwick.ac.uk",
+    author_email="TIA@warwick.ac.uk",
     python_requires=">=3.10, <3.14",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",

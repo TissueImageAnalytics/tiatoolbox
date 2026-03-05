@@ -2,28 +2,39 @@
 
 from __future__ import annotations
 
-import click
+from typing import TYPE_CHECKING
 
 from tiatoolbox.cli.common import (
+    cli_auto_get_mask,
     cli_batch_size,
+    cli_class_dict,
     cli_device,
     cli_file_type,
     cli_img_input,
+    cli_input_resolutions,
     cli_masks,
-    cli_merge_predictions,
-    cli_mode,
-    cli_num_loader_workers,
+    cli_memory_threshold,
+    cli_model,
+    cli_num_workers,
+    cli_output_file,
     cli_output_path,
-    cli_pretrained_model,
-    cli_pretrained_weights,
-    cli_resolution,
-    cli_return_labels,
+    cli_output_type,
+    cli_overwrite,
+    cli_patch_input_shape,
+    cli_patch_mode,
     cli_return_probabilities,
-    cli_units,
+    cli_scale_factor,
+    cli_stride_shape,
     cli_verbose,
+    cli_weights,
+    cli_yaml_config_path,
+    prepare_ioconfig,
     prepare_model_cli,
     tiatoolbox_cli,
 )
+
+if TYPE_CHECKING:  # pragma: no cover
+    from tiatoolbox.type_hints import IntPair
 
 
 @tiatoolbox_cli.command()
@@ -32,48 +43,64 @@ from tiatoolbox.cli.common import (
     usage_help="Output directory where model predictions will be saved.",
     default="patch_prediction",
 )
+@cli_output_file(default=None)
 @cli_file_type(
     default="*.png, *.jpg, *.jpeg, *.tif, *.tiff, *.svs, *.ndpi, *.jp2, *.mrxs",
 )
-@cli_mode(
-    usage_help="Type of input file to process.",
-    default="wsi",
-    input_type=click.Choice(["patch", "wsi", "tile"], case_sensitive=False),
-)
-@cli_pretrained_model(default="resnet18-kather100k")
-@cli_pretrained_weights()
-@cli_return_probabilities(default=False)
-@cli_merge_predictions(default=True)
-@cli_return_labels(default=True)
+@cli_input_resolutions(default=None)
+@cli_class_dict(default=None)
+@cli_model(default="resnet18-kather100k")
+@cli_weights()
 @cli_device(default="cpu")
-@cli_batch_size(default=1)
-@cli_resolution(default=0.5)
-@cli_units(default="mpp")
+@cli_batch_size(default=64)
+@cli_yaml_config_path()
 @cli_masks(default=None)
-@cli_num_loader_workers(default=0)
+@cli_num_workers(default=0)
+@cli_output_type(
+    default="AnnotationStore",
+)
+@cli_memory_threshold(default=80)
+@cli_patch_input_shape(default=None)
+@cli_stride_shape(default=None)
+@cli_scale_factor(default=None)
+@cli_patch_mode(default=False)
+@cli_return_probabilities(default=True)
+@cli_auto_get_mask(default=True)
+@cli_overwrite(default=False)
 @cli_verbose(default=True)
 def patch_predictor(
-    pretrained_model: str,
-    pretrained_weights: str,
+    model: str,
+    weights: str,
     img_input: str,
     file_types: str,
+    class_dict: list[tuple[int, str]],
+    input_resolutions: list[dict],
     masks: str | None,
-    mode: str,
     output_path: str,
+    patch_input_shape: IntPair | None,
+    stride_shape: IntPair | None,
+    scale_factor: tuple[float, float] | None,
     batch_size: int,
-    resolution: float,
-    units: str,
-    num_loader_workers: int,
+    yaml_config_path: str,
+    num_workers: int,
     device: str,
+    output_type: str,
+    memory_threshold: int,
+    output_file: str | None,
     *,
+    patch_mode: bool,
     return_probabilities: bool,
-    return_labels: bool,
-    merge_predictions: bool,
+    auto_get_mask: bool,
     verbose: bool,
+    overwrite: bool,
 ) -> None:
-    """Process an image/directory of input images with a patch classification CNN."""
-    from tiatoolbox.models import PatchPredictor  # noqa: PLC0415
-    from tiatoolbox.utils import save_as_json  # noqa: PLC0415
+    """Process an image/directory of input images with a patch classification engine."""
+    from tiatoolbox.models.engine.io_config import (  # noqa: PLC0415
+        IOPatchPredictorConfig,
+    )
+    from tiatoolbox.models.engine.patch_predictor import PatchPredictor  # noqa: PLC0415
+
+    class_dict = dict(class_dict) if class_dict else None
 
     files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,
@@ -83,26 +110,38 @@ def patch_predictor(
     )
 
     predictor = PatchPredictor(
-        pretrained_model=pretrained_model,
-        pretrained_weights=pretrained_weights,
+        model=model,
+        weights=weights,
         batch_size=batch_size,
-        num_loader_workers=num_loader_workers,
+        num_workers=num_workers,
         verbose=verbose,
     )
 
-    output = predictor.predict(
-        imgs=files_all,
-        masks=masks_all,
-        mode=mode,
-        return_probabilities=return_probabilities,
-        merge_predictions=merge_predictions,
-        labels=None,
-        return_labels=return_labels,
-        resolution=resolution,
-        units=units,
-        device=device,
-        save_dir=output_path,
-        save_output=True,
+    ioconfig = prepare_ioconfig(
+        IOPatchPredictorConfig,
+        pretrained_weights=weights,
+        yaml_config_path=yaml_config_path,
     )
 
-    save_as_json(output, str(output_path.joinpath("results.json")))
+    _ = predictor.run(
+        images=files_all,
+        masks=masks_all,
+        class_dict=class_dict,
+        patch_mode=patch_mode,
+        patch_input_shape=patch_input_shape,
+        input_resolutions=input_resolutions,
+        batch_size=batch_size,
+        ioconfig=ioconfig,
+        device=device,
+        save_dir=output_path,
+        output_type=output_type,
+        return_probabilities=return_probabilities,
+        auto_get_mask=auto_get_mask,
+        memory_threshold=memory_threshold,
+        num_workers=num_workers,
+        output_file=output_file,
+        scale_factor=scale_factor,
+        stride_shape=stride_shape,
+        overwrite=overwrite,
+        verbose=verbose,
+    )

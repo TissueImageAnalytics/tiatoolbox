@@ -20,6 +20,7 @@ from tests.test_utils import make_simple_dat
 from tiatoolbox.annotation import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.cli.common import cli_name
 from tiatoolbox.utils import imread, imwrite
+from tiatoolbox.utils.misc import store_from_dat
 from tiatoolbox.visualization import TileServer
 from tiatoolbox.wsicore import WSIReader
 
@@ -91,14 +92,14 @@ def fill_store(cell_grid: SQLiteStore, points_grid: str) -> Callable:
 
 
 @pytest.fixture
-def app(remote_sample: Callable, tmp_path: Path) -> TileServer:
+def app(remote_sample: Callable, track_tmp_path: Path) -> TileServer:
     """Create a testing TileServer WSGI app."""
     # Make a low-res .jpg of the right shape to be used as
     # a low-res overlay.
     sample_svs = Path(remote_sample("svs-1-small"))
     wsi = WSIReader.open(sample_svs)
     thumb = wsi.slide_thumbnail()
-    thumb_path = tmp_path / "thumb.jpg"
+    thumb_path = track_tmp_path / "thumb.jpg"
     imwrite(thumb_path, thumb)
 
     sample_store = Path(remote_sample("annotation_store_svs_1"))
@@ -334,16 +335,19 @@ def test_change_cmap(app: TileServer) -> None:
         assert response.json == cdict
 
 
-def test_load_save_annotations(app: TileServer, tmp_path: Path) -> None:
+def test_load_save_annotations(app: TileServer, track_tmp_path: Path) -> None:
     """Test loading and saving annotations."""
     data = make_simple_dat()
-    joblib.dump(data, tmp_path / "test.dat")
+    joblib.dump(data, track_tmp_path / "test.dat")
+    store = store_from_dat(track_tmp_path / "test.dat")
+    store.dump(track_tmp_path / "test.db")
+    store.close()
     with app.test_client() as client:
         num_annotations = len(app.pyramids["default"]["overlay"].store)
         response = client.put(
             "/tileserver/annotations",
             data={
-                "file_path": safe_str(tmp_path / "test.dat"),
+                "file_path": safe_str(track_tmp_path / "test.db"),
                 "model_mpp": json.dumps(0.5),
             },
         )
@@ -365,12 +369,15 @@ def test_load_save_annotations(app: TileServer, tmp_path: Path) -> None:
 
 def test_load_annotations_empty(
     empty_app: TileServer,
-    tmp_path: Path,
+    track_tmp_path: Path,
     remote_sample: Callable,
 ) -> None:
     """Test loading annotations when no annotations are present."""
     data = make_simple_dat()
-    joblib.dump(data, tmp_path / "test.dat")
+    joblib.dump(data, track_tmp_path / "test.dat")
+    store = store_from_dat(track_tmp_path / "test.dat")
+    store.dump(track_tmp_path / "test.db")
+    store.close()
     with empty_app.test_client() as client:
         session_id = setup_app(client)
         response = client.put(
@@ -381,7 +388,7 @@ def test_load_annotations_empty(
         response = client.put(
             "/tileserver/annotations",
             data={
-                "file_path": safe_str(tmp_path / "test.dat"),
+                "file_path": safe_str(track_tmp_path / "test.db"),
                 "model_mpp": json.dumps(0.5),
             },
         )
@@ -406,14 +413,14 @@ def test_load_annotations_empty(
 
 def test_change_overlay(  # noqa: PLR0915
     empty_app: TileServer,
-    tmp_path: Path,
+    track_tmp_path: Path,
     remote_sample: Callable,
 ) -> None:
     """Test changing overlay."""
     sample_store = Path(remote_sample("annotation_store_svs_1"))
     store = SQLiteStore(sample_store)
     num_annotations = len(store)
-    geo_path = tmp_path / "test.geojson"
+    geo_path = track_tmp_path / "test.geojson"
     store.to_geojson(geo_path)
     store.commit()
     store.close()
@@ -514,10 +521,10 @@ def test_change_overlay(  # noqa: PLR0915
 
         # add an overlay from a .dat file
         data = make_simple_dat()
-        joblib.dump(data, tmp_path / "test.dat")
+        joblib.dump(data, track_tmp_path / "test.dat")
         response = client.put(
             "/tileserver/overlay",
-            data={"overlay_path": safe_str(tmp_path / "test.dat")},
+            data={"overlay_path": safe_str(track_tmp_path / "test.dat")},
         )
         assert set(json.loads(response.data)) == {0, 1}
 
@@ -537,10 +544,12 @@ def test_change_overlay(  # noqa: PLR0915
         assert layer.wsi.info.file_path == tiff_path
 
 
-def test_commit(empty_app: TileServer, tmp_path: Path, remote_sample: Callable) -> None:
+def test_commit(
+    empty_app: TileServer, track_tmp_path: Path, remote_sample: Callable
+) -> None:
     """Test committing annotations."""
     data = make_simple_dat()
-    joblib.dump(data, tmp_path / "test.dat")
+    joblib.dump(data, track_tmp_path / "test.dat")
     with empty_app.test_client() as client:
         setup_app(client)
         response = client.put(
@@ -552,7 +561,7 @@ def test_commit(empty_app: TileServer, tmp_path: Path, remote_sample: Callable) 
         # try to commit now - should return "nothing to save"
         response = client.post(
             "/tileserver/commit",
-            data={"save_path": safe_str(tmp_path / "test.db")},
+            data={"save_path": safe_str(track_tmp_path / "test.db")},
         )
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
@@ -560,17 +569,17 @@ def test_commit(empty_app: TileServer, tmp_path: Path, remote_sample: Callable) 
 
         response = client.put(
             "/tileserver/overlay",
-            data={"overlay_path": safe_str(tmp_path / "test.dat")},
+            data={"overlay_path": safe_str(track_tmp_path / "test.dat")},
         )
         assert response.status_code == 200
         # commit the changes
         response = client.post(
             "/tileserver/commit",
-            data={"save_path": safe_str(tmp_path / "test.db")},
+            data={"save_path": safe_str(track_tmp_path / "test.db")},
         )
 
     # check that the annotations have been correctly saved
-    store = SQLiteStore(tmp_path / "test.db")
+    store = SQLiteStore(track_tmp_path / "test.db")
     assert len(store) == 2
 
 
@@ -752,11 +761,11 @@ def test_prop_range(app: TileServer) -> None:
 
 
 def test_registration_dual_window(
-    empty_app: TileServer, tmp_path: Path, remote_sample: Callable
+    empty_app: TileServer, track_tmp_path: Path, remote_sample: Callable
 ) -> None:
     """Test registering slides."""
     data = make_simple_dat()
-    joblib.dump(data, tmp_path / "test.dat")
+    joblib.dump(data, track_tmp_path / "test.dat")
     with empty_app.test_client() as client, empty_app.test_client() as client2:
         setup_app(client)
         response = client.put(
@@ -842,14 +851,14 @@ def test_registration_single_window_nonslide_overlay(
 
 def test_registration_single_window_different_slide(
     empty_app: TileServer,
-    tmp_path: Path,
+    track_tmp_path: Path,
     remote_sample: Callable,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test registering slides."""
     # Repeat but provide extra overlays
     data = make_simple_dat()
-    joblib.dump(data, tmp_path / "test.dat")
+    joblib.dump(data, track_tmp_path / "test.dat")
     with empty_app.test_client() as client:
         setup_app(client)
         response = client.put(
@@ -916,3 +925,28 @@ def test_sessions_one_slide_loaded(
 
         assert isinstance(sessions, dict)
         assert len(sessions) == 1
+
+
+def test_channels_set_nopostproc(app: TileServer) -> None:
+    """Test setting channels when no postproc is present."""
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/channels",
+            data={
+                "channels": json.dumps({"c0": [1.0, 0.0, 0.0]}),
+                "active": json.dumps(["c0"]),
+            },
+        )
+        assert response.status_code == 200
+        assert response.data.decode() == "done"
+
+
+def test_enhance_set_nopostproc(app: TileServer) -> None:
+    """Test setting enhance when no postproc is present."""
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/enhance",
+            data={"val": json.dumps(1.7)},
+        )
+        assert response.status_code == 200
+        assert response.data.decode() == "done"

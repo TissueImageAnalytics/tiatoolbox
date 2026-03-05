@@ -7,8 +7,10 @@ import io
 import json
 import multiprocessing
 import re
+import shutil
 import time
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import bokeh.models as bkmodels
@@ -25,7 +27,7 @@ from PIL import Image
 from scipy.ndimage import label
 
 from tiatoolbox.data import _fetch_remote_sample
-from tiatoolbox.visualization.bokeh_app import main
+from tiatoolbox.visualization.bokeh_app import app_hooks, main
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
 
@@ -39,6 +41,44 @@ BOKEH_PATH = importlib_resources.files("tiatoolbox.visualization.bokeh_app")
 FILLED = 0
 MICRON_FORMATTER = 1
 GRIDLINES = 2
+
+
+# Helper function
+def fetch_sample_to_dir(key: str, target_dir: Path) -> Path:
+    """Fetch a remote sample and and ensure it resides directly in ``target_dir``.
+
+     The sample is downloaded and, if it is not already located directly in
+    ``target_dir``, it is moved there. If it is already in ``target_dir``,
+    it is left in place and its path is returned.
+
+    Args:
+        key (str): The name of the resource to fetch.
+        target_dir (Path): The directory where the file should be placed.
+
+    Returns:
+        Path: The path to the file in the target directory.
+    """
+    # Download to a temp location
+    downloaded_path = _fetch_remote_sample(key, target_dir)
+
+    # If the file is already in target_dir directly, return it
+    if downloaded_path.parent == target_dir:
+        return downloaded_path
+
+    # Otherwise, move it to target_dir
+    target_path = target_dir / downloaded_path.name
+    if not target_path.exists():
+        target_dir.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(downloaded_path), str(target_path))
+
+    return target_path
+
+
+class _DummySessionContext:
+    """Simple shim matching the subset of Bokeh's SessionContext we use."""
+
+    def __init__(self: _DummySessionContext, user: str) -> None:
+        self.request = SimpleNamespace(arguments={"user": user})
 
 
 # helper functions and fixtures
@@ -77,8 +117,28 @@ def get_renderer_prop(prop: str) -> json:
             The property to get.
 
     """
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/renderer/{prop}")
+    resp = main.UI["s"].get(
+        f"http://{main.host2}:{main.port}/tileserver/renderer/{prop}",
+    )
     return resp.json()
+
+
+def get_channel_ui_elements() -> tuple[
+    bkmodels.DataTable,
+    bkmodels.DataTable,
+    bkmodels.ColorPicker,
+    bkmodels.Button,
+    bkmodels.Slider,
+]:
+    """Return channel selection UI widgets."""
+    channel_select = main.UI["channel_select"]
+    inner_column = channel_select.children[1]
+    table_row = inner_column.children[0]
+    channel_table, color_table = table_row.children
+    picker_row = inner_column.children[1]
+    color_picker, apply_button = picker_row.children
+    enhance_slider = inner_column.children[2]
+    return channel_table, color_table, color_picker, apply_button, enhance_slider
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -89,39 +149,43 @@ def annotation_path(data_path: dict[str, Path]) -> dict[str, object]:
     that can be grabbed as a fixture to refer to during tests.
 
     """
-    data_path["slide1"] = _fetch_remote_sample(
+    data_path["slide1"] = fetch_sample_to_dir(
         "svs-1-small",
         data_path["base_path"] / "slides",
     )
-    data_path["slide2"] = _fetch_remote_sample(
+    data_path["slide2"] = fetch_sample_to_dir(
         "ndpi-1",
         data_path["base_path"] / "slides",
     )
-    data_path["slide3"] = _fetch_remote_sample(
+    data_path["slide3"] = fetch_sample_to_dir(
         "patch-extraction-vf",
         data_path["base_path"] / "slides",
     )
-    data_path["annotations"] = _fetch_remote_sample(
+    data_path["qptiff"] = fetch_sample_to_dir(
+        "qptiff_sample",
+        data_path["base_path"] / "slides",
+    )
+    data_path["annotations"] = fetch_sample_to_dir(
         "annotation_store_svs_1",
         data_path["base_path"] / "overlays",
     )
-    data_path["graph"] = _fetch_remote_sample(
+    data_path["graph"] = fetch_sample_to_dir(
         "graph_svs_1",
         data_path["base_path"] / "overlays",
     )
-    data_path["graph_feats"] = _fetch_remote_sample(
+    data_path["graph_feats"] = fetch_sample_to_dir(
         "graph_svs_1_feats",
         data_path["base_path"] / "overlays",
     )
-    data_path["img_overlay"] = _fetch_remote_sample(
+    data_path["img_overlay"] = fetch_sample_to_dir(
         "svs_1_rendered_annotations_jpg",
         data_path["base_path"] / "overlays",
     )
-    data_path["geojson_anns"] = _fetch_remote_sample(
+    data_path["geojson_anns"] = fetch_sample_to_dir(
         "geojson_cmu_1",
         data_path["base_path"] / "overlays",
     )
-    data_path["dat_anns"] = _fetch_remote_sample(
+    data_path["dat_anns"] = fetch_sample_to_dir(
         "annotation_dat_svs_1",
         data_path["base_path"] / "overlays",
     )
@@ -130,7 +194,7 @@ def annotation_path(data_path: dict[str, Path]) -> dict[str, object]:
     )
     # save eye as test identity transform
     np.save(data_path["affine_trans"], np.eye(3))
-    data_path["config"] = _fetch_remote_sample(
+    data_path["config"] = fetch_sample_to_dir(
         "config_2",
         data_path["base_path"] / "overlays",
     )
@@ -143,8 +207,9 @@ def run_app() -> None:
         title="Tiatoolbox TileServer",
         layers={},
     )
+    app.json.sort_keys = False
     CORS(app, send_wildcard=True)
-    app.run(host="127.0.0.1", threaded=True)
+    app.run(host="127.0.0.1", port=int(main.port), threaded=True)
 
 
 @pytest.fixture(scope="module")
@@ -153,7 +218,21 @@ def doc(data_path: dict[str, object]) -> Generator[Document, object, None]:
     # start tile server
     p = multiprocessing.Process(target=run_app, daemon=True)
     p.start()
-    time.sleep(2)  # allow time for server to start
+    # wait until server is ready
+    start = time.time()
+    url = f"http://127.0.0.1:{main.port}/tileserver/session_id"
+    while True:
+        try:
+            resp = requests.get(url, timeout=1)
+            if resp.status_code == 200:
+                break
+        except requests.RequestException:
+            pass
+        if time.time() - start > 10:
+            p.terminate()
+            msg = f"Tileserver failed to start within 10s: {url}"
+            raise RuntimeError(msg)
+        time.sleep(0.2)
 
     main.doc_config.set_sys_args(argv=["dummy_str", str(data_path["base_path"])])
     handler = FunctionHandler(main.doc_config.setup_doc)
@@ -207,8 +286,8 @@ def test_config_loaded(data_path: pytest.TempPathFactory) -> None:
 def test_slide_select(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test slide selection."""
     slide_select = doc.get_model_by_name("slide_select0")
-    # check there are three available slides
-    assert len(slide_select.options) == 3
+    # check there are four available slides
+    assert len(slide_select.options) == 4
     assert slide_select.options[0][0] == data_path["slide1"].name
 
     # select a slide and check it is loaded
@@ -230,7 +309,7 @@ def test_dual_window(doc: Document, data_path: pytest.TempPathFactory) -> None:
     doc.get_model_by_name("slide_windows")
     control_tabs.active = 1
     slide_select = doc.get_model_by_name("slide_select1")
-    assert len(slide_select.options) == 3
+    assert len(slide_select.options) == 4
     assert slide_select.options[0][0] == data_path["slide1"].name
 
     control_tabs.active = 0
@@ -267,13 +346,32 @@ def test_add_slide_layer(doc: Document, data_path: pytest.TempPathFactory) -> No
 
 def test_transform_overlay(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test adding a transform overlay."""
-    layer_drop = doc.get_model_by_name("layer_drop0")
-    affine_layer_path = str(data_path["affine_trans"])  # sample .npy file
 
-    click = MenuItemClick(layer_drop, affine_layer_path)
-    layer_drop._trigger_event(click)
+    class DummyResponse:
+        """Dummy response for mocking requests.put()."""
 
-    assert len(layer_drop.menu) == 6
+        text = json.dumps("dummy.npy")
+        status_code = 200
+
+    def dummy_put(*_: object, **__: object) -> DummyResponse:
+        """Dummy put method to replace requests.Session.put()."""
+        return DummyResponse()
+
+    # Patch the method on the Session class
+    old_put = requests.sessions.Session.put
+    requests.sessions.Session.put = dummy_put
+
+    try:
+        layer_drop = doc.get_model_by_name("layer_drop0")
+        affine_layer_path = str(data_path["affine_trans"])
+
+        click = MenuItemClick(layer_drop, affine_layer_path)
+        layer_drop._trigger_event(click)
+
+        assert len(layer_drop.menu) == 6
+
+    finally:
+        requests.sessions.Session.put = old_put
 
 
 def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) -> None:
@@ -287,11 +385,24 @@ def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) 
     layer_drop._trigger_event(click)
     assert set(main.UI["vstate"].types) == {"nucleus", "cell", "annotation"}
 
+    # test save functionality
+    save_button = doc.get_model_by_name("save_button0")
+    click = ButtonClick(save_button)
+    save_button._trigger_event(click)
+    saved_path = (
+        data_path["base_path"]
+        / "overlays"
+        / (data_path["slide2"].stem + "_saved_anns.db")
+    )
+    assert saved_path.exists()
+
     # test the name2type function.
     assert main.name2type("annotation") == '"annotation"'
 
-    # test loading an annotation store
     slide_select.value = [data_path["slide1"].name]
+    saved_path.unlink()  # clean up saved file
+
+    # test loading an annotation store
     layer_drop = doc.get_model_by_name("layer_drop0")
     assert len(layer_drop.menu) == 6
     n_renderers = len(doc.get_model_by_name("slide_windows").children[0].renderers)
@@ -376,13 +487,17 @@ def test_type_cmap_select(doc: Document) -> None:
 
     # remove the type cmap
     cmap_select.value = []
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/secondary_cmap")
+    resp = main.UI["s"].get(
+        f"http://{main.host2}:{main.port}/tileserver/secondary_cmap"
+    )
     assert resp.json()["score_prop"] == "None"
 
     # check callback works regardless of order
     cmap_select.value = ["0"]
     cmap_select.value = ["0", "prob"]
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/secondary_cmap")
+    resp = main.UI["s"].get(
+        f"http://{main.host2}:{main.port}/tileserver/secondary_cmap"
+    )
     assert resp.json()["score_prop"] == "prob"
 
 
@@ -488,17 +603,6 @@ def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> No
     # check there are multiple cells being detected
     assert len(main.UI["color_column"].children) > 3
     assert num > 10
-
-    # test save functionality
-    save_button = doc.get_model_by_name("save_button0")
-    click = ButtonClick(save_button)
-    save_button._trigger_event(click)
-    saved_path = (
-        data_path["base_path"]
-        / "overlays"
-        / (data_path["slide1"].stem + "_saved_anns.db")
-    )
-    assert saved_path.exists()
 
     # load an overlay with different types
     cprop_select = doc.get_model_by_name("cprop0")
@@ -753,16 +857,16 @@ def test_cmap_select(doc: Document) -> None:
     main.UI["cprop_input"].value = ["prob"]
     # set to jet
     cmap_select.value = "jet"
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
+    resp = main.UI["s"].get(f"http://{main.host2}:{main.port}/tileserver/cmap")
     assert resp.json() == "jet"
     # set to dict
     cmap_select.value = "dict"
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
+    resp = main.UI["s"].get(f"http://{main.host2}:{main.port}/tileserver/cmap")
     assert isinstance(resp.json(), dict)
 
     main.UI["cprop_input"].value = ["type"]
     # should now be the type mapping
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
+    resp = main.UI["s"].get(f"http://{main.host2}:{main.port}/tileserver/cmap")
     for key in main.UI["vstate"].mapper:
         assert str(key) in resp.json()
         assert np.all(
@@ -770,7 +874,7 @@ def test_cmap_select(doc: Document) -> None:
         )
     # set the cmap to "coolwarm"
     cmap_select.value = "coolwarm"
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
+    resp = main.UI["s"].get(f"http://{main.host2}:{main.port}/tileserver/cmap")
     # as cprop is type (categorical), it should have had no effect
     for key in main.UI["vstate"].mapper:
         assert str(key) in resp.json()
@@ -779,7 +883,7 @@ def test_cmap_select(doc: Document) -> None:
         )
 
     main.UI["cprop_input"].value = ["prob"]
-    resp = main.UI["s"].get(f"http://{main.host2}:5000/tileserver/cmap")
+    resp = main.UI["s"].get(f"http://{main.host2}:{main.port}/tileserver/cmap")
     # should be coolwarm as that is the last cmap we set, and prob is continuous
     assert resp.json() == "coolwarm"
 
@@ -809,7 +913,7 @@ def test_option_buttons() -> None:
 def test_populate_slide_list(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test populating the slide list."""
     slide_select = doc.get_model_by_name("slide_select0")
-    assert len(slide_select.options) == 3
+    assert len(slide_select.options) == 4
     main.populate_slide_list(
         data_path["base_path"] / "slides",
         search_txt="TCGA-HE-7130-01Z-00-DX1",
@@ -818,10 +922,128 @@ def test_populate_slide_list(doc: Document, data_path: pytest.TempPathFactory) -
     main.populate_slide_list(
         data_path["base_path"] / "slides",
     )
-    assert len(slide_select.options) == 3
+    assert len(slide_select.options) == 4
+
+
+def test_channel_color_ui_callbacks(
+    doc: Document,
+    data_path: pytest.TempPathFactory,
+) -> None:
+    """Test channel color selection and apply changes callbacks on qptiff."""
+    slide_select = doc.get_model_by_name("slide_select0")
+    slide_select.value = [data_path["qptiff"].name]
+    assert main.UI["vstate"].slide_path == data_path["qptiff"]
+
+    channel_table, color_table, color_picker, apply_button, _ = (
+        get_channel_ui_elements()
+    )
+    # check we see 5 channels
+    assert len(channel_table.source.data["channels"]) == 5
+
+    # if no channels selected, check apply button does nothing
+    old_colors = color_table.source.data["colors"].copy()
+    color_picker.color = "#ffff00"
+    click = ButtonClick(apply_button)
+    apply_button._trigger_event(click)
+    assert color_table.source.data["colors"] == old_colors
+
+    # select the first channel and set it to red
+    channel_index = 0
+    color_table.source.selected.indices = [channel_index]
+    color_picker.color = "#ff0000"
+    channel_table.source.selected.indices = [channel_index]
+    click = ButtonClick(apply_button)
+    apply_button._trigger_event(click)
+    assert color_table.source.data["colors"] != old_colors
+
+    # check that getting a tile now red
+    tile = get_tile("slide", 0, 0, 0, show=False).astype(np.float32)
+    sum_r = tile[:, :, 0].sum()
+    sum_gb = tile[:, :, 1:].sum()
+    assert sum_r > 0
+    # may be tiny non-zero g and b values due to webp compression
+    # but should be almost pure red
+    assert (sum_gb) / (sum_r + 1e-5) < 0.1
+
+
+def test_enhance_slider_callback(
+    doc: Document,
+    data_path: pytest.TempPathFactory,
+) -> None:
+    """Test enhance slider callback on qptiff."""
+    slide_select = doc.get_model_by_name("slide_select0")
+    slide_select.value = [data_path["qptiff"].name]
+    assert main.UI["vstate"].slide_path == data_path["qptiff"]
+
+    channel_table, color_table, color_picker, apply_button, enhance_slider = (
+        get_channel_ui_elements()
+    )
+    assert len(channel_table.source.data["channels"]) > 0
+
+    channel_index = 0
+    color_table.source.selected.indices = [channel_index]
+    color_picker.color = "#ff0000"
+    channel_table.source.selected.indices = [channel_index]
+    click = ButtonClick(apply_button)
+    apply_button._trigger_event(click)
+
+    before = get_tile("slide", 0, 0, 0, show=False).astype(np.float32)
+    enhance_slider.value = 2.0
+    after = get_tile("slide", 0, 0, 0, show=False).astype(np.float32)
+    # enhance should have made it brighter
+    diff = after - before
+    assert np.max(diff) > 0
 
 
 def test_clearing_doc(doc: Document) -> None:
     """Test that the doc can be cleared."""
     doc.clear()
     assert len(doc.roots) == 0
+
+
+def test_app_hooks_session_destroyed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Hook should call reset endpoint and exit."""
+    recorded: dict[str, object] = {}
+
+    def fake_get(url: str, *, timeout: int) -> None:
+        """Fake requests.get to record parameters."""
+        recorded["url"] = url
+        recorded["timeout"] = timeout
+
+    monkeypatch.setattr(app_hooks, "PORT", "6150")
+    monkeypatch.setattr(app_hooks.requests, "get", fake_get)
+    exited = False
+
+    def fake_exit() -> None:
+        """Fake sys.exit to record call."""
+        nonlocal exited
+        exited = True
+
+    monkeypatch.setattr(app_hooks, "sys", SimpleNamespace(exit=fake_exit))
+    app_hooks.on_session_destroyed(_DummySessionContext("user-1"))
+    assert recorded["url"] == "http://127.0.0.1:6150/tileserver/reset/user-1"
+    assert recorded["timeout"] == 5
+    assert exited
+
+
+def test_app_hooks_session_destroyed_suppresses_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """ReadTimeout should be suppressed and exit still called."""
+
+    def fake_get(*_: object, **__: object) -> None:
+        """Fake requests.get to raise ReadTimeout."""
+        raise app_hooks.requests.exceptions.ReadTimeout  # type: ignore[attr-defined]
+
+    monkeypatch.setattr(app_hooks, "PORT", "6160")
+    monkeypatch.setattr(app_hooks.requests, "get", fake_get)
+    exited = False
+
+    def fake_exit() -> None:
+        """Fake sys.exit to record call."""
+        nonlocal exited
+        exited = True
+
+    monkeypatch.setattr(app_hooks, "sys", SimpleNamespace(exit=fake_exit))
+    app_hooks.on_session_destroyed(_DummySessionContext("user-2"))
+    assert exited

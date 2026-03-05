@@ -1,236 +1,236 @@
 alexnet-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/alexnet-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: alexnet
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 resnet18-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet18-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnet18
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 resnet34-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet34-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnet34
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 resnet50-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet50-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnet50
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 resnet101-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet101-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnet101
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 resnext50_32x4d-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnext50_32x4d-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnext50_32x4d
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 resnext101_32x8d-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnext101_32x8d-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnext101_32x8d
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 wide_resnet50_2-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/wide_resnet50_2-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: wide_resnet50_2
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 wide_resnet101_2-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/wide_resnet101_2-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: wide_resnet101_2
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 densenet121-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet121-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: densenet121
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 densenet161-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet161-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: densenet161
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 densenet169-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet169-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: densenet169
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 densenet201-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet201-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: densenet201
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 mobilenet_v2-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v2-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: mobilenet_v2
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 mobilenet_v3_large-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v3_large-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: mobilenet_v3_large
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 mobilenet_v3_small-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v3_small-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: mobilenet_v3_small
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 googlenet-kather100k:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/googlenet-kather100k.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: googlenet
             num_classes: 9
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -238,238 +238,238 @@ googlenet-kather100k:
     dataset: kather100k
 
 alexnet-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/alexnet-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: alexnet
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 resnet18-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet18-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnet18
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 resnet34-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet34-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 resnet50-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet50-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnet50
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 resnet101-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnet101-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnet101
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 resnext50_32x4d-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnext50_32x4d-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnext50_32x4d
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 resnext101_32x8d-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/resnext101_32x8d-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnext101_32x8d
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 wide_resnet50_2-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/wide_resnet50_2-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: wide_resnet50_2
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 wide_resnet101_2-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/wide_resnet101_2-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: wide_resnet101_2
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 densenet121-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet121-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: densenet121
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 densenet161-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet161-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: densenet161
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 densenet169-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet169-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: densenet169
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 densenet201-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/densenet201-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: densenet201
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 mobilenet_v2-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v2-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: mobilenet_v2
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 mobilenet_v3_large-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v3_large-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: mobilenet_v3_large
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 mobilenet_v3_small-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/mobilenet_v3_small-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: mobilenet_v3_small
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 googlenet-pcam:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/pc/googlenet-pcam.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: googlenet
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -477,92 +477,92 @@ googlenet-pcam:
     dataset: pcam
 
 resnet18-idars-tumour:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet18-idars-tumour.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: idars.IDaRS
         kwargs:
             backbone: resnet18
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [512, 512]
             stride_shape: [512, 512]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
 resnet34-idars-msi:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-msi.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 resnet34-idars-braf:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-braf.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 resnet34-idars-cimp:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-cimp.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 resnet34-idars-cin:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-cin.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 resnet34-idars-tp53:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-tp53.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 resnet34-idars-hm:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/idars/resnet34-idars-hm.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: patch_predictor.IOPatchPredictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -570,7 +570,7 @@ resnet34-idars-hm:
 
 
 fcn-tissue_mask:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/fcn-tissue_mask.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: unet.UNetModel
         kwargs:
@@ -579,7 +579,7 @@ fcn-tissue_mask:
             encoder: "resnet50"
             decoder_block: [3]
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - {'units': 'mpp', 'resolution': 2.0}
@@ -587,11 +587,11 @@ fcn-tissue_mask:
                 - {'units': 'mpp', 'resolution': 2.0}
             patch_input_shape: [1024, 1024]
             patch_output_shape: [512, 512]
-            stride_shape: [256, 256]
+            stride_shape: [450, 450]
             save_resolution: {'units': 'mpp', 'resolution': 8.0}
 
 fcn_resnet50_unet-bcss:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/fcn_resnet50_unet-bcss.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: unet.UNetModel
         kwargs:
@@ -600,7 +600,7 @@ fcn_resnet50_unet-bcss:
             encoder: "resnet50"
             decoder_block: [3, 3]
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - {'units': 'mpp', 'resolution': 0.25}
@@ -608,11 +608,11 @@ fcn_resnet50_unet-bcss:
                 - {'units': 'mpp', 'resolution': 0.25}
             patch_input_shape: [1024, 1024]
             patch_output_shape: [512, 512]
-            stride_shape: [256, 256]
+            stride_shape: [450, 450]
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
 
 unet_tissue_mask_tsef:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/registration/UNET-v0.0-TSEF.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     description: >
       These weights can be used to segment a grayscale image to
       create a tissue mask excluding the fatty region. TSEF stands for tissue
@@ -625,7 +625,7 @@ unet_tissue_mask_tsef:
             encoder: "resnet50"
             decoder_block: [3, 3]
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - {'units': 'baseline', 'resolution': 1.0}
@@ -637,7 +637,7 @@ unet_tissue_mask_tsef:
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
 
 hovernet_fast-pannuke:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_fast-pannuke.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -652,7 +652,7 @@ hovernet_fast-pannuke:
                 5: "Non-Neoplastic Epithelial",
             }
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOInstanceSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
@@ -668,7 +668,7 @@ hovernet_fast-pannuke:
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
 
 hovernet_fast-monusac:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_fast-monusac.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -682,7 +682,7 @@ hovernet_fast-monusac:
                 4: "Neutrophil",
             }
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOInstanceSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
@@ -698,7 +698,7 @@ hovernet_fast-monusac:
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
 
 hovernet_original-consep:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_original-consep.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -712,7 +712,7 @@ hovernet_original-consep:
                 4: "Miscellaneous",
             }
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOInstanceSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
@@ -728,14 +728,14 @@ hovernet_original-consep:
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
 
 hovernet_original-kumar:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernet_original-kumar.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: hovernet.HoVerNet
         kwargs:
             num_types: null  # None in python ?, only do instance segmentation
             mode: "original"
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOInstanceSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
@@ -750,7 +750,7 @@ hovernet_original-kumar:
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
 
 hovernetplus-oed:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/hovernetplus-oed.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: hovernetplus.HoVerNetPlus
         kwargs:
@@ -769,7 +769,7 @@ hovernetplus-oed:
                 4: "Keratin",
             }
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOInstanceSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.50}
@@ -786,14 +786,14 @@ hovernetplus-oed:
             save_resolution: {'units': 'mpp', 'resolution': 0.50}
 
 micronet-consep:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/micronet-consep.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: micronet.MicroNet
         kwargs:
             num_input_channels: 3
             num_output_channels: 2
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - {"units": "mpp", "resolution": 0.25}
@@ -806,7 +806,7 @@ micronet-consep:
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
 
 mapde-crchisto:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/mapde-crchisto.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: mapde.MapDe
         kwargs:
@@ -814,21 +814,25 @@ mapde-crchisto:
             min_distance: 4
             threshold_abs: 250
             num_classes: 1
+            tile_shape: [ 2048, 2048 ]
+            class_dict: {
+                0: "nucleus"
+            }
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - { "units": "mpp", "resolution": 0.5 }
             output_resolutions:
                 - { "units": "mpp", "resolution": 0.5 }
-            tile_shape: [ 2048, 2048 ]
+            tile_shape: [2048, 2048]
             patch_input_shape: [ 252, 252 ]
             patch_output_shape: [ 252, 252 ]
             stride_shape: [ 150, 150 ]
             save_resolution: { 'units': 'mpp', 'resolution': 0.5 }
 
 mapde-conic:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/mapde-conic.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: mapde.MapDe
         kwargs:
@@ -836,21 +840,24 @@ mapde-conic:
             min_distance: 3
             threshold_abs: 205
             num_classes: 1
+            tile_shape: [ 2048, 2048 ]
+            class_dict: {
+                0: "nucleus"
+            }
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - { "units": "mpp", "resolution": 0.5 }
             output_resolutions:
                 - { "units": "mpp", "resolution": 0.5 }
-            tile_shape: [ 2048, 2048 ]
             patch_input_shape: [ 252, 252 ]
             patch_output_shape: [ 252, 252 ]
             stride_shape: [ 150, 150 ]
             save_resolution: { 'units': 'mpp', 'resolution': 0.5 }
 
 sccnn-crchisto:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/sccnn-crchisto.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: sccnn.SCCNN
         kwargs:
@@ -859,21 +866,24 @@ sccnn-crchisto:
             min_distance: 6
             threshold_abs: 0.20
             patch_output_shape: [ 13, 13 ]
+            tile_shape: [ 2048, 2048 ]
+            class_dict: {
+                0: "nucleus"
+            }
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
-                - { "units": "mpp", "resolution": 0.5 }
+                - { "units": "mpp", "resolution": 0.25 }
             output_resolutions:
-                - { "units": "mpp", "resolution": 0.5 }
-            tile_shape: [ 2048, 2048 ]
+                - { "units": "mpp", "resolution": 0.25 }
             patch_input_shape: [ 31, 31 ]
             patch_output_shape: [ 13, 13 ]
             stride_shape: [ 8, 8 ]
-            save_resolution: { 'units': 'mpp', 'resolution': 0.5 }
+            save_resolution: { 'units': 'mpp', 'resolution': 0.25 }
 
 sccnn-conic:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/detection/sccnn-conic.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: sccnn.SCCNN
         kwargs:
@@ -882,28 +892,31 @@ sccnn-conic:
             min_distance: 5
             threshold_abs: 0.05
             patch_output_shape: [ 13, 13 ]
+            tile_shape: [ 2048, 2048 ]
+            class_dict: {
+                0: "nucleus"
+            }
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
-                - { "units": "mpp", "resolution": 0.5 }
+                - { "units": "mpp", "resolution": 0.25 }
             output_resolutions:
-                - { "units": "mpp", "resolution": 0.5 }
-            tile_shape: [ 2048, 2048 ]
+                - { "units": "mpp", "resolution": 0.25 }
             patch_input_shape: [ 31, 31 ]
             patch_output_shape: [ 13, 13 ]
             stride_shape: [ 8, 8 ]
-            save_resolution: { 'units': 'mpp', 'resolution': 0.5 }
+            save_resolution: { 'units': 'mpp', 'resolution': 0.25 }
 
 nuclick_original-pannuke:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/nuclick_original-pannuke.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: nuclick.NuClick
         kwargs:
             num_input_channels: 5
             num_output_channels: 1
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - {'units': 'baseline', 'resolution': 0.25}
@@ -914,7 +927,7 @@ nuclick_original-pannuke:
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
 
 nuclick_light-pannuke:
-    url: https://tiatoolbox.dcs.warwick.ac.uk/models/seg/nuclick_unet-pannuke.pth
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:
         class: unet.UNetModel
         kwargs:
@@ -925,7 +938,7 @@ nuclick_light-pannuke:
             decoder_block: [3,3]
             skip_type: "add"
     ioconfig:
-        class: semantic_segmentor.IOSegmentorConfig
+        class: io_config.IOSegmentorConfig
         kwargs:
             input_resolutions:
                 - {'units': 'baseline', 'resolution': 0.25}
@@ -934,3 +947,224 @@ nuclick_light-pannuke:
             patch_input_shape: [128, 128]
             patch_output_shape: [128, 128]
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
+
+grandqc_tissue_detection:
+    hf_repo_id: TIACentre/GrandQC_Tissue_Detection
+    architecture:
+        class: grandqc.GrandQCModel
+        kwargs:
+            num_output_channels: 2
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 10.0}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 10.0}
+            patch_input_shape: [512, 512]
+            patch_output_shape: [512, 512]
+            stride_shape: [256, 256]
+            save_resolution: {'units': 'mpp', 'resolution': 10.0}
+
+KongNet_CoNIC_1:
+    hf_repo_id: TIACentre/KongNet_pretrained_weights
+    architecture:
+        class: kongnet.KongNet
+        kwargs:
+            num_heads: 6
+            num_channels_per_head: [3, 3, 3, 3, 3, 3]
+            target_channels: [2, 5, 8, 11, 14, 17]
+            wide_decoder: False
+            min_distance: 5
+            threshold_abs: 0.5
+            class_dict: {
+                0: "Neutrophil",
+                1: "Epithelial",
+                2: "Lymphocyte",
+                3: "Plasma",
+                4: "Eosinophil",
+                5: "Connective",
+            }
+            tile_shape: [2048, 2048]
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 0.5}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 0.5}
+            patch_input_shape: [256, 256]
+            patch_output_shape: [256, 256]
+            stride_shape: [248, 248]
+            save_resolution: {'units': 'baseline', 'resolution': 1.0}
+
+KongNet_PanNuke_1:
+    hf_repo_id: TIACentre/KongNet_pretrained_weights
+    architecture:
+        class: kongnet.KongNet
+        kwargs:
+            num_heads: 6
+            num_channels_per_head: [3, 3, 3, 3, 3, 3]
+            target_channels: [5, 8, 11, 14, 17]
+            wide_decoder: False
+            min_distance: 11
+            threshold_abs: 0.5
+            class_dict: {
+                0: "Neoplastic",
+                1: "Inflammatory",
+                2: "Connective",
+                3: "Dead",
+                4: "Epithelial",
+            }
+            tile_shape: [2048, 2048]
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            patch_input_shape: [256, 256]
+            patch_output_shape: [256, 256]
+            stride_shape: [240, 240]
+            save_resolution: {'units': 'baseline', 'resolution': 1.0}
+
+KongNet_MONKEY_1:
+    hf_repo_id: TIACentre/KongNet_pretrained_weights
+    architecture:
+        class: kongnet.KongNet
+        kwargs:
+            num_heads: 3
+            num_channels_per_head: [3, 3, 3]
+            target_channels: [2, 5, 8]
+            wide_decoder: True
+            min_distance: 11
+            threshold_abs: 0.5
+            class_dict: {
+                0: "Overall_Inflammatory",
+                1: "Lymphocyte",
+                2: "Monocyte",
+            }
+            tile_shape: [2048, 2048]
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            patch_input_shape: [256, 256]
+            patch_output_shape: [256, 256]
+            stride_shape: [224, 224]
+            save_resolution: {'units': 'baseline', 'resolution': 1.0}
+
+KongNet_PUMA_T1_3:
+    hf_repo_id: TIACentre/KongNet_pretrained_weights
+    architecture:
+        class: kongnet.KongNet
+        kwargs:
+            num_heads: 3
+            num_channels_per_head: [3, 3, 3]
+            target_channels: [2, 5, 8]
+            wide_decoder: False
+            min_distance: 13
+            threshold_abs: 0.5
+            class_dict: {
+                0: "Tumour_Cell",
+                1: "Lymphocyte",
+                2: "Other_Cell",
+            }
+            tile_shape: [2048, 2048]
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            patch_input_shape: [256, 256]
+            patch_output_shape: [256, 256]
+            stride_shape: [224, 224]
+            save_resolution: {'units': 'baseline', 'resolution': 1.0}
+
+KongNet_PUMA_T2_3:
+    hf_repo_id: TIACentre/KongNet_pretrained_weights
+    architecture:
+        class: kongnet.KongNet
+        kwargs:
+            num_heads: 10
+            num_channels_per_head: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
+            target_channels: [2, 5, 8, 11, 14, 17, 20, 23, 26, 29]
+            wide_decoder: False
+            min_distance: 13
+            threshold_abs: 0.5
+            class_dict: {
+                0: "Tumour_Cell",
+                1: "Lymphocyte",
+                2: "Plasma_Cell",
+                3: "Histiocyte",
+                4: "Melanophage",
+                5: "Neutrophil",
+                6: "Stroma_Cell",
+                7: "Epithelial_Cell",
+                8: "Endothelial_Cell",
+                9: "Apoptotic_Cell",
+            }
+            tile_shape: [2048, 2048]
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 0.25}
+            patch_input_shape: [256, 256]
+            patch_output_shape: [256, 256]
+            stride_shape: [224, 224]
+            save_resolution: {'units': 'baseline', 'resolution': 1.0}
+
+KongNet_Det_MIDOG_1:
+    hf_repo_id: TIACentre/KongNet_pretrained_weights
+    architecture:
+        class: kongnet.KongNet
+        kwargs:
+            num_heads: 1
+            num_channels_per_head: [1]
+            target_channels: [0]
+            wide_decoder: False
+            min_distance: 21
+            threshold_abs: 0.99
+            class_dict: {
+                0: "Mitotic_Figure"
+            }
+            tile_shape: [2048, 2048]
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 0.5}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 0.5}
+            patch_input_shape: [512, 512]
+            patch_output_shape: [512, 512]
+            stride_shape: [492, 492]
+            save_resolution: {'units': 'baseline', 'resolution': 1.0}
+
+efficientunet-tissue_mask:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    architecture:
+        class: efficientunet_tissue_mask_model.EfficientUNetTissueMaskModel
+        kwargs:
+            num_classes: 1
+            threshold: 0.95
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 8.0}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 8.0}
+            patch_input_shape: [512, 512]
+            patch_output_shape: [512, 512]
+            stride_shape: [480, 480]
+            save_resolution: {'units': 'mpp', 'resolution': 8.0}

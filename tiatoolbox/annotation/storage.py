@@ -2861,6 +2861,33 @@ class SQLiteStore(AnnotationStore):
 
         return query_string, query_parameters
 
+    @staticmethod
+    def _warn_if_query_not_using_index(
+        cur: sqlite3.Cursor,
+        query_string: str,
+        query_parameters: dict[str, object],
+    ) -> None:
+        """Log a warning when SQLite does not use an index."""
+        query_plan = cur.execute(
+            "EXPLAIN QUERY PLAN " + query_string,
+            query_parameters,
+        ).fetchall()
+        uses_index = False
+        for plan in query_plan:
+            detail = str(plan[-1]).upper()
+            # macOS SQLite may report "USING COVERING INDEX".
+            if "AUTOMATIC" not in detail and (
+                "USING INDEX" in detail or "USING COVERING INDEX" in detail
+            ):
+                uses_index = True
+                break
+        if not uses_index:
+            logger.warning(
+                "Query is not using an index. "
+                "Consider adding an index to improve performance.",
+                stacklevel=2,
+            )
+
     def _query(
         self: SQLiteStore,
         columns: str,
@@ -2970,16 +2997,7 @@ class SQLiteStore(AnnotationStore):
 
         # Warn if the query is not using an index
         if index_warning:
-            query_plan = cur.execute(
-                "EXPLAIN QUERY PLAN " + query_string,
-                query_parameters,
-            ).fetchone()
-            if "USING INDEX" not in query_plan[-1]:
-                logger.warning(
-                    "Query is not using an index. "
-                    "Consider adding an index to improve performance.",
-                    stacklevel=2,
-                )
+            self._warn_if_query_not_using_index(cur, query_string, query_parameters)
         # if area column exists, sort annotations by area
         if "area" in self.table_columns:
             query_string += "\nORDER BY area DESC"

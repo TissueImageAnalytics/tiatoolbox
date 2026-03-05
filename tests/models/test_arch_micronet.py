@@ -6,8 +6,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 import torch
+import zarr
 
-from tiatoolbox.models import MicroNet, SemanticSegmentor
+from tiatoolbox.models import MicroNet, NucleusInstanceSegmentor
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import select_device
@@ -40,8 +41,20 @@ def test_functionality(
     pretrained = torch.load(weights_path, map_location=map_location)
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, device=map_location)
-    output, _ = model.postproc(output[0])
-    assert np.max(np.unique(output)) == 46
+    output_ = model.postproc(list(output[0]), offset=(0, 0))
+    assert output_[0]["task_type"] == "nuclei_segmentation"
+    assert np.max(np.unique(output_[0]["predictions"])) == 46
+    assert len(output_[0]["info_dict"]["centroid"]) == 27
+    assert len(output_[0]["info_dict"]["contours"]) == 27
+
+    # For test coverage pass probability map with
+    # no cell segmentation instance
+    output_ = model.postproc(raw_maps=[np.zeros([252, 252, 2])], offset=(0, 0))
+    assert output_[0]["task_type"] == "nuclei_segmentation"
+    assert np.max(np.unique(output_[0]["predictions"])) == 0
+    assert len(output_[0]["info_dict"]["centroid"]) == 0
+
+    Path(weights_path).unlink()
 
 
 def test_value_error() -> None:
@@ -54,32 +67,38 @@ def test_value_error() -> None:
     toolbox_env.running_on_ci() or not ON_GPU,
     reason="Local test on machine with GPU.",
 )
-def test_micronet_output(remote_sample: Callable, tmp_path: Path) -> None:
+def test_micronet_output(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test the output of MicroNet."""
     svs_1_small = Path(remote_sample("svs-1-small"))
     micronet_output = Path(remote_sample("micronet-output"))
-    pretrained_model = "micronet-consep"
-    batch_size = 5
-    num_loader_workers = 0
-    num_postproc_workers = 0
+    model = "micronet-consep"
+    batch_size = 64
+    num_workers = 0
 
-    predictor = SemanticSegmentor(
-        pretrained_model=pretrained_model,
+    ninst_seg = NucleusInstanceSegmentor(
+        model=model,
         batch_size=batch_size,
-        num_loader_workers=num_loader_workers,
-        num_postproc_workers=num_postproc_workers,
+        num_workers=num_workers,
     )
 
-    output = predictor.predict(
-        imgs=[
+    output = ninst_seg.run(
+        images=[
             svs_1_small,
         ],
-        save_dir=tmp_path / "output",
+        save_dir=track_tmp_path / "output",
+        patch_mode=False,
+        verbose=True,
+        device=select_device(on_gpu=ON_GPU),
+        return_predictions=(True,),
+        return_probabilities=True,
+        output_type="zarr",
     )
 
-    output = np.load(output[0][1] + ".raw.0.npy")
+    output = zarr.open(output[svs_1_small], mode="r")
     output_on_server = np.load(str(micronet_output))
     output_on_server = np.round(output_on_server, decimals=3)
-    new_output = np.round(output[500:1000, 1000:1500, :], decimals=3)
+    new_output = np.round(
+        output["probabilities"][0][1000:2000:2, 2000:3000:2, :], decimals=3
+    )
     diff = new_output - output_on_server
     assert diff.mean() < 1e-5

@@ -27,7 +27,7 @@
 name = "TIA Centre"
 version = "1.6.0"
 description = "test"
-authors = ["TIA Centre <tialab@dcs.warwick.ac.uk>"]
+authors = ["TIA Centre <TIA@warwick.ac.uk>"]
 
 [tool.poetry_bumpversion.file."tiatoolbox/__init__.py"]
 search = '__version__ = "{current_version}"'
@@ -105,7 +105,7 @@ lint.select = [
   "ASYNC", # flake8-async
 ]
 # Ignore rules which conflict with ruff formatter.
-lint.ignore = ["COM812", "ISC001",]
+lint.ignore = ["COM812", "ISC001"]
 # Allow Ruff to discover `*.ipynb` files.
 include = ["*.py", "*.pyi", "**/pyproject.toml", "*.ipynb"]
 

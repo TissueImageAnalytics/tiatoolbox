@@ -4,22 +4,114 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import numpy as np
 import timm
 import torch
 import torchvision.models as torch_models
 from timm.layers import SwiGLUPacked
 from torch import nn
 
+from tiatoolbox.models.architecture.utils import argmax_last_axis
 from tiatoolbox.models.models_abc import ModelABC
 
 if TYPE_CHECKING:  # pragma: no cover
+    import numpy as np
+    from torch.nn import Module, Sequential
     from torchvision.models import WeightsEnum
+
+torch_cnn_backbone_dict = {
+    "alexnet": torch_models.alexnet,
+    "resnet18": torch_models.resnet18,
+    "resnet34": torch_models.resnet34,
+    "resnet50": torch_models.resnet50,
+    "resnet101": torch_models.resnet101,
+    "resnext50_32x4d": torch_models.resnext50_32x4d,
+    "resnext101_32x8d": torch_models.resnext101_32x8d,
+    "wide_resnet50_2": torch_models.wide_resnet50_2,
+    "wide_resnet101_2": torch_models.wide_resnet101_2,
+    "densenet121": torch_models.densenet121,
+    "densenet161": torch_models.densenet161,
+    "densenet169": torch_models.densenet169,
+    "densenet201": torch_models.densenet201,
+    "inception_v3": torch_models.inception_v3,
+    "googlenet": torch_models.googlenet,
+    "mobilenet_v2": torch_models.mobilenet_v2,
+    "mobilenet_v3_large": torch_models.mobilenet_v3_large,
+    "mobilenet_v3_small": torch_models.mobilenet_v3_small,
+}
+
+timm_arch_dict = {
+    # UNI tile encoder: https://huggingface.co/MahmoodLab/UNI
+    "UNI": {
+        "model": "hf-hub:MahmoodLab/UNI",
+        "init_values": 1e-5,
+        "dynamic_img_size": True,
+    },
+    # Prov-GigaPath tile encoder: https://huggingface.co/prov-gigapath/prov-gigapath
+    "prov-gigapath": {"model": "hf_hub:prov-gigapath/prov-gigapath"},
+    # H-Optimus-0 tile encoder: https://huggingface.co/bioptimus/H-optimus-0
+    "H-optimus-0": {
+        "model": "hf-hub:bioptimus/H-optimus-0",
+        "init_values": 1e-5,
+        "dynamic_img_size": False,
+    },
+    # H-Optimus-1 tile encoder: https://huggingface.co/bioptimus/H-optimus-1
+    "H-optimus-1": {
+        "model": "hf-hub:bioptimus/H-optimus-1",
+        "init_values": 1e-5,
+        "dynamic_img_size": False,
+    },
+    # HO-mini tile encoder: https://huggingface.co/bioptimus/H0-mini
+    "H0-mini": {
+        "model": "hf-hub:bioptimus/H0-mini",
+        "init_values": 1e-5,
+        "dynamic_img_size": False,
+        "mlp_layer": timm.layers.SwiGLUPacked,
+        "act_layer": torch.nn.SiLU,
+    },
+    # UNI2-h tile encoder: https://huggingface.co/MahmoodLab/UNI2-h
+    "UNI2": {
+        "model": "hf-hub:MahmoodLab/UNI2-h",
+        "img_size": 224,
+        "patch_size": 14,
+        "depth": 24,
+        "num_heads": 24,
+        "init_values": 1e-5,
+        "embed_dim": 1536,
+        "mlp_ratio": 2.66667 * 2,
+        "num_classes": 0,
+        "no_embed_class": True,
+        "mlp_layer": timm.layers.SwiGLUPacked,
+        "act_layer": torch.nn.SiLU,
+        "reg_tokens": 8,
+        "dynamic_img_size": True,
+    },
+    # Virchow tile encoder: https://huggingface.co/paige-ai/Virchow
+    "Virchow": {
+        "model": "hf_hub:paige-ai/Virchow",
+        "mlp_layer": SwiGLUPacked,
+        "act_layer": torch.nn.SiLU,
+    },
+    # Virchow2 tile encoder: https://huggingface.co/paige-ai/Virchow2
+    "Virchow2": {
+        "model": "hf_hub:paige-ai/Virchow2",
+        "mlp_layer": SwiGLUPacked,
+        "act_layer": torch.nn.SiLU,
+    },
+    # Kaiko tile encoder:
+    # https://huggingface.co/1aurent/vit_large_patch14_reg4_224.kaiko_ai_towards_large_pathology_fms
+    "kaiko": {
+        "model": (
+            "hf_hub:1aurent/"
+            "vit_large_patch14_reg4_224.kaiko_ai_towards_large_pathology_fms"
+        ),
+        "dynamic_img_size": True,
+    },
+}
 
 
 def _get_architecture(
     arch_name: str,
-    weights: str or WeightsEnum = "DEFAULT",
+    weights: str | WeightsEnum | None = None,
     **kwargs: dict,
 ) -> list[nn.Sequential, ...] | nn.Sequential:
     """Retrieve a CNN model architecture.
@@ -31,9 +123,10 @@ def _get_architecture(
     Args:
         arch_name (str):
             Name of the architecture (e.g. 'resnet50', 'alexnet').
-        weights (str or WeightsEnum):
+        weights (str, WeightsEnum, or None):
             Pretrained torchvision model weights to use (get_model_weights).
-            Defaults to "DEFAULT".
+            Default is None to avoid downloading ImageNet weights.
+            To initiate the models with ImageNet weights, use "DEFAULT".
         **kwargs (dict):
             Key-word arguments.
 
@@ -50,33 +143,16 @@ def _get_architecture(
         >>> print(model)
 
     """
-    backbone_dict = {
-        "alexnet": torch_models.alexnet,
-        "resnet18": torch_models.resnet18,
-        "resnet34": torch_models.resnet34,
-        "resnet50": torch_models.resnet50,
-        "resnet101": torch_models.resnet101,
-        "resnext50_32x4d": torch_models.resnext50_32x4d,
-        "resnext101_32x8d": torch_models.resnext101_32x8d,
-        "wide_resnet50_2": torch_models.wide_resnet50_2,
-        "wide_resnet101_2": torch_models.wide_resnet101_2,
-        "densenet121": torch_models.densenet121,
-        "densenet161": torch_models.densenet161,
-        "densenet169": torch_models.densenet169,
-        "densenet201": torch_models.densenet201,
-        "inception_v3": torch_models.inception_v3,
-        "googlenet": torch_models.googlenet,
-        "mobilenet_v2": torch_models.mobilenet_v2,
-        "mobilenet_v3_large": torch_models.mobilenet_v3_large,
-        "mobilenet_v3_small": torch_models.mobilenet_v3_small,
-    }
-    if arch_name not in backbone_dict:
+    if arch_name not in torch_cnn_backbone_dict:
         msg = f"Backbone `{arch_name}` is not supported."
         raise ValueError(msg)
 
-    creator = backbone_dict[arch_name]
-    model = creator(weights=weights, **kwargs)
+    creator = torch_cnn_backbone_dict[arch_name]
+    if "inception_v3" in arch_name or "googlenet" in arch_name:
+        model = creator(weights=weights, aux_logits=False, num_classes=1000)
+        return nn.Sequential(*list(model.children())[:-3])
 
+    model = creator(weights=weights, **kwargs)
     # Unroll all the definition and strip off the final GAP and FCN
     if "resnet" in arch_name or "resnext" in arch_name:
         return nn.Sequential(*list(model.children())[:-2])
@@ -84,8 +160,6 @@ def _get_architecture(
         return model.features
     if "alexnet" in arch_name:
         return model.features
-    if "inception_v3" in arch_name or "googlenet" in arch_name:
-        return nn.Sequential(*list(model.children())[:-3])
 
     return model.features
 
@@ -94,7 +168,7 @@ def _get_timm_architecture(
     arch_name: str,
     *,
     pretrained: bool,
-) -> list[nn.Sequential, ...] | nn.Sequential:
+) -> Module | Sequential:
     """Retrieve a timm model architecture.
 
     This function fetches a model architecture from the timm library, specifically for
@@ -120,113 +194,29 @@ def _get_timm_architecture(
         >>> print(model)
 
     """
-    if arch_name in [f"efficientnet_b{i}" for i in range(8)]:
+    if arch_name in timm_arch_dict:  # pragma: no cover
+        # Coverage skipped timm API is tested using efficient U-Net.
+        config = dict(timm_arch_dict[arch_name])
+        model_name = config.pop("model")
+        return timm.create_model(
+            model_name,
+            pretrained=pretrained,
+            **config,
+        )
+
+    if arch_name in timm.list_models():
         model = timm.create_model(arch_name, pretrained=pretrained)
         return nn.Sequential(*list(model.children())[:-1])
 
-    arch_map = {
-        # UNI tile encoder: https://huggingface.co/MahmoodLab/UNI
-        "UNI": {
-            "model": "hf-hub:MahmoodLab/UNI",
-            "init_values": 1e-5,
-            "dynamic_img_size": True,
-        },
-        # Prov-GigaPath tile encoder: https://huggingface.co/prov-gigapath/prov-gigapath
-        "prov-gigapath": {"model": "hf_hub:prov-gigapath/prov-gigapath"},
-        # H-Optimus-0 tile encoder: https://huggingface.co/bioptimus/H-optimus-0
-        "H-optimus-0": {
-            "model": "hf-hub:bioptimus/H-optimus-0",
-            "init_values": 1e-5,
-            "dynamic_img_size": False,
-        },
-        # H-Optimus-1 tile encoder: https://huggingface.co/bioptimus/H-optimus-1
-        "H-optimus-1": {
-            "model": "hf-hub:bioptimus/H-optimus-1",
-            "init_values": 1e-5,
-            "dynamic_img_size": False,
-        },
-        # HO-mini tile encoder: https://huggingface.co/bioptimus/H0-mini
-        "H0-mini": {
-            "model": "hf-hub:bioptimus/H0-mini",
-            "init_values": 1e-5,
-            "dynamic_img_size": False,
-            "mlp_layer": timm.layers.SwiGLUPacked,
-            "act_layer": torch.nn.SiLU,
-        },
-        # UNI2-h tile encoder: https://huggingface.co/MahmoodLab/UNI2-h
-        "UNI2": {
-            "model": "hf-hub:MahmoodLab/UNI2-h",
-            "img_size": 224,
-            "patch_size": 14,
-            "depth": 24,
-            "num_heads": 24,
-            "init_values": 1e-5,
-            "embed_dim": 1536,
-            "mlp_ratio": 2.66667 * 2,
-            "num_classes": 0,
-            "no_embed_class": True,
-            "mlp_layer": timm.layers.SwiGLUPacked,
-            "act_layer": torch.nn.SiLU,
-            "reg_tokens": 8,
-            "dynamic_img_size": True,
-        },
-        # Virchow tile encoder: https://huggingface.co/paige-ai/Virchow
-        "Virchow": {
-            "model": "hf_hub:paige-ai/Virchow",
-            "mlp_layer": SwiGLUPacked,
-            "act_layer": torch.nn.SiLU,
-        },
-        # Virchow2 tile encoder: https://huggingface.co/paige-ai/Virchow2
-        "Virchow2": {
-            "model": "hf_hub:paige-ai/Virchow2",
-            "mlp_layer": SwiGLUPacked,
-            "act_layer": torch.nn.SiLU,
-        },
-        # Kaiko tile encoder:
-        # https://huggingface.co/1aurent/vit_large_patch14_reg4_224.kaiko_ai_towards_large_pathology_fms
-        "kaiko": {
-            "model": (
-                "hf_hub:1aurent/"
-                "vit_large_patch14_reg4_224.kaiko_ai_towards_large_pathology_fms"
-            ),
-            "dynamic_img_size": True,
-        },
-    }
-
-    if arch_name in arch_map:  # pragma: no cover
-        # Coverage skipped timm API is tested using efficient U-Net.
-        return timm.create_model(
-            arch_map[arch_name].pop("model"),
-            pretrained=pretrained,
-            **arch_map[arch_name],
-        )
-
     msg = f"Backbone {arch_name} not supported. "
     raise ValueError(msg)
-
-
-def _postproc(image: np.ndarray) -> np.ndarray:
-    """Define the post-processing of this class of model.
-
-    This simply applies argmax along last axis of the input.
-
-    Args:
-        image (np.ndarray):
-            The input image array.
-
-    Returns:
-        np.ndarray:
-            The post-processed image array.
-
-    """
-    return np.argmax(image, axis=-1)
 
 
 def _infer_batch(
     model: nn.Module,
     batch_data: torch.Tensor,
     device: str,
-) -> dict[str, np.ndarray]:
+) -> np.ndarray:
     """Run inference on an input batch.
 
     Contains logic for forward operation as well as i/o aggregation.
@@ -297,6 +287,7 @@ class CNNModel(ModelABC):
         super().__init__()
         self.num_classes = num_classes
 
+        # By default pretrained weights are not downloaded
         self.feat_extract = _get_architecture(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
 
@@ -339,14 +330,14 @@ class CNNModel(ModelABC):
                 The post-processed image array.
 
         """
-        return _postproc(image=image)
+        return argmax_last_axis(image=image)
 
     @staticmethod
     def infer_batch(
         model: nn.Module,
         batch_data: torch.Tensor,
         device: str = "cpu",
-    ) -> dict[str, np.ndarray]:
+    ) -> np.ndarray:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as i/o aggregation.
@@ -463,14 +454,14 @@ class TimmModel(ModelABC):
                 The post-processed image array.
 
         """
-        return _postproc(image=image)
+        return argmax_last_axis(image=image)
 
     @staticmethod
     def infer_batch(
         model: nn.Module,
         batch_data: torch.Tensor,
         device: str,
-    ) -> dict[str, np.ndarray]:
+    ) -> np.ndarray:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as i/o aggregation.
@@ -482,10 +473,10 @@ class TimmModel(ModelABC):
                 A batch of data generated by
                 `torch.utils.data.DataLoader`.
             device (str):
-                Transfers model to the specified device. Default is "cpu".
+                Transfers model to the specified device.
 
         Returns:
-            dict[str, np.ndarray]:
+            np.ndarray:
                 The model predictions as a NumPy array.
 
         Example:
@@ -547,6 +538,7 @@ class CNNBackbone(ModelABC):
     def __init__(self: CNNBackbone, backbone: str) -> None:
         """Initialize :class:`CNNBackbone`."""
         super().__init__()
+        # By default pretrained weights are not downloaded
         self.feat_extract = _get_architecture(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
 
@@ -573,7 +565,7 @@ class CNNBackbone(ModelABC):
         model: nn.Module,
         batch_data: torch.Tensor,
         device: str,
-    ) -> list[dict[str, np.ndarray]]:
+    ) -> list[np.ndarray]:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as i/o aggregation.
@@ -588,7 +580,7 @@ class CNNBackbone(ModelABC):
                 Transfers model to the specified device. Default is "cpu".
 
         Returns:
-            list[dict[str, np.ndarray]]:
+            list[np.ndarray]:
                 list of dictionary values with numpy arrays.
 
         Example:
@@ -665,7 +657,7 @@ class TimmBackbone(ModelABC):
         model: nn.Module,
         batch_data: torch.Tensor,
         device: str,
-    ) -> list[dict[str, np.ndarray]]:
+    ) -> list[np.ndarray]:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as i/o aggregation.
@@ -680,7 +672,7 @@ class TimmBackbone(ModelABC):
                 Transfers model to the specified device. Default is "cpu".
 
         Returns:
-            list[dict[str, np.ndarray]]:
+            list[np.ndarray]:
                 list of dictionary values with numpy arrays.
 
         Example:
