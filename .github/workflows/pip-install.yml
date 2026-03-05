@@ -42,40 +42,124 @@ jobs:
         channel-priority: strict
         auto-update-conda: true
 
-    - name: Create conda environment with correct Python
-      shell: bash -l
+    # -------------------------------
+    # Create environment (Linux/macOS)
+    # -------------------------------
+    - name: Create conda environment (Linux/macOS)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        source $CONDA/etc/profile.d/conda.sh
+        conda create -y -n test-env python=${{ matrix.python-version }}
+        conda activate test-env
+        conda install -y openjpeg sqlite
+
+    # -------------------------------
+    # Create environment (Windows)
+    # -------------------------------
+    - name: Create conda environment (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
       run: |
         conda create -y -n test-env python=${{ matrix.python-version }}
         conda activate test-env
         conda install -y openjpeg sqlite
 
-    - name: Verify SQLite
-      shell: bash -l
+    # -------------------------------
+    # Verify SQLite
+    # -------------------------------
+    - name: Verify SQLite (Linux/macOS)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        source $CONDA/etc/profile.d/conda.sh
+        conda activate test-env
+        sqlite3 --version
+        sqlite3 ":memory:" -list ".output stdout" "pragma compile_options" ".exit"
+
+    - name: Verify SQLite (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
       run: |
         conda activate test-env
         sqlite3 --version
         sqlite3 ":memory:" -list ".output stdout" "pragma compile_options" ".exit"
 
-    - name: Verify OpenJPEG
-      shell: bash -l
+    # -------------------------------
+    # Verify OpenJPEG
+    # -------------------------------
+    - name: Verify OpenJPEG (Linux/macOS)
+      if: runner.os != 'Windows'
+      shell: bash
       run: |
+        source $CONDA/etc/profile.d/conda.sh
         conda activate test-env
         opj_dump -h || true
 
-    - name: Install CPU-only PyTorch
-      shell: bash -l
+    - name: Verify OpenJPEG (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        conda activate test-env
+        opj_dump -h
+
+    # -------------------------------
+    # Install PyTorch
+    # -------------------------------
+    - name: Install CPU-only PyTorch (Linux/macOS)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        source $CONDA/etc/profile.d/conda.sh
+        conda activate test-env
+        pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+
+    - name: Install CPU-only PyTorch (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
       run: |
         conda activate test-env
         pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
-    - name: Install tiatoolbox from GitHub
-      shell: bash -l
+    # -------------------------------
+    # Install tiatoolbox
+    # -------------------------------
+    - name: Install tiatoolbox (Linux/macOS)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        source $CONDA/etc/profile.d/conda.sh
+        conda activate test-env
+        pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@${GITHUB_SHA}
+
+    - name: Install tiatoolbox (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
       run: |
         conda activate test-env
         pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@${GITHUB_SHA}
 
-    - name: Test Imports
-      shell: bash -l
+    # -------------------------------
+    # Test Imports
+    # -------------------------------
+    - name: Test Imports (Linux/macOS)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        source $CONDA/etc/profile.d/conda.sh
+        conda activate test-env
+        python - << 'EOF'
+        import tiatoolbox
+        print("tiatoolbox:", tiatoolbox.__version__)
+        import openslide
+        print("openslide:", openslide.__version__)
+        import torch
+        print("torch:", torch.__version__)
+        EOF
+
+    - name: Test Imports (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
       run: |
         conda activate test-env
         python - << 'EOF'
