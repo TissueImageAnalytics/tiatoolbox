@@ -1156,17 +1156,17 @@ def test_merge_stops_when_should_stop(
         return None, None
 
     monkeypatch.setattr(
-        "tiatoolbox.models.engines.semantic_segmentor.store_probabilities",
+        "tiatoolbox.models.engine.semantic_segmentor.store_probabilities",
         fake_store_probabilities,
     )
 
     monkeypatch.setattr(
-        "tiatoolbox.models.engines.multi_task_segmentor._save_multitask_vertical_to_cache",
+        "tiatoolbox.models.engine.multi_task_segmentor._save_multitask_vertical_to_cache",
         lambda **__: (None, None),
     )
 
     monkeypatch.setattr(
-        "tiatoolbox.models.engines.multi_task_segmentor._clear_zarr",
+        "tiatoolbox.models.engine.multi_task_segmentor._clear_zarr",
         lambda **__: da.zeros((0, 4, 1)),
     )
 
