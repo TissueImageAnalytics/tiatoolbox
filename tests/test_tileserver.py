@@ -20,6 +20,7 @@ from tests.test_utils import make_simple_dat
 from tiatoolbox.annotation import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.cli.common import cli_name
 from tiatoolbox.utils import imread, imwrite
+from tiatoolbox.utils.misc import store_from_dat
 from tiatoolbox.visualization import TileServer
 from tiatoolbox.wsicore import WSIReader
 
@@ -338,12 +339,15 @@ def test_load_save_annotations(app: TileServer, track_tmp_path: Path) -> None:
     """Test loading and saving annotations."""
     data = make_simple_dat()
     joblib.dump(data, track_tmp_path / "test.dat")
+    store = store_from_dat(track_tmp_path / "test.dat")
+    store.dump(track_tmp_path / "test.db")
+    store.close()
     with app.test_client() as client:
         num_annotations = len(app.pyramids["default"]["overlay"].store)
         response = client.put(
             "/tileserver/annotations",
             data={
-                "file_path": safe_str(track_tmp_path / "test.dat"),
+                "file_path": safe_str(track_tmp_path / "test.db"),
                 "model_mpp": json.dumps(0.5),
             },
         )
@@ -371,6 +375,9 @@ def test_load_annotations_empty(
     """Test loading annotations when no annotations are present."""
     data = make_simple_dat()
     joblib.dump(data, track_tmp_path / "test.dat")
+    store = store_from_dat(track_tmp_path / "test.dat")
+    store.dump(track_tmp_path / "test.db")
+    store.close()
     with empty_app.test_client() as client:
         session_id = setup_app(client)
         response = client.put(
@@ -381,7 +388,7 @@ def test_load_annotations_empty(
         response = client.put(
             "/tileserver/annotations",
             data={
-                "file_path": safe_str(track_tmp_path / "test.dat"),
+                "file_path": safe_str(track_tmp_path / "test.db"),
                 "model_mpp": json.dumps(0.5),
             },
         )

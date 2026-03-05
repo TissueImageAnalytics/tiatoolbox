@@ -553,6 +553,7 @@ def sample_wsi_dict(remote_sample: Callable) -> dict:
         "wsi4_4k_4k_svs",
         "wsi3_20k_20k_pred",
         "wsi4_4k_4k_pred",
+        "wsi4_1k_1k_svs",
     ]
     return {name: remote_sample(name) for name in file_names}
 
@@ -713,3 +714,15 @@ def module_teardown() -> None:
         if path.exists():
             shutil.rmtree(path)
             print(f"Cleaned up: {path}")
+
+
+@pytest.fixture(scope="session")
+def rm_dir(tmp_samples_path: str) -> Callable:  # noqa: ARG001
+    """Factory fixture to remove directory."""
+
+    def _rm_dir(tmp_samples_path: Path) -> None:
+        """Helper func to remove directory."""
+        if tmp_samples_path.exists():
+            shutil.rmtree(tmp_samples_path, ignore_errors=True)
+
+    return _rm_dir
