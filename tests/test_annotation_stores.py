@@ -566,10 +566,10 @@ def test_sqlite_store_index_type_error() -> None:
 
 
 def test_sqlite_store_index_version_error(monkeypatch: object) -> None:
-    """Test adding an index with SQlite <3.10."""
+    """Test adding an index with SQlite <3.9."""
     store = SQLiteStore()
-    monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 9, 0))
-    with pytest.raises(EnvironmentError, match=r"Requires sqlite version 3.10.0"):
+    monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 8, 0))
+    with pytest.raises(EnvironmentError, match=r"Requires sqlite version 3.9.0"):
         store.create_index("foo", lambda _, p: "foo" in p)
 
 

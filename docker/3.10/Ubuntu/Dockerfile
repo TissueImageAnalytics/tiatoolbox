@@ -20,7 +20,7 @@ ENV PATH=/venv/bin:$PATH
 # install TIAToolbox and its requirements
 RUN apt-get update && apt-get install --no-install-recommends -y \
     libopenjp2-7-dev libopenjp2-tools \
-    sqlite3 \
+    sqlite3 libsqlite3-0 \
     libgl1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir tiatoolbox
