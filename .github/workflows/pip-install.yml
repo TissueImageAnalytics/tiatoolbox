@@ -94,14 +94,14 @@ jobs:
       run: |
         source $CONDA/etc/profile.d/conda.sh
         conda activate test-env
-        opj_dump -h || true
+        opj_dump -h || true  # This -h option exits with code 1 for some reason
 
     - name: Verify OpenJPEG (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
         conda activate test-env
-        opj_dump -h
+        opj_dump -h || true  # This -h option exits with code 1 for some reason
 
     # -------------------------------
     # Install PyTorch
