@@ -385,11 +385,24 @@ def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) 
     layer_drop._trigger_event(click)
     assert set(main.UI["vstate"].types) == {"nucleus", "cell", "annotation"}
 
+    # test save functionality
+    save_button = doc.get_model_by_name("save_button0")
+    click = ButtonClick(save_button)
+    save_button._trigger_event(click)
+    saved_path = (
+        data_path["base_path"]
+        / "overlays"
+        / (data_path["slide2"].stem + "_saved_anns.db")
+    )
+    assert saved_path.exists()
+
     # test the name2type function.
     assert main.name2type("annotation") == '"annotation"'
 
-    # test loading an annotation store
     slide_select.value = [data_path["slide1"].name]
+    saved_path.unlink()  # clean up saved file
+
+    # test loading an annotation store
     layer_drop = doc.get_model_by_name("layer_drop0")
     assert len(layer_drop.menu) == 6
     n_renderers = len(doc.get_model_by_name("slide_windows").children[0].renderers)
@@ -590,17 +603,6 @@ def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> No
     # check there are multiple cells being detected
     assert len(main.UI["color_column"].children) > 3
     assert num > 10
-
-    # test save functionality
-    save_button = doc.get_model_by_name("save_button0")
-    click = ButtonClick(save_button)
-    save_button._trigger_event(click)
-    saved_path = (
-        data_path["base_path"]
-        / "overlays"
-        / (data_path["slide1"].stem + "_saved_anns.db")
-    )
-    assert saved_path.exists()
 
     # load an overlay with different types
     cprop_select = doc.get_model_by_name("cprop0")
