@@ -13,10 +13,10 @@ files:
     filename: "CMU-1-Small-Region.dicom.zip"
     extract: True
   dicom-2:
-      hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
-      subfolder: "sample_wsis"
-      filename: "JP2K-33003-1.zip"
-      extract: True
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "JP2K-33003-1.zip"
+    extract: True
   ngff-1:
     hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
     subfolder: "sample_wsis"

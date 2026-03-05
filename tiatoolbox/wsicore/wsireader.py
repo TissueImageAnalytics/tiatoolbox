@@ -504,8 +504,16 @@ class WSIReader:
         _, _, suffixes = utils.misc.split_path_name_ext(input_path)
         last_suffix = suffixes[-1]
 
-        reader = (
+        openslide_reader = (
             WSIReader.try_openslide(input_path, last_suffix, mpp, power)
+            # ensures ome tiff, dicom and tiff reader are tested first
+            # if post_proc needs to be applied.
+            if post_proc is not None
+            else None
+        )
+
+        reader = (
+            openslide_reader
             or WSIReader.try_dicom(input_path, mpp, power, post_proc)
             or WSIReader.try_fsspec(input_img, mpp, power)
             or WSIReader.try_annotation_store(
@@ -530,7 +538,7 @@ class WSIReader:
         mpp: tuple[Number, Number] | None,
         power: Number | None,
     ) -> OpenSlideWSIReader | None:
-        """Try to create a DICOMWSIReader if the input is a DICOM file."""
+        """Try to create an OpenSlideWSIReader if the input is a TIFF file."""
         if last_suffix in (".tif", ".tiff"):
             try:
                 return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
@@ -1931,7 +1939,10 @@ class WSIReader:
     def _estimate_mpp_objective_power(
         objective_power: float | None,
         mpp: float | tuple[float] | tuple[float, float] | None,
-    ) -> tuple[float] | tuple[float, float] | tuple[None, None]:
+    ) -> tuple[
+        float | None,
+        float | tuple[float] | tuple[float, float] | np.ndarray | None,
+    ]:
         """Estimate objective power or mpp if one of these is available."""
         if objective_power is not None and mpp is not None:
             return objective_power, mpp  # use slide metadata
@@ -5229,14 +5240,13 @@ class DICOMWSIReader(WSIReader):
         mpp = (mm_per_pixel.width * 1e3, mm_per_pixel.height * 1e3)
 
         objective_power = None
-        if hasattr(dataset, "OpticalPathSequence"):
-            ops = dataset.OpticalPathSequence[0]
+        ops_seq = getattr(dataset, "OpticalPathSequence", None)
+        if ops_seq:
+            ops = ops_seq[0]
             if hasattr(ops, "ObjectiveLensPower"):
                 objective_power = ops.ObjectiveLensPower
 
-        # Fallback to calculating objective power & mpp
-        # Need to add test image with objective power metadata
-        # in a separate PR.
+        # Fallback to calculating objective power & mpp when metadata is missing.
         objective_power, mpp = self._estimate_mpp_objective_power(
             objective_power=objective_power,
             mpp=mpp,

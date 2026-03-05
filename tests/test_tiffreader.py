@@ -42,8 +42,8 @@ def test_ome_missing_instrument_ref(
     new_description = ElementTree.tostring(tree, encoding="unicode")
     monkeypatch.setattr(page, "description", new_description)
     monkeypatch.setattr(wsi, "_m_info", None)
-    assert monkeypatch._setattr[1][2].objective_power == 20.0
-    assert np.all(monkeypatch._setattr[1][2].mpp == [0.499, 0.499])
+    assert wsi.info.objective_power == 20.0
+    assert np.all(wsi.info.mpp == np.array([0.499, 0.499]))
 
 
 def test_ome_missing_physicalsize(
