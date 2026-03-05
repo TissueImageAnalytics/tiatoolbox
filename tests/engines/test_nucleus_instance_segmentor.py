@@ -11,7 +11,7 @@ import zarr
 from click.testing import CliRunner
 
 from tiatoolbox import cli
-from tiatoolbox.models.engines.nucleus_instance_segmentor import (
+from tiatoolbox.models.engine.nucleus_instance_segmentor import (
     NucleusInstanceSegmentor,
 )
 from tiatoolbox.utils import env_detection as toolbox_env

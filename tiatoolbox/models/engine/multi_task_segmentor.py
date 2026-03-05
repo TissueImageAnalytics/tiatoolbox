@@ -1,4 +1,4 @@
-"""Multi-task segmentation engines for computational pathology.
+"""Multi-task segmentation engine for computational pathology.
 
 This module implements the :class:`MultiTaskSegmentor` and supporting utilities to
 run multi-head segmentation models (e.g., HoVerNet/HoVerNetplus-style architectures)
@@ -22,13 +22,13 @@ Overview
 
 Key Classes
     MultiTaskSegmentor
-        Core engines for multi-head segmentation. Extends :class:`SemanticSegmentor`
+        Core engine for multi-head segmentation. Extends :class:`SemanticSegmentor`
         to run models with multiple output heads and to produce task-centric
         predictions after post-processing. Supports patch and WSI workflows,
         dict/Zarr/AnnotationStore outputs, and device/batch/stride configuration.
 
     MultiTaskSegmentorRunParams
-        TypedDict of runtime parameters used across the engines. Extends
+        TypedDict of runtime parameters used across the engine. Extends
         :class:`SemanticSegmentorRunParams` with additional multitask option:
         `return_predictions`.
 
@@ -102,7 +102,7 @@ Examples:
         ... )
 
 Notes:
-    - The engines infers the number of model heads from the first `infer_batch`
+    - The engine infers the number of model heads from the first `infer_batch`
       call and maintains per-head arrays throughout merging.
     - Probability normalization is performed during the final vertical merge
       (row accumulation divided by row counts).
@@ -228,7 +228,7 @@ class MultiTaskSegmentorRunParams(SemanticSegmentorRunParams, total=False):
 
 
 class MultiTaskSegmentor(SemanticSegmentor):
-    """MultiTask segmentation engines to run models like hovernet and hovernetplus.
+    """MultiTask segmentation engine to run models like hovernet and hovernetplus.
 
     MultiTaskSegmentor performs segmentation across multiple model heads
     (e.g., semantic, instance, edge). It abstracts model invocation,
@@ -250,7 +250,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         weights (str | Path | None):
             Path to model weights. If None, default weights are used.
 
-            >>> engines = MultiTaskSegmentor(
+            >>> engine = MultiTaskSegmentor(
             ...    model="pretrained-model",
             ...    weights="/path/to/pretrained-local-weights.pth"
             ... )
@@ -1137,7 +1137,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 Returns ``None`` only if ``postproc_func`` yields no outputs.
 
         Notes:
-            - Tile layout is derived from the engines IO config; each tile's bounds
+            - Tile layout is derived from the engine's IO config; each tile's bounds
               are used to slice per-head probability maps and to place results back
               into WSI space.
             - For instance tasks, objects near tile margins are pruned/merged using
@@ -2020,7 +2020,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         output_type: str = "dict",
         **kwargs: Unpack[MultiTaskSegmentorRunParams],
     ) -> AnnotationStore | Path | str | dict | list[Path]:
-        """Run the `MultiTaskSegmentor` engines on input images.
+        """Run the `MultiTaskSegmentor` engine on input images.
 
         This method orchestrates the full inference pipeline, including preprocessing,
         model inference, post-processing, and saving results. It supports both

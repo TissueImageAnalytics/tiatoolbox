@@ -12,7 +12,7 @@ from click.testing import CliRunner
 
 from tiatoolbox import cli
 from tiatoolbox.annotation.storage import SQLiteStore
-from tiatoolbox.models.engines.nucleus_detector import (
+from tiatoolbox.models.engine.nucleus_detector import (
     NucleusDetector,
     _write_detection_arrays_to_store,
     save_detection_arrays_to_qupath_json,

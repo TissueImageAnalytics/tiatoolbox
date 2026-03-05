@@ -13,7 +13,7 @@ from click.testing import CliRunner
 from tiatoolbox import cli
 from tiatoolbox.models import IOPatchPredictorConfig
 from tiatoolbox.models.architecture.vanilla import CNNBackbone, TimmBackbone
-from tiatoolbox.models.engines.deep_feature_extractor import DeepFeatureExtractor
+from tiatoolbox.models.engine.deep_feature_extractor import DeepFeatureExtractor
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore.wsireader import WSIReader

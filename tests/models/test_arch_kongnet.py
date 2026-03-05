@@ -17,8 +17,8 @@ from tiatoolbox.models.architecture.kongnet import (
     SubPixelUpsample,
     TimmEncoderFixed,
 )
-from tiatoolbox.models.engines.io_config import IOSegmentorConfig
-from tiatoolbox.models.engines.nucleus_detector import NucleusDetector
+from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
 from tiatoolbox.utils import env_detection as toolbox_env
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"

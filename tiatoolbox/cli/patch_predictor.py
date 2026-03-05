@@ -95,12 +95,10 @@ def patch_predictor(
     overwrite: bool,
 ) -> None:
     """Process an image/directory of input images with a patch classification engine."""
-    from tiatoolbox.models.engines.io_config import (  # noqa: PLC0415
+    from tiatoolbox.models.engine.io_config import (  # noqa: PLC0415
         IOPatchPredictorConfig,
     )
-    from tiatoolbox.models.engines.patch_predictor import (  # noqa: PLC0415
-        PatchPredictor,
-    )
+    from tiatoolbox.models.engine.patch_predictor import PatchPredictor  # noqa: PLC0415
 
     class_dict = dict(class_dict) if class_dict else None
 

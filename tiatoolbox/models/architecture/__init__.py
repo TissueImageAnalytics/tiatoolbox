@@ -18,7 +18,7 @@ from .vanilla import CNNBackbone, TimmBackbone, timm_arch_dict, torch_cnn_backbo
 if TYPE_CHECKING:  # pragma: no cover
     import torch
 
-    from tiatoolbox.models.engines.io_config import ModelIOConfigABC
+    from tiatoolbox.models.engine.io_config import ModelIOConfigABC
 
 __all__ = ["fetch_pretrained_weights", "get_pretrained_model"]
 PRETRAINED_INFO = rcParam["pretrained_model_info"]
@@ -171,7 +171,7 @@ def get_pretrained_model(
     io_module_name = str(".".join(io_class_info.split(".")[:-1]))
     io_class_name = str(io_class_info.split(".")[-1])
 
-    engine_module = locate(f"tiatoolbox.models.engines.{io_module_name}")
+    engine_module = locate(f"tiatoolbox.models.engine.{io_module_name}")
     engine_class = getattr(engine_module, io_class_name)
 
     ioconfig = engine_class(**io_info["kwargs"])
