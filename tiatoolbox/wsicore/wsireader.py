@@ -3693,7 +3693,7 @@ class TIFFWSIReader(WSIReader):
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
         series: str = "auto",
-        cache_size: int = 2**28,  # noqa: ARG002
+        cache_size: int = 2**28,
         post_proc: str | callable | None = "auto",
     ) -> None:
         """Initialize :class:`TIFFWSIReader`."""
