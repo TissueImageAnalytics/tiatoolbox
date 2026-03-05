@@ -251,10 +251,11 @@ class HoVerNetPlus(HoVerNet):
                     continue
 
                 coords = layer[:, 0, :] + offset
-                bounding_box[:2] = bounding_box[:2] + offset
-                bounding_box[2:] = bounding_box[2:] + offset
+                box = bounding_box.copy()
+                box[:2] = box[:2] + offset
+                box[2:] = box[2:] + offset
                 layer_info_dict[count] = {
-                    "box": bounding_box,
+                    "box": box,
                     "contours": coords,
                     "type": type_class,
                 }

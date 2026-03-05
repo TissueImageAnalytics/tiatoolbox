@@ -15,6 +15,7 @@ from tiatoolbox.models.models_abc import ModelABC
 
 if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
+    from torch.nn import Module, Sequential
     from torchvision.models import WeightsEnum
 
 torch_cnn_backbone_dict = {
@@ -167,7 +168,7 @@ def _get_timm_architecture(
     arch_name: str,
     *,
     pretrained: bool,
-) -> list[nn.Sequential, ...] | nn.Sequential:
+) -> Module | Sequential:
     """Retrieve a timm model architecture.
 
     This function fetches a model architecture from the timm library, specifically for
@@ -195,10 +196,12 @@ def _get_timm_architecture(
     """
     if arch_name in timm_arch_dict:  # pragma: no cover
         # Coverage skipped timm API is tested using efficient U-Net.
+        config = dict(timm_arch_dict[arch_name])
+        model_name = config.pop("model")
         return timm.create_model(
-            timm_arch_dict[arch_name].pop("model"),
+            model_name,
             pretrained=pretrained,
-            **timm_arch_dict[arch_name],
+            **config,
         )
 
     if arch_name in timm.list_models():
