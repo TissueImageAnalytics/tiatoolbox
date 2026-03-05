@@ -19,7 +19,11 @@ On Linux, the prerequisite software can be installed using the following command
 
     $ apt-get -y install libopenjp2-7-dev libopenjp2-tools sqlite3
 
-The same command is used when working on the Colab or Kaggle platforms. When working on Google Colab, we remove the packages ``datascience`` and ``albumentations`` because they conflict and produce an error message.
+The same command is used when working on the Colab or Kaggle platforms. When working on Google Colab, these packages should be removed **before** installing TIAToolbox, as they conflict and can produce an error message:
+
+.. code-block:: console
+
+    $ pip uninstall -y datascience albumentations
 
 Windows (10+)
 -------------
