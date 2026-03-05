@@ -89,6 +89,7 @@ class PromptSegmentor:
                 scale_factor=(self.scale, self.scale),
                 offset=self.offset,
                 save_path=Path(f"{save_path}.{i}.db"),
+                output_type="annotationstore",
             )
             paths.append(Path(f"{save_path}.{i}.db"))
         return paths
