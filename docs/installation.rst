@@ -109,7 +109,7 @@ or
 
     $ mamba install tiatoolbox
 
-Please note that conda-forge installation support is limited on Windows as OpenSlide binaries are not supported on official conda channels. An alternate way to install using conda on Windows could be to install it in `WSL2 with CUDA support <https://docs.microsoft.com/en-us/windows/ai/directml/gpu-cuda-in-wsl>`_. In some cases, WSL2 runs faster on Python code, and therefore we **recommend** this option.
+Please note that conda-forge installation support is limited on Windows as OpenSlide binaries are not supported on official conda channels. An alternate way to install using conda on Windows could be to install it in `WSL2 with CUDA support <https://learn.microsoft.com/en-us/windows/ai/directml/gpu-cuda-in-wsl>`_. Depending on your hardware and workload, WSL2 may offer improved performance for some Python workflows, and therefore we **recommend** this option.
 
 From Sources
 ------------
