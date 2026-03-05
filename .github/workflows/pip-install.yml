@@ -162,11 +162,11 @@ jobs:
       shell: pwsh
       run: |
         conda activate test-env
-        python - << 'EOF'
+        @"
         import tiatoolbox
         print("tiatoolbox:", tiatoolbox.__version__)
         import openslide
         print("openslide:", openslide.__version__)
         import torch
         print("torch:", torch.__version__)
-        EOF
+        "@ | python -
