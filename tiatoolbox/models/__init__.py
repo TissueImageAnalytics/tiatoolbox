@@ -38,6 +38,7 @@ __all__ = [
     "ModelIOConfigABC",
     "MultiTaskSegmentor",
     "NuClick",
+    "NucleusDetector",
     "NucleusInstanceSegmentor",
     "PatchDataset",
     "PatchPredictor",

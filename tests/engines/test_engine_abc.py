@@ -572,7 +572,7 @@ class TestEngineABC(EngineABC):
         auto_get_mask: bool = True,
         wsireader_kwargs: WSIReaderParams | None = None,
     ) -> torch.utils.data.DataLoader:
-        """Test pre process images."""
+        """Test pre-process images."""
         return super().get_dataloader(
             images,
             masks,

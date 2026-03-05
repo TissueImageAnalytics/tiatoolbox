@@ -152,7 +152,7 @@ def get_pretrained_model(
     # Get model class form module
     model_class = getattr(arch_module, model_name)
     model = model_class(**arch_info["kwargs"])
-    # TODO(TBC): Dictionary of dataset specific or transformation?  # noqa: FIX002,TD003
+
     if "dataset" in info:
         # ! this is a hack currently, need another PR to clean up
         # ! associated pre-processing coming from dataset (Kumar, Kather, etc.)
