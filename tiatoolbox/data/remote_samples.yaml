@@ -21,6 +21,10 @@ files:
     hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
     subfolder: "sample_wsis"
     filename: "CMU-1-Small-Region.svs"
+  thumbnail-1k-1k:
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "CMU-2_1k_1k-thumbnail.png"
   tiled-tiff-1-small-jpeg:
     hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
     subfolder: "sample_wsis"
@@ -281,6 +285,14 @@ files:
     hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
     subfolder: "testdata/models/predictions/nuclei_mask"
     filename: "nuclick-output.npy"
+  qptiff_sample:
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "multiplex_example.qptiff"
+  qptiff_sample_small:
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "sample_wsis"
+    filename: "multiplex_example_small.qptiff"
   reg_disp_mha_example:
     hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
     subfolder: "testdata/registration"

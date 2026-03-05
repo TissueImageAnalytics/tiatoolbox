@@ -25,6 +25,7 @@ def run_tileserver() -> None:
             title="Tiatoolbox TileServer",
             layers={},
         )
+        app.json.sort_keys = False
         CORS(app, send_wildcard=True)
         port = int(os.environ.get("TIATOOLBOX_TILESERVER_PORT", "5000"))
         app.run(host="127.0.0.1", port=port, threaded=True)

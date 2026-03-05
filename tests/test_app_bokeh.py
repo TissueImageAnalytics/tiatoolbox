@@ -123,6 +123,24 @@ def get_renderer_prop(prop: str) -> json:
     return resp.json()
 
 
+def get_channel_ui_elements() -> tuple[
+    bkmodels.DataTable,
+    bkmodels.DataTable,
+    bkmodels.ColorPicker,
+    bkmodels.Button,
+    bkmodels.Slider,
+]:
+    """Return channel selection UI widgets."""
+    channel_select = main.UI["channel_select"]
+    inner_column = channel_select.children[1]
+    table_row = inner_column.children[0]
+    channel_table, color_table = table_row.children
+    picker_row = inner_column.children[1]
+    color_picker, apply_button = picker_row.children
+    enhance_slider = inner_column.children[2]
+    return channel_table, color_table, color_picker, apply_button, enhance_slider
+
+
 @pytest.fixture(scope="module", autouse=True)
 def annotation_path(data_path: dict[str, Path]) -> dict[str, object]:
     """Download some testing slides and overlays.
@@ -145,6 +163,8 @@ def annotation_path(data_path: dict[str, Path]) -> dict[str, object]:
     )
     data_path["meta"] = fetch_sample_to_dir(
         "test_meta",
+    data_path["qptiff"] = fetch_sample_to_dir(
+        "qptiff_sample",
         data_path["base_path"] / "slides",
     )
     data_path["annotations"] = fetch_sample_to_dir(
@@ -197,6 +217,7 @@ def run_app() -> None:
         title="Tiatoolbox TileServer",
         layers={},
     )
+    app.json.sort_keys = False
     CORS(app, send_wildcard=True)
     app.run(host="127.0.0.1", port=int(main.port), threaded=True)
 
@@ -207,7 +228,21 @@ def doc(data_path: dict[str, object]) -> Generator[Document, object, None]:
     # start tile server
     p = multiprocessing.Process(target=run_app, daemon=True)
     p.start()
-    time.sleep(2)  # allow time for server to start
+    # wait until server is ready
+    start = time.time()
+    url = f"http://127.0.0.1:{main.port}/tileserver/session_id"
+    while True:
+        try:
+            resp = requests.get(url, timeout=1)
+            if resp.status_code == 200:
+                break
+        except requests.RequestException:
+            pass
+        if time.time() - start > 10:
+            p.terminate()
+            msg = f"Tileserver failed to start within 10s: {url}"
+            raise RuntimeError(msg)
+        time.sleep(0.2)
 
     main.doc_config.set_sys_args(argv=["dummy_str", str(data_path["base_path"])])
     handler = FunctionHandler(main.doc_config.setup_doc)
@@ -261,8 +296,8 @@ def test_config_loaded(data_path: pytest.TempPathFactory) -> None:
 def test_slide_select(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test slide selection."""
     slide_select = doc.get_model_by_name("slide_select0")
-    # check there are three available slides
-    assert len(slide_select.options) == 3
+    # check there are four available slides
+    assert len(slide_select.options) == 4
     assert slide_select.options[0][0] == data_path["slide1"].name
 
     # select a slide and check it is loaded
@@ -289,7 +324,7 @@ def test_dual_window(doc: Document, data_path: pytest.TempPathFactory) -> None:
     doc.get_model_by_name("slide_windows")
     control_tabs.active = 1
     slide_select = doc.get_model_by_name("slide_select1")
-    assert len(slide_select.options) == 3
+    assert len(slide_select.options) == 4
     assert slide_select.options[0][0] == data_path["slide1"].name
 
     control_tabs.active = 0
@@ -326,13 +361,32 @@ def test_add_slide_layer(doc: Document, data_path: pytest.TempPathFactory) -> No
 
 def test_transform_overlay(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test adding a transform overlay."""
-    layer_drop = doc.get_model_by_name("layer_drop0")
-    affine_layer_path = str(data_path["affine_trans"])  # sample .npy file
 
-    click = MenuItemClick(layer_drop, affine_layer_path)
-    layer_drop._trigger_event(click)
+    class DummyResponse:
+        """Dummy response for mocking requests.put()."""
 
-    assert len(layer_drop.menu) == 6
+        text = json.dumps("dummy.npy")
+        status_code = 200
+
+    def dummy_put(*_: object, **__: object) -> DummyResponse:
+        """Dummy put method to replace requests.Session.put()."""
+        return DummyResponse()
+
+    # Patch the method on the Session class
+    old_put = requests.sessions.Session.put
+    requests.sessions.Session.put = dummy_put
+
+    try:
+        layer_drop = doc.get_model_by_name("layer_drop0")
+        affine_layer_path = str(data_path["affine_trans"])
+
+        click = MenuItemClick(layer_drop, affine_layer_path)
+        layer_drop._trigger_event(click)
+
+        assert len(layer_drop.menu) == 6
+
+    finally:
+        requests.sessions.Session.put = old_put
 
 
 def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) -> None:
@@ -346,11 +400,24 @@ def test_add_annotation_layer(doc: Document, data_path: pytest.TempPathFactory) 
     layer_drop._trigger_event(click)
     assert set(main.UI["vstate"].types) == {"nucleus", "cell", "annotation"}
 
+    # test save functionality
+    save_button = doc.get_model_by_name("save_button0")
+    click = ButtonClick(save_button)
+    save_button._trigger_event(click)
+    saved_path = (
+        data_path["base_path"]
+        / "overlays"
+        / (data_path["slide2"].stem + "_saved_anns.db")
+    )
+    assert saved_path.exists()
+
     # test the name2type function.
     assert main.name2type("annotation") == '"annotation"'
 
-    # test loading an annotation store
     slide_select.value = [data_path["slide1"].name]
+    saved_path.unlink()  # clean up saved file
+
+    # test loading an annotation store
     layer_drop = doc.get_model_by_name("layer_drop0")
     assert len(layer_drop.menu) == 6
     n_renderers = len(doc.get_model_by_name("slide_windows").children[0].renderers)
@@ -551,17 +618,6 @@ def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> No
     # check there are multiple cells being detected
     assert len(main.UI["color_column"].children) > 3
     assert num > 10
-
-    # test save functionality
-    save_button = doc.get_model_by_name("save_button0")
-    click = ButtonClick(save_button)
-    save_button._trigger_event(click)
-    saved_path = (
-        data_path["base_path"]
-        / "overlays"
-        / (data_path["slide1"].stem + "_saved_anns.db")
-    )
-    assert saved_path.exists()
 
     # load an overlay with different types
     cprop_select = doc.get_model_by_name("cprop0")
@@ -872,7 +928,7 @@ def test_option_buttons() -> None:
 def test_populate_slide_list(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test populating the slide list."""
     slide_select = doc.get_model_by_name("slide_select0")
-    assert len(slide_select.options) == 3
+    assert len(slide_select.options) == 4
     main.populate_slide_list(
         data_path["base_path"] / "slides",
         search_txt="TCGA-HE-7130-01Z-00-DX1",
@@ -881,7 +937,77 @@ def test_populate_slide_list(doc: Document, data_path: pytest.TempPathFactory) -
     main.populate_slide_list(
         data_path["base_path"] / "slides",
     )
-    assert len(slide_select.options) == 3
+    assert len(slide_select.options) == 4
+
+
+def test_channel_color_ui_callbacks(
+    doc: Document,
+    data_path: pytest.TempPathFactory,
+) -> None:
+    """Test channel color selection and apply changes callbacks on qptiff."""
+    slide_select = doc.get_model_by_name("slide_select0")
+    slide_select.value = [data_path["qptiff"].name]
+    assert main.UI["vstate"].slide_path == data_path["qptiff"]
+
+    channel_table, color_table, color_picker, apply_button, _ = (
+        get_channel_ui_elements()
+    )
+    # check we see 5 channels
+    assert len(channel_table.source.data["channels"]) == 5
+
+    # if no channels selected, check apply button does nothing
+    old_colors = color_table.source.data["colors"].copy()
+    color_picker.color = "#ffff00"
+    click = ButtonClick(apply_button)
+    apply_button._trigger_event(click)
+    assert color_table.source.data["colors"] == old_colors
+
+    # select the first channel and set it to red
+    channel_index = 0
+    color_table.source.selected.indices = [channel_index]
+    color_picker.color = "#ff0000"
+    channel_table.source.selected.indices = [channel_index]
+    click = ButtonClick(apply_button)
+    apply_button._trigger_event(click)
+    assert color_table.source.data["colors"] != old_colors
+
+    # check that getting a tile now red
+    tile = get_tile("slide", 0, 0, 0, show=False).astype(np.float32)
+    sum_r = tile[:, :, 0].sum()
+    sum_gb = tile[:, :, 1:].sum()
+    assert sum_r > 0
+    # may be tiny non-zero g and b values due to webp compression
+    # but should be almost pure red
+    assert (sum_gb) / (sum_r + 1e-5) < 0.1
+
+
+def test_enhance_slider_callback(
+    doc: Document,
+    data_path: pytest.TempPathFactory,
+) -> None:
+    """Test enhance slider callback on qptiff."""
+    slide_select = doc.get_model_by_name("slide_select0")
+    slide_select.value = [data_path["qptiff"].name]
+    assert main.UI["vstate"].slide_path == data_path["qptiff"]
+
+    channel_table, color_table, color_picker, apply_button, enhance_slider = (
+        get_channel_ui_elements()
+    )
+    assert len(channel_table.source.data["channels"]) > 0
+
+    channel_index = 0
+    color_table.source.selected.indices = [channel_index]
+    color_picker.color = "#ff0000"
+    channel_table.source.selected.indices = [channel_index]
+    click = ButtonClick(apply_button)
+    apply_button._trigger_event(click)
+
+    before = get_tile("slide", 0, 0, 0, show=False).astype(np.float32)
+    enhance_slider.value = 2.0
+    after = get_tile("slide", 0, 0, 0, show=False).astype(np.float32)
+    # enhance should have made it brighter
+    diff = after - before
+    assert np.max(diff) > 0
 
 
 def test_clearing_doc(doc: Document) -> None:

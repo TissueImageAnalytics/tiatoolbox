@@ -1,0 +1,610 @@
+"""Test tiatoolbox.models.engine.engine_abc."""
+
+from __future__ import annotations
+
+import copy
+import logging
+import shutil
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+import dask.array as da
+import numpy as np
+import pytest
+import torch
+import torchvision.models as torch_models
+from typing_extensions import Unpack
+
+from tiatoolbox.models.architecture import (
+    fetch_pretrained_weights,
+    get_pretrained_model,
+)
+from tiatoolbox.models.architecture.vanilla import CNNModel
+from tiatoolbox.models.dataset import PatchDataset, WSIPatchDataset
+from tiatoolbox.models.engine.engine_abc import (
+    EngineABC,
+    EngineABCRunParams,
+    prepare_engines_save_dir,
+)
+from tiatoolbox.models.engine.io_config import ModelIOConfigABC
+
+if TYPE_CHECKING:
+    from tiatoolbox.wsicore import WSIReaderParams
+
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
+
+
+def test_engine_abc_incorrect_model_type() -> None:
+    """Test EngineABC initialization with incorrect model type."""
+    with pytest.raises(
+        TypeError,
+        match=r".*missing 1 required positional argument: 'model'",
+    ):
+        TestEngineABC()  # skipcq
+
+    with pytest.raises(
+        TypeError,
+        match=r"Input model must be a string or 'torch.nn.Module'.",
+    ):
+        TestEngineABC(model=1)
+
+
+def test_incorrect_ioconfig() -> None:
+    """Test EngineABC initialization with incorrect ioconfig."""
+    model = torch_models.resnet18()
+    engine_ = TestEngineABC(model=model)
+
+    with pytest.raises(
+        ValueError,
+        match=r".*Must provide.*`ioconfig`.*",
+    ):
+        engine_.run(images=[], masks=[], ioconfig=None)
+
+
+def test_incorrect_output_type() -> None:
+    """Test EngineABC for incorrect output type."""
+    pretrained_model = "alexnet-kather100k"
+
+    # Test engine run without ioconfig
+    eng = TestEngineABC(model=pretrained_model)
+
+    with pytest.raises(
+        TypeError,
+        match=r".*output_type must be 'dict' or 'zarr', 'qupath' or 'annotationstore*",
+    ):
+        _ = eng.run(
+            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            device=device,
+            patch_mode=True,
+            ioconfig=None,
+            output_type="random",
+        )
+
+
+def test_incorrect_output_type_save_dir() -> None:
+    """Test EngineABC for None output_type and output type zarr/annotationstore."""
+    pretrained_model = "alexnet-kather100k"
+
+    # Test engine run without ioconfig
+    eng = TestEngineABC(model=pretrained_model)
+
+    with pytest.raises(
+        ValueError,
+        match=r".*Please provide save_dir for output_type=zarr*",
+    ):
+        _ = eng.run(
+            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            device=device,
+            patch_mode=True,
+            ioconfig=None,
+            output_type="zarr",
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=r".*Please provide save_dir for output_type=annotationstore*",
+    ):
+        _ = eng.run(
+            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            device=device,
+            patch_mode=True,
+            ioconfig=None,
+            output_type="annotationstore",
+        )
+
+
+def test_pretrained_ioconfig() -> None:
+    """Test EngineABC initialization with pretrained model name in the toolbox."""
+    pretrained_model = "alexnet-kather100k"
+
+    # Test engine run without ioconfig
+    eng = TestEngineABC(model=pretrained_model)
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        device=device,
+        patch_mode=True,
+        ioconfig=None,
+    )
+    assert "probabilities" in out
+    assert "labels" not in out
+
+
+def test_ioconfig() -> None:
+    """Test EngineABC initialization with valid ioconfig."""
+    ioconfig = ModelIOConfigABC(
+        input_resolutions=[
+            {"units": "baseline", "resolution": 1.0},
+        ],
+        patch_input_shape=(224, 224),
+    )
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        ioconfig=ioconfig,
+    )
+
+    assert "probabilities" in out
+    assert "labels" not in out
+
+
+def test_prepare_engines_save_dir(
+    track_tmp_path: pytest.TempPathFactory,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test prepare save directory for engines."""
+    out_dir = prepare_engines_save_dir(
+        save_dir=track_tmp_path / "patch_output",
+        patch_mode=True,
+        overwrite=False,
+    )
+
+    assert out_dir == track_tmp_path / "patch_output"
+    assert out_dir.exists()
+
+    out_dir = prepare_engines_save_dir(
+        save_dir=track_tmp_path / "patch_output",
+        patch_mode=True,
+        overwrite=True,
+    )
+
+    assert out_dir == track_tmp_path / "patch_output"
+    assert out_dir.exists()
+
+    out_dir = prepare_engines_save_dir(
+        save_dir=None,
+        patch_mode=True,
+        overwrite=False,
+    )
+    assert out_dir is None
+
+    with pytest.raises(
+        OSError,
+        match=r".*Input WSIs detected but no save directory provided.*",
+    ):
+        _ = prepare_engines_save_dir(
+            save_dir=None,
+            patch_mode=False,
+            overwrite=False,
+        )
+
+    out_dir = prepare_engines_save_dir(
+        save_dir=track_tmp_path / "wsi_single_output",
+        patch_mode=False,
+        overwrite=False,
+    )
+
+    assert out_dir == track_tmp_path / "wsi_single_output"
+    assert out_dir.exists()
+    assert r"When providing multiple whole-slide images / tiles" not in caplog.text
+
+    out_dir = prepare_engines_save_dir(
+        save_dir=track_tmp_path / "wsi_multiple_output",
+        patch_mode=False,
+        overwrite=False,
+    )
+
+    assert out_dir == track_tmp_path / "wsi_multiple_output"
+    assert out_dir.exists()
+    assert r"When providing multiple whole slide images" in caplog.text
+
+    # test for file overwrite with Path.mkdirs() method
+    out_path = prepare_engines_save_dir(
+        save_dir=track_tmp_path / "patch_output" / "output.zarr",
+        patch_mode=True,
+        overwrite=True,
+    )
+    assert out_path.exists()
+
+    out_path = prepare_engines_save_dir(
+        save_dir=track_tmp_path / "patch_output" / "output.zarr",
+        patch_mode=True,
+        overwrite=True,
+    )
+    assert out_path.exists()
+
+    with pytest.raises(FileExistsError):
+        out_path = prepare_engines_save_dir(
+            save_dir=track_tmp_path / "patch_output" / "output.zarr",
+            patch_mode=True,
+            overwrite=False,
+        )
+
+
+def test_engine_initalization() -> None:
+    """Test engine initialization."""
+    with pytest.raises(
+        TypeError,
+        match=r"Input model must be a string or 'torch.nn.Module'.",
+    ):
+        _ = TestEngineABC(model=0)
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    assert isinstance(eng, EngineABC)
+    model = CNNModel("alexnet", num_classes=1)
+    eng = TestEngineABC(model=model)
+    assert isinstance(eng, EngineABC)
+
+    model = get_pretrained_model("alexnet-kather100k")[0]
+    weights_path = fetch_pretrained_weights("alexnet-kather100k")
+    eng = TestEngineABC(model=model, weights=weights_path)
+    assert isinstance(eng, EngineABC)
+
+    with pytest.raises(AttributeError):
+        _ = eng._get_model_attr("test_attr")
+
+    model.test_attr = True
+    eng = TestEngineABC(model=model, weights=weights_path)
+    assert eng._get_model_attr("test_attr") is True
+
+
+def test_engine_run() -> None:
+    """Test engine run."""
+    eng = TestEngineABC(model="alexnet-kather100k")
+    assert isinstance(eng, EngineABC)
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    with pytest.raises(
+        ValueError,
+        match=r".*The input numpy array should be four dimensional.*",
+    ):
+        eng.run(images=np.zeros((10, 10)))
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    with pytest.raises(
+        TypeError,
+        match=r"Input must be a list of file paths or a numpy array.",
+    ):
+        eng.run(images=1)
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    with pytest.raises(
+        ValueError,
+        match=r".*len\(labels\) is not equal to len(images)*",
+    ):
+        eng.run(
+            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            labels=list(range(1)),
+            device=device,
+        )
+
+    with pytest.raises(
+        ValueError,
+        match=r".*len\(masks\) is not equal to len(images)*",
+    ):
+        eng.run(
+            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            masks=np.zeros((1, 224, 224, 3)),
+            device=device,
+        )
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    with pytest.raises(
+        ValueError,
+        match=r".*The shape of the numpy array should be NHWC*",
+    ):
+        eng.run(
+            images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+            masks=np.zeros((10, 3)),
+            device=device,
+        )
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        device=device,
+        patch_mode=True,
+    )
+    assert "probabilities" in out
+    assert "labels" not in out
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        device=device,
+        verbose=False,
+    )
+    assert "probabilities" in out
+    assert "labels" not in out
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        labels=list(range(10)),
+        device=device,
+    )
+    assert "probabilities" in out
+    assert "labels" in out
+
+    raw_output = np.zeros((3, 3, 3))
+    predictions = eng.post_process_wsi(
+        raw_predictions={"probabilities": da.from_array(raw_output)},
+        save_path=Path("/path/to/save_predictions.zarr"),
+    )
+    pred = np.array(predictions["probabilities"])
+    np.testing.assert_array_equal(pred, raw_output)
+
+
+def test_engine_run_with_verbose() -> None:
+    """Test engine run with verbose."""
+    # Run pytest with `-rP` option to view progress bar on the captured stderr call.
+
+    eng = TestEngineABC(model="alexnet-kather100k", verbose=True)
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        labels=list(range(10)),
+        device=device,
+    )
+
+    assert "probabilities" in out
+    assert "labels" in out
+
+
+def test_patch_pred_zarr_store(track_tmp_path: pytest.TempPathFactory) -> None:
+    """Test the engine run and patch pred store."""
+    save_dir = track_tmp_path / "patch_output"
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        device=device,
+        save_dir=save_dir,
+        overwrite=True,
+    )
+    assert Path.exists(out), "Zarr output file does not exist"
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        device=device,
+        verbose=False,
+        save_dir=save_dir,
+        overwrite=True,
+    )
+    assert Path.exists(out), "Zarr output file does not exist"
+
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        labels=list(range(10)),
+        device=device,
+        save_dir=save_dir,
+        overwrite=True,
+    )
+    assert Path.exists(out), "Zarr output file does not exist"
+
+    # Test custom zarr output file name
+    eng = TestEngineABC(model="alexnet-kather100k")
+    out = eng.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        labels=list(range(10)),
+        device=device,
+        save_dir=save_dir,
+        overwrite=True,
+        output_file="patch_pred_output",
+    )
+    assert Path.exists(out), "Zarr output file does not exist"
+
+
+def test_get_dataloader(sample_svs: Path) -> None:
+    """Test the get_dataloader function."""
+    eng = TestEngineABC(model="alexnet-kather100k")
+    ioconfig = ModelIOConfigABC(
+        input_resolutions=[
+            {"units": "baseline", "resolution": 1.0},
+        ],
+        patch_input_shape=(224, 224),
+    )
+    dataloader = eng.get_dataloader(
+        images=np.zeros(shape=(10, 224, 224, 3), dtype=np.uint8),
+        patch_mode=True,
+        ioconfig=ioconfig,
+    )
+
+    assert isinstance(dataloader.dataset, PatchDataset)
+
+    dataloader = eng.get_dataloader(
+        images=sample_svs,
+        patch_mode=False,
+        ioconfig=ioconfig,
+    )
+
+    assert isinstance(dataloader.dataset, WSIPatchDataset)
+
+
+def test_io_config_delegation(
+    track_tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test for delegating args to io config."""
+    # test not providing config / full input info for not pretrained models
+    model = CNNModel("resnet50")
+    eng_ = TestEngineABC(model=model)
+
+    kwargs = {
+        "patch_input_shape": (224, 224),
+        "input_resolutions": [{"units": "mpp", "resolution": 1.75}],
+    }
+    with caplog.at_level(logging.WARNING):
+        eng_.run(
+            np.zeros((10, 224, 224, 3)),
+            patch_mode=True,
+            save_dir=track_tmp_path / "dump",
+            patch_input_shape=kwargs["patch_input_shape"],
+            input_resolutions=kwargs["input_resolutions"],
+        )
+        assert "provide a valid ModelIOConfigABC" in caplog.text
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
+
+    # test providing config / full input info for non pretrained models
+    ioconfig = ModelIOConfigABC(
+        patch_input_shape=(224, 224),
+        stride_shape=(256, 256),
+        input_resolutions=[{"resolution": 1.35, "units": "mpp"}],
+    )
+    eng_.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        patch_mode=True,
+        save_dir=Path(f"{track_tmp_path}/dump"),
+        ioconfig=ioconfig,
+    )
+    assert eng_._ioconfig.patch_input_shape == (224, 224)
+    assert eng_._ioconfig.stride_shape == (256, 256)
+    assert eng_._ioconfig.input_resolutions == [{"resolution": 1.35, "units": "mpp"}]
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
+
+    eng_.run(
+        images=np.zeros((10, 224, 224, 3), dtype=np.uint8),
+        patch_mode=True,
+        save_dir=Path(f"{track_tmp_path}/dump"),
+        **kwargs,
+    )
+    assert eng_._ioconfig.patch_input_shape == (224, 224)
+    assert eng_._ioconfig.stride_shape == (224, 224)
+    assert eng_._ioconfig.input_resolutions == [{"resolution": 1.75, "units": "mpp"}]
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
+
+    # test overwriting pretrained ioconfig
+    eng_ = TestEngineABC(model="alexnet-kather100k")
+    eng_.run(
+        images=np.zeros((10, 300, 300, 3), dtype=np.uint8),
+        patch_input_shape=(300, 300),
+        stride_shape=(300, 300),
+        input_resolutions=[{"units": "baseline", "resolution": 1.99}],
+        patch_mode=True,
+        save_dir=Path(f"{track_tmp_path}/dump"),
+    )
+    assert eng_._ioconfig.patch_input_shape == (300, 300)
+    assert eng_._ioconfig.stride_shape == (300, 300)
+    assert eng_._ioconfig.input_resolutions[0]["resolution"] == 1.99
+    assert eng_._ioconfig.input_resolutions[0]["units"] == "baseline"
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
+
+    eng_.run(
+        images=np.zeros((10, 300, 300, 3), dtype=np.uint8),
+        patch_input_shape=(300, 300),
+        stride_shape=(300, 300),
+        input_resolutions=None,
+        patch_mode=True,
+        save_dir=Path(f"{track_tmp_path}/dump"),
+    )
+    assert eng_._ioconfig.patch_input_shape == (300, 300)
+    assert eng_._ioconfig.stride_shape == (300, 300)
+    shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
+
+    eng_.ioconfig = None
+    _ioconfig = eng_._update_ioconfig(
+        ioconfig=None,
+        patch_input_shape=(300, 300),
+        stride_shape=(300, 300),
+        input_resolutions=[{"units": "baseline", "resolution": 1.99}],
+    )
+
+    assert _ioconfig.patch_input_shape == (300, 300)
+    assert _ioconfig.stride_shape == (300, 300)
+    assert _ioconfig.input_resolutions[0]["resolution"] == 1.99
+    assert _ioconfig.input_resolutions[0]["units"] == "baseline"
+
+    for key in kwargs:
+        _kwargs = copy.deepcopy(kwargs)
+        _kwargs[key] = None
+        with pytest.raises(
+            ValueError,
+            match=r".*Must provide either `ioconfig` or "
+            r"`patch_input_shape` and `input_resolutions`*",
+        ):
+            eng_._update_ioconfig(
+                ioconfig=None,
+                patch_input_shape=_kwargs["patch_input_shape"],
+                stride_shape=(1, 1),
+                input_resolutions=_kwargs["input_resolutions"],
+            )
+
+
+def test_save_predictions_incorrect_output_type() -> None:
+    """Engine should raise TypeError if incorrect output type is requested."""
+    eng = TestEngineABC(model="alexnet-kather100k")
+
+    with pytest.raises(TypeError, match=r".*Unsupported output type.* "):
+        eng.save_predictions({"predictions": np.zeros((20, 9))}, output_type="random")
+
+
+class TestEngineABC(EngineABC):
+    """Test EngineABC."""
+
+    def __init__(
+        self: TestEngineABC,
+        model: str | torch.nn.Module,
+        weights: str | Path | None = None,
+        *,
+        verbose: bool | None = None,
+    ) -> None:
+        """Test EngineABC init."""
+        super().__init__(model=model, weights=weights, verbose=verbose)
+
+    def get_dataloader(
+        self: EngineABC,
+        images: str | Path | list[str | Path] | np.ndarray,
+        masks: Path | None = None,
+        labels: list | None = None,
+        ioconfig: ModelIOConfigABC | None = None,
+        *,
+        patch_mode: bool = True,
+        auto_get_mask: bool = True,
+        wsireader_kwargs: WSIReaderParams | None = None,
+    ) -> torch.utils.data.DataLoader:
+        """Test pre-process images."""
+        return super().get_dataloader(
+            images,
+            masks,
+            labels,
+            ioconfig,
+            patch_mode=patch_mode,
+            wsireader_kwargs=wsireader_kwargs,
+            auto_get_mask=auto_get_mask,
+        )
+
+    def post_process_wsi(
+        self: EngineABC,
+        raw_predictions: dict | Path,
+        save_path: Path,
+        **kwargs: Unpack[EngineABCRunParams],
+    ) -> dict | Path:
+        """Post process WSI output."""
+        return super().post_process_wsi(
+            raw_predictions=raw_predictions,
+            save_path=save_path,
+            **kwargs,
+        )
+
+    def infer_wsi(
+        self: EngineABC,
+        dataloader: torch.utils.data.DataLoader,
+        save_path: Path,
+        **kwargs: Unpack[EngineABCRunParams],
+    ) -> dict | np.ndarray:
+        """Test infer_wsi."""
+        return super().infer_wsi(  # skipcq: PYL-E1121
+            dataloader,
+            save_path,
+            **kwargs,
+        )
