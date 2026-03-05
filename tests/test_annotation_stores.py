@@ -566,10 +566,10 @@ def test_sqlite_store_index_type_error() -> None:
 
 
 def test_sqlite_store_index_version_error(monkeypatch: object) -> None:
-    """Test adding an index with SQlite <3.9."""
+    """Test adding an index with SQlite <3.10."""
     store = SQLiteStore()
-    monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 8, 0))
-    with pytest.raises(EnvironmentError, match=r"Requires sqlite version 3.9.0"):
+    monkeypatch.setattr(sqlite3, "sqlite_version_info", (3, 9, 0))
+    with pytest.raises(EnvironmentError, match=r"Requires sqlite version 3.10.0"):
         store.create_index("foo", lambda _, p: "foo" in p)
 
 
@@ -1827,13 +1827,13 @@ class TestStore:
             store._load_cases(["foo"], lambda: None, lambda: None)
 
     @staticmethod
-    def test_py39_init(
+    def test_py310_init(
         fill_store: Callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
         monkeypatch: object,
     ) -> None:
-        """Test that __init__ is compatible with Python 3.9."""
-        py39_version = (3, 9, 0)
+        """Test that __init__ is compatible with Python 3.10."""
+        py310_version = (3, 10, 0)
 
         class Connection(sqlite3.Connection):
             """Mock SQLite connection."""
@@ -1847,7 +1847,7 @@ class TestStore:
                 """Mock create_function without `deterministic` kwarg."""
                 return self.create_function(self, name, num_params)
 
-        monkeypatch.setattr(sys, "version_info", py39_version)
+        monkeypatch.setattr(sys, "version_info", py310_version)
         monkeypatch.setattr(sqlite3, "Connection", Connection)
         _ = store_cls()
 

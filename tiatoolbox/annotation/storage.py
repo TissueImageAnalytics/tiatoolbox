@@ -3892,7 +3892,7 @@ class SQLiteStore(AnnotationStore):
         the index (excluding minor inconsequential changes such as
         whitespace).
 
-        An SQLite expression indexes require SQLite version 3.9.0 or higher.
+        An SQLite expression indexes require SQLite version 3.10.0 or higher.
 
         Args:
             name (str):
@@ -3905,8 +3905,8 @@ class SQLiteStore(AnnotationStore):
 
         """
         _, minor, _ = sqlite3.sqlite_version_info
-        if minor < 9:  # noqa: PLR2004
-            msg = "Requires sqlite version 3.9.0 or higher."
+        if minor < 10:  # noqa: PLR2004
+            msg = "Requires sqlite version 3.10.0 or higher."
             raise OSError(msg)
         cur = self.con.cursor()
         if not isinstance(where, str):

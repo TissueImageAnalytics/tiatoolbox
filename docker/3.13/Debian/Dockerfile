@@ -1,9 +1,9 @@
-FROM python:3.9-slim-bullseye
+FROM python:3.13-slim-bullseye
 
 #get linux packages
 RUN apt-get -y update && apt-get -y install --no-install-recommends \
     libopenjp2-7-dev libopenjp2-tools \
-    openslide-tools \
+    sqlite3 \
     libgl1 \
     build-essential \
     && pip3 --no-cache-dir install tiatoolbox \
