@@ -504,17 +504,8 @@ class WSIReader:
         _, _, suffixes = utils.misc.split_path_name_ext(input_path)
         last_suffix = suffixes[-1]
 
-        openslide_reader = (
-            WSIReader.try_openslide(input_path, last_suffix, mpp, power)
-            # ensures ome tiff, dicom and tiff reader are tested first
-            # if post_proc needs to be applied.
-            if post_proc is not None
-            else None
-        )
-
         reader = (
-            openslide_reader
-            or WSIReader.try_dicom(input_path, mpp, power, post_proc)
+            WSIReader.try_dicom(input_path, mpp, power, post_proc)
             or WSIReader.try_fsspec(input_img, mpp, power)
             or WSIReader.try_annotation_store(
                 input_path, last_suffix, post_proc, kwargs
