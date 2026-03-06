@@ -8,13 +8,15 @@ import logging
 import math
 import os
 import re
-from datetime import datetime
+from collections import defaultdict
+from datetime import datetime, timezone
 from numbers import Number
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import cv2
 import fsspec
+import matplotlib.colors as mcolors
 import numpy as np
 import openslide
 import pandas as pd
@@ -31,6 +33,7 @@ from tifffile import TiffPages
 
 from tiatoolbox import logger, utils
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
+from tiatoolbox.utils import postproc_defs
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.magic import is_sqlite3
@@ -272,7 +275,10 @@ def _handle_virtual_wsi(
 
 
 def _handle_tiff_wsi(
-    input_path: Path, mpp: tuple[Number, Number] | None, power: Number | None
+    input_path: Path,
+    mpp: tuple[Number, Number] | None,
+    power: Number | None,
+    post_proc: str | callable | None,
 ) -> TIFFWSIReader | OpenSlideWSIReader | None:
     """Handle TIFF WSI cases.
 
@@ -285,6 +291,8 @@ def _handle_tiff_wsi(
         power (:obj:`float` or :obj:`None`, optional):
             The objective power of the WSI. If not provided, the power
             is approximated from the MPP.
+        post_proc (str | callable | None):
+            Post-processing function to apply to the image.
 
     Returns:
         OpenSlideWSIReader | TIFFWSIReader | None:
@@ -294,11 +302,13 @@ def _handle_tiff_wsi(
     """
     if openslide.OpenSlide.detect_format(input_path) is not None:
         try:
-            return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
+            return OpenSlideWSIReader(
+                input_path, mpp=mpp, power=power, post_proc=post_proc
+            )
         except openslide.OpenSlideError:
             pass
     if is_tiled_tiff(input_path):
-        return TIFFWSIReader(input_path, mpp=mpp, power=power)
+        return TIFFWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
 
     return None
 
@@ -322,14 +332,19 @@ class WSIReader:
         power (:obj:`float` or :obj:`None`, optional):
             The objective power of the WSI. If not provided, the power
             is approximated from the MPP.
+        post_proc (str | callable | None):
+            Post-processing function to apply to the image. If None,
+            no post-processing is applied. If 'auto', the post-processing
+            function is automatically selected based on the reader type.
 
     """
 
     @staticmethod
-    def open(  # noqa: PLR0911
+    def open(
         input_img: str | Path | np.ndarray | WSIReader,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
+        post_proc: str | callable | None = "auto",
         **kwargs: dict,
     ) -> WSIReader:
         """Return an appropriate :class:`.WSIReader` object.
@@ -348,6 +363,10 @@ class WSIReader:
                 (x, y) tuple of the MPP in the units of the input image.
             power (float):
                 Objective power of the input image.
+            post_proc (str | callable | None):
+                Post-processing function to apply to the image. If None,
+                no post-processing is applied. If 'auto', the post-processing
+                function is automatically selected based on the reader type.
             kwargs (dict):
                 Key-word arguments.
 
@@ -359,15 +378,28 @@ class WSIReader:
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> wsi = WSIReader.open(input_img="./sample.svs")
 
+        When working with multi-channel images such as immunofluorescence,
+        the default behaviour when post_proc is set to "auto" is to convert
+        the output to RGB when reading from the slide. If you need the raw
+        channel outputs, set post_proc to None:
+
+            >>> wsi = WSIReader.open(input_img="./sample.ome.tiff", post_proc="auto")
+            >>> region = wsi.read_rect((0, 0), (100, 100))
+            >>> print(region.shape)
+            (100, 100, 3)  # RGB output
+
+            >>> wsi = WSIReader.open(input_img="./sample.ome.tiff", post_proc=None)
+            >>> region = wsi.read_rect((0, 0), (100, 100))
+            >>> print(region.shape)
+            (100, 100, 5)  # raw channel outputs
+
         """
-        # Validate inputs
-        if not isinstance(input_img, (WSIReader, np.ndarray, str, Path)):
-            msg = "Invalid input: Must be a WSIRead, numpy array, string or Path"
-            raise TypeError(
-                msg,
-            )
+        WSIReader._validate_input(input_img)
+
         if isinstance(input_img, np.ndarray):
-            return VirtualWSIReader(input_img, mpp=mpp, power=power)
+            return VirtualWSIReader(
+                input_img, mpp=mpp, power=power, post_proc=post_proc
+            )
 
         if isinstance(input_img, WSIReader):
             return input_img
@@ -377,45 +409,30 @@ class WSIReader:
         WSIReader.verify_supported_wsi(input_path)
 
         # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)
-        if is_dicom(input_path):
-            return DICOMWSIReader(input_path, mpp=mpp, power=power)
-
-        _, _, suffixes = utils.misc.split_path_name_ext(input_path)
-        last_suffix = suffixes[-1]
-
-        if FsspecJsonWSIReader.is_valid_zarr_fsspec(input_img):
-            return FsspecJsonWSIReader(input_img, mpp=mpp, power=power)
-
-        if last_suffix == ".db":
-            return AnnotationStoreReader(input_path, **kwargs)
-
-        if last_suffix in (".zarr",):
-            if not is_ngff(input_path):
-                msg = f"File {input_path} does not appear to be a v0.4 NGFF zarr."
-                raise FileNotSupportedError(
-                    msg,
-                )
-            return NGFFWSIReader(input_path, mpp=mpp, power=power)
-
-        if suffixes[-2:] in ([".ome", ".tiff"],) or suffixes[-2:] in (
-            [".ome", ".tif"],
-        ):
-            return TIFFWSIReader(input_path, mpp=mpp, power=power)
-
-        if last_suffix in (".tif", ".tiff"):
-            tiff_wsi = _handle_tiff_wsi(input_path, mpp=mpp, power=power)
-            if tiff_wsi is not None:
-                return tiff_wsi
-
-        virtual_wsi = _handle_virtual_wsi(
-            last_suffix=last_suffix, input_path=input_path, mpp=mpp, power=power
+        special_reader = WSIReader._handle_special_cases(
+            input_path, input_img, mpp, power, post_proc, **kwargs
         )
-
-        if virtual_wsi is not None:
-            return virtual_wsi
+        if special_reader is not None:
+            return special_reader
 
         # Try openslide last
-        return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
+        return OpenSlideWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
+
+    @staticmethod
+    def _validate_input(input_img: str | Path | np.ndarray) -> None:
+        """Validate the input image type.
+
+        Args:
+            input_img (str | Path | np.ndarray): The input image, which
+            must be a path, string, numpy array, or WSIReader.
+
+        Raises:
+            TypeError: If the input is not one of the accepted types.
+
+        """
+        if not isinstance(input_img, (WSIReader, np.ndarray, str, Path)):
+            msg = "Invalid input: Must be a WSIReader, numpy array, string or Path"
+            raise TypeError(msg)
 
     @staticmethod
     def verify_supported_wsi(input_path: Path) -> None:
@@ -448,6 +465,7 @@ class WSIReader:
             ".jpeg",
             ".zarr",
             ".db",
+            ".qptiff",
             ".json",
         ]:
             msg = f"File {input_path} is not a supported file format."
@@ -455,11 +473,154 @@ class WSIReader:
                 msg,
             )
 
+    @staticmethod
+    def _handle_special_cases(
+        input_path: Path,
+        input_img: str | Path | np.ndarray,
+        mpp: tuple[Number, Number] | None = None,
+        power: Number | None = None,
+        post_proc: str | callable | None = "auto",
+        **kwargs: dict,
+    ) -> WSIReader | None:
+        """Handle special cases for selecting the appropriate WSIReader.
+
+        Args:
+            input_path (Path): Path to the input image file.
+            input_img (str | Path | np.ndarray): The input image or path.
+            mpp (tuple[Number, Number] | None, optional): Microns per pixel resolution.
+            power (Number | None, optional): Objective power.
+            post_proc (str | callable | None, optional): Post-processing method
+            or identifier.
+            **kwargs (dict): Additional keyword arguments for specific reader types.
+
+        Returns:
+            WSIReader | None: An appropriate WSIReader instance if a match is found,
+            otherwise None.
+
+        Raises:
+            FileNotSupportedError: If the file format is not supported for NGFF Zarr.
+
+        """
+        _, _, suffixes = utils.misc.split_path_name_ext(input_path)
+        last_suffix = suffixes[-1]
+
+        reader = (
+            WSIReader.try_dicom(input_path, mpp, power, post_proc)
+            or WSIReader.try_fsspec(input_img, mpp, power)
+            or WSIReader.try_annotation_store(
+                input_path, last_suffix, post_proc, kwargs
+            )
+            or WSIReader.try_ngff(input_path, last_suffix, mpp, power)
+            or WSIReader.try_ome_tiff(
+                input_path, suffixes, last_suffix, mpp, power, post_proc
+            )
+            or WSIReader.try_tiff(input_path, last_suffix, mpp, power, post_proc)
+        )
+
+        if reader is None:
+            reader = _handle_virtual_wsi(last_suffix, input_path, mpp, power)
+
+        return reader
+
+    @staticmethod
+    def try_dicom(
+        input_path: Path,
+        mpp: tuple[Number, Number] | None,
+        power: Number | None,
+        post_proc: str | callable | None,
+    ) -> DICOMWSIReader | None:
+        """Try to create a DICOMWSIReader if the input is a DICOM file."""
+        if is_dicom(input_path):
+            return DICOMWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
+        return None
+
+    @staticmethod
+    def try_fsspec(
+        input_img: str | Path | np.ndarray,
+        mpp: tuple[Number, Number] | None,
+        power: Number | None,
+    ) -> FsspecJsonWSIReader | None:
+        """Try to create a FsspecJsonWSIReader if the input is a valid Zarr fsspec."""
+        if FsspecJsonWSIReader.is_valid_zarr_fsspec(input_img):
+            return FsspecJsonWSIReader(input_img, mpp=mpp, power=power)
+        return None
+
+    @staticmethod
+    def try_annotation_store(
+        input_path: Path,
+        last_suffix: str,
+        post_proc: str | callable | None,
+        kwargs: dict,
+    ) -> AnnotationStoreReader | None:
+        """Try to create an AnnotationStoreReader if the file is a .db."""
+        if last_suffix == ".db":
+            kwargs["post_proc"] = post_proc
+            return AnnotationStoreReader(input_path, **kwargs)
+        return None
+
+    @staticmethod
+    def try_ngff(
+        input_path: Path,
+        last_suffix: str,
+        mpp: tuple[Number, Number] | None,
+        power: Number | None,
+    ) -> NGFFWSIReader | None:
+        """Try to create an NGFFWSIReader if the file is a valid NGFF Zarr."""
+        if last_suffix == ".zarr":
+            if not is_ngff(input_path):
+                msg = f"File {input_path} does not appear to be a v0.4 NGFF zarr."
+                raise FileNotSupportedError(msg)
+            return NGFFWSIReader(input_path, mpp=mpp, power=power)
+        return None
+
+    @staticmethod
+    def try_ome_tiff(
+        input_path: Path,
+        suffixes: list[str],
+        last_suffix: str,
+        mpp: tuple[Number, Number] | None,
+        power: Number | None,
+        post_proc: str | callable | None,
+    ) -> TIFFWSIReader | None:
+        """Try to create a TIFFWSIReader for OME-TIFF or QPTIFF formats."""
+        if (
+            suffixes[-2:] in ([".ome", ".tiff"], [".ome", ".tif"])
+            or last_suffix == ".qptiff"
+        ):
+            return TIFFWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
+        return None
+
+    @staticmethod
+    def try_tiff(
+        input_path: Path,
+        last_suffix: str,
+        mpp: tuple[Number, Number] | None,
+        power: Number | None,
+        post_proc: str | callable | None,
+    ) -> TIFFWSIReader | None:
+        """Try to create a TIFFWSIReader.
+
+        Try to create a TIFFWSIReader for standard TIFF formats,
+        or fallback to virtual WSI.
+
+        """
+        if last_suffix in (".tif", ".tiff"):
+            try:
+                return TIFFWSIReader(
+                    input_path, mpp=mpp, power=power, post_proc=post_proc
+                )
+            except ValueError as e:
+                if "Unsupported TIFF WSI format" in str(e):
+                    return _handle_virtual_wsi(last_suffix, input_path, mpp, power)
+                raise
+        return None
+
     def __init__(
         self: WSIReader,
         input_img: str | Path | np.ndarray | AnnotationStore,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
+        post_proc: callable | None = None,
     ) -> None:
         """Initialize :class:`WSIReader`."""
         if isinstance(input_img, (np.ndarray, AnnotationStore)):
@@ -484,6 +645,7 @@ class WSIReader:
             msg = "`power` must be a number."
             raise TypeError(msg)
         self._manual_power = power
+        self.post_proc = self.get_post_proc(post_proc)
 
     @property
     def info(self: WSIReader) -> WSIMeta:
@@ -514,6 +676,35 @@ class WSIReader:
 
         """
         self._m_info = meta
+
+    def get_post_proc(self: WSIReader, post_proc: str | callable | None) -> callable:
+        """Get the post-processing function.
+
+        Args:
+            post_proc (str | callable | None):
+                Post-processing function to apply to the image. If auto,
+                will use no post_proc unless reader is TIFF or Virtual Reader,
+                in which case it will use MultichannelToRGB.
+
+        Returns:
+            callable:
+                Post-processing function.
+
+        """
+        if callable(post_proc):
+            return post_proc
+        if post_proc is None:
+            return None
+        if post_proc == "auto":
+            # if its TIFFWSIReader or VirtualWSIReader, return fn to
+            # allow multichannel, else return None
+            if isinstance(self, (TIFFWSIReader, VirtualWSIReader)):
+                return postproc_defs.MultichannelToRGB()
+            return None
+        if isinstance(post_proc, str) and hasattr(postproc_defs, post_proc):
+            return getattr(postproc_defs, post_proc)()
+        msg = f"Invalid post-processing function: {post_proc}"
+        raise ValueError(msg)
 
     def _info(self: WSIReader) -> WSIMeta:
         """WSI metadata internal getter used to update info property.
@@ -1744,9 +1935,10 @@ class OpenSlideWSIReader(WSIReader):
         input_img: str | Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
+        post_proc: str | callable | None = "auto",
     ) -> None:
         """Initialize :class:`OpenSlideWSIReader`."""
-        super().__init__(input_img=input_img, mpp=mpp, power=power)
+        super().__init__(input_img=input_img, mpp=mpp, power=power, post_proc=post_proc)
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
     def read_rect(
@@ -1989,6 +2181,8 @@ class OpenSlideWSIReader(WSIReader):
             interpolation=interpolation,
         )
 
+        if self.post_proc is not None:
+            im_region = self.post_proc(im_region)
         return utils.transforms.background_composite(image=im_region, alpha=False)
 
     def read_bounds(
@@ -2174,6 +2368,8 @@ class OpenSlideWSIReader(WSIReader):
                 interpolation=interpolation,
             )
 
+        if self.post_proc is not None:
+            im_region = self.post_proc(im_region)
         return utils.transforms.background_composite(image=im_region, alpha=False)
 
     @staticmethod
@@ -2282,9 +2478,10 @@ class JP2WSIReader(WSIReader):
         input_img: str | Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
+        post_proc: str | callable | None = "auto",
     ) -> None:
         """Initialize :class:`OmnyxJP2WSIReader`."""
-        super().__init__(input_img=input_img, mpp=mpp, power=power)
+        super().__init__(input_img=input_img, mpp=mpp, power=power, post_proc=post_proc)
         import glymur  # noqa: PLC0415
 
         glymur.set_option("lib.num_threads", os.cpu_count() or 1)
@@ -2528,6 +2725,8 @@ class JP2WSIReader(WSIReader):
             interpolation=interpolation,
         )
 
+        if self.post_proc is not None:
+            im_region = self.post_proc(im_region)
         return utils.transforms.background_composite(image=im_region, alpha=False)
 
     def read_bounds(
@@ -2702,6 +2901,8 @@ class JP2WSIReader(WSIReader):
                 interpolation=interpolation,
             )
 
+        if self.post_proc is not None:
+            im_region = self.post_proc(im_region)
         return utils.transforms.background_composite(image=im_region, alpha=False)
 
     @staticmethod
@@ -2899,6 +3100,8 @@ class VirtualWSIReader(WSIReader):
             "bool" mode supports binary masks,
             interpolation in this case will be "nearest" instead of "bicubic".
             "feature" mode allows multichannel features.
+        post_proc (str, callable):
+            Post-processing function to apply to the output image.
 
     """
 
@@ -2909,12 +3112,14 @@ class VirtualWSIReader(WSIReader):
         power: Number | None = None,
         info: WSIMeta | None = None,
         mode: str = "rgb",
+        post_proc: str | callable | None = "auto",
     ) -> None:
         """Initialize :class:`VirtualWSIReader`."""
         super().__init__(
             input_img=input_img,
             mpp=mpp,
             power=power,
+            post_proc=post_proc,
         )
         if mode.lower() not in ["rgb", "bool", "feature"]:
             msg = "Invalid mode."
@@ -2924,6 +3129,14 @@ class VirtualWSIReader(WSIReader):
             self.img = input_img
         else:
             self.img = utils.imread(self.input_path)
+
+        _min_image_ndims = (
+            2  # Minimum number of dimensions required for an image (H, W)
+        )
+        # Reject 1D (or otherwise <2D) inputs early with a clear message.
+        if self.img.ndim < _min_image_ndims:
+            msg = "Input image must be 2D (H, W) or 3D (H, W, C). Got a 1D array."
+            raise ValueError(msg)
 
         if mode != "bool" and (
             self.img.ndim == 2 or self.img.shape[2] not in [3, 4]  # noqa: PLR2004
@@ -3236,6 +3449,8 @@ class VirtualWSIReader(WSIReader):
         )
 
         if self.mode == "rgb":
+            if self.post_proc is not None:
+                im_region = self.post_proc(im_region)
             return utils.transforms.background_composite(image=im_region, alpha=False)
         return im_region
 
@@ -3413,6 +3628,8 @@ class VirtualWSIReader(WSIReader):
             )
 
         if self.mode == "rgb":
+            if self.post_proc is not None:
+                im_region = self.post_proc(im_region)
             return utils.transforms.background_composite(image=im_region, alpha=False)
         return im_region
 
@@ -3476,12 +3693,13 @@ class TIFFWSIReader(WSIReader):
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
         series: str = "auto",
-        cache_size: int = 2**28,
+        cache_size: int = 2**28,  # noqa: ARG002
+        post_proc: str | callable | None = "auto",
     ) -> None:
         """Initialize :class:`TIFFWSIReader`."""
-        super().__init__(input_img=input_img, mpp=mpp, power=power)
+        super().__init__(input_img=input_img, mpp=mpp, power=power, post_proc=post_proc)
         self.tiff = tifffile.TiffFile(self.input_path)
-        self._axes = self.tiff.pages[0].axes
+        self._axes = self.tiff.series[0].axes
         # Flag which is True if the image is a simple single page tile TIFF
         is_single_page_tiled = all(
             [
@@ -3514,7 +3732,8 @@ class TIFFWSIReader(WSIReader):
             def page_area(page: tifffile.TiffPage) -> float:
                 """Calculate the area of a page."""
                 return np.prod(
-                    TIFFWSIReaderDelegate.canonical_shape(self._axes, page.shape)[:2]
+                    TIFFWSIReaderDelegate.canonical_shape(self._axes, page.shape)[:2],
+                    dtype=float,
                 )
 
             series_areas = [page_area(s.pages[0]) for s in all_series]  # skipcq
@@ -3525,8 +3744,8 @@ class TIFFWSIReader(WSIReader):
             series=self.series_n,
             aszarr=True,
         )
-        self._zarr_lru_cache = zarr.LRUStoreCache(self._zarr_store, max_size=cache_size)
-        self._zarr_group = zarr.open(self._zarr_lru_cache)
+        # remove LRU cache for now as seems to cause issues on windows
+        self._zarr_group = zarr.open(self._zarr_store)
         if not isinstance(self._zarr_group, zarr.hierarchy.Group):  # pragma: no cover
             group = zarr.hierarchy.group()
             group[0] = self._zarr_group
@@ -3539,14 +3758,313 @@ class TIFFWSIReader(WSIReader):
         self.level_arrays = dict(
             sorted(
                 self.level_arrays.items(),
-                key=lambda x: -np.prod(
-                    TIFFWSIReaderDelegate.canonical_shape(
-                        self._axes, x[1].array.shape[:2]
+                key=lambda x: (
+                    -np.prod(
+                        TIFFWSIReaderDelegate.canonical_shape(
+                            self._axes, x[1].array.shape[:2]
+                        ),
+                        dtype=float,
                     )
                 ),
             )
         )
+        # maybe get colors if they exist in metadata
+        self._get_colors_from_meta()
+
         self.tiff_reader_delegate = TIFFWSIReaderDelegate(self, self.level_arrays)
+
+    def _get_colors_from_meta(self: TIFFWSIReader) -> None:
+        """Get colors from metadata if they exist."""
+        if not isinstance(self.post_proc, postproc_defs.MultichannelToRGB):
+            return
+
+        try:
+            xml = self.info.raw["Description"]
+            root = ElementTree.fromstring(xml)
+        except ElementTree.ParseError:
+            return
+
+        # Try multiple formats
+        for parser in (
+            TIFFWSIReader._parse_scancolortable,
+            TIFFWSIReader._parse_filtercolor_metadata,
+            TIFFWSIReader._parse_ome_metadata_mapping,
+        ):
+            color_dict = parser(root)
+            if color_dict:
+                self.post_proc.color_dict = color_dict
+                return
+
+    @staticmethod
+    def _parse_scancolortable(
+        root: ElementTree,
+    ) -> dict[str, tuple[float, float, float]] | None:
+        """Parse ScanColorTable metadata from XML and convert color values to RGB.
+
+        Args:
+            root (ElementTree): The root of the parsed XML tree.
+
+        Returns:
+            dict[str, tuple[float, float, float]] | None: A mapping of channel
+            names to RGB tuples, or None if not found.
+
+        """
+        color_info = root.find(".//ScanColorTable")
+        if color_info is None:
+            return None
+
+        color_dict = {
+            k.text.split("_")[0]: v.text
+            for k, v in zip(
+                color_info.iterfind("ScanColorTable-k"),
+                color_info.iterfind("ScanColorTable-v"),
+                strict=False,
+            )
+        }
+        # values will be either a string of 3 ints e.g 155, 128, 0, or
+        # a color name e.g Lime. Convert them all to RGB tuples.
+        for key, value in color_dict.items():
+            if value is None:
+                continue
+            if "," in value:
+                color_dict[key] = tuple(int(x) / 255 for x in value.split(","))
+            else:
+                color_dict[key] = mcolors.to_rgb(value)
+
+        return color_dict
+
+    @staticmethod
+    def _parse_filtercolor_metadata(
+        root: ElementTree,
+    ) -> dict[str, tuple[float, float, float]] | None:
+        """Parse FilterColors metadata from XML and convert color values to RGB.
+
+        Args:
+            root (ElementTree): The root of the parsed XML tree.
+
+        Returns:
+            dict[str, tuple[float, float, float]] | None: A mapping of channel
+            names to RGB tuples, or None if not found.
+
+        """
+        # try alternate metadata format
+        # Build a map from filter pair string -> color label or RGB string
+        # from the <FilterColors> section
+        filter_colors = {}
+        filter_colors_section = root.find(".//FilterColors")
+        if filter_colors_section is None:
+            return None
+
+        keys = filter_colors_section.findall(".//FilterColors-k")
+        vals = filter_colors_section.findall(".//FilterColors-v")
+        for k, v in zip(keys, vals, strict=False):
+            filter_colors[k.text] = v.text
+
+        # Helper function to convert color strings like "Lime" or
+        # "255, 128, 0" into (R,G,B)
+        def color_string_to_rgb(s: str) -> tuple[float, float, float]:
+            """Convert a color string (e.g., 'Lime' or '255, 128, 0') to an RGB tuple.
+
+            Args:
+                s (str): The color string.
+
+            Returns:
+                tuple[float, float, float]: RGB values normalized to [0, 1].
+            """
+            if "," in s:
+                return tuple(int(x.strip()) / 255 for x in s.split(","))
+            return mcolors.to_rgb(s)
+
+        # 2) For each <ScanBands-i>, find the channel's name and figure out
+        #    which filter pair it uses, then match that to a color.
+        channel_dict = {}
+        for scan_band in root.findall(".//ScanBands-i"):
+            # Inside a <ScanBands-i> there is a <Bands-i> with a <Name> tag
+            bands_i = scan_band.find(".//Bands-i")
+            if bands_i is not None:
+                band_name_element = bands_i.find("Name")
+                if band_name_element is not None:
+                    channel_name = band_name_element.text.strip()
+
+                    # Grab the filter pair manufacturer info
+                    filter_pair = scan_band.find(".//FilterPair")
+                    if filter_pair is not None:
+                        emission_part = filter_pair.find(
+                            ".//EmissionFilter/FixedFilter/PartNumber"
+                        )
+                        excitation_part = filter_pair.find(
+                            ".//ExcitationFilter/FixedFilter/PartNumber"
+                        )
+                        if emission_part is not None and excitation_part is not None:
+                            matching_rgb = (1.0, 1.0, 1.0)  # default white
+                            for fc_key, fc_val in filter_colors.items():
+                                # if both part numbers appear in the FilterColors-k
+                                # string, assume it's the match
+                                if (
+                                    emission_part.text in fc_key
+                                    and excitation_part.text in fc_key
+                                ):
+                                    matching_rgb = color_string_to_rgb(fc_val)
+                                    break
+
+                            channel_dict[channel_name] = matching_rgb
+
+        return channel_dict if channel_dict else None
+
+    @staticmethod
+    def _get_namespace(root: ElementTree) -> dict:
+        """Extract the XML namespace from the root element.
+
+        Args:
+            root (ElementTree): Root of the parsed XML tree.
+
+        Returns:
+            dict: Dictionary containing the namespace prefix and URI.
+
+        """
+        if root.tag.startswith("{"):
+            ns_uri = root.tag.split("}")[0].strip("{")
+            return {"ns": ns_uri}
+
+        return {}
+
+    @staticmethod
+    def _extract_dye_mapping(root: ElementTree, ns: dict) -> dict:
+        """Extract dye mapping from OME-XML annotations.
+
+        Args:
+            root (ElementTree): Root of the parsed XML tree.
+            ns (dict): XML namespace dictionary.
+
+        Returns:
+            dict: Mapping of channel IDs to dye names.
+
+        """
+        dye_mapping = {}
+        for annotation in root.findall(
+            ".//ns:StructuredAnnotations/ns:XMLAnnotation", ns
+        ):
+            value_elem = annotation.find("ns:Value", ns)
+            if value_elem is not None:
+                for chan_priv in value_elem.findall(".//ns:ChannelPriv", ns):
+                    chan_id = chan_priv.attrib.get("ID")
+                    dye = chan_priv.attrib.get("FluorescenceChannel")
+                    if chan_id and dye:
+                        dye_mapping[chan_id] = dye
+        return dye_mapping
+
+    @staticmethod
+    def _int_to_rgb(color_int: int) -> tuple[float, float, float]:
+        """Convert an integer color value to an RGB tuple.
+
+        Args:
+            color_int (int): Integer representation of a color.
+
+        Returns:
+            tuple[float, float, float]: RGB values normalized to [0, 1].
+
+        """
+        if color_int < 0:
+            color_int += 1 << 32
+        r = (color_int >> 16) & 0xFF
+        g = (color_int >> 8) & 0xFF
+        b = color_int & 0xFF
+
+        return (r / 255, g / 255, b / 255)
+
+    @staticmethod
+    def _parse_channel_data(
+        root: ElementTree, ns: dict, dye_mapping: dict
+    ) -> list[dict]:
+        """Parse channel metadata from OME-XML.
+
+        Extract RGB color and dye information for each channel defined in the metadata.
+
+        Args:
+            root (ElementTree): Root of the parsed XML tree.
+            ns (dict): XML namespace dictionary.
+            dye_mapping (dict): Mapping of channel IDs to dye names.
+
+        Returns:
+            list[dict]: List of dictionaries containing channel metadata.
+
+        """
+        channel_data = []
+        for pixels in root.findall(".//ns:Pixels", ns):
+            for channel in pixels.findall("ns:Channel", ns):
+                chan_id = channel.attrib.get("ID")
+                name = channel.attrib.get("Name")
+                color = channel.attrib.get("Color")
+                if chan_id and name and color:
+                    try:
+                        color_int = int(color)
+                        rgb = TIFFWSIReader._int_to_rgb(color_int)
+                    except ValueError:
+                        rgb = None
+                    dye = dye_mapping.get(chan_id, "Unknown")
+                    label = f"{chan_id}: {name} ({dye})"
+                    channel_data.append(
+                        {
+                            "id": chan_id,
+                            "name": name,
+                            "dye": dye,
+                            "rgb": rgb,
+                            "label": label,
+                        }
+                    )
+        return channel_data
+
+    @staticmethod
+    def _build_color_dict(
+        channel_data: list[dict], dye_mapping: dict
+    ) -> dict[str, tuple[float, float, float]]:
+        """Build a dictionary mapping channel names to RGB color tuples.
+
+        Args:
+            channel_data (list[dict]): List of channel metadata dictionaries.
+            dye_mapping (dict): Mapping of channel IDs to dye names.
+
+        Returns:
+            dict[str, tuple[float, float, float]]: Dictionary mapping channel labels to
+            RGB values.
+
+        """
+        color_dict = {}
+        key_counts = defaultdict(int)
+        for c_data in channel_data:
+            chan_id = c_data["id"]
+            name = c_data["name"]
+            dye = dye_mapping.get(chan_id)
+            rgb = c_data["rgb"]
+            base_key = f"{name} ({dye})" if dye else name
+            count = key_counts[base_key]
+            key = base_key if count == 0 else f"{base_key} [{count + 1}]"
+            color_dict[key] = rgb
+            key_counts[base_key] += 1
+
+        return color_dict
+
+    @staticmethod
+    def _parse_ome_metadata_mapping(
+        root: ElementTree,
+    ) -> dict[str, tuple[float, float, float]] | None:
+        """Parse OME metadata from the given XML root element.
+
+        Args:
+            root (ElementTree): The root of the parsed XML tree.
+
+        Returns:
+            dict[str, tuple[float, float, float]] | None: A mapping
+            of channel names to RGB tuples, or None if not found.
+
+        """
+        # 3) Try OME/Lunaphore format e.g. for COMET
+        ns = TIFFWSIReader._get_namespace(root)
+        dye_mapping = TIFFWSIReader._extract_dye_mapping(root, ns)
+        channel_data = TIFFWSIReader._parse_channel_data(root, ns, dye_mapping)
+        color_dict = TIFFWSIReader._build_color_dict(channel_data, dye_mapping)
+
+        return color_dict if color_dict else None
 
     def _get_ome_xml(self: TIFFWSIReader) -> ElementTree.Element:
         """Parse OME-XML from the description of the first IFD (page).
@@ -3602,32 +4120,49 @@ class TIFFWSIReader(WSIReader):
         """
         xml = xml or self._get_ome_xml()
         namespaces = {"ome": "http://www.openmicroscopy.org/Schemas/OME/2016-06"}
-        xml_series = xml.findall("ome:Image", namespaces)[self.series_n]
-        instrument_ref = xml_series.find("ome:InstrumentRef", namespaces)
-        if instrument_ref is None:
-            return None
-
-        objective_settings = xml_series.find("ome:ObjectiveSettings", namespaces)
-        instrument_ref_id = instrument_ref.attrib["ID"]
-        objective_settings_id = objective_settings.attrib["ID"]
-        instruments = {
-            instrument.attrib["ID"]: instrument
-            for instrument in xml.findall("ome:Instrument", namespaces)
-        }
-        objectives = {
-            (instrument_id, objective.attrib["ID"]): objective
-            for instrument_id, instrument in instruments.items()
-            for objective in instrument.findall("ome:Objective", namespaces)
-        }
 
         try:
-            objective = objectives[(instrument_ref_id, objective_settings_id)]
-            return float(objective.attrib.get("NominalMagnification"))
-        except KeyError as e:
-            msg = "No matching Instrument for image InstrumentRef in OME-XML."
-            raise KeyError(
-                msg,
-            ) from e
+            xml_series = xml.findall("ome:Image", namespaces)[self.series_n]
+            instrument_ref = xml_series.find("ome:InstrumentRef", namespaces)
+            objective_settings = xml_series.find("ome:ObjectiveSettings", namespaces)
+            if objective_settings is None:
+                # try alternative tag
+                objective_settings = xml_series.find("ome:Objective", namespaces)
+
+            instrument_ref_id = instrument_ref.attrib.get("ID")
+            objective_settings_id = (
+                objective_settings.attrib.get("ID")
+                if objective_settings is not None
+                else "Objective:0"
+            )
+
+            instruments = {
+                instrument.attrib.get("ID"): instrument
+                for instrument in xml.findall("ome:Instrument", namespaces)
+            }
+            objectives = {
+                (instrument_id, objective.attrib.get("ID")): objective
+                for instrument_id, instrument in instruments.items()
+                for objective in instrument.findall("ome:Objective", namespaces)
+            }
+
+            objective = objectives.get((instrument_ref_id, objective_settings_id))
+            if objective is not None:
+                return float(objective.attrib.get("NominalMagnification"))
+
+        except (IndexError, AttributeError, ValueError, TypeError, KeyError) as e:
+            logger.warning("OME objective power extraction failed: %s", e)
+
+        # Fallback: try to infer from MPP
+        mpp = self._get_ome_mpp(xml)
+        if mpp is not None:
+            try:
+                return utils.misc.mpp2common_objective_power(float(np.mean(mpp)))
+            except (TypeError, ValueError) as e:
+                logger.warning("Failed to infer objective power from MPP: %s", e)
+
+        logger.warning("Objective power could not be determined from OME-XML.")
+        return None
 
     def _get_ome_mpp(
         self: TIFFWSIReader,
@@ -3819,9 +4354,11 @@ class FsspecJsonWSIReader(WSIReader):
         self.level_arrays = dict(
             sorted(
                 self.level_arrays.items(),
-                key=lambda x: -np.prod(
-                    TIFFWSIReaderDelegate.canonical_shape(
-                        self._axes, x[1].array.shape[:2]
+                key=lambda x: (
+                    -np.prod(
+                        TIFFWSIReaderDelegate.canonical_shape(
+                            self._axes, x[1].array.shape[:2]
+                        )
                     )
                 ),
             )
@@ -4053,12 +4590,20 @@ class TIFFWSIReaderDelegate:
             value_string = value_string.strip()
 
             def us_date(string: str) -> datetime:
-                """Return datetime parsed according to US date format."""
-                return datetime.strptime(string, r"%m/%d/%y").astimezone()
+                """Return datetime parsed according to US date format (UTC-aware)."""
+                # and we immediately attach UTC.
+                dt = datetime.strptime(string, r"%m/%d/%y")  # noqa: DTZ007
+                return dt.replace(tzinfo=timezone.utc)
 
             def time(string: str) -> datetime:
-                """Return datetime parsed according to HMS format."""
-                return datetime.strptime(string, r"%H:%M:%S").astimezone()
+                """Return datetime parsed according to HMS format (UTC-aware)."""
+                # parse to time first; although .time() is tz-agnostic
+                # DTZ007 is triggered by strptime
+                t = datetime.strptime(string, r"%H:%M:%S").time()  # noqa: DTZ007
+                today_utc = datetime.now(timezone.utc)
+                return today_utc.replace(
+                    hour=t.hour, minute=t.minute, second=t.second, microsecond=0
+                )
 
             casting_precedence = [us_date, time, int, float]
             value = value_string
@@ -4097,9 +4642,9 @@ class TIFFWSIReaderDelegate:
         Returns:
             tuple[int, int]: Shape in YXS order.
         """
-        if axes == "YXS":
+        if axes in ("YXS", "YXC"):
             return shape
-        if axes == "SYX":
+        if axes in ("SYX", "CYX"):
             return np.roll(shape, -1)
         msg = f"Unsupported axes `{axes}`."
         raise ValueError(msg)
@@ -4306,7 +4851,9 @@ class TIFFWSIReaderDelegate:
                 pad_mode=pad_mode,
                 pad_constant_values=pad_constant_values,
             )
-            return utils.transforms.background_composite(im_region, alpha=False)
+            if self.reader.post_proc is not None:
+                im_region = self.reader.post_proc(im_region)
+            return im_region
 
         # Find parameters for optimal read
         (
@@ -4339,7 +4886,9 @@ class TIFFWSIReaderDelegate:
             interpolation=interpolation,
         )
 
-        return utils.transforms.background_composite(image=im_region, alpha=False)
+        if self.reader.post_proc is not None:
+            im_region = self.reader.post_proc(im_region)
+        return im_region
 
     def read_bounds(
         self: TIFFWSIReaderDelegate,
@@ -4511,6 +5060,8 @@ class TIFFWSIReaderDelegate:
                 output_size=size_at_requested,
             )
 
+        if self.reader.post_proc is not None:
+            return self.reader.post_proc(im_region)
         return im_region
 
     @staticmethod
@@ -4559,11 +5110,12 @@ class DICOMWSIReader(WSIReader):
         input_img: str | Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
+        post_proc: str | callable | None = "auto",
     ) -> None:
         """Initialize :class:`DICOMWSIReader`."""
         from wsidicom import WsiDicom  # noqa: PLC0415
 
-        super().__init__(input_img, mpp, power)
+        super().__init__(input_img, mpp, power, post_proc)
         self.wsi = WsiDicom.open(input_img)
 
     def _info(self: DICOMWSIReader) -> WSIMeta:
@@ -4867,6 +5419,8 @@ class DICOMWSIReader(WSIReader):
             interpolation=interpolation,
         )
 
+        if self.post_proc is not None:
+            im_region = self.post_proc(im_region)
         return utils.transforms.background_composite(image=im_region, alpha=False)
 
     def read_bounds(
@@ -5061,6 +5615,8 @@ class DICOMWSIReader(WSIReader):
                 interpolation=interpolation,
             )
 
+        if self.post_proc is not None:
+            return self.post_proc(im_region)
         return utils.transforms.background_composite(image=im_region, alpha=False)
 
 
@@ -5418,6 +5974,8 @@ class NGFFWSIReader(WSIReader):
             interpolation=interpolation,
         )
 
+        if self.post_proc is not None:
+            im_region = self.post_proc(im_region)
         return utils.transforms.background_composite(image=im_region, alpha=False)
 
     def read_bounds(
@@ -5589,6 +6147,8 @@ class NGFFWSIReader(WSIReader):
                 scale_factor=post_read_scale,
                 output_size=size_at_requested,
             )
+        if self.post_proc is not None:
+            im_region = self.post_proc(im_region)
 
         return im_region
 
@@ -5965,7 +6525,12 @@ class AnnotationStoreReader(WSIReader):
                 )
             base_region = Image.alpha_composite(base_region, im_region)
             base_region = base_region.convert("RGB")
-            return np.array(base_region)
+            base_region = np.array(base_region)
+            if self.post_proc is not None:
+                base_region = self.post_proc(base_region)
+            return base_region
+        if self.post_proc is not None:
+            im_region = self.post_proc(im_region)
         return utils.transforms.background_composite(im_region, alpha=False)
 
     def read_bounds(
@@ -6158,7 +6723,12 @@ class AnnotationStoreReader(WSIReader):
                 )
             base_region = Image.alpha_composite(base_region, im_region)
             base_region = base_region.convert("RGB")
-            return np.array(base_region)
+            base_region = np.array(base_region)
+            if self.post_proc is not None:
+                base_region = self.post_proc(base_region)
+            return base_region
+        if self.post_proc is not None:
+            im_region = self.post_proc(im_region)
         return utils.transforms.background_composite(im_region, alpha=False)
 
 

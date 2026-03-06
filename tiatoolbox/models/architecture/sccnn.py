@@ -10,12 +10,15 @@ IEEE transactions on medical imaging 35.5 (2016): 1196-1206.
 from __future__ import annotations
 
 from collections import OrderedDict
+from typing import TYPE_CHECKING
 
-import numpy as np
+if TYPE_CHECKING:  # pragma: no cover
+    import numpy as np
+
 import torch
-from skimage.feature import peak_local_max
 from torch import nn
 
+from tiatoolbox.models.architecture.utils import peak_detection_map_overlap
 from tiatoolbox.models.models_abc import ModelABC
 
 
@@ -91,6 +94,8 @@ class SCCNN(ModelABC):
         radius: int = 12,
         min_distance: int = 6,
         threshold_abs: float = 0.20,
+        tile_shape: tuple[int, int] = (2048, 2048),
+        class_dict: dict[int, str] | None = None,
     ) -> None:
         """Initialize :class:`SCCNN`."""
         super().__init__()
@@ -99,6 +104,8 @@ class SCCNN(ModelABC):
         self.in_ch = num_input_channels
         self.out_height = out_height
         self.out_width = out_width
+        self.tile_shape = tile_shape
+        self.class_dict = class_dict
 
         # Create mesh grid and convert to 3D vector
         x, y = torch.meshgrid(
@@ -325,35 +332,68 @@ class SCCNN(ModelABC):
         return self.spatially_constrained_layer2(s1_sigmoid0, s1_sigmoid1, s1_sigmoid2)
 
     #  skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(self: SCCNN, prediction_map: np.ndarray) -> np.ndarray:
-        """Post-processing script for MicroNet.
+    def postproc(
+        self: SCCNN,
+        block: np.ndarray,
+        min_distance: int | None = None,
+        threshold_abs: float | None = None,
+        threshold_rel: float | None = None,
+        block_info: dict | None = None,
+        depth_h: int = 0,
+        depth_w: int = 0,
+    ) -> np.ndarray:
+        """SCCNN post-processing function.
 
-        Performs peak detection and extracts coordinates in x, y format.
+        Builds a processed mask per input channel, runs peak_local_max then
+        writes 1.0 at peak pixels.
+
+        Returns same spatial shape as the input block
 
         Args:
-            prediction_map (ndarray):
-                Input image of type numpy array.
+            block (np.ndarray):
+                shape (H, W, C).
+            min_distance (int | None):
+                The minimal allowed distance separating peaks.
+            threshold_abs (float | None):
+                Minimum intensity of peaks.
+            threshold_rel (float | None):
+                Minimum intensity of peaks.
+            block_info (dict | None):
+                Dask block info dict. Only used when called from
+                dask.array.map_overlap.
+            depth_h (int):
+                Halo size in pixels for height (rows). Only used
+                when it's called from dask.array.map_overlap.
+            depth_w (int):
+                Halo size in pixels for width (cols). Only used
+                when it's called from dask.array.map_overlap.
 
         Returns:
-            :class:`numpy.ndarray`:
-                Pixel-wise nuclear instance segmentation
-                prediction.
-
+            out: NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere.
         """
-        coordinates = peak_local_max(
-            np.squeeze(prediction_map[0], axis=2),
-            min_distance=self.min_distance,
-            threshold_abs=self.threshold_abs,
-            exclude_border=False,
+        min_distance_to_use = (
+            self.min_distance if min_distance is None else min_distance
         )
-        return np.fliplr(coordinates)
+        threshold_abs_to_use = (
+            self.threshold_abs if threshold_abs is None else threshold_abs
+        )
+        return peak_detection_map_overlap(
+            block,
+            min_distance=min_distance_to_use,
+            threshold_abs=threshold_abs_to_use,
+            threshold_rel=threshold_rel,
+            block_info=block_info,
+            depth_h=depth_h,
+            depth_w=depth_w,
+        )
 
     @staticmethod
     def infer_batch(
         model: nn.Module,
-        batch_data: np.ndarray | torch.Tensor,
+        batch_data: torch.Tensor,
+        *,
         device: str,
-    ) -> list[np.ndarray]:
+    ) -> np.ndarray:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O
@@ -386,8 +426,4 @@ class SCCNN(ModelABC):
             pred = model(patch_imgs_gpu)
 
         pred = pred.permute(0, 2, 3, 1).contiguous()
-        pred = pred.cpu().numpy()
-
-        return [
-            pred,
-        ]
+        return pred.cpu().numpy()

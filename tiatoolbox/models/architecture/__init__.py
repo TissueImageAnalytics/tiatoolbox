@@ -6,15 +6,19 @@ from pathlib import Path
 from pydoc import locate
 from typing import TYPE_CHECKING
 
-import torch
+import timm
 from huggingface_hub import hf_hub_download
 
 from tiatoolbox import rcParam
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
+from tiatoolbox.models.models_abc import load_torch_model
+
+from .vanilla import CNNBackbone, TimmBackbone, timm_arch_dict, torch_cnn_backbone_dict
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.models.models_abc import IOConfigABC
+    import torch
 
+    from tiatoolbox.models.engine.io_config import ModelIOConfigABC
 
 __all__ = ["fetch_pretrained_weights", "get_pretrained_model"]
 PRETRAINED_INFO = rcParam["pretrained_model_info"]
@@ -68,7 +72,7 @@ def get_pretrained_model(
     pretrained_weights: str | Path | None = None,
     *,
     overwrite: bool = False,
-) -> tuple[torch.nn.Module, IOConfigABC]:
+) -> tuple[torch.nn.Module, ModelIOConfigABC | None]:
     """Load a predefined PyTorch model with the appropriate pretrained weights.
 
     Args:
@@ -126,6 +130,12 @@ def get_pretrained_model(
         msg = "pretrained_model must be a string."
         raise TypeError(msg)
 
+    if pretrained_model in torch_cnn_backbone_dict:
+        return CNNBackbone(pretrained_model), None
+
+    if pretrained_model in [*timm_arch_dict, *timm.list_models()]:
+        return TimmBackbone(pretrained_model, pretrained=True), None
+
     if pretrained_model not in PRETRAINED_INFO:
         msg = f"Pretrained model `{pretrained_model}` does not exist."
         raise ValueError(msg)
@@ -142,7 +152,7 @@ def get_pretrained_model(
     # Get model class form module
     model_class = getattr(arch_module, model_name)
     model = model_class(**arch_info["kwargs"])
-    # TODO(TBC): Dictionary of dataset specific or transformation?  # noqa: FIX002,TD003
+
     if "dataset" in info:
         # ! this is a hack currently, need another PR to clean up
         # ! associated pre-processing coming from dataset (Kumar, Kather, etc.)
@@ -154,12 +164,7 @@ def get_pretrained_model(
             overwrite=overwrite,
         )
 
-    # ! assume to be saved in single GPU mode
-    # always load on to the CPU
-    saved_state_dict = torch.load(pretrained_weights, map_location="cpu")
-    model.load_state_dict(saved_state_dict, strict=True)
-
-    # !
+    model = load_torch_model(model=model, weights=pretrained_weights)
 
     io_info = info["ioconfig"]
     io_class_info = io_info["class"]
@@ -169,5 +174,5 @@ def get_pretrained_model(
     engine_module = locate(f"tiatoolbox.models.engine.{io_module_name}")
     engine_class = getattr(engine_module, io_class_name)
 
-    iostate = engine_class(**io_info["kwargs"])
-    return model, iostate
+    ioconfig = engine_class(**io_info["kwargs"])
+    return model, ioconfig

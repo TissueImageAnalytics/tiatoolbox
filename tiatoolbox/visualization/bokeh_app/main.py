@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import multiprocessing
 import os
 import sys
 import tempfile
@@ -47,6 +48,7 @@ from bokeh.models import (
     Select,
     Slider,
     Spinner,
+    StringEditor,
     TableColumn,
     TabPanel,
     Tabs,
@@ -139,6 +141,197 @@ def format_info(info: dict[str, Any]) -> str:
     for k, v in info.items():
         info_str += f"{k}: {v}<br>"
     return info_str
+
+
+def get_channel_info() -> dict[str, tuple[int, int, int]]:
+    """Get the colors for the channels."""
+    resp = UI["s"].get(f"http://{host2}:{port}/tileserver/channels")
+    try:
+        resp = json.loads(resp.text)
+        return resp.get("channels", {}), resp.get("active", [])
+    except json.JSONDecodeError as e:
+        logger.warning("Error decoding JSON: %s", e)
+        return {}, []
+
+
+def set_channel_info(
+    colors: dict[str, tuple[int, int, int]], active_channels: list
+) -> None:
+    """Set the colors for the channels."""
+    UI["s"].put(
+        f"http://{host2}:{port}/tileserver/channels",
+        data={"channels": json.dumps(colors), "active": json.dumps(active_channels)},
+    )
+
+
+def create_channel_color_ui() -> Column:
+    """Create the multi-channel UI controls."""
+    channel_source = ColumnDataSource(
+        data={
+            "channels": [],
+            "dummy": [],
+        }
+    )
+    color_source = ColumnDataSource(
+        data={
+            "colors": [],
+            "dummy": [],
+        }
+    )
+
+    color_formatter = HTMLTemplateFormatter(
+        template="""<div style='background-color: <%= value %>; color:
+          <%= value %>; border: 1px solid #ddd;'><%= value %></div>"""
+    )
+
+    channel_table = DataTable(
+        source=channel_source,
+        columns=[
+            TableColumn(
+                field="channels",
+                title="Channel",
+                editor=StringEditor(),
+                sortable=False,
+                width=200,
+            )
+        ],
+        editable=True,
+        width=200,
+        height=260,
+        selectable="checkbox",
+        autosize_mode="none",
+        fit_columns=True,
+    )
+    color_table = DataTable(
+        source=color_source,
+        columns=[
+            TableColumn(
+                field="colors",
+                title="Color",
+                formatter=color_formatter,
+                editor=StringEditor(),
+                sortable=False,
+                width=130,
+            )
+        ],
+        editable=True,
+        width=130,
+        height=260,
+        selectable=True,
+        autosize_mode="none",
+        index_position=None,
+        fit_columns=True,
+    )
+
+    color_picker = ColorPicker(title="Channel Color", width=100)
+
+    def update_selected_color(
+        attr: str,  # noqa: ARG001 # skipcq: PYL-W0613
+        old: str,  # noqa: ARG001 # skipcq: PYL-W0613
+        new: str,
+    ) -> None:
+        """Update the selected color in multichannel ui."""
+        selected = color_source.selected.indices
+        if selected:
+            color_source.patch({"colors": [(selected[0], new)]})
+
+    color_picker.on_change("color", update_selected_color)
+
+    apply_button = Button(
+        label="Apply Changes", button_type="success", margin=(20, 5, 5, 5)
+    )
+
+    def apply_changes() -> None:
+        """Apply the changes to the image."""
+        colors = dict(
+            zip(
+                channel_source.data["channels"],
+                color_source.data["colors"],
+                strict=False,
+            )
+        )
+        active_channels = channel_source.selected.indices
+
+        set_channel_info({ch: hex2rgb(colors[ch]) for ch in colors}, active_channels)
+        change_tiles("slide")
+
+    apply_button.on_click(apply_changes)
+
+    def update_color_picker(
+        attr: str,  # noqa: ARG001 # skipcq: PYL-W0613
+        old: str,  # noqa: ARG001 # skipcq: PYL-W0613
+        new: str,
+    ) -> None:
+        """Update the color picker when a new channel is selected."""
+        selected_color = color_source.data["colors"][new[0]]
+        color_picker.color = selected_color
+
+    color_source.selected.on_change("indices", update_color_picker)
+
+    enhance_slider = Slider(
+        start=0.1,
+        end=10,
+        value=1,
+        step=0.1,
+        title="Enhance",
+        width=200,
+    )
+
+    def enhance_cb(
+        attr: str,  # noqa: ARG001 # skipcq: PYL-W0613
+        old: str,  # noqa: ARG001 # skipcq: PYL-W0613
+        new: str,
+    ) -> None:
+        """Enhance slider callback."""
+        UI["s"].put(
+            f"http://{host2}:{port}/tileserver/enhance",
+            data={"val": json.dumps(new)},
+        )
+        UI["vstate"].update_state = 1
+        UI["vstate"].to_update.update(["slide"])
+
+    enhance_slider.on_change("value", enhance_cb)
+
+    instructions = Div(
+        text="""
+        <p>Instructions:</p>
+        <ul>
+            <li>Double-click on the 'Active' column to toggle channel visibility</li>
+            <li>Click on a row to select it for color editing</li>
+            <li>Use 'Select All' or 'Deselect All' for quick selection</li>
+            <li>Use the color picker to change the color of the selected channel</li>
+            <li>Click 'Apply Changes' to update the image</li>
+        </ul>
+    """
+    )
+
+    return column(
+        instructions,
+        column(
+            row(channel_table, color_table),
+            row(color_picker, apply_button),
+            enhance_slider,
+        ),
+    )
+
+
+def populate_table() -> None:
+    """Populate the channel color table."""
+    # Access the ColumnDataSource from the UI dictionary
+    tables = UI["channel_select"].children[1].children[0].children
+    colors, active_channels = get_channel_info()
+
+    if colors:
+        if active_channels:
+            tables[0].source.selected.indices = active_channels
+        tables[0].source.data = {
+            "channels": list(colors.keys()),
+            "dummy": list(colors.keys()),
+        }
+        tables[1].source.data = {
+            "colors": [rgb2hex(color) for color in colors.values()],
+            "dummy": list(colors.keys()),
+        }
 
 
 def get_view_bounds(
@@ -735,12 +928,13 @@ def populate_slide_list(slide_folder: Path, search_txt: str | None = None) -> No
     len_slidepath = len(slide_folder.parts)
     for ext in [
         "*.svs",
-        "*ndpi",
+        "*.ndpi",
         "*.tiff",
         "*.mrxs",
         "*.jpg",
         "*.png",
         "*.tif",
+        "*.qptiff",
         "*.dcm",
     ]:
         file_list.extend(list(Path(slide_folder).glob(str(Path("*") / ext))))
@@ -760,14 +954,22 @@ def populate_slide_list(slide_folder: Path, search_txt: str | None = None) -> No
     UI["slide_select"].options = file_list
 
 
-def filter_input_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
+def filter_input_cb(
+    attr: str,  # noqa: ARG001 # skipcq: PYL-W0613
+    old: str,  # noqa: ARG001 # skipcq: PYL-W0613
+    new: str,  # noqa: ARG001 # skipcq: PYL-W0613
+) -> None:
     """Change predicate to be used to filter annotations."""
     build_predicate()
     UI["vstate"].update_state = 1
     UI["vstate"].to_update.update(["overlay"])
 
 
-def cprop_input_cb(attr: str, old: str, new: list[str]) -> None:  # noqa: ARG001
+def cprop_input_cb(
+    attr: str,  # noqa: ARG001 # skipcq: PYL-W0613
+    old: str,  # noqa: ARG001 # skipcq: PYL-W0613
+    new: list[str],
+) -> None:
     """Change property to color by."""
     if len(new) == 0:
         return
@@ -885,6 +1087,7 @@ def slide_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
     fname = make_safe_name(str(slide_path))
     UI["s"].put(f"http://{host2}:{port}/tileserver/slide", data={"slide_path": fname})
     change_tiles("slide")
+    populate_table()
 
     # Load the overlay and graph automatically if set in config
     if doc_config["auto_load"]:
@@ -1243,9 +1446,7 @@ def segment_on_box() -> None:
     mask[y : y + height, x : x + width] = 1
 
     inst_segmentor = NucleusInstanceSegmentor(
-        pretrained_model="hovernet_fast-pannuke",
-        num_loader_workers=4,
-        num_postproc_workers=8,
+        model="hovernet_fast-pannuke",
         batch_size=24,
     )
     tmp_save_dir = Path(tempfile.mkdtemp())
@@ -1254,16 +1455,19 @@ def segment_on_box() -> None:
 
     # Run hovernet inside the box
     UI["vstate"].model_mpp = inst_segmentor.ioconfig.save_resolution["resolution"]
-    inst_segmentor.predict(
-        [UI["vstate"].slide_path],
-        [tmp_mask_dir / "mask.png"],
+    num_workers = 0 if os.name == "nt" else multiprocessing.cpu_count()
+    out_ = inst_segmentor.run(
+        images=[UI["vstate"].slide_path],
+        masks=[tmp_mask_dir / "mask.png"],
         save_dir=tmp_save_dir / "hover_out",
-        mode="wsi",
+        patch_mode=False,
         device=select_device(on_gpu=torch.cuda.is_available()),
-        crash_on_exception=True,
+        output_type="annotationstore",
+        auto_get_mask=False,
+        num_workers=num_workers,
     )
 
-    fname = make_safe_name(tmp_save_dir / "hover_out" / "0.dat")
+    fname = make_safe_name(out_[UI["vstate"].slide_path][0])
     resp = UI["s"].put(
         f"http://{host2}:{port}/tileserver/annotations",
         data={"file_path": fname, "model_mpp": json.dumps(UI["vstate"].model_mpp)},
@@ -1272,7 +1476,6 @@ def segment_on_box() -> None:
     update_ui_on_new_annotations(ann_types)
 
     # Clean up temp files
-    rmtree(tmp_save_dir)
     rmtree(tmp_mask_dir)
 
 
@@ -1666,12 +1869,14 @@ def gather_ui_elements(  # noqa: PLR0915
                 "pt_size_spinner",
                 "edge_size_spinner",
                 "res_switch",
+                "channel_select",
             ],
             [
                 opt_buttons,
                 pt_size_spinner,
                 edge_size_spinner,
                 res_switch,
+                create_channel_color_ui(),
             ],
             strict=False,
         ),
@@ -2114,12 +2319,13 @@ class DocConfig:
         slide_list = []
         for ext in [
             "*.svs",
-            "*ndpi",
+            "*.ndpi",
             "*.tiff",
             "*.tif",
             "*.mrxs",
             "*.png",
             "*.jpg",
+            "*.qptiff",
             "*.dcm",
         ]:
             slide_list.extend(list(doc_config["slide_folder"].glob(ext)))
