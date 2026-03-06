@@ -971,6 +971,27 @@ def test_populate_slide_list(doc: Document, data_path: pytest.TempPathFactory) -
     assert len(slide_select.options) == 4
 
 
+def test_clear_overlays(doc: Document, data_path: pytest.TempPathFactory) -> None:
+    """Test clearing overlays."""
+    slide_select = doc.get_model_by_name("slide_select0")
+    slide_select.value = [data_path["slide1"].name]
+
+    # load an annotation store
+    layer_drop = doc.get_model_by_name("layer_drop0")
+    click = MenuItemClick(layer_drop, str(data_path["annotations"]))
+    layer_drop._trigger_event(click)
+    assert "overlay" in main.UI["vstate"].layer_dict
+
+    # now clear the overlays
+    clear_button = doc.get_model_by_name("clear_button0")
+    click = ButtonClick(clear_button)
+    clear_button._trigger_event(click)
+    assert "overlay" not in main.UI["vstate"].layer_dict
+    assert (
+        len(main.UI["vstate"].layer_dict) == 5
+    )  # slide & empty box/pt/edge/node renderers
+
+
 def test_channel_color_ui_callbacks(
     doc: Document,
     data_path: pytest.TempPathFactory,

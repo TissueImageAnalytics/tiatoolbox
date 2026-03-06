@@ -41,17 +41,21 @@ class _FakeSlide:
     ) -> None:
         self.info = info or _FakeInfo()
         self.post_proc = post_proc
-        self._thumb_called = 0
+        self._called = 0
 
-    def slide_thumbnail(
-        self, *, resolution: float = 8.0, units: str = "mpp"
+    def read_rect(
+        self,
+        location: tuple[float, float] = (0, 0),
+        size: tuple[float, float] = (100, 100),
+        resolution: int = 0,
+        units: str = "level",
     ) -> np.ndarray:
-        """Fake thumbnail method that counts calls."""
-        _ = (resolution, units)  # mark as used to satisfy Ruff
+        """Fake read_rect method that counts calls."""
+        _ = (resolution, units, location)  # mark as used to satisfy Ruff
         # Parameters are part of the real Slide API; unused by the fake.
-        self._thumb_called += 1
+        self._called += 1
         # returning an array avoids PIL issues if used elsewhere
-        return np.zeros((8, 8, 3), dtype=np.uint8)
+        return np.zeros((size[0], size[1], 3), dtype=np.uint8)
 
 
 @pytest.fixture
@@ -81,7 +85,7 @@ def session_id(client: TileServer) -> str:
     return sid
 
 
-def test_get_channels_populated_and_triggers_thumbnail_when_not_validated(
+def test_get_channels_populated_and_triggers_read_when_not_validated(
     app: TileServer, client: TileServer, session_id: str
 ) -> None:
     """Covers lines in get_channels by MultichannelToRGB and is_validated gate."""
@@ -106,14 +110,14 @@ def test_get_channels_populated_and_triggers_thumbnail_when_not_validated(
     # JSON serializes tuples to lists
     assert payload["channels"] == {"c0": [1.0, 0.0, 0.0], "c1": [0.0, 1.0, 0.0]}
     assert payload["active"] == ["c0", "c1"]
-    # Should have forced a thumbnail when not validated
-    assert slide._thumb_called == 1
+    # Should have forced a read_rect when not validated
+    assert slide._called == 1
 
-    # Call again with already validated state to ensure no extra thumbnailing
+    # Call again with already validated state to ensure no extra read_rect calls
     app.layers[sid]["slide"].post_proc.is_validated = True
     r2 = client.get("/tileserver/channels")
     assert r2.status_code == 200
-    assert slide._thumb_called == 1  # unchanged
+    assert slide._called == 1  # unchanged
 
 
 def test_set_channels_updates_dicts_and_marks_unvalidated(

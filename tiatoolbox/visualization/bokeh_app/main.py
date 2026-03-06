@@ -1975,12 +1975,12 @@ def gather_ui_elements(  # noqa: PLR0915
         ),
     )
     if "ui_elements_1" in doc_config:
-        # Only add the elements specified in config file
+        # Dont add elements specified 0 in config file
         ui_layout = column(
             [
                 ui_elements_1[el]
-                for el in doc_config["ui_elements_1"]
-                if doc_config["ui_elements_1"][el] == 1
+                for el in ui_elements_1
+                if doc_config["ui_elements_1"].get(el, 1) == 1
             ],
             sizing_mode="stretch_width",
         )
@@ -2016,7 +2016,7 @@ def gather_ui_elements(  # noqa: PLR0915
             [
                 ui_elements_2[el]
                 for el in doc_config["ui_elements_2"]
-                if doc_config["ui_elements_2"][el] == 1
+                if doc_config["ui_elements_2"].get(el, 1) == 1
             ],
         )
     else:
