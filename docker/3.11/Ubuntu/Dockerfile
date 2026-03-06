@@ -1,4 +1,4 @@
-FROM ubuntu:22.04 AS builder-image
+FROM ubuntu:24.04 AS builder-image
 
 # To avoid tzdata blocking the build with frontend questions
 ENV DEBIAN_FRONTEND=noninteractive
@@ -20,11 +20,11 @@ ENV PATH=/venv/bin:$PATH
 # install TIAToolbox and its requirements
 RUN apt-get update && apt-get install --no-install-recommends -y \
     libopenjp2-7-dev libopenjp2-tools \
-    openslide-tools \
+    sqlite3 libsqlite3-0 \
     libgl1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir tiatoolbox
 
 # activate virtual environment
-ENV VIRTUAL_ENV=/opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+ENV VIRTUAL_ENV=/venv
+ENV PATH="/venv/bin:$PATH"

@@ -991,6 +991,12 @@ def test_clear_overlays(doc: Document, data_path: pytest.TempPathFactory) -> Non
         len(main.UI["vstate"].layer_dict) == 5
     )  # slide & empty box/pt/edge/node renderers
 
+    # click again - should do nothing and not error
+    click = ButtonClick(clear_button)
+    clear_button._trigger_event(click)
+    assert "overlay" not in main.UI["vstate"].layer_dict
+    assert len(main.UI["vstate"].layer_dict) == 5
+
 
 def test_channel_color_ui_callbacks(
     doc: Document,
