@@ -12,11 +12,12 @@ from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import cv2
 import glymur
 import numpy as np
+import openslide
 import pytest
 import SimpleITK as sitk  # noqa: N813
 import tifffile
@@ -4228,3 +4229,41 @@ def test_virtual_read_rect_resolution_coord_space_roundtrip() -> None:
     r1 = v.read_rect((0, 0), (8, 8), coord_space="resolution")
     r2 = v.read_bounds((0, 0, 8, 8))
     assert np.array_equal(r1, r2)
+
+
+class TestTryOpenSlide:
+    """Unit tests for the WSIReader.try_openslide static method."""
+
+    @patch("tiatoolbox.wsicore.wsireader.OpenSlideWSIReader")
+    def test_tiff_suffix_success(self, mock_reader: MagicMock) -> None:
+        """Test that a valid TIFF file results in an OpenSlideWSIReader instance."""
+        mock_instance = MagicMock()
+        mock_reader.return_value = mock_instance
+
+        result: OpenSlideWSIReader | None = WSIReader.try_openslide(
+            input_path=Path("sample.tif"),
+            last_suffix=".tif",
+            mpp=(0.5, 0.5),
+            power=20,
+        )
+
+        mock_reader.assert_called_once_with(
+            Path("sample.tif"),
+            mpp=(0.5, 0.5),
+            power=20,
+        )
+        assert result is mock_instance
+
+    @patch("tiatoolbox.wsicore.wsireader.OpenSlideWSIReader")
+    def test_tiff_suffix_raises_openslide_error(self, mock_reader: MagicMock) -> None:
+        """Test that OpenSlide errors are caught and the function returns None."""
+        mock_reader.side_effect = openslide.OpenSlideError("bad file")
+
+        result: OpenSlideWSIReader | None = WSIReader.try_openslide(
+            input_path=Path("bad.tiff"),
+            last_suffix=".tiff",
+            mpp=None,
+            power=None,
+        )
+
+        assert result is None
