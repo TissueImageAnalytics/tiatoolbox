@@ -964,6 +964,10 @@ grandqc_tissue_detection:
         class: grandqc.GrandQCModel
         kwargs:
             num_output_channels: 2
+            class_dict: {
+                0: "Background",
+                1: "Tissue",
+            }
     ioconfig:
         class: io_config.IOSegmentorConfig
         kwargs:

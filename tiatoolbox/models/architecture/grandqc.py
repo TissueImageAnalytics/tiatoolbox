@@ -470,7 +470,9 @@ class GrandQCModel(ModelABC):
 
     """
 
-    def __init__(self: GrandQCModel, num_output_channels: int = 2) -> None:
+    def __init__(
+        self: GrandQCModel, num_output_channels: int = 2, class_dict: dict | None = None
+    ) -> None:
         """Initialize GrandQCModel.
 
         Sets up the UNet++ decoder, EfficientNet encoder, and segmentation head
@@ -479,6 +481,8 @@ class GrandQCModel(ModelABC):
         Args:
             num_output_channels (int):
                 Number of output classes. Defaults to 2 (Tissue and Background).
+            class_dict (dict | None):
+                Optional dictionary mapping class names to indices. Defaults to None.
 
         """
         super().__init__()
@@ -505,6 +509,7 @@ class GrandQCModel(ModelABC):
         )
 
         self.name = "unetplusplus-efficientnetb0"
+        self.class_dict = class_dict
 
     def forward(  # skipcq: PYL-W0613
         self: GrandQCModel,
@@ -577,8 +582,6 @@ class GrandQCModel(ModelABC):
         Returns:
             np.ndarray:
                 Binary tissue mask where 1 = Tissue and 0 = Background.
-                This is opposite to the original implementation which
-                uses 0 = Tissue, 1 = Background.
 
         Example:
             >>> probs = np.random.rand(256, 256, 2)
@@ -587,7 +590,7 @@ class GrandQCModel(ModelABC):
             ... (256, 256)
 
         """
-        return image.argmax(axis=-1)
+        return image.argmin(axis=-1)
 
     @staticmethod
     def infer_batch(
