@@ -3904,8 +3904,7 @@ class SQLiteStore(AnnotationStore):
                 index.
 
         """
-        major, minor, _ = sqlite3.sqlite_version_info
-        if major <= 3 and minor < 9:  # noqa: PLR2004
+        if sqlite3.sqlite_version_info < (3, 9, 0):
             msg = "Requires sqlite version 3.9.0 or higher."
             raise OSError(msg)
         cur = self.con.cursor()
