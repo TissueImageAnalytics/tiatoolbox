@@ -70,7 +70,6 @@ class PromptSegmentor:
                 Paths to the saved output databases.
 
         """
-        self.model.to(device)
         paths = []
         masks, _ = self.model.infer_batch(
             self.model,

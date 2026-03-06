@@ -16,25 +16,22 @@ class SAM(ModelABC):
     Meta AI's zero-shot segmentation model.
     SAM is used for interactive general-purpose segmentation.
 
-    Currently supports SAM, which requires a checkpoint and model type.
+    Currently supports SAM.
 
     SAM accepts an RGB image patch along with a list of point and bounding
     box coordinates as prompts.
 
     Args:
-        model_type (str):
-            Model type.
-            Currently supported: vit_b, vit_l, vit_h.
-        checkpoint_path (str):
-            Path to the model checkpoint.
+        model_path (str):
+            Path to the model (huggingface).
         device (str):
             Device to run inference on.
 
     Examples:
         >>> # instantiate SAM with checkpoint path and model type
         >>> sam = SAM(
-        ...     model_type="vit_b",
-        ...     checkpoint_path="path/to/sam_checkpoint.pth"
+        ...     model_path="facebook/sam-vit-b",
+        ...     device="cuda",
         ... )
     """
 
