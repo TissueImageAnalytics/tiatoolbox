@@ -161,6 +161,8 @@ def annotation_path(data_path: dict[str, Path]) -> dict[str, object]:
         "patch-extraction-vf",
         data_path["base_path"] / "slides",
     )
+    data_path["meta"] = fetch_sample_to_dir(
+        "test_meta",
     data_path["qptiff"] = fetch_sample_to_dir(
         "qptiff_sample",
         data_path["base_path"] / "slides",
@@ -197,6 +199,14 @@ def annotation_path(data_path: dict[str, Path]) -> dict[str, object]:
     data_path["config"] = fetch_sample_to_dir(
         "config_2",
         data_path["base_path"] / "overlays",
+    )
+    data_path["plugin_img"] = _fetch_remote_sample(
+        "stainnorm-source",
+        data_path["base_path"] / "slides" / "CMU-1_files",
+    )
+    data_path["plugin_csv"] = _fetch_remote_sample(
+        "test_csv",
+        data_path["base_path"] / "slides" / "CMU-1_files",
     )
     return data_path
 
@@ -265,8 +275,8 @@ def test_get_level_by_extent() -> None:
 
 def test_roots(doc: Document) -> None:
     """Test that the document has the correct number of roots."""
-    # should be 4 roots: main window, controls, slide_info, popup table
-    assert len(doc.roots) == 4
+    # should be 5 roots: main window, controls, slide_info, popup, extra_layout
+    assert len(doc.roots) == 5
 
 
 def test_config_loaded(data_path: pytest.TempPathFactory) -> None:
@@ -293,6 +303,11 @@ def test_slide_select(doc: Document, data_path: pytest.TempPathFactory) -> None:
     # select a slide and check it is loaded
     slide_select.value = ["CMU-1.ndpi"]
     assert main.UI["vstate"].slide_path == data_path["slide2"]
+
+    # check the slide metadata is loaded from csv
+    desc = doc.get_model_by_name("description")
+    assert "valA" in desc.text
+    assert "valB" not in desc.text
 
     # check selecting nothing has no effect
     slide_select.value = []

@@ -269,6 +269,14 @@ files:
     hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
     subfolder: "testdata/annotation"
     filename: "test2_config.json"
+  test_meta:
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/annotation"
+    filename: "test_meta.csv"
+  test_csv:
+    hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
+    subfolder: "testdata/annotation"
+    filename: "metrics_10.csv"
   patch_annotations:
     hf_repo_id: "TIACentre/TIAToolBox_Remote_Samples"
     subfolder: "testdata/annotation"
