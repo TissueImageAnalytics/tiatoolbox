@@ -576,7 +576,9 @@ class GrandQCModel(ModelABC):
 
         Returns:
             np.ndarray:
-                Binary tissue mask where 0 = Tissue and 1 = Background.
+                Binary tissue mask where 1 = Tissue and 0 = Background.
+                This is opposite to the original implementation which
+                uses 0 = Tissue, 1 = Background.
 
         Example:
             >>> probs = np.random.rand(256, 256, 2)
@@ -585,7 +587,7 @@ class GrandQCModel(ModelABC):
             ... (256, 256)
 
         """
-        return image.argmin(axis=-1)
+        return image.argmax(axis=-1)
 
     @staticmethod
     def infer_batch(

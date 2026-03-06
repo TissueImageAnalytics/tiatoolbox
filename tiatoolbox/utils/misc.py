@@ -1427,7 +1427,7 @@ def dict_to_store_semantic_segmentor(
     save_path: Path | None = None,
     offset: np.ndarray | None = None,
     *,
-    ignore_index: int | None = 0,
+    ignore_index: int | None = None,
     verbose: bool = True,
 ) -> AnnotationStore | dict | Path:
     """Converts output of TIAToolbox SemanticSegmentor engine to AnnotationStore.
