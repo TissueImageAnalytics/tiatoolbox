@@ -144,6 +144,7 @@ class TileServer(Flask):
         self.route("/tileserver/session_id")(self.session_id)
         self.route("/tileserver/color_prop", methods=["PUT"])(self.change_prop)
         self.route("/tileserver/slide", methods=["PUT"])(self.change_slide)
+        self.route("/tileserver/clear_overlays", methods=["PUT"])(self.clear_overlays)
         self.route("/tileserver/cmap", methods=["PUT"])(self.change_mapper)
         self.route(
             "/tileserver/annotations",
@@ -419,6 +420,16 @@ class TileServer(Flask):
             self.layers[session_id]["slide"].info.mpp = [1, 1]
         self.slide_mpps[session_id] = self.layers[session_id]["slide"].info.mpp
 
+        return "done"
+
+    def clear_overlays(self: TileServer) -> str:
+        """Clear all overlays."""
+        session_id = self._get_session_id()
+        slide_layer = self.layers[session_id]["slide"]
+        self.layers[session_id] = {"slide": slide_layer}
+        self.pyramids[session_id] = {
+            "slide": ZoomifyGenerator(slide_layer, tile_size=256),
+        }
         return "done"
 
     def change_mapper(self: TileServer) -> str:
@@ -816,9 +827,8 @@ class TileServer(Flask):
         session_id = self._get_session_id()
         if isinstance(self.layers[session_id]["slide"].post_proc, MultichannelToRGB):
             if not self.layers[session_id]["slide"].post_proc.is_validated:
-                _ = self.layers[session_id]["slide"].slide_thumbnail(
-                    resolution=8.0, units="mpp"
-                )
+                # trigger validation of channels with small read
+                _ = self.layers[session_id]["slide"].read_rect((0, 0), (100, 100))
             return jsonify(
                 {
                     "channels": self.layers[session_id]["slide"].post_proc.color_dict,

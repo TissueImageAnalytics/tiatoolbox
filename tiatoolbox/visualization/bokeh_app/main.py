@@ -1098,6 +1098,23 @@ def slide_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
             layer_drop_cb(dummy_attr)
 
 
+def clear_overlay_cb(attr: str) -> None:  # noqa: ARG001
+    """Clear all overlays and reset to just the slide."""
+    UI["pt_source"].data = {"x": [], "y": []}
+    UI["box_source"].data = {"x": [], "y": [], "width": [], "height": []}
+    UI["node_source"].data = {"x_": [], "y_": [], "node_color_": []}
+    UI["edge_source"].data = {"x0_": [], "y0_": [], "x1_": [], "y1_": []}
+    UI["hover"].tooltips = None
+    if len(UI["p"].renderers) > N_PERMANENT_RENDERERS:
+        for r in UI["p"].renderers[N_PERMANENT_RENDERERS:].copy():
+            UI["p"].renderers.remove(r)
+    UI["vstate"].layer_dict = {"slide": 0, "rect": 1, "pts": 2, "nodes": 3, "edges": 4}
+    UI["color_column"].children = []
+    UI["type_column"].children = []
+    UI["s"].put(f"http://{host2}:{port}/tileserver/clear_overlays")
+    change_tiles("slide")
+
+
 def handle_graph_layer(attr: MenuItemClick) -> None:  # skipcq: PY-R1000
     """Handle adding a graph layer."""
     do_feats = False
@@ -1796,7 +1813,7 @@ def gather_ui_elements(  # noqa: PLR0915
         button_type="success",
         width=80,
         max_width=90,
-        height=35,
+        height=45,
         sizing_mode="stretch_width",
         name=f"to_model{win_num}",
     )
@@ -1821,9 +1838,17 @@ def gather_ui_elements(  # noqa: PLR0915
         button_type="success",
         max_width=90,
         width=80,
-        height=35,
+        height=45,
         sizing_mode="stretch_width",
         name=f"save_button{win_num}",
+    )
+    clear_button = Button(
+        label="Clear Overlays",
+        button_type="warning",
+        width=120,
+        height=40,
+        sizing_mode="stretch_width",
+        name=f"clear_button{win_num}",
     )
     type_cprop_tt = Tooltip(
         content=HTML(
@@ -1892,6 +1917,7 @@ def gather_ui_elements(  # noqa: PLR0915
     filter_input.on_change("value", filter_input_cb)
     cprop_input.on_change("value", cprop_input_cb)
     type_cmap_select.on_change("value", type_cmap_cb)
+    clear_button.on_click(clear_overlay_cb)
 
     # Create some layouts
     type_column = column(children=layer_boxes, name=f"type_column{win_num}")
@@ -1929,6 +1955,7 @@ def gather_ui_elements(  # noqa: PLR0915
                 "cmap_row",
                 "type_cmap_select",
                 "model_row",
+                "clear_button",
                 "type_select_row",
             ],
             [
@@ -1941,6 +1968,7 @@ def gather_ui_elements(  # noqa: PLR0915
                 cmap_row,
                 type_cmap_select,
                 model_row,
+                clear_button,
                 type_select_row,
             ],
             strict=False,
