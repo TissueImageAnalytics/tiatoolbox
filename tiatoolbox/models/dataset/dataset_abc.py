@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -310,9 +309,9 @@ class WSIPatchDataset(PatchDatasetABC):
             if isinstance(input_img, WSIReader)
             else WSIReader.open(self.img_path, **wsireader_kwargs)
         )
-        # To support multi-threading on Windows
+        # To support multi-threading
         # Helps pickle using Path
-        self.reader = None if os.name == "nt" else reader
+        self.reader = None
         # may decouple into misc ?
         # the scaling factor will scale base level to requested read resolution/units
         wsi_shape = reader.slide_dimensions(resolution=resolution, units=units)
