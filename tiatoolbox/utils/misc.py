@@ -1427,6 +1427,7 @@ def dict_to_store_semantic_segmentor(
     save_path: Path | None = None,
     offset: np.ndarray | None = None,
     *,
+    ignore_index: int | None = 0,
     verbose: bool = True,
 ) -> AnnotationStore | dict | Path:
     """Converts output of TIAToolbox SemanticSegmentor engine to AnnotationStore.
@@ -1449,6 +1450,10 @@ def dict_to_store_semantic_segmentor(
             Store results.
         offset (np.ndarray | None):
             Optional offset to be added to the coordinates of the annotations.
+        ignore_index (int | None):
+            Any index to ignore in the layer list. e.g., background.
+            Defaults to 0 (background). If None, all the layers are saved to
+            the annotationstore or JSON file.
         verbose (bool):
             Whether to display logs and progress bar.
 
@@ -1461,8 +1466,10 @@ def dict_to_store_semantic_segmentor(
     """
     preds = da.from_array(patch_output["predictions"], chunks="auto")
 
+    ignore_index = -1 if ignore_index is None else ignore_index
     # Get the number of unique predictions
     layer_list = da.unique(preds).compute()
+    layer_list = np.delete(layer_list, np.where(layer_list == ignore_index))
 
     if class_dict is None:
         class_dict = {int(i): int(i) for i in layer_list.tolist()}
