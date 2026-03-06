@@ -515,6 +515,7 @@ class WSIReader:
                 input_path, suffixes, last_suffix, mpp, power, post_proc
             )
             or WSIReader.try_tiff(input_path, last_suffix, mpp, power, post_proc)
+            or WSIReader.try_openslide(input_path, last_suffix, mpp, power)
         )
 
         if reader is None:
