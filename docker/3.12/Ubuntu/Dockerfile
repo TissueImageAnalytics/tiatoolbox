@@ -26,5 +26,5 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 RUN pip install --no-cache-dir tiatoolbox
 
 # activate virtual environment
-ENV VIRTUAL_ENV=/opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+ENV VIRTUAL_ENV=/venv
+ENV PATH="/venv/bin:$PATH"
