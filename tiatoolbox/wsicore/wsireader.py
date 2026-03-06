@@ -652,12 +652,12 @@ class WSIReader:
         self._m_info = None
 
         # Set a manual mpp value
-        if mpp and isinstance(mpp, Number):
+        if mpp is not None and isinstance(mpp, Number):
             mpp = (mpp, mpp)
-        if mpp and (not hasattr(mpp, "__len__") or len(mpp) != 2):  # noqa: PLR2004
+        if mpp is not None and (not hasattr(mpp, "__len__") or len(mpp) != 2):  # noqa: PLR2004
             msg = "`mpp` must be a number or iterable of length 2."
             raise TypeError(msg)
-        self._manual_mpp = tuple(mpp) if mpp else None
+        self._manual_mpp = tuple(mpp) if mpp is not None else None
 
         # Set a manual power value
         if power and not isinstance(power, Number):

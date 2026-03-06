@@ -407,10 +407,13 @@ class WSIPatchDataset(PatchDatasetABC):
             msg = "No patch coordinates remain after filtering."
             raise ValueError(msg)
 
-    def _get_reader(self: WSIPatchDataset, img_path: str | Path) -> WSIReader:
+    def _get_reader(
+        self: WSIPatchDataset, img_path: str | Path, wsireader_kwargs: WSIReaderParams
+    ) -> WSIReader:
         """Get a reader for the image."""
-        # To avoid ruff errors and compatibility with base class.
-        return self.reader if self.reader else WSIReader.open(img_path)
+        return (
+            self.reader if self.reader else WSIReader.open(img_path, **wsireader_kwargs)
+        )
 
     def __getitem__(self: WSIPatchDataset, idx: int) -> dict:
         """Get an item from the dataset."""
@@ -418,9 +421,12 @@ class WSIPatchDataset(PatchDatasetABC):
         output_locs = None
         if len(self.outputs) > 0:
             output_locs = self.outputs[idx]
-
+        wsireader_kwargs: WSIReaderParams = {
+            "mpp": self.reader_info.mpp,
+            "power": self.reader_info.objective_power,
+        }
         # Read image patch from the whole-slide image
-        self.reader = self._get_reader(self.img_path)
+        self.reader = self._get_reader(self.img_path, wsireader_kwargs)
         patch = self.reader.read_bounds(
             coords,
             resolution=self.resolution,
