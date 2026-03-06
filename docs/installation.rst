@@ -17,9 +17,13 @@ On Linux, the prerequisite software can be installed using the following command
 
 .. code-block:: console
 
-    $ apt-get -y install libopenjp2-7-dev libopenjp2-tools sqlite3
+    $ apt-get -y install libopenjp2-7-dev libopenjp2-tools sqlite3 libsqlite3-0
 
-The same command is used when working on the Colab or Kaggle platforms. When working on Google Colab, we remove the packages ``datascience`` and ``albumentations`` because they conflict and produce an error message.
+The same command is used when working on the Colab or Kaggle platforms. When working on Google Colab, the following packages should be removed **before** installing TIAToolbox, as they conflict and may produce an error message:
+
+.. code-block:: console
+
+    $ pip uninstall -y datascience albumentations
 
 Windows (10+)
 -------------
@@ -109,7 +113,7 @@ or
 
     $ mamba install tiatoolbox
 
-Please note that conda-forge installation support is limited on Windows as OpenSlide binaries are not supported on official conda channels. An alternate way to install using conda on Windows could be to install it in `WSL2 with CUDA support <https://docs.microsoft.com/en-us/windows/ai/directml/gpu-cuda-in-wsl>`_. In some cases, WSL2 runs faster on Python code, and therefore we **recommend** this option.
+An alternate way to install using conda on Windows could be to install it in `WSL2 with CUDA support <https://learn.microsoft.com/en-us/windows/ai/directml/gpu-cuda-in-wsl>`_. Depending on your hardware and workload, WSL2 may offer improved performance for some Python workflows, and therefore we **recommend** this option.
 
 From Sources
 ------------
