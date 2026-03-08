@@ -1163,7 +1163,7 @@ def test_get_channel_info_logs_json_error(
     class DummySession:
         """A dummy session whose GET request returns invalid JSON."""
 
-        def get(self, _url: str) -> DummyResponse:
+        def get(self, url: str) -> DummyResponse:  # noqa: ARG002
             return DummyResponse()
 
     # Patch __getitem__ on the UIWrapper *class* so UI["s"] returns DummySession()
