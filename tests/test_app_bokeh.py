@@ -11,7 +11,7 @@ import shutil
 import time
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
@@ -1120,3 +1120,62 @@ def test_app_hooks_session_destroyed_suppresses_timeout(
     monkeypatch.setattr(app_hooks, "sys", SimpleNamespace(exit=fake_exit))
     app_hooks.on_session_destroyed(_DummySessionContext("user-2"))
     assert exited
+
+
+def test_dummyattr_stores_value() -> None:
+    """Ensure that DummyAttr correctly stores the provided value.
+
+    This test verifies that the constructor assigns the input value
+    to the `item` attribute.
+    """
+    obj = main.DummyAttr("hello")
+    assert obj.item == "hello"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        123,
+        3.14,
+        {"a": 1},
+        [1, 2, 3],
+        (1, 2),
+        None,
+    ],
+)
+def test_dummyattr_accepts_any_type(value: Any) -> None:  # noqa: ANN401
+    """Confirm that DummyAttr accepts and stores values of any type."""
+    obj = main.DummyAttr(value)
+    assert obj.item is value
+
+
+class DummyResponse:
+    """A dummy HTTP response object containing invalid JSON."""
+
+    text: str = "not valid json"
+
+
+def test_get_channel_info_logs_json_error(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Test that get_channel_info logs a warning."""
+
+    class DummySession:
+        """A dummy session whose GET request returns invalid JSON."""
+
+        def get(self, _url: str) -> DummyResponse:
+            return DummyResponse()
+
+    # Patch __getitem__ on the UIWrapper *class* so UI["s"] returns DummySession()
+    monkeypatch.setattr(
+        main.UI.__class__,
+        "__getitem__",
+        lambda _self, key: DummySession() if key == "s" else None,
+    )
+
+    with caplog.at_level("WARNING"):
+        result = main.get_channel_info()
+
+    assert result == ({}, [])
+
+    assert any("Error decoding JSON" in message for message in caplog.messages)
