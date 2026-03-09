@@ -167,7 +167,7 @@ def test_get_thumb_tile() -> None:
     assert thumb.size == (224, 224)
     cv2_thumb = imresize(array, output_size=(224, 224))
     psnr = peak_signal_noise_ratio(cv2_thumb, np.array(thumb.convert("L")))
-    assert np.isinf(psnr) or psnr < 40
+    assert np.isinf(psnr)
 
 
 def test_sub_tile_levels() -> None:
@@ -183,7 +183,7 @@ def test_sub_tile_levels() -> None:
             level: int,
             x: int,
             y: int,
-        ) -> Path:  # skipcq: PYL-R0201
+        ) -> Path:
             """Return path to mock tile."""
             return Path(level, x, y)
 
