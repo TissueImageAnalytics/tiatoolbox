@@ -1719,3 +1719,20 @@ def test_make_window_hover_nodes_edges_colorbar(
     assert edge_renderer.visible is False
 
     assert not p.select(type=ColorBar)
+
+
+def test_make_window_edges_on_true(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Import main with NO session so do_doc=False."""
+    main = reload_main(monkeypatch, with_session=False)
+
+    # Force config branch
+    main.doc_config.config["opts"] = {"edges_on": True}
+
+    v = main.ViewerState(Path("/tmp/a.svs"))  # noqa: S108
+    win = main.make_window(v)
+
+    # When edges_on=True, renderer must remain visible (i.e., NOT hidden)
+    p = win["p"]
+    edge_renderer = p.renderers[win["vstate"].layer_dict["edges"]]
+
+    assert edge_renderer.visible is True
