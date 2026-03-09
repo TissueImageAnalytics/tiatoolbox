@@ -44,14 +44,14 @@ class ResNetEncoder(ResNet):
 
         """
         # See note [TorchScript super()]
-        x0 = x = self.conv1(x)
-        x0 = x = self.bn1(x)
+        x = self.conv1(x)
+        x = self.bn1(x)
         x0 = x = self.relu(x)
-        x1 = x = self.maxpool(x)
+        x = self.maxpool(x)
         x1 = x = self.layer1(x)
         x2 = x = self.layer2(x)
         x3 = x = self.layer3(x)
-        x4 = x = self.layer4(x)
+        x4 = self.layer4(x)
         return [x0, x1, x2, x3, x4]
 
     @staticmethod
@@ -263,7 +263,7 @@ class UNetModel(ModelABC):
         encoder_levels (list):
             A list of integers to configure "unet" encoder levels.
             Each number defines the number of output channels at each
-            down-sampling level (2 convolutions). Number of intergers
+            down-sampling level (2 convolutions). Number of integers
             define the number down-sampling levels in the unet encoder.
             This is only applicable when `encoder="unet"`.
         decoder_block (list):

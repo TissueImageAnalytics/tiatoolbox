@@ -2,6 +2,9 @@
 
 name: Solve Conda Environment
 
+permissions:
+  contents: read
+
 on:
   push:
     paths: [ "requirements/requirements*.yml", "conda-env-create.yml", "requirement*.txt"]

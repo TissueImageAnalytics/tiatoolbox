@@ -1227,7 +1227,7 @@ def test_crop_and_pad_edges() -> None:
     size = (10, 10)
     bounds = utils.transforms.locsize2bounds(loc, size)
     under, over = edge_mask(bounds)
-    region = -under + over
+    _region = -under + over
     region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
     output = utils.image.crop_and_pad_edges(
         bounds=bounds,
