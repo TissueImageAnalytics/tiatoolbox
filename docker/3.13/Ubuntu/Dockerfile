@@ -11,7 +11,7 @@ RUN apt-get update && \
     apt-get install libpython3.13-dev -y &&\
     apt-get install python3.13-dev -y &&\
     apt-get install build-essential -y &&\
-    apt-get clean
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Add env to PATH
 RUN python3.13 -m venv /venv
@@ -27,4 +27,3 @@ RUN pip install --no-cache-dir tiatoolbox
 
 # activate virtual environment
 ENV VIRTUAL_ENV=/venv
-ENV PATH="/venv/bin:$PATH"
