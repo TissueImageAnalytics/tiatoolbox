@@ -409,6 +409,15 @@ class EfficientNetBaseEncoder(EfficientNet, EncoderMixin):
 
     """
 
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize EfficientNet-based encoder.
+
+        This initializer participates in cooperative multiple inheritance so that
+        both :class:`EfficientNet` and :class:`EncoderMixin` (and any other
+        mixins in the MRO) are properly initialized.
+        """
+        super().__init__(*args, **kwargs)
+
     def __init__(
         self,
         stage_idxs: list[int],
