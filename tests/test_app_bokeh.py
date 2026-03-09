@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import importlib.resources as importlib_resources
 import io
 import json
@@ -9,9 +10,10 @@ import multiprocessing
 import re
 import shutil
 import time
+import types
 from pathlib import Path
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import bokeh.models as bkmodels
 import matplotlib.pyplot as plt
@@ -21,6 +23,9 @@ import requests
 from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
 from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
+from bokeh.models import ColorBar
+from bokeh.models.tiles import WMTSTileSource
+from bokeh.plotting import figure
 from flask_cors import CORS
 from matplotlib import colormaps
 from PIL import Image
@@ -1143,7 +1148,7 @@ def test_dummyattr_stores_value() -> None:
         None,
     ],
 )
-def test_dummyattr_accepts_any_type(value: Any) -> None:  # noqa: ANN401
+def test_dummyattr_accepts_any_type(value: object) -> None:
     """Confirm that DummyAttr accepts and stores values of any type."""
     obj = main.DummyAttr(value)
     assert obj.item is value
@@ -1180,3 +1185,527 @@ def test_get_channel_info_logs_json_error(
     assert result == ({}, [])
 
     assert any("Error decoding JSON" in message for message in caplog.messages)
+
+
+# ---------------------------------------------------------------------------
+# Helper stubs (purely for testing)
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Helper stubs (purely for testing) — ruff/DeepSource compliant
+# ---------------------------------------------------------------------------
+
+
+class FakeInfo:
+    """Lightweight stub for WSIReader.info."""
+
+    def __init__(self, path: Path) -> None:
+        """Initialize fake slide info with plausible values."""
+        self.mpp = [0.25, 0.25]
+        self.slide_dimensions = (2000, 1500)
+        self.file_path = path
+
+    def as_dict(self) -> dict[str, object]:
+        """Return dictionary representation of slide metadata."""
+        return {
+            "file_path": self.file_path,
+            "mpp": self.mpp,
+            "dims": self.slide_dimensions,
+        }
+
+
+class FakeWSIReader:
+    """Stub mimicking tiatoolbox WSIReader."""
+
+    def __init__(self, path: Path) -> None:
+        """Create a fake reader with associated FakeInfo."""
+        self.info = FakeInfo(path)
+
+    @staticmethod
+    def open(path: Path | str) -> FakeWSIReader:
+        """Replacement for WSIReader.open that returns a controlled stub."""
+        return FakeWSIReader(Path(path))
+
+    def slide_thumbnail(self) -> np.ndarray:
+        """Return a small fake thumbnail array."""
+        return 255 * np.ones((20, 20, 3), dtype="uint8")
+
+    def read_bounds(self, *_args: object, **_kwargs: object) -> np.ndarray:
+        """Return a fake array for ROI extraction."""
+        return 255 * np.ones((10, 10, 3), dtype="uint8")
+
+
+class FakeZoomifyGenerator:
+    """Stub mimicking ZoomifyGenerator with a fixed zoom level count."""
+
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
+        """Initialize with a default level count."""
+        self.level_count = 7
+
+
+class FakeResp:
+    """Lightweight fake requests.Response used for stubbing."""
+
+    class CookieDict(dict):
+        """Subclass dict to mimic requests cookie access."""
+
+        def get(self, key: str, default: object | None = None) -> object:
+            """Return cookie value or default."""
+            return super().get(key, default)
+
+    def __init__(self, text: str = "", cookies: dict[str, str] | None = None) -> None:
+        """Initialize fake response with text and optional cookies."""
+        self.text = text
+        self._cookies = FakeResp.CookieDict(cookies or {})
+
+    @property
+    def cookies(self) -> dict[str, str]:
+        """Return fake cookie jar."""
+        return self._cookies
+
+
+class FakeSession:
+    """Minimal stub for requests.Session."""
+
+    def __init__(self) -> None:
+        """Initialize fake session with no proxies and empty mounts."""
+        self.trust_env = False
+        self.proxies: dict[str, str | None] = {}
+        self.mounted: dict[str, object] = {}
+
+    def mount(self, scheme: str, adapter: object) -> None:
+        """Record mounted adapters (no real effect)."""
+        self.mounted[scheme] = adapter
+
+    def get(self, url: str, *_args: object, **_kwargs: object) -> FakeResp:
+        """Return canned JSON or session cookie."""
+        if url.endswith("/tileserver/session_id"):
+            return FakeResp(cookies={"session_id": "test_user"})
+        return FakeResp(text="{}")
+
+    def put(
+        self,
+        url: str,
+        _data: dict[str, object] | None = None,
+        *_args: object,
+        **_kwargs: object,
+    ) -> FakeResp:
+        """Return controlled values based on the endpoint."""
+        if url.endswith("/tileserver/overlay"):
+            return FakeResp(text='"slide"')
+        return FakeResp(text='"ok"')
+
+    def post(
+        self,
+        _url: str,
+        _data: dict[str, object] | None = None,
+        *_args: object,
+        **_kwargs: object,
+    ) -> FakeResp:
+        """Return generic OK response."""
+        return FakeResp(text='"ok"')
+
+
+class FakeRequest:
+    """Stub for request object inside session context."""
+
+    def __init__(self, arguments: dict[str, list[bytes]] | None = None) -> None:
+        """Initialize with an optional arguments dict."""
+        self.arguments = arguments or {}
+
+
+class FakeSessionContext:
+    """Stub for Bokeh session context."""
+
+    def __init__(self, arguments: dict[str, list[bytes]] | None = None) -> None:
+        """Create a session context holding a FakeRequest."""
+        self.request = FakeRequest(arguments=arguments)
+
+
+class FakeDoc:
+    """Stub for Bokeh Document used during import/setup."""
+
+    def __init__(
+        self,
+        *,
+        with_session: bool = False,
+        arguments: dict[str, list[bytes]] | None = None,
+    ) -> None:
+        """Initialize a fake Bokeh document."""
+        self._sc = FakeSessionContext(arguments) if with_session else None
+        self.template_variables: dict[str, object] = {}
+        self._callbacks: list[tuple[object, int]] = []
+        self._roots: list[object] = []
+        self.title: str = ""
+
+    @property
+    def session_context(self) -> FakeSessionContext | None:
+        """Return fake session context if enabled."""
+        return self._sc
+
+    def add_periodic_callback(self, fn: object, ms: int) -> None:
+        """Record callbacks for later introspection."""
+        self._callbacks.append((fn, ms))
+
+    def add_root(self, root: object) -> None:
+        """Record Bokeh layout roots."""
+        self._roots.append(root)
+
+
+# ---------------------------------------------------------------------------
+# Controlled import of main.py under patching
+# ---------------------------------------------------------------------------
+
+
+def reload_main(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    with_session: bool = False,
+    req_args: dict[str, list[bytes]] | None = None,
+) -> object:
+    """Reload main.py in a controlled environment.
+
+    This ensures `curdoc()`, `requests.Session`, WSIReader, and ZoomifyGenerator
+    are fully stubbed before import.
+
+    """
+    # IMPORTANT: patch symbols main.py will import/use
+    monkeypatch.setattr(
+        "bokeh.io.curdoc",
+        lambda: FakeDoc(with_session=with_session, arguments=req_args),
+        raising=False,
+    )
+    monkeypatch.setattr("requests.Session", FakeSession, raising=True)
+    monkeypatch.setattr(
+        "tiatoolbox.wsicore.wsireader.WSIReader.open",
+        FakeWSIReader.open,
+        raising=True,
+    )
+    monkeypatch.setattr(
+        "tiatoolbox.tools.pyramid.ZoomifyGenerator",
+        FakeZoomifyGenerator,
+        raising=True,
+    )
+
+    return importlib.reload(main)
+
+
+# ---------------------------------------------------------------------------
+# Actual tests
+# ---------------------------------------------------------------------------
+
+
+def test_populate_table_active_channels_false(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test populate_table() branch where active_channels == [].
+
+    Ensures:
+    - Table rows populate from colors.
+    - No indices selected.
+
+    """
+    main = reload_main(monkeypatch, with_session=False)
+
+    channel_ui = main.create_channel_color_ui()
+    main.win_dicts.clear()
+    main.win_dicts.append({"channel_select": channel_ui})
+    main.UI.active = 0
+
+    monkeypatch.setattr(
+        main,
+        "get_channel_info",
+        lambda: ({"C1": (1, 2, 3), "C2": (4, 5, 6)}, []),
+        raising=True,
+    )
+
+    main.populate_table()
+    tables = main.UI["channel_select"].children[1].children[0].children
+
+    assert tables[0].source.data["channels"] == ["C1", "C2"]
+    assert len(tables[1].source.data["colors"]) == 2
+    assert tables[0].source.selected.indices == []
+
+
+def test_initialise_slide_initial_view_limits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test initialise_slide() branch where slide_name appears in initial_views.
+
+    Ensures p.x_range/y_range are set from config.
+
+    """
+    main = reload_main(monkeypatch, with_session=False)
+
+    slide_path = Path("/tmp/s1.svs")  # noqa: S108
+    vstate = main.ViewerState(slide_path)
+
+    p = figure(width=400, height=400)
+
+    main.win_dicts.clear()
+    main.win_dicts.append({"vstate": vstate, "p": p})
+    main.UI.active = 0
+
+    main.doc_config.config["initial_views"] = {"s1": [10, 20, 110, 120]}
+    main.initialise_slide()
+
+    assert p.x_range.start == 10
+    assert p.x_range.end == 110
+    assert p.y_range.start == -120
+    assert p.y_range.end == -20
+
+
+def test_slide_select_cb_auto_load_triggers_layer_drop(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test slide_select_cb() when auto_load=True.
+
+    Ensures:
+    - slide_select_cb() runs without error
+    - auto_load triggers layer_drop_cb() exactly once
+    """
+    main = reload_main(monkeypatch, with_session=False)
+
+    class MiniHover:
+        tooltips: object | None = None
+
+    p = figure(width=400, height=300)
+
+    # renderer[0] must be a TileRenderer for change_tiles()
+    dummy_ts = WMTSTileSource(url="http://dummy/{Z}/{X}/{Y}.png")
+    p.add_tile(dummy_ts)
+
+    # Fill remaining permanent renderers
+    for _ in range(main.N_PERMANENT_RENDERERS - 1):
+        p.circle([], [])
+
+    # --- Create a minimal fake channel_select matching expected structure ---
+    class FakeTable:
+        def __init__(self) -> None:
+            self.source = main.ColumnDataSource({"channels": [], "dummy": []})
+            self.selected = types.SimpleNamespace(indices=[])
+
+    class FakeChannelSelect:
+        """Must satisfy: UI["channel_select"].children[1].children[0].children."""
+
+        def __init__(self) -> None:
+            table1 = FakeTable()  # channels table
+            table2 = FakeTable()  # colors table
+
+            inner = types.SimpleNamespace(children=[table1, table2])
+            outer = types.SimpleNamespace(children=[inner])
+
+            self.children = [None, outer]
+
+    class DummyCol:
+        def __init__(self) -> None:
+            self.children: list[object] = []
+
+    win = {
+        "p": p,
+        "vstate": main.ViewerState(Path("/tmp/initial.svs")),  # noqa: S108
+        "pt_source": main.ColumnDataSource({"x": [], "y": []}),
+        "box_source": main.ColumnDataSource(
+            {"x": [], "y": [], "width": [], "height": []}
+        ),
+        "node_source": main.ColumnDataSource({"x_": [], "y_": [], "node_color_": []}),
+        "edge_source": main.ColumnDataSource(
+            {"x0_": [], "y0_": [], "x1_": [], "y1_": []}
+        ),
+        "hover": MiniHover(),
+        "layer_drop": main.Dropdown(
+            label="Add Overlay", menu=[("foo.json", "foo.json")]
+        ),
+        "s": FakeSession(),
+        # Required UI structures
+        "color_column": DummyCol(),
+        "type_column": DummyCol(),
+        "channel_select": FakeChannelSelect(),
+        # Required by change_tiles()
+        "user": "test_user",
+    }
+
+    main.win_dicts.clear()
+    main.win_dicts.append(win)
+    main.UI.active = 0
+
+    # Enable auto-load
+    main.doc_config.config["auto_load"] = True
+
+    # Avoid filesystem operations
+    monkeypatch.setattr(
+        main,
+        "populate_layer_list",
+        lambda *_args, **_kwargs: None,
+        raising=True,
+    )
+
+    # Spy on layer_drop_cb
+    called: list[str] = []
+
+    def spy(attr: object) -> None:
+        called.append(attr.item)
+
+    monkeypatch.setattr(main, "layer_drop_cb", spy, raising=True)
+
+    # ACT
+    new_slide_name = [Path("/tmp/newslide.svs").name]  # noqa: S108
+    main.slide_select_cb(None, None, new=new_slide_name)
+
+    # ASSERT
+    assert called == ["foo.json"]
+
+
+def test_layer_drop_cb_resp_equals_slide(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test branch in layer_drop_cb() where resp == "slide".
+
+    Expected behavior:
+    - add_layer() is NOT called
+    - change_tiles("slide") IS called (this is correct behaviour)
+
+    """
+    main = reload_main(monkeypatch, with_session=False)
+
+    # Prepare minimal window with a FakeSession
+    main.win_dicts.clear()
+    main.win_dicts.append({"s": FakeSession()})
+    main.UI.active = 0
+
+    # Spy: add_layer() must not be called
+    monkeypatch.setattr(
+        main,
+        "add_layer",
+        lambda *_a, **_k: (_ for _ in ()).throw(
+            AssertionError("add_layer should NOT be called")
+        ),
+        raising=True,
+    )
+
+    # Spy: change_tiles() SHOULD be called exactly once
+    change_calls: list[str] = []
+
+    def change_spy(arg: str) -> None:
+        change_calls.append(arg)
+
+    monkeypatch.setattr(main, "change_tiles", change_spy, raising=True)
+
+    # Trigger overlay load on a non-annotation file => uses resp == "slide"
+    attr = main.DummyAttr("/tmp/overlay.png")  # noqa: S108
+    main.layer_drop_cb(attr)
+
+    # Assert correct behavior
+    assert change_calls == ["slide"], (
+        "change_tiles('slide') must be called when resp == 'slide'"
+    )
+
+
+def test_gather_ui_elements_ui_elements_1_and_2_true(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test gather_ui_elements() when config includes ui_elements_1 and ui_elements_2.
+
+    Ensures only enabled elements are included.
+    """
+    main = reload_main(monkeypatch, with_session=False)
+
+    main.doc_config.config["ui_elements_1"] = {
+        "slide_select": 1,
+        "layer_drop": 1,
+        "slide_row": 1,
+        "overlay_row": 1,
+        "filter_input": 0,
+        "cprop_input": 1,
+        "cmap_row": 1,
+        "type_cmap_select": 1,
+        "model_row": 1,
+        "clear_button": 1,
+        "type_select_row": 1,
+    }
+
+    main.doc_config.config["ui_elements_2"] = {
+        "opt_buttons": 1,
+        "pt_size_spinner": 1,
+        "edge_size_spinner": 0,
+        "res_switch": 1,
+        "channel_select": 1,
+    }
+
+    vstate = main.ViewerState(Path("/tmp/v.svs"))  # noqa: S108
+    ui_layout, extra_options, _elements = main.gather_ui_elements(vstate, win_num=0)
+
+    present = {c.name for c in ui_layout.children if hasattr(c, "name")}
+    assert "filter0" not in present
+    assert "slide_select0" in present
+    assert "cprop0" in present
+
+    assert len(extra_options.children) == 4
+
+
+def test_make_window_sets_user_when_session_context_true(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test branch where make_window() sees session_context present.
+
+    Ensures:
+        - 'user' cookie gets written to session_context.request.arguments
+
+    """
+    # Import main WITHOUT a session context so module-level do_doc is False
+    main = reload_main(monkeypatch, with_session=False)
+
+    # Prepare a FakeDoc WITH a session_context
+    # this is the one we want make_window to see
+    req_args: dict[str, list[bytes]] = {}
+    fake_doc = FakeDoc(with_session=True, arguments=req_args)
+
+    # CRITICAL FIX: patch main.curdoc, not bokeh.io.curdoc
+    monkeypatch.setattr(main, "curdoc", lambda: fake_doc, raising=False)
+
+    # Create a vstate and call make_window
+    vstate = main.ViewerState(Path("/tmp/one.svs"))  # noqa: S108
+    _win = main.make_window(vstate)
+
+    # Assertions: make_window must write "user"
+    sc = main.curdoc().session_context
+    assert sc is not None
+    assert "user" in sc.request.arguments
+    assert sc.request.arguments["user"] == "test_user"
+
+
+def test_make_window_hover_nodes_edges_colorbar(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test make_window() branches.
+
+    - opts.hover_on == 1 (skip disabling inspect tool)
+    - nodes_on == False
+    - edges_on == False
+    - colorbar_on == 0
+
+    """
+    main = reload_main(monkeypatch, with_session=False)
+
+    main.doc_config.config["opts"] = {
+        "hover_on": 1,
+        "nodes_on": False,
+        "edges_on": False,
+        "colorbar_on": 0,
+    }
+
+    vstate = main.ViewerState(Path("/tmp/abc.svs"))  # noqa: S108
+    win = main.make_window(vstate)
+    p = win["p"]
+
+    assert p.toolbar.active_inspect is not None
+
+    node_renderer = p.renderers[-2]
+    assert node_renderer.glyph.fill_alpha == 0
+    assert node_renderer.glyph.line_alpha == 0
+
+    edge_renderer = p.renderers[-1]
+    assert edge_renderer.visible is False
+
+    assert not p.select(type=ColorBar)
