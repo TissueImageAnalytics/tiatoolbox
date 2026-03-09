@@ -1290,8 +1290,8 @@ class FakeSession:
     @staticmethod
     def put(
         url: str,
-        _data: dict[str, object] | None = None,
         *_args: object,
+        _data: dict[str, object] | None = None,
         **_kwargs: object,
     ) -> FakeResp:
         """Return controlled values based on the endpoint."""
@@ -1302,8 +1302,8 @@ class FakeSession:
     @staticmethod
     def post(
         _url: str,
-        _data: dict[str, object] | None = None,
         *_args: object,
+        _data: dict[str, object] | None = None,
         **_kwargs: object,
     ) -> FakeResp:
         """Return generic OK response."""
