@@ -44,14 +44,14 @@ class ResNetEncoder(ResNet):
 
         """
         # See note [TorchScript super()]
-        x0 = x = self.conv1(x)
-        x0 = x = self.bn1(x)
+        _x0 = x = self.conv1(x)
+        _x0 = x = self.bn1(x)
         x0 = x = self.relu(x)
-        x1 = x = self.maxpool(x)
+        _x1 = x = self.maxpool(x)
         x1 = x = self.layer1(x)
         x2 = x = self.layer2(x)
         x3 = x = self.layer3(x)
-        x4 = x = self.layer4(x)
+        x4 = _x = self.layer4(x)
         return [x0, x1, x2, x3, x4]
 
     @staticmethod
