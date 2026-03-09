@@ -1763,3 +1763,55 @@ def test_docconfig_no_config_file(
     dc._get_config()
     assert "initial_views" in dc.config
     assert dc.config["initial_views"] == {}
+
+
+def test_docconfig_get_config_basefolder_and_demo(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Test _get_config handles base_folder with demo query parameter."""
+    # Avoid module-level auto-setup
+    main = reload_main(monkeypatch, with_session=False)
+
+    # Simulate argv with only base folder (len==2) and a demo in req_args
+    dc = main.doc_config
+    dc.set_sys_args(["prog", str(tmp_path)])
+    main.req_args = {"demo": [b"DemoX"]}
+
+    # Invoke _get_config
+    dc._get_config()
+
+    # Expect updated slide/overlay/base folders under DemoX
+    assert dc.config["demo_name"] == "DemoX"
+    assert dc.config["slide_folder"].name == "slides"
+    assert dc.config["overlay_folder"].name == "overlays"
+    assert dc.config["slide_folder"].parent.name == "DemoX"
+    assert dc.config["overlay_folder"].parent.name == "DemoX"
+
+
+def test_docconfig_request_args_slide_and_window(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Test _get_config processes ?slide= and ?window= request args."""
+    # Avoid module-level auto-setup
+    main = reload_main(monkeypatch, with_session=False)
+
+    # Create folders to satisfy path arithmetic in _get_config
+    slides_dir = tmp_path / "slides"
+    overlays_dir = tmp_path / "overlays"
+    slides_dir.mkdir()
+    overlays_dir.mkdir()
+
+    # Provide fake req_args that main._get_config reads
+    main.req_args = {
+        "slide": [b"S1.svs"],
+        "window": [b"[10,20,100,200]"],
+    }
+
+    dc = main.doc_config
+    dc.set_sys_args(["prog", str(tmp_path)])
+    dc._get_config()
+
+    assert dc.config["first_slide"] == "S1.svs"
+    assert dc.config["initial_views"]["S1"] == [10, 20, 100, 200]
