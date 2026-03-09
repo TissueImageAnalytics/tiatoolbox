@@ -224,7 +224,7 @@ def test_prepare_engines_save_dir(
     assert out_path.exists()
 
     with pytest.raises(FileExistsError):
-        out_path = prepare_engines_save_dir(
+        _ = prepare_engines_save_dir(
             save_dir=track_tmp_path / "patch_output" / "output.zarr",
             patch_mode=True,
             overwrite=False,

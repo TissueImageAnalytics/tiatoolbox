@@ -2545,7 +2545,6 @@ def test_ngff_non_numeric_version(
 ) -> None:
     """Test that the reader can handle non-numeric omero versions."""
     # Patch the is_ngff function to change the min/max version
-    if_ngff = wsireader.is_ngff  # noqa: F841
     min_version = Version("0.4")
     max_version = Version("0.5")
 
@@ -3314,7 +3313,7 @@ def test_read_rect_transformedreader_svs_baseline(
         ValueError,
         match=r"Transform cannot be None. Please provide a valid transformation",
     ):
-        wsi2 = wsireader.TransformedWSIReader(
+        _ = wsireader.TransformedWSIReader(
             sample_svs, target_img=sample_svs, transform=None
         )
 
@@ -3605,7 +3604,7 @@ def test_jp2wsireader_get_jp2_boxes_edge_cases(track_tmp_path: Path) -> None:
     """Test JP2WSIReader._get_jp2_boxes with edge cases."""
     # Create a minimal JP2 file
     path = track_tmp_path / "test.jp2"
-    _jp2 = glymur.Jp2k(path, data=np.ones((64, 64, 3), np.uint8))
+    _ = glymur.Jp2k(path, data=np.ones((64, 64, 3), np.uint8))
 
     wsi = JP2WSIReader(path)
 
@@ -4039,7 +4038,7 @@ def test_jp2wsireader_find_box_edge_cases(track_tmp_path: Path) -> None:
     """Test JP2WSIReader find_box method edge cases."""
     # Create a minimal JP2 file
     path = track_tmp_path / "test.jp2"
-    _jp2 = glymur.Jp2k(path, data=np.ones((64, 64, 3), np.uint8))
+    _ = glymur.Jp2k(path, data=np.ones((64, 64, 3), np.uint8))
 
     wsi = JP2WSIReader(path)
     boxes = wsi._get_jp2_boxes(wsi.glymur_jp2)

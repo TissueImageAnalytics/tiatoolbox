@@ -274,7 +274,7 @@ def test_color_prop(app: TileServer) -> None:
         assert response.content_type == "application/json"
         assert response.get_json() == "test_prop"
 
-        response = client.put("/tileserver/color_prop", data={"prop": json.dumps(None)})
+        client.put("/tileserver/color_prop", data={"prop": json.dumps(None)})
         assert app.pyramids["default"]["overlay"].renderer.score_prop is None
 
 
@@ -361,6 +361,7 @@ def test_load_save_annotations(app: TileServer, track_tmp_path: Path) -> None:
             "/tileserver/commit",
             data={"save_path": json.dumps(None)},
         )
+        assert response.status_code == 200
 
     # check that the annotations have been correctly saved
     store = SQLiteStore(app.pyramids["default"]["overlay"].store.path)
@@ -442,7 +443,7 @@ def test_change_overlay(  # noqa: PLR0915
         assert len(empty_app.pyramids[session_id]["overlay"].store) == num_annotations
 
         # reset tileserver and load overlay from .db instead
-        response = client.put(f"tileserver/reset/{session_id}")
+        client.put(f"tileserver/reset/{session_id}")
         session_id = setup_app(client)
         response = client.put(
             "/tileserver/slide",
@@ -577,6 +578,7 @@ def test_commit(
             "/tileserver/commit",
             data={"save_path": safe_str(track_tmp_path / "test.db")},
         )
+        assert response.status_code == 200
 
     # check that the annotations have been correctly saved
     store = SQLiteStore(track_tmp_path / "test.db")
@@ -868,7 +870,7 @@ def test_registration_single_window_different_slide(
         assert response.status_code == 200
 
         # Now add extra slide (i.e. IHC slide as target to register with)
-        _ = client.put(
+        client.put(
             "/tileserver/overlay",
             data={"overlay_path": safe_str(remote_sample("svs-1-small"))},
         )
