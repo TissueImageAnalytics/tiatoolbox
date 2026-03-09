@@ -154,7 +154,8 @@ def test_zoomify_dump(track_tmp_path: Path) -> None:
     dz.dump(out_path)
     assert out_path.exists()
     assert len(list((out_path / "TileGroup0").glob("0-*"))) == 1
-    assert Image.open(out_path / "TileGroup0" / "0-0-0.jpg").size == (64, 64)
+    thumb_image = Image.open(out_path / "TileGroup0" / "0-0-0.jpg")
+    assert thumb_image.size == (64, 64)
 
 
 def test_get_thumb_tile() -> None:
