@@ -663,7 +663,6 @@ def timed(fn: Callable, *args: object) -> (Callable, float):
         and the time taken to execute it in seconds.
 
     """
-    compile_time = 0.0
     if has_gpu():
         start = torch.cuda.Event(enable_timing=True)
         end = torch.cuda.Event(enable_timing=True)
