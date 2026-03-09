@@ -27,4 +27,4 @@ RUN pip install --no-cache-dir tiatoolbox
 
 # activate virtual environment
 ENV VIRTUAL_ENV=/venv
-ENV PATH="/venv/bin:$PATH"
+
