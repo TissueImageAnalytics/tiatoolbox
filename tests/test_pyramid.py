@@ -183,7 +183,7 @@ def test_sub_tile_levels() -> None:
             level: int,
             x: int,
             y: int,
-        ) -> Path:  # skipcq: PYL-R0201
+        ) -> Path:
             """Return path to mock tile."""
             return Path(level, x, y)
 
