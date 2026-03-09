@@ -409,9 +409,17 @@ class TileServer(Flask):
         """Change the slide."""
         session_id = self._get_session_id()
         slide_path = request.form["slide_path"]
-        slide_path = self.decode_safe_name(slide_path)
+        # Decode and normalise the provided path, then ensure it stays within a
+        # trusted root directory (the current working directory).
+        decoded_path = self.decode_safe_name(slide_path)
+        root_dir = Path.cwd().resolve()
+        candidate_path = (root_dir / decoded_path).resolve()
+        # Prevent directory traversal or access outside the allowed root.
+        if root_dir not in (candidate_path, *candidate_path.parents):
+            # Invalid path; do not attempt to open it.
+            return "invalid slide path"
 
-        self.layers[session_id] = {"slide": WSIReader.open(Path(slide_path))}
+        self.layers[session_id] = {"slide": WSIReader.open(candidate_path)}
         self.pyramids[session_id] = {
             "slide": ZoomifyGenerator(self.layers[session_id]["slide"], tile_size=256),
         }
