@@ -37,7 +37,7 @@ from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
     from bokeh.document import Document
 
@@ -1366,19 +1366,21 @@ def reload_main(
     *,
     with_session: bool = False,
     req_args: dict[str, list[bytes]] | None = None,
+    pre_import_patch: Callable | None = None,
 ) -> object:
-    """Reload main.py in a controlled environment.
+    """Reload ``main`` in a controlled environment."""
+    # Apply pre-import patches FIRST (critical).
+    if pre_import_patch is not None:
+        pre_import_patch(monkeypatch)
 
-    This ensures `curdoc()`, `requests.Session`, WSIReader, and ZoomifyGenerator
-    are fully stubbed before import.
-
-    """
-    # IMPORTANT: patch symbols main.py will import/use
+    # Patch curdoc
     monkeypatch.setattr(
         "bokeh.io.curdoc",
         lambda: FakeDoc(with_session=with_session, arguments=req_args),
         raising=False,
     )
+
+    # Core stub patches used everywhere in the suite
     monkeypatch.setattr("requests.Session", FakeSession, raising=True)
     monkeypatch.setattr(
         "tiatoolbox.wsicore.wsireader.WSIReader.open",
@@ -1391,6 +1393,7 @@ def reload_main(
         raising=True,
     )
 
+    # Safe reload with all patches applied
     return importlib.reload(main)
 
 
@@ -1736,3 +1739,27 @@ def test_make_window_edges_on_true(monkeypatch: pytest.MonkeyPatch) -> None:
     edge_renderer = p.renderers[win["vstate"].layer_dict["edges"]]
 
     assert edge_renderer.visible is True
+
+
+def test_docconfig_no_config_file(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Test _get_config when no *config.json file is present."""
+    # Avoid module-level auto-setup
+    main = reload_main(monkeypatch, with_session=False)
+
+    # Provide only base_folder; overlays contain no *config.json
+    slides_dir = tmp_path / "slides"
+    overlays_dir = tmp_path / "overlays"
+    slides_dir.mkdir()
+    overlays_dir.mkdir()
+
+    main.req_args = {}  # no extra query args
+    dc = main.doc_config
+    dc.set_sys_args(["prog", str(tmp_path)])
+
+    # Execute and ensure fallback path doesn't crash and sets initial_views
+    dc._get_config()
+    assert "initial_views" in dc.config
+    assert dc.config["initial_views"] == {}
