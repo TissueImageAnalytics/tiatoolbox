@@ -293,7 +293,7 @@ def test_change_slide(app: TileServer, remote_sample: Callable) -> None:
         layer = app.pyramids["default"]["slide"]
         assert layer.wsi.info.file_path == slide_path
 
-        _response = client.put(
+        client.put(
             "/tileserver/slide",
             data={"slide_path": safe_str(slide_path2)},
         )
@@ -320,12 +320,12 @@ def test_change_cmap(app: TileServer) -> None:
         assert layer.renderer.mapper(0.5) == colormaps["Reds"](0.5)
 
         # None should use default jet colormap
-        _response = client.put("/tileserver/cmap", data={"cmap": json.dumps(None)})
+        client.put("/tileserver/cmap", data={"cmap": json.dumps(None)})
         assert layer.renderer.mapper(0.5) == colormaps["jet"](0.5)
 
         cdict = {"type1": [1, 0, 0], "type2": [0, 1, 0]}
         req_data = {"keys": list(cdict.keys()), "values": list(cdict.values())}
-        _response = client.put("/tileserver/cmap", data={"cmap": json.dumps(req_data)})
+        client.put("/tileserver/cmap", data={"cmap": json.dumps(req_data)})
         assert layer.renderer.mapper("type2") == [0, 1, 0]
 
         # test corresponding get
@@ -488,7 +488,7 @@ def test_change_overlay(  # noqa: PLR0915
         assert Path(overlay_path).name in empty_app.pyramids[session_id]
 
         # replace existing store overlay
-        _response = client.put(
+        client.put(
             "/tileserver/overlay",
             data={"overlay_path": safe_str(sample_store)},
         )
@@ -503,14 +503,14 @@ def test_change_overlay(  # noqa: PLR0915
         assert json.loads(response.data) == str(sample_store)
 
         # add a .jpg overlay
-        _response = client.put(f"tileserver/reset/{session_id}")
+        client.put(f"tileserver/reset/{session_id}")
         session_id = setup_app(client)
-        _response = client.put(
+        client.put(
             "/tileserver/slide",
             data={"slide_path": safe_str(remote_sample("wsi2_4k_4k_svs"))},
         )
         jpg_path = remote_sample("wsi2_4k_4k_jpg")
-        _response = client.put(
+        client.put(
             "/tileserver/overlay",
             data={"overlay_path": safe_str(jpg_path)},
         )
@@ -529,12 +529,12 @@ def test_change_overlay(  # noqa: PLR0915
         assert set(json.loads(response.data)) == {0, 1}
 
         # add a .tiff overlay
-        _response = client.put(
+        client.put(
             "/tileserver/slide",
             data=safe_str(remote_sample("svs-1-small")),
         )
         tiff_path = remote_sample("tiled-tiff-1-small-jpeg")
-        _response = client.put(
+        client.put(
             "/tileserver/overlay",
             data={"overlay_path": safe_str(tiff_path)},
         )
@@ -598,16 +598,16 @@ def test_update_renderer(app: TileServer) -> None:
         assert response.content_type == "application/json"
         assert json.loads(response.data) == 5
 
-        _response = client.put("/tileserver/renderer/blur_radius", data={"val": 5})
+        client.put("/tileserver/renderer/blur_radius", data={"val": 5})
         assert app.pyramids["default"]["overlay"].renderer.blur_radius == 5
         assert app.overlaps["default"] == int(5 * 1.5)
 
-        _response = client.put(
+        client.put(
             "/tileserver/renderer/where",
             data={"val": json.dumps(None)},
         )
         assert app.pyramids["default"]["overlay"].renderer.where is None
-        _response = client.put(
+        client.put(
             "/tileserver/renderer/where",
             data={"val": json.dumps("None")},
         )
@@ -640,14 +640,14 @@ def test_secondary_cmap(app: TileServer) -> None:
         }
 
         # None should use default jet colormap
-        _response = client.put(
+        client.put(
             "/tileserver/secondary_cmap",
             data={"type_id": json.dumps(0), "prop": "prob", "cmap": json.dumps("None")},
         )
         assert layer.renderer.secondary_cmap["mapper"](0.5) == colormaps["jet"](0.5)
 
         cdict = {"type1": [1, 0, 0], "type2": [0, 1, 0]}
-        _response = client.put(
+        client.put(
             "/tileserver/secondary_cmap",
             data={"type_id": json.dumps(0), "prop": "type", "cmap": json.dumps(cdict)},
         )
