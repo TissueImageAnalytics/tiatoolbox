@@ -263,7 +263,7 @@ class UNetModel(ModelABC):
         encoder_levels (list):
             A list of integers to configure "unet" encoder levels.
             Each number defines the number of output channels at each
-            down-sampling level (2 convolutions). Number of intergers
+            down-sampling level (2 convolutions). Number of integers
             define the number down-sampling levels in the unet encoder.
             This is only applicable when `encoder="unet"`.
         decoder_block (list):
