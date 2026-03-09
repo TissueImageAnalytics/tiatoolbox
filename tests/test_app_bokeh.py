@@ -1227,11 +1227,13 @@ class FakeWSIReader:
         """Replacement for WSIReader.open that returns a controlled stub."""
         return FakeWSIReader(Path(path))
 
-    def slide_thumbnail(self) -> np.ndarray:
+    @staticmethod
+    def slide_thumbnail() -> np.ndarray:
         """Return a small fake thumbnail array."""
         return 255 * np.ones((20, 20, 3), dtype="uint8")
 
-    def read_bounds(self, *_args: object, **_kwargs: object) -> np.ndarray:
+    @staticmethod
+    def read_bounds(*_args: object, **_kwargs: object) -> np.ndarray:
         """Return a fake array for ROI extraction."""
         return 255 * np.ones((10, 10, 3), dtype="uint8")
 
@@ -1268,24 +1270,25 @@ class FakeResp:
 class FakeSession:
     """Minimal stub for requests.Session."""
 
-    def __init__(self) -> None:
+    def __init__(self: FakeSession) -> None:
         """Initialize fake session with no proxies and empty mounts."""
         self.trust_env = False
         self.proxies: dict[str, str | None] = {}
         self.mounted: dict[str, object] = {}
 
-    def mount(self, scheme: str, adapter: object) -> None:
+    def mount(self: FakeSession, scheme: str, adapter: object) -> None:
         """Record mounted adapters (no real effect)."""
         self.mounted[scheme] = adapter
 
-    def get(self, url: str, *_args: object, **_kwargs: object) -> FakeResp:
+    @staticmethod
+    def get(url: str, *_args: object, **_kwargs: object) -> FakeResp:
         """Return canned JSON or session cookie."""
         if url.endswith("/tileserver/session_id"):
             return FakeResp(cookies={"session_id": "test_user"})
         return FakeResp(text="{}")
 
+    @staticmethod
     def put(
-        self,
         url: str,
         _data: dict[str, object] | None = None,
         *_args: object,
@@ -1296,8 +1299,8 @@ class FakeSession:
             return FakeResp(text='"slide"')
         return FakeResp(text='"ok"')
 
+    @staticmethod
     def post(
-        self,
         _url: str,
         _data: dict[str, object] | None = None,
         *_args: object,
@@ -1468,6 +1471,8 @@ def test_slide_select_cb_auto_load_triggers_layer_drop(
     main = reload_main(monkeypatch, with_session=False)
 
     class MiniHover:
+        """Initialize MiniHover."""
+
         tooltips: object | None = None
 
     p = figure(width=400, height=300)
@@ -1480,16 +1485,17 @@ def test_slide_select_cb_auto_load_triggers_layer_drop(
     for _ in range(main.N_PERMANENT_RENDERERS - 1):
         p.circle([], [])
 
-    # --- Create a minimal fake channel_select matching expected structure ---
     class FakeTable:
-        def __init__(self) -> None:
+        """Create a minimal fake channel_select matching expected structure."""
+
+        def __init__(self: FakeTable) -> None:
             self.source = main.ColumnDataSource({"channels": [], "dummy": []})
             self.selected = types.SimpleNamespace(indices=[])
 
     class FakeChannelSelect:
         """Must satisfy: UI["channel_select"].children[1].children[0].children."""
 
-        def __init__(self) -> None:
+        def __init__(self: FakeChannelSelect) -> None:
             table1 = FakeTable()  # channels table
             table2 = FakeTable()  # colors table
 
@@ -1499,7 +1505,9 @@ def test_slide_select_cb_auto_load_triggers_layer_drop(
             self.children = [None, outer]
 
     class DummyCol:
-        def __init__(self) -> None:
+        """Initialize DummyCol test."""
+
+        def __init__(self: DummyCol) -> None:
             self.children: list[object] = []
 
     win = {
@@ -1545,6 +1553,7 @@ def test_slide_select_cb_auto_load_triggers_layer_drop(
     called: list[str] = []
 
     def spy(attr: object) -> None:
+        """Spy attribute for layer_drop_cb."""
         called.append(attr.item)
 
     monkeypatch.setattr(main, "layer_drop_cb", spy, raising=True)
@@ -1588,6 +1597,7 @@ def test_layer_drop_cb_resp_equals_slide(
     change_calls: list[str] = []
 
     def change_spy(arg: str) -> None:
+        """Change spy."""
         change_calls.append(arg)
 
     monkeypatch.setattr(main, "change_tiles", change_spy, raising=True)
@@ -1666,7 +1676,7 @@ def test_make_window_sets_user_when_session_context_true(
 
     # Create a vstate and call make_window
     vstate = main.ViewerState(Path("/tmp/one.svs"))  # noqa: S108
-    _win = main.make_window(vstate)
+    main.make_window(vstate)
 
     # Assertions: make_window must write "user"
     sc = main.curdoc().session_context
