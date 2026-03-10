@@ -1743,21 +1743,21 @@ def test_make_window_edges_on_true(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_docconfig_no_config_file(
     monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test _get_config when no *config.json file is present."""
     # Avoid module-level auto-setup
     main = reload_main(monkeypatch, with_session=False)
 
     # Provide only base_folder; overlays contain no *config.json
-    slides_dir = tmp_path / "slides"
-    overlays_dir = tmp_path / "overlays"
+    slides_dir = track_tmp_path / "slides"
+    overlays_dir = track_tmp_path / "overlays"
     slides_dir.mkdir()
     overlays_dir.mkdir()
 
     main.req_args = {}  # no extra query args
     dc = main.doc_config
-    dc.set_sys_args(["prog", str(tmp_path)])
+    dc.set_sys_args(["prog", str(track_tmp_path)])
 
     # Execute and ensure fallback path doesn't crash and sets initial_views
     dc._get_config()
@@ -1767,7 +1767,7 @@ def test_docconfig_no_config_file(
 
 def test_docconfig_get_config_basefolder_and_demo(
     monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test _get_config handles base_folder with demo query parameter."""
     # Avoid module-level auto-setup
@@ -1775,7 +1775,7 @@ def test_docconfig_get_config_basefolder_and_demo(
 
     # Simulate argv with only base folder (len==2) and a demo in req_args
     dc = main.doc_config
-    dc.set_sys_args(["prog", str(tmp_path)])
+    dc.set_sys_args(["prog", str(track_tmp_path)])
     main.req_args = {"demo": [b"DemoX"]}
 
     # Invoke _get_config
@@ -1791,15 +1791,15 @@ def test_docconfig_get_config_basefolder_and_demo(
 
 def test_docconfig_request_args_slide_and_window(
     monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test _get_config processes ?slide= and ?window= request args."""
     # Avoid module-level auto-setup
     main = reload_main(monkeypatch, with_session=False)
 
     # Create folders to satisfy path arithmetic in _get_config
-    slides_dir = tmp_path / "slides"
-    overlays_dir = tmp_path / "overlays"
+    slides_dir = track_tmp_path / "slides"
+    overlays_dir = track_tmp_path / "overlays"
     slides_dir.mkdir()
     overlays_dir.mkdir()
 
@@ -1810,7 +1810,7 @@ def test_docconfig_request_args_slide_and_window(
     }
 
     dc = main.doc_config
-    dc.set_sys_args(["prog", str(tmp_path)])
+    dc.set_sys_args(["prog", str(track_tmp_path)])
     dc._get_config()
 
     assert dc.config["first_slide"] == "S1.svs"
@@ -1819,7 +1819,7 @@ def test_docconfig_request_args_slide_and_window(
 
 def test_setup_config_ui_settings_all_branches(
     monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test setup_config_ui_settings.
 
@@ -1831,8 +1831,8 @@ def test_setup_config_ui_settings_all_branches(
     main = reload_main(monkeypatch, with_session=False)
 
     # Build a real slide and window
-    slides_dir = tmp_path / "slides"
-    overlays_dir = tmp_path / "overlays"
+    slides_dir = track_tmp_path / "slides"
+    overlays_dir = track_tmp_path / "overlays"
     slides_dir.mkdir()
     overlays_dir.mkdir()
     slide_path = slides_dir / "x.svs"
@@ -1862,15 +1862,15 @@ def test_setup_config_ui_settings_all_branches(
 
 def test_setup_doc_uses_first_slide(
     monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test setup_doc uses config['first_slide'] when present."""
     # Avoid module-level auto-setup.
     main = reload_main(monkeypatch, with_session=False)
 
     # Create two slides in tmp.
-    slides_dir = tmp_path / "slides"
-    overlays_dir = tmp_path / "overlays"
+    slides_dir = track_tmp_path / "slides"
+    overlays_dir = track_tmp_path / "overlays"
     slides_dir.mkdir()
     overlays_dir.mkdir()
     (slides_dir / "A.svs").touch()
@@ -1883,7 +1883,7 @@ def test_setup_doc_uses_first_slide(
     cfg["first_slide"] = "B.svs"
 
     # Ensure sys_args is set so _get_config() doesn't fail.
-    main.doc_config.set_sys_args(["prog", str(tmp_path)])
+    main.doc_config.set_sys_args(["prog", str(track_tmp_path)])
 
     # Set up the document on a FakeDoc.
     doc = FakeDoc(with_session=False)
@@ -1894,11 +1894,11 @@ def test_setup_doc_uses_first_slide(
 
 def test_module_level_do_doc_true(
     monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test that module-level do_doc becomes True when session_context is present."""
     # Create a dummy slide path that the patched Path.glob will return.
-    fake_slide: Path = tmp_path / "dummy.svs"
+    fake_slide: Path = track_tmp_path / "dummy.svs"
     fake_slide.touch()
 
     def pre_import_patch(mp: pytest.MonkeyPatch) -> None:
@@ -1938,11 +1938,11 @@ def test_module_level_do_doc_true(
 
 def test_module_auto_setup_doc(
     monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test that module auto-initialises the document when do_doc=True."""
     # Create a dummy slide path that the patched Path.glob will return.
-    fake_slide: Path = tmp_path / "dummy.svs"
+    fake_slide: Path = track_tmp_path / "dummy.svs"
     fake_slide.touch()
 
     def pre_import_patch(mp: pytest.MonkeyPatch) -> None:
