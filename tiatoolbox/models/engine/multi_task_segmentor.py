@@ -2668,10 +2668,10 @@ def _clear_zarr(
     probabilities_shape: tuple,
 ) -> da.Array | None:
     """Helper function to clear all zarr contents and return dask array."""
-    if probabilities_zarr:
-        if "canvas" in zarr_group:
+    if probabilities_zarr is not None:
+        if zarr_group is not None and "canvas" in zarr_group:
             del zarr_group["canvas"][idx]
-        if "count" in zarr_group:
+        if zarr_group is not None and "count" in zarr_group:
             del zarr_group["count"][idx]
         return da.from_zarr(
             probabilities_zarr, chunks=(chunk_shape[0], *probabilities_shape)
