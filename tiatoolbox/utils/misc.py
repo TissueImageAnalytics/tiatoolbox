@@ -339,7 +339,7 @@ mpp2common_objective_power = np.vectorize(
 
 @np.vectorize
 def objective_power2mpp(
-    objective_power: float | tuple[float, ...],
+    objective_power: float | tuple[float, ...] | np.ndarray,
 ) -> float | np.ndarray:
     r"""Approximate mpp from objective power.
 
