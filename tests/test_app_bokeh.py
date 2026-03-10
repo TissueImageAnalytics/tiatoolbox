@@ -32,6 +32,7 @@ from PIL import Image
 from scipy.ndimage import label
 
 from tiatoolbox.data import _fetch_remote_sample
+from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.visualization.bokeh_app import app_hooks, main
 from tiatoolbox.visualization.tileserver import TileServer
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
@@ -1892,6 +1893,10 @@ def test_setup_doc_uses_first_slide(
     assert main.UI["vstate"].slide_path.name == "B.svs"
 
 
+@pytest.mark.skipif(
+    toolbox_env.running_on_ci(),
+    reason="Local test on machine with GPU.",
+)
 def test_module_level_do_doc_true(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
