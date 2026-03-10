@@ -368,6 +368,16 @@ def test_load_save_annotations(app: TileServer, track_tmp_path: Path) -> None:
     assert len(store) == num_annotations + 2
 
 
+def test_clear_overlays(app: TileServer) -> None:
+    """Test clearing overlays."""
+    with app.test_client() as client:
+        response = client.put("/tileserver/clear_overlays")
+        assert response.status_code == 200
+        assert response.content_type == "text/html; charset=utf-8"
+        # check that the overlay has been correctly cleared
+        assert "overlay" not in app.pyramids["default"]
+
+
 def test_load_annotations_empty(
     empty_app: TileServer,
     track_tmp_path: Path,

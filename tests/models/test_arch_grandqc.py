@@ -105,7 +105,7 @@ def test_grandqc_with_semantic_segmentor(
     assert Path(output[sample_image]).exists()
 
     store = SQLiteStore.open(output[sample_image])
-    assert len(store) == 4
+    assert len(store) == 3
 
     unique_types = set()
 
@@ -116,7 +116,7 @@ def test_grandqc_with_semantic_segmentor(
             tissue_area_px += annotation.geometry.area
     assert 2950000 < tissue_area_px < 2960000
 
-    assert unique_types == {"background", "tissue"}
+    assert unique_types == {"tissue"}
     store.close()
 
 

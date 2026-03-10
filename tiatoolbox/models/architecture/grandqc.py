@@ -470,7 +470,9 @@ class GrandQCModel(ModelABC):
 
     """
 
-    def __init__(self: GrandQCModel, num_output_channels: int = 2) -> None:
+    def __init__(
+        self: GrandQCModel, num_output_channels: int = 2, class_dict: dict | None = None
+    ) -> None:
         """Initialize GrandQCModel.
 
         Sets up the UNet++ decoder, EfficientNet encoder, and segmentation head
@@ -479,6 +481,8 @@ class GrandQCModel(ModelABC):
         Args:
             num_output_channels (int):
                 Number of output classes. Defaults to 2 (Tissue and Background).
+            class_dict (dict | None):
+                Optional dictionary mapping class names to indices. Defaults to None.
 
         """
         super().__init__()
@@ -505,6 +509,7 @@ class GrandQCModel(ModelABC):
         )
 
         self.name = "unetplusplus-efficientnetb0"
+        self.class_dict = class_dict
 
     def forward(  # skipcq: PYL-W0613
         self: GrandQCModel,
@@ -576,7 +581,7 @@ class GrandQCModel(ModelABC):
 
         Returns:
             np.ndarray:
-                Binary tissue mask where 0 = Tissue and 1 = Background.
+                Binary tissue mask where 1 = Tissue and 0 = Background.
 
         Example:
             >>> probs = np.random.rand(256, 256, 2)

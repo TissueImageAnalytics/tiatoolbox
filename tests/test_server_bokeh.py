@@ -88,12 +88,13 @@ def test_slides_available(bk_session: ClientSession) -> None:
     """Test that the slides and overlays are available."""
     doc = bk_session.document
     slide_select = doc.get_model_by_name("slide_select0")
-    # check there are two available slides
     assert len(slide_select.options) == 2
 
     # check that the overlays are available.
-    slide_select.value = ["CMU-1-Small-region.svs"]
+    slide_select.value = ["CMU-1.ndpi"]
     layer_drop = doc.get_model_by_name("layer_drop0")
+    assert len(layer_drop.menu) == 2
+    slide_select.value = ["CMU-1-Small-region.svs"]
     assert len(layer_drop.menu) == 2
 
     bk_session.document.clear()

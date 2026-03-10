@@ -833,6 +833,7 @@ class SemanticSegmentor(PatchPredictor):
                     output_type=output_type,
                     class_dict=class_dict,
                     save_path=output_path,
+                    ignore_index=self._ioconfig.ignore_index,
                     verbose=self.verbose,
                 )
 
@@ -844,6 +845,7 @@ class SemanticSegmentor(PatchPredictor):
                 output_type=output_type,
                 class_dict=class_dict,
                 save_path=save_path.with_suffix(suffix),
+                ignore_index=self._ioconfig.ignore_index,
                 verbose=self.verbose,
             )
             save_paths = out_file

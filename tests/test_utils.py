@@ -1929,8 +1929,9 @@ def test_dict_to_store_semantic_segment() -> None:
         class_dict=None,
         save_path=None,
         output_type="annotationstore",
+        ignore_index=0,
     )
-    assert len(store_) == 3
+    assert len(store_) == 2
 
     annotations_ = store_.values()
 
