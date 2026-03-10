@@ -1934,3 +1934,44 @@ def test_module_level_do_doc_true(
 
     assert main.do_doc is True
     assert main.req_args == req_args
+
+
+def test_module_auto_setup_doc(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Test that module auto-initialises the document when do_doc=True."""
+    # Create a dummy slide path that the patched Path.glob will return.
+    fake_slide: Path = tmp_path / "dummy.svs"
+    fake_slide.touch()
+
+    def pre_import_patch(mp: pytest.MonkeyPatch) -> None:
+        """Patch Path.glob during import so slide enumeration is non-empty."""
+        original_glob = Path.glob
+
+        def forced_nonempty_glob(self: Path, pattern: str) -> list[Path]:
+            # During import-time enumeration, always return at least one slide.
+            try:
+                if self.name == "slides" or self.as_posix().endswith("/slides"):
+                    return [fake_slide]
+            except Exception:  # noqa: BLE001
+                return [fake_slide]
+            return list(original_glob(self, pattern))  # type: ignore[arg-type]
+
+        mp.setattr(Path, "glob", forced_nonempty_glob, raising=False)
+
+    # Trigger the module-level path that sets up the document on import.
+    # with_session=True ensures do_doc=True at import.
+    main = reload_main(
+        monkeypatch,
+        with_session=True,
+        req_args={},  # ok to be empty; only the presence of session matters
+        pre_import_patch=pre_import_patch,
+    )
+
+    # IMPORTANT: assert on the SAME document the module used during import.
+    # main.doc is set at module import when setup_doc() is called.
+    assert hasattr(main, "doc")
+    assert hasattr(main.doc, "_roots")
+    # slide_wins, control_tabs, popup_table, slide_info
+    assert len(main.doc._roots) == 4
