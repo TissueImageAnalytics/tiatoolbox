@@ -1815,3 +1815,46 @@ def test_docconfig_request_args_slide_and_window(
 
     assert dc.config["first_slide"] == "S1.svs"
     assert dc.config["initial_views"]["S1"] == [10, 20, 100, 200]
+
+
+def test_setup_config_ui_settings_all_branches(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Test setup_config_ui_settings.
+
+    Test setup_config_ui_settings covers UI_settings,
+    default_cprop, default_type_cprop.
+
+    """
+    # Load main without module-level auto-setup
+    main = reload_main(monkeypatch, with_session=False)
+
+    # Build a real slide and window
+    slides_dir = tmp_path / "slides"
+    overlays_dir = tmp_path / "overlays"
+    slides_dir.mkdir()
+    overlays_dir.mkdir()
+    slide_path = slides_dir / "x.svs"
+    slide_path.touch()
+
+    vstate = main.ViewerState(slide_path)
+    win_dict: dict[str, object] = main.make_window(vstate)
+    main.win_dicts.clear()
+    main.win_dicts.append(win_dict)
+    main.UI.active = 0
+
+    # Provide config keys consumed by setup_config_ui_settings()
+    cfg: dict[str, object] = main.doc_config.config
+    cfg["UI_settings"] = {"blur_radius": 3, "max_scale": 8}
+    cfg["default_cprop"] = "prob"
+    cfg["default_type_cprop"] = {"t": "1"}  # exercises the "default_type_cprop" branch
+    cfg["auto_load"] = 0  # slide_select callback won't trigger auto-load
+    cfg["slide_folder"] = slides_dir
+    cfg["overlay_folder"] = overlays_dir
+
+    # Execute the function under test
+    main.setup_config_ui_settings(cfg)
+
+    # Assert the type-specific selection was applied (this exercises lines 2368-2371)
+    assert main.UI["type_cmap_select"].value == ["1"]

@@ -185,7 +185,7 @@ def test_sub_tile_levels() -> None:
             y: int,
         ) -> Path:
             """Return path to mock tile."""
-            return Path(level, x, y)
+            return Path(str(level), str(x), str(y))
 
         @property
         def sub_tile_level_count(self: MockTileGenerator) -> int:
