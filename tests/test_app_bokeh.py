@@ -1858,3 +1858,35 @@ def test_setup_config_ui_settings_all_branches(
 
     # Assert the type-specific selection was applied (this exercises lines 2368-2371)
     assert main.UI["type_cmap_select"].value == ["1"]
+
+
+def test_setup_doc_uses_first_slide(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Test setup_doc uses config['first_slide'] when present."""
+    # Avoid module-level auto-setup.
+    main = reload_main(monkeypatch, with_session=False)
+
+    # Create two slides in tmp.
+    slides_dir = tmp_path / "slides"
+    overlays_dir = tmp_path / "overlays"
+    slides_dir.mkdir()
+    overlays_dir.mkdir()
+    (slides_dir / "A.svs").touch()
+    (slides_dir / "B.svs").touch()
+
+    # Configure doc_config to use tmp paths and a specific first_slide.
+    cfg: dict[str, object] = main.doc_config.config
+    cfg["slide_folder"] = slides_dir
+    cfg["overlay_folder"] = overlays_dir
+    cfg["first_slide"] = "B.svs"
+
+    # Ensure sys_args is set so _get_config() doesn't fail.
+    main.doc_config.set_sys_args(["prog", str(tmp_path)])
+
+    # Set up the document on a FakeDoc.
+    doc = FakeDoc(with_session=False)
+    main.doc_config.setup_doc(doc)
+
+    assert main.UI["vstate"].slide_path.name == "B.svs"
