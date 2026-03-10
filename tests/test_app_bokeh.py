@@ -50,7 +50,7 @@ GRIDLINES = 2
 
 # Helper function
 def fetch_sample_to_dir(key: str, target_dir: Path) -> Path:
-    """Fetch a remote sample and and ensure it resides directly in ``target_dir``.
+    """Fetch a remote sample and ensure it resides directly in ``target_dir``.
 
      The sample is downloaded and, if it is not already located directly in
     ``target_dir``, it is moved there. If it is already in ``target_dir``,
