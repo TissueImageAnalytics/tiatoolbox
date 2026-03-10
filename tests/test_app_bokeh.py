@@ -1890,3 +1890,47 @@ def test_setup_doc_uses_first_slide(
     main.doc_config.setup_doc(doc)
 
     assert main.UI["vstate"].slide_path.name == "B.svs"
+
+
+def test_module_level_do_doc_true(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Test that module-level do_doc becomes True when session_context is present."""
+    # Create a dummy slide path that the patched Path.glob will return.
+    fake_slide: Path = tmp_path / "dummy.svs"
+    fake_slide.touch()
+
+    def pre_import_patch(mp: pytest.MonkeyPatch) -> None:
+        """Patch Path.glob during import so slide enumeration is non-empty."""
+        original_glob = Path.glob
+
+        def forced_nonempty_glob(self: Path, pattern: str) -> list[Path]:
+            # During import-time enumeration, always return at least one slide.
+            # This avoids touching /app_data while ensuring setup_doc() succeeds.
+            try:
+                # If this is the "slides" folder, short-circuit to our fake slide.
+                if self.name == "slides" or self.as_posix().endswith("/slides"):
+                    return [fake_slide]
+            except Exception:  # noqa: BLE001
+                # Fallback to be defensive, but still non-empty.
+                return [fake_slide]
+            # For non-slide paths, fall back to the real glob (converted to list).
+            return list(original_glob(self, pattern))  # type: ignore[arg-type]
+
+        mp.setattr(Path, "glob", forced_nonempty_glob, raising=False)
+
+    # Provide a session-backing FakeDoc so main.do_doc is computed True at import.
+    req_args: dict[str, list[bytes]] = {"x": [b"1"]}
+
+    # IMPORTANT: with_session=True so reload_main supplies a curdoc()
+    # with session_context.
+    main = reload_main(
+        monkeypatch,
+        with_session=True,
+        req_args=req_args,
+        pre_import_patch=pre_import_patch,
+    )
+
+    assert main.do_doc is True
+    assert main.req_args == req_args
