@@ -35,6 +35,7 @@ Example:
 from __future__ import annotations
 
 import copy
+import gc
 import shutil
 from abc import ABC
 from pathlib import Path
@@ -1485,6 +1486,7 @@ class EngineABC(ABC):  # noqa: B024
 
         msg = f"Output file saved at {out}."
         logger.info(msg=msg)
+        gc.collect()  # Clean up
         return out
 
     @staticmethod
@@ -1677,6 +1679,7 @@ class EngineABC(ABC):  # noqa: B024
             logger.removeFilter(duplicate_filter)
             msg = f"Output file saved at {out[get_path(image)]}."
             logger.info(msg=msg)
+            gc.collect()  # Clean up
 
         return out
 
