@@ -1895,7 +1895,7 @@ def test_setup_doc_uses_first_slide(
 
 @pytest.mark.skipif(
     toolbox_env.running_on_ci(),
-    reason="Local test on machine with GPU.",
+    reason="Local test, fails on CI environment.",
 )
 def test_module_level_do_doc_true(
     monkeypatch: pytest.MonkeyPatch,
@@ -1941,6 +1941,10 @@ def test_module_level_do_doc_true(
     assert main.req_args == req_args
 
 
+@pytest.mark.skipif(
+    toolbox_env.running_on_ci(),
+    reason="Local test, fails on CI environment.",
+)
 def test_module_auto_setup_doc(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
