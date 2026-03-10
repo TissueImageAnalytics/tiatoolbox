@@ -131,7 +131,7 @@ def test_imresize() -> None:
     # test for not supporting dtype
     img = RNG.integers(0, 256, (4, 4, 16))
     with pytest.raises((AttributeError, ValueError), match=r".*float128.*"):
-        resized_img = utils.transforms.imresize(
+        _ = utils.transforms.imresize(
             img.astype(np.float128),
             scale_factor=4,
             interpolation=cv2.INTER_CUBIC,
@@ -1227,7 +1227,7 @@ def test_crop_and_pad_edges() -> None:
     size = (10, 10)
     bounds = utils.transforms.locsize2bounds(loc, size)
     under, over = edge_mask(bounds)
-    _region = -under + over
+    _ = -under + over
     region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
     output = utils.image.crop_and_pad_edges(
         bounds=bounds,
@@ -1243,7 +1243,7 @@ def test_crop_and_pad_edges() -> None:
 
     loc = (slide_width - 5, slide_height - 5)
     bounds = utils.transforms.locsize2bounds(loc, size)
-    under, over = edge_mask(bounds)
+    _, _ = edge_mask(bounds)
     region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
     output = utils.image.crop_and_pad_edges(
         bounds=bounds,

@@ -1375,7 +1375,11 @@ def get_wsi_output_shape(dataset: object) -> tuple[int, int] | None:
             try:
                 reader = getattr(dataset, "reader", None)
                 if reader is None:
-                    reader = WSIReader.open(dataset.img_path)
+                    wsireader_kwargs: WSIReaderParams = {
+                        "mpp": dataset.reader_info.mpp,
+                        "power": dataset.reader_info.objective_power,
+                    }
+                    reader = WSIReader.open(dataset.img_path, **wsireader_kwargs)
                 wsi_shape = reader.slide_dimensions(
                     resolution=dataset.resolution, units=dataset.units
                 )
