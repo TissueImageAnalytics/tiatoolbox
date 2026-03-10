@@ -322,6 +322,7 @@ def test_get_coordinates() -> None:
         stride_shape=(9, 9),
         input_within_bound=False,
     )
+    assert np.all(output == [0, 0, 9, 9])
     # test when output patch shape is out of bound
     # but input is in bound
     input_bounds, output_bounds = PatchExtractor.get_coordinates(  # skipcq: PYL-E0633
@@ -465,7 +466,7 @@ def test_filter_coordinates() -> None:
         slide_shape,
     )
     assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
-    _flag_list = PatchExtractor.filter_coordinates(mask_reader, bbox_list, slide_shape)
+    _ = PatchExtractor.filter_coordinates(mask_reader, bbox_list, slide_shape)
 
     # Test for bad mask input
     with pytest.raises(

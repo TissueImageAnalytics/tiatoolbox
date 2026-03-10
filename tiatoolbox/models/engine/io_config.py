@@ -62,6 +62,7 @@ class ModelIOConfigABC:
     patch_input_shape: list[int] | np.ndarray | tuple[int, int]
     stride_shape: list[int] | np.ndarray | tuple[int, int] = None
     output_resolutions: list[dict] = field(default_factory=list)
+    ignore_index: int | None = (None,)
 
     def __post_init__(self: ModelIOConfigABC) -> None:
         """Perform post initialization tasks."""

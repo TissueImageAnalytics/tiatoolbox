@@ -22,6 +22,9 @@ on:
       - "MANIFEST*in"
       - ".github/workflows/pip-install.yml"
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}

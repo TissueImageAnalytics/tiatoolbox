@@ -339,7 +339,7 @@ mpp2common_objective_power = np.vectorize(
 
 @np.vectorize
 def objective_power2mpp(
-    objective_power: float | tuple[float, ...],
+    objective_power: float | tuple[float, ...] | np.ndarray,
 ) -> float | np.ndarray:
     r"""Approximate mpp from objective power.
 
@@ -1313,6 +1313,7 @@ def process_contours(
     contours: list[np.ndarray],
     hierarchy: np.ndarray,
     scale_factor: tuple[float, float] = (1, 1),
+    offset: np.ndarray | None = None,
     properties: dict[str, JSON] | None = None,
 ) -> list[Annotation]:
     """Process contours and hierarchy to create annotations.
@@ -1324,6 +1325,8 @@ def process_contours(
             A list of hierarchy.
         scale_factor (tuple[float, float]):
             The scale factor to use when loading the annotations.
+        offset (np.ndarray | None):
+            Optional offset to be added to the coordinates of the annotations.
         properties (dict | None):
             Optional properties to include with each annotation type.
 
@@ -1342,6 +1345,8 @@ def process_contours(
     for i, layer_ in enumerate(contours):
         coords: np.ndarray = layer_.squeeze()
         scaled_coords: np.ndarray = np.array([np.array(scale_factor) * coords])
+        if offset is not None:
+            scaled_coords += offset
 
         # save one points as a line, otherwise save the Polygon
         if len(layer_) > 2:  # noqa: PLR2004
@@ -1420,7 +1425,9 @@ def dict_to_store_semantic_segmentor(
     output_type: str,
     class_dict: dict | None = None,
     save_path: Path | None = None,
+    offset: np.ndarray | None = None,
     *,
+    ignore_index: int | None = None,
     verbose: bool = True,
 ) -> AnnotationStore | dict | Path:
     """Converts output of TIAToolbox SemanticSegmentor engine to AnnotationStore.
@@ -1441,6 +1448,12 @@ def dict_to_store_semantic_segmentor(
         save_path (str or Path):
             Optional Output directory to save the Annotation
             Store results.
+        offset (np.ndarray | None):
+            Optional offset to be added to the coordinates of the annotations.
+        ignore_index (int | None):
+            Any index to ignore in the layer list. e.g., background.
+            Defaults to 0 (background). If None, all the layers are saved to
+            the annotationstore or JSON file.
         verbose (bool):
             Whether to display logs and progress bar.
 
@@ -1453,8 +1466,10 @@ def dict_to_store_semantic_segmentor(
     """
     preds = da.from_array(patch_output["predictions"], chunks="auto")
 
+    ignore_index = -1 if ignore_index is None else ignore_index
     # Get the number of unique predictions
     layer_list = da.unique(preds).compute()
+    layer_list = np.delete(layer_list, np.where(layer_list == ignore_index))
 
     if class_dict is None:
         class_dict = {int(i): int(i) for i in layer_list.tolist()}
@@ -1475,6 +1490,7 @@ def dict_to_store_semantic_segmentor(
         scale_factor=scale_factor,
         class_dict=class_dict,
         save_path=save_path,
+        offset=offset,
         verbose=verbose,
     )
 
@@ -1566,6 +1582,7 @@ def _semantic_segmentations_as_annotations(
     scale_factor: tuple[float, float],
     class_dict: dict,
     save_path: Path | None = None,
+    offset: np.ndarray | None = None,
     *,
     verbose: bool = True,
 ) -> AnnotationStore | Path:
@@ -1593,7 +1610,11 @@ def _semantic_segmentations_as_annotations(
         contours = cast("list[np.ndarray]", contours)
 
         annotations_list_ = process_contours(
-            contours, hierarchy, scale_factor, {"type": class_label, "class": class_id}
+            contours=contours,
+            hierarchy=hierarchy,
+            scale_factor=scale_factor,
+            offset=offset,
+            properties={"type": class_label, "class": class_id},
         )
         annotations_list.extend(annotations_list_)
 

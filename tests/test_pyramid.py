@@ -154,7 +154,8 @@ def test_zoomify_dump(track_tmp_path: Path) -> None:
     dz.dump(out_path)
     assert out_path.exists()
     assert len(list((out_path / "TileGroup0").glob("0-*"))) == 1
-    assert Image.open(out_path / "TileGroup0" / "0-0-0.jpg").size == (64, 64)
+    thumb_image = Image.open(out_path / "TileGroup0" / "0-0-0.jpg")
+    assert thumb_image.size == (64, 64)
 
 
 def test_get_thumb_tile() -> None:
@@ -166,7 +167,7 @@ def test_get_thumb_tile() -> None:
     assert thumb.size == (224, 224)
     cv2_thumb = imresize(array, output_size=(224, 224))
     psnr = peak_signal_noise_ratio(cv2_thumb, np.array(thumb.convert("L")))
-    assert np.isinf(psnr) or psnr < 40
+    assert np.isinf(psnr)
 
 
 def test_sub_tile_levels() -> None:
@@ -182,9 +183,9 @@ def test_sub_tile_levels() -> None:
             level: int,
             x: int,
             y: int,
-        ) -> Path:  # skipcq: PYL-R0201
+        ) -> Path:
             """Return path to mock tile."""
-            return Path(level, x, y)
+            return Path(str(level), str(x), str(y))
 
         @property
         def sub_tile_level_count(self: MockTileGenerator) -> int:

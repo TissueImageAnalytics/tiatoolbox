@@ -137,8 +137,8 @@ def test_overlay_probability_map(sample_wsi_dict: dict) -> None:
 
     # * Test normal run, should not crash.
     thumb_float = np.mean(thumb, axis=-1) / 255.0
-    output = overlay_probability_map(thumb, thumb_float, min_val=0.5, return_ax=True)
-    output = overlay_probability_map(
+    _ = overlay_probability_map(thumb, thumb_float, min_val=0.5, return_ax=True)
+    _ = overlay_probability_map(
         thumb / 256.0,
         thumb_float,
         min_val=0.5,
