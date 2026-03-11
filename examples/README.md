@@ -101,11 +101,11 @@ Explains how to extract features from WSIs using pre-trained models from the `ti
 
 [![image](../docs/images/feature_extraction.png)](./11-import-foundation-models.ipynb)
 
-### 12. Nuclei Detection and Classification in Whole Slide Images using KongNet ([nucleus-detection](./nucleus-detection.ipynb))
+### 12. Nuclei Detection and Classification in Whole Slide Images using KongNet ([12-nucleus-detection](./12-nucleus-detection.ipynb))
 
 Demonstrates the use of the TIAToolbox implementation of the [KongNet model](https://arxiv.org/abs/2510.23559) for nucleus detection and classification across various tasks and tissue types. KongNet is a state-of-the-art multi-headed deep learning architecture that achieved top rankings in multiple Grand Challenges including MONKEY, MIDOG, and PUMA. This notebook shows how to use pretrained KongNet models for different detection tasks such as mitosis detection in H&E-stained images and immune cell (lymphocyte/monocyte) detection in PAS-stained kidney biopsies. Learn how to run detection on both individual image patches and entire whole slide images, and interactive visualization using TIAViz.
 
-[![image](../docs/images/nucleus_detection_classification.png)](./nucleus-detection.ipynb)
+[![image](../docs/images/nucleus_detection_classification.png)](./12-nucleus-detection.ipynb)
 
 ## B) Examples of High-Level Analysis (Pipelines) Using TIAToolbox
 
