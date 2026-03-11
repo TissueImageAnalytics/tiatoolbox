@@ -1,6 +1,6 @@
 # History
 
-## TIAToolbox 2.0.0 — Release Notes
+## TIAToolbox v2.0.0 (2026-03-11)
 
 ### ✨ Major Updates and Feature Improvements
 
