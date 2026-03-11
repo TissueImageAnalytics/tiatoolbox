@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import json
+import multiprocessing
+import os
 import sys
 import tempfile
 import urllib
 from cmath import pi
 from pathlib import Path, PureWindowsPath
 from shutil import rmtree
-from typing import TYPE_CHECKING, Any, Callable, SupportsFloat
+from typing import TYPE_CHECKING, Any, SupportsFloat
 
 import numpy as np
 import requests
@@ -27,6 +29,7 @@ from bokeh.models import (
     ColorPicker,
     Column,
     ColumnDataSource,
+    CustomAction,
     CustomJS,
     CustomJSTickFormatter,
     DataTable,
@@ -46,6 +49,7 @@ from bokeh.models import (
     Select,
     Slider,
     Spinner,
+    StringEditor,
     TableColumn,
     TabPanel,
     Tabs,
@@ -65,8 +69,9 @@ from requests.adapters import HTTPAdapter, Retry
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from tiatoolbox import logger
-from tiatoolbox.models.engine.nucleus_instance_segmentor import (
-    NucleusInstanceSegmentor,
+from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
+from tiatoolbox.models.engine.prompt_segmentor import (  # skipcq: FLK-E402
+    PromptSegmentor,
 )
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.utils.misc import select_device
@@ -75,6 +80,8 @@ from tiatoolbox.visualization.ui_utils import get_level_by_extent
 from tiatoolbox.wsicore.wsireader import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     from bokeh.document import Document
 
 rng = np.random.default_rng()
@@ -136,6 +143,197 @@ def format_info(info: dict[str, Any]) -> str:
     for k, v in info.items():
         info_str += f"{k}: {v}<br>"
     return info_str
+
+
+def get_channel_info() -> dict[str, tuple[int, int, int]]:
+    """Get the colors for the channels."""
+    resp = UI["s"].get(f"http://{host2}:{port}/tileserver/channels")
+    try:
+        resp = json.loads(resp.text)
+        return resp.get("channels", {}), resp.get("active", [])
+    except json.JSONDecodeError as e:
+        logger.warning("Error decoding JSON: %s", e)
+        return {}, []
+
+
+def set_channel_info(
+    colors: dict[str, tuple[int, int, int]], active_channels: list
+) -> None:
+    """Set the colors for the channels."""
+    UI["s"].put(
+        f"http://{host2}:{port}/tileserver/channels",
+        data={"channels": json.dumps(colors), "active": json.dumps(active_channels)},
+    )
+
+
+def create_channel_color_ui() -> Column:
+    """Create the multi-channel UI controls."""
+    channel_source = ColumnDataSource(
+        data={
+            "channels": [],
+            "dummy": [],
+        }
+    )
+    color_source = ColumnDataSource(
+        data={
+            "colors": [],
+            "dummy": [],
+        }
+    )
+
+    color_formatter = HTMLTemplateFormatter(
+        template="""<div style='background-color: <%= value %>; color:
+          <%= value %>; border: 1px solid #ddd;'><%= value %></div>"""
+    )
+
+    channel_table = DataTable(
+        source=channel_source,
+        columns=[
+            TableColumn(
+                field="channels",
+                title="Channel",
+                editor=StringEditor(),
+                sortable=False,
+                width=200,
+            )
+        ],
+        editable=True,
+        width=200,
+        height=260,
+        selectable="checkbox",
+        autosize_mode="none",
+        fit_columns=True,
+    )
+    color_table = DataTable(
+        source=color_source,
+        columns=[
+            TableColumn(
+                field="colors",
+                title="Color",
+                formatter=color_formatter,
+                editor=StringEditor(),
+                sortable=False,
+                width=130,
+            )
+        ],
+        editable=True,
+        width=130,
+        height=260,
+        selectable=True,
+        autosize_mode="none",
+        index_position=None,
+        fit_columns=True,
+    )
+
+    color_picker = ColorPicker(title="Channel Color", width=100)
+
+    def update_selected_color(
+        attr: str,  # noqa: ARG001 # skipcq: PYL-W0613
+        old: str,  # noqa: ARG001 # skipcq: PYL-W0613
+        new: str,
+    ) -> None:
+        """Update the selected color in multichannel ui."""
+        selected = color_source.selected.indices
+        if selected:
+            color_source.patch({"colors": [(selected[0], new)]})
+
+    color_picker.on_change("color", update_selected_color)
+
+    apply_button = Button(
+        label="Apply Changes", button_type="success", margin=(20, 5, 5, 5)
+    )
+
+    def apply_changes() -> None:
+        """Apply the changes to the image."""
+        colors = dict(
+            zip(
+                channel_source.data["channels"],
+                color_source.data["colors"],
+                strict=False,
+            )
+        )
+        active_channels = channel_source.selected.indices
+
+        set_channel_info({ch: hex2rgb(colors[ch]) for ch in colors}, active_channels)
+        change_tiles("slide")
+
+    apply_button.on_click(apply_changes)
+
+    def update_color_picker(
+        attr: str,  # noqa: ARG001 # skipcq: PYL-W0613
+        old: str,  # noqa: ARG001 # skipcq: PYL-W0613
+        new: str,
+    ) -> None:
+        """Update the color picker when a new channel is selected."""
+        selected_color = color_source.data["colors"][new[0]]
+        color_picker.color = selected_color
+
+    color_source.selected.on_change("indices", update_color_picker)
+
+    enhance_slider = Slider(
+        start=0.1,
+        end=10,
+        value=1,
+        step=0.1,
+        title="Enhance",
+        width=200,
+    )
+
+    def enhance_cb(
+        attr: str,  # noqa: ARG001 # skipcq: PYL-W0613
+        old: str,  # noqa: ARG001 # skipcq: PYL-W0613
+        new: str,
+    ) -> None:
+        """Enhance slider callback."""
+        UI["s"].put(
+            f"http://{host2}:{port}/tileserver/enhance",
+            data={"val": json.dumps(new)},
+        )
+        UI["vstate"].update_state = 1
+        UI["vstate"].to_update.update(["slide"])
+
+    enhance_slider.on_change("value", enhance_cb)
+
+    instructions = Div(
+        text="""
+        <p>Instructions:</p>
+        <ul>
+            <li>Double-click on the 'Active' column to toggle channel visibility</li>
+            <li>Click on a row to select it for color editing</li>
+            <li>Use 'Select All' or 'Deselect All' for quick selection</li>
+            <li>Use the color picker to change the color of the selected channel</li>
+            <li>Click 'Apply Changes' to update the image</li>
+        </ul>
+    """
+    )
+
+    return column(
+        instructions,
+        column(
+            row(channel_table, color_table),
+            row(color_picker, apply_button),
+            enhance_slider,
+        ),
+    )
+
+
+def populate_table() -> None:
+    """Populate the channel color table."""
+    # Access the ColumnDataSource from the UI dictionary
+    tables = UI["channel_select"].children[1].children[0].children
+    colors, active_channels = get_channel_info()
+
+    if colors:
+        if active_channels:
+            tables[0].source.selected.indices = active_channels
+        tables[0].source.data = {
+            "channels": list(colors.keys()),
+            "dummy": list(colors.keys()),
+        }
+        tables[1].source.data = {
+            "colors": [rgb2hex(color) for color in colors.values()],
+            "dummy": list(colors.keys()),
+        }
 
 
 def get_view_bounds(
@@ -304,7 +502,7 @@ def get_mapper_for_prop(prop: str, mapper_type: str = "auto") -> str | dict[str,
         UI["vstate"].is_categorical = True
         return UI["vstate"].mapper
     # Find out the unique values of the chosen property
-    resp = UI["s"].get(f"http://{host2}:5000/tileserver/prop_values/{prop}/all")
+    resp = UI["s"].get(f"http://{host2}:{port}/tileserver/prop_values/{prop}/all")
     prop_vals = json.loads(resp.text)
     # If auto, guess what cmap should be
     if (
@@ -342,12 +540,12 @@ def update_renderer(prop: str, value: Any) -> None:  # noqa: ANN401
             # Send keys and values separately so types are preserved
             value = {"keys": list(value.keys()), "values": list(value.values())}
         UI["s"].put(
-            f"http://{host2}:5000/tileserver/cmap",
+            f"http://{host2}:{port}/tileserver/cmap",
             data={"cmap": json.dumps(value)},
         )
         return
     UI["s"].put(
-        f"http://{host2}:5000/tileserver/renderer/{prop}",
+        f"http://{host2}:{port}/tileserver/renderer/{prop}",
         data={"val": json.dumps(value)},
     )
 
@@ -510,7 +708,6 @@ def add_layer(lname: str) -> None:
             end=1,
             value=0.75,
             step=0.01,
-            title=lname,
             height=40,
             width=100,
             max_width=90,
@@ -714,6 +911,12 @@ def populate_layer_list(slide_name: str, overlay_path: Path) -> None:
         "*.jpg",
         "*.json",
         "*.tiff",
+        "*.mrxs",
+        "*.ndpi",
+        "*.svs",
+        "*.tif",
+        "*.npy",
+        "*.mha",
     ]:
         file_list.extend(list(overlay_path.glob(str(Path("*") / ext))))
         file_list.extend(list(overlay_path.glob(ext)))
@@ -725,7 +928,17 @@ def populate_slide_list(slide_folder: Path, search_txt: str | None = None) -> No
     """Populate the slide list with the available slides."""
     file_list = []
     len_slidepath = len(slide_folder.parts)
-    for ext in ["*.svs", "*ndpi", "*.tiff", "*.mrxs", "*.jpg", "*.png", "*.tif"]:
+    for ext in [
+        "*.svs",
+        "*.ndpi",
+        "*.tiff",
+        "*.mrxs",
+        "*.jpg",
+        "*.png",
+        "*.tif",
+        "*.qptiff",
+        "*.dcm",
+    ]:
         file_list.extend(list(Path(slide_folder).glob(str(Path("*") / ext))))
         file_list.extend(list(Path(slide_folder).glob(ext)))
     if search_txt is None:
@@ -743,14 +956,22 @@ def populate_slide_list(slide_folder: Path, search_txt: str | None = None) -> No
     UI["slide_select"].options = file_list
 
 
-def filter_input_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
+def filter_input_cb(
+    attr: str,  # noqa: ARG001 # skipcq: PYL-W0613
+    old: str,  # noqa: ARG001 # skipcq: PYL-W0613
+    new: str,  # noqa: ARG001 # skipcq: PYL-W0613
+) -> None:
     """Change predicate to be used to filter annotations."""
     build_predicate()
     UI["vstate"].update_state = 1
     UI["vstate"].to_update.update(["overlay"])
 
 
-def cprop_input_cb(attr: str, old: str, new: list[str]) -> None:  # noqa: ARG001
+def cprop_input_cb(
+    attr: str,  # noqa: ARG001 # skipcq: PYL-W0613
+    old: str,  # noqa: ARG001 # skipcq: PYL-W0613
+    new: list[str],
+) -> None:
     """Change property to color by."""
     if len(new) == 0:
         return
@@ -758,7 +979,7 @@ def cprop_input_cb(attr: str, old: str, new: list[str]) -> None:  # noqa: ARG001
     UI["vstate"].cprop = new[0]
     update_renderer("mapper", cmap)
     UI["s"].put(
-        f"http://{host2}:5000/tileserver/color_prop",
+        f"http://{host2}:{port}/tileserver/color_prop",
         data={"prop": json.dumps(new[0])},
     )
     UI["vstate"].update_state = 1
@@ -866,14 +1087,32 @@ def slide_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
     UI["vstate"].wsi = WSIReader.open(slide_path)
     initialise_slide()
     fname = make_safe_name(str(slide_path))
-    UI["s"].put(f"http://{host2}:5000/tileserver/slide", data={"slide_path": fname})
+    UI["s"].put(f"http://{host2}:{port}/tileserver/slide", data={"slide_path": fname})
     change_tiles("slide")
+    populate_table()
 
     # Load the overlay and graph automatically if set in config
     if doc_config["auto_load"]:
         for f in UI["layer_drop"].menu:
             dummy_attr = DummyAttr(f[0])
             layer_drop_cb(dummy_attr)
+
+
+def clear_overlay_cb(attr: str) -> None:  # noqa: ARG001
+    """Clear all overlays and reset to just the slide."""
+    UI["pt_source"].data = {"x": [], "y": []}
+    UI["box_source"].data = {"x": [], "y": [], "width": [], "height": []}
+    UI["node_source"].data = {"x_": [], "y_": [], "node_color_": []}
+    UI["edge_source"].data = {"x0_": [], "y0_": [], "x1_": [], "y1_": []}
+    UI["hover"].tooltips = None
+    if len(UI["p"].renderers) > N_PERMANENT_RENDERERS:
+        for r in UI["p"].renderers[N_PERMANENT_RENDERERS:].copy():
+            UI["p"].renderers.remove(r)
+    UI["vstate"].layer_dict = {"slide": 0, "rect": 1, "pts": 2, "nodes": 3, "edges": 4}
+    UI["color_column"].children = []
+    UI["type_column"].children = []
+    UI["s"].put(f"http://{host2}:{port}/tileserver/clear_overlays")
+    change_tiles("slide")
 
 
 def handle_graph_layer(attr: MenuItemClick) -> None:  # skipcq: PY-R1000
@@ -958,7 +1197,7 @@ def handle_graph_layer(attr: MenuItemClick) -> None:  # skipcq: PY-R1000
 def update_ui_on_new_annotations(ann_types: list[str]) -> None:
     """Update the UI when new annotations are added."""
     UI["vstate"].types = ann_types
-    props = UI["s"].get(f"http://{host2}:5000/tileserver/prop_names/all")
+    props = UI["s"].get(f"http://{host2}:{port}/tileserver/prop_names/all")
     UI["vstate"].props = json.loads(props.text)
     # Update the color type by prop menu
     UI["type_cmap_select"].options = list(UI["vstate"].types)
@@ -995,7 +1234,7 @@ def layer_drop_cb(attr: MenuItemClick) -> None:
     # Otherwise it's a tile-based overlay of some form
     fname = make_safe_name(attr.item)
     resp = UI["s"].put(
-        f"http://{host2}:5000/tileserver/overlay",
+        f"http://{host2}:{port}/tileserver/overlay",
         data={"overlay_path": fname},
     )
     resp = json.loads(resp.text)
@@ -1003,7 +1242,8 @@ def layer_drop_cb(attr: MenuItemClick) -> None:
     if Path(attr.item).suffix in [".db", ".dat", ".geojson"]:
         update_ui_on_new_annotations(resp)
     else:
-        add_layer(resp)
+        if resp != "slide":
+            add_layer(resp)
         change_tiles(resp)
 
 
@@ -1053,7 +1293,9 @@ def layer_slider_cb(
             UI["vstate"].layer_dict[obj.name.split("_")[0]]
         ].glyph.line_alpha = new
     else:
-        UI["p"].renderers[UI["vstate"].layer_dict[obj.name.split("_")[0]]].alpha = new
+        UI["p"].renderers[
+            UI["vstate"].layer_dict["_".join(obj.name.split("_")[0:-1])]
+        ].alpha = new
 
 
 def color_input_cb(
@@ -1099,6 +1341,8 @@ def to_model_cb(attr: ButtonClick) -> None:  # noqa: ARG001
     """Callback to run currently selected model."""
     if UI["vstate"].current_model == "hovernet":
         segment_on_box()
+    elif UI["vstate"].current_model == "SAM":
+        sam_segment()
     # Add any other models here
     else:  # pragma: no cover
         logger.warning("unknown model")
@@ -1110,7 +1354,7 @@ def type_cmap_cb(attr: str, old: list[str], new: list[str]) -> None:  # noqa: AR
         # Remove type-specific coloring
         UI["type_cmap_select"].options = [*UI["vstate"].types, "graph_overlay"]
         UI["s"].put(
-            f"http://{host2}:5000/tileserver/secondary_cmap",
+            f"http://{host2}:{port}/tileserver/secondary_cmap",
             data={
                 "type_id": json.dumps("None"),
                 "prop": "None",
@@ -1153,7 +1397,7 @@ def type_cmap_cb(attr: str, old: list[str], new: list[str]) -> None:  # noqa: AR
             return
         cmap = get_mapper_for_prop(new[1])  # separate cmap select ?
         UI["s"].put(
-            f"http://{host2}:5000/tileserver/secondary_cmap",
+            f"http://{host2}:{port}/tileserver/secondary_cmap",
             data={
                 "type_id": json.dumps(UI["vstate"].orig_types.get(new[0], new[0])),
                 "prop": new[1],
@@ -1178,14 +1422,16 @@ def save_cb(attr: ButtonClick) -> None:  # noqa: ARG001
         ),
     )
     UI["s"].post(
-        f"http://{host2}:5000/tileserver/commit",
+        f"http://{host2}:{port}/tileserver/commit",
         data={"save_path": save_path},
     )
 
 
 def tap_event_cb(event: DoubleTap) -> None:
     """Callback to handle double tap events to inspect annotations."""
-    resp = UI["s"].get(f"http://{host2}:5000/tileserver/tap_query/{event.x}/{-event.y}")
+    resp = UI["s"].get(
+        f"http://{host2}:{port}/tileserver/tap_query/{event.x}/{-event.y}"
+    )
     data_dict = json.loads(resp.text)
 
     popup_table.source.data = {
@@ -1204,7 +1450,7 @@ def segment_on_box() -> None:
     # Make a mask defining the box
     thumb = UI["vstate"].wsi.slide_thumbnail()
     conv_mpp = UI["vstate"].dims[0] / thumb.shape[1]
-    msg = f'box tl: {UI["box_source"].data["x"][0]}, {UI["box_source"].data["y"][0]}'
+    msg = f"box tl: {UI['box_source'].data['x'][0]}, {UI['box_source'].data['y'][0]}"
     logger.info(msg)
     x = round(
         (UI["box_source"].data["x"][0] - 0.5 * UI["box_source"].data["width"][0])
@@ -1221,9 +1467,7 @@ def segment_on_box() -> None:
     mask[y : y + height, x : x + width] = 1
 
     inst_segmentor = NucleusInstanceSegmentor(
-        pretrained_model="hovernet_fast-pannuke",
-        num_loader_workers=4,
-        num_postproc_workers=8,
+        model="hovernet_fast-pannuke",
         batch_size=24,
     )
     tmp_save_dir = Path(tempfile.mkdtemp())
@@ -1232,26 +1476,125 @@ def segment_on_box() -> None:
 
     # Run hovernet inside the box
     UI["vstate"].model_mpp = inst_segmentor.ioconfig.save_resolution["resolution"]
-    inst_segmentor.predict(
-        [UI["vstate"].slide_path],
-        [tmp_mask_dir / "mask.png"],
+    num_workers = 0 if os.name == "nt" else multiprocessing.cpu_count()
+    out_ = inst_segmentor.run(
+        images=[UI["vstate"].slide_path],
+        masks=[tmp_mask_dir / "mask.png"],
         save_dir=tmp_save_dir / "hover_out",
-        mode="wsi",
+        patch_mode=False,
         device=select_device(on_gpu=torch.cuda.is_available()),
-        crash_on_exception=True,
+        output_type="annotationstore",
+        auto_get_mask=False,
+        num_workers=num_workers,
     )
 
-    fname = make_safe_name(tmp_save_dir / "hover_out" / "0.dat")
+    fname = make_safe_name(out_[UI["vstate"].slide_path][0])
     resp = UI["s"].put(
-        f"http://{host2}:5000/tileserver/annotations",
+        f"http://{host2}:{port}/tileserver/annotations",
         data={"file_path": fname, "model_mpp": json.dumps(UI["vstate"].model_mpp)},
     )
     ann_types = json.loads(resp.text)
     update_ui_on_new_annotations(ann_types)
 
     # Clean up temp files
-    rmtree(tmp_save_dir)
     rmtree(tmp_mask_dir)
+
+
+def sam_segment() -> None:
+    """Callback to run SAM using a point on the slide.
+
+    Will run PromptSegmentor on selected region of wsi defined
+    by the point in pt_source.
+
+    """
+    prompt_segmentor = PromptSegmentor()
+    x_start = max(0, UI["p"].x_range.start)
+    y_start = max(0, -UI["p"].y_range.end)
+    x_end = min(UI["p"].x_range.end, UI["vstate"].dims[0])
+    y_end = min(-UI["p"].y_range.start, UI["vstate"].dims[1])
+    offset = np.array([x_start, y_start])
+    prompt_segmentor.offset = offset
+
+    height = y_end - y_start
+    width = x_end - x_start
+    res, scale_factor = prompt_segmentor.calc_mpp(
+        (width, height), UI["vstate"].mpp[0], 1500
+    )
+
+    # Get point coordinates
+    x = np.round(UI["pt_source"].data["x"])
+    y = np.round(UI["pt_source"].data["y"])
+    point_coords = (
+        (
+            np.array([[[x[i], -y[i]] for i in range(len(x))]], np.uint32)
+            - np.array([[x_start, y_start]])
+        )
+        / scale_factor
+        if len(x) > 0
+        else None
+    )
+
+    # Get box coordinates
+    x = np.round(UI["box_source"].data["x"])
+    y = np.round(UI["box_source"].data["y"])
+
+    x = [
+        round(UI["box_source"].data["x"][i] - 0.5 * UI["box_source"].data["width"][i])
+        for i in range(len(x))
+    ]
+    y = [
+        -round(UI["box_source"].data["y"][i] + 0.5 * UI["box_source"].data["height"][i])
+        for i in range(len(y))
+    ]
+    width = [round(UI["box_source"].data["width"][i]) for i in range(len(x))]
+    height = [round(UI["box_source"].data["height"][i]) for i in range(len(x))]
+    box_coords = (
+        (
+            np.array(
+                [
+                    [
+                        [x[i], y[i], x[i] + width[i], height[i] + y[i]]
+                        for i in range(len(x))
+                    ]
+                ],
+                np.uint32,
+            )
+            - np.array(
+                [[x_start, y_start, x_start, y_start]],
+            )
+        )
+        / scale_factor
+        if len(x) > 0
+        else None
+    )
+
+    tmp_save_dir = Path(tempfile.mkdtemp(suffix="bokeh_temp"))
+
+    # read the region of interest from the slide
+    roi = UI["vstate"].wsi.read_bounds(
+        (int(x_start), int(y_start), int(x_end), int(y_end)),
+        resolution=res,
+        units="mpp",
+    )
+
+    # Run SAM on the point
+    prediction = prompt_segmentor.run(
+        images=[roi],
+        device=select_device(on_gpu=torch.cuda.is_available()),
+        save_dir=tmp_save_dir,
+        point_coords=point_coords,
+        box_coords=box_coords,
+    )
+
+    ann_loc = str(prediction[0])
+
+    fname = make_safe_name(ann_loc)
+    resp = UI["s"].put(
+        f"http://{host2}:{port}/tileserver/overlay",
+        data={"overlay_path": fname},
+    )
+    ann_types = json.loads(resp.text)
+    update_ui_on_new_annotations(ann_types)
 
 
 # endregion
@@ -1470,7 +1813,7 @@ def gather_ui_elements(  # noqa: PLR0915
         button_type="success",
         width=80,
         max_width=90,
-        height=35,
+        height=45,
         sizing_mode="stretch_width",
         name=f"to_model{win_num}",
     )
@@ -1482,7 +1825,7 @@ def gather_ui_elements(  # noqa: PLR0915
     )
     model_drop = Select(
         title="choose model:",
-        options=["hovernet"],
+        options=["hovernet", "SAM"],
         height=25,
         width=120,
         max_width=120,
@@ -1495,9 +1838,17 @@ def gather_ui_elements(  # noqa: PLR0915
         button_type="success",
         max_width=90,
         width=80,
-        height=35,
+        height=45,
         sizing_mode="stretch_width",
         name=f"save_button{win_num}",
+    )
+    clear_button = Button(
+        label="Clear Overlays",
+        button_type="warning",
+        width=120,
+        height=40,
+        sizing_mode="stretch_width",
+        name=f"clear_button{win_num}",
     )
     type_cprop_tt = Tooltip(
         content=HTML(
@@ -1566,6 +1917,7 @@ def gather_ui_elements(  # noqa: PLR0915
     filter_input.on_change("value", filter_input_cb)
     cprop_input.on_change("value", cprop_input_cb)
     type_cmap_select.on_change("value", type_cmap_cb)
+    clear_button.on_click(clear_overlay_cb)
 
     # Create some layouts
     type_column = column(children=layer_boxes, name=f"type_column{win_num}")
@@ -1603,6 +1955,7 @@ def gather_ui_elements(  # noqa: PLR0915
                 "cmap_row",
                 "type_cmap_select",
                 "model_row",
+                "clear_button",
                 "type_select_row",
             ],
             [
@@ -1615,17 +1968,19 @@ def gather_ui_elements(  # noqa: PLR0915
                 cmap_row,
                 type_cmap_select,
                 model_row,
+                clear_button,
                 type_select_row,
             ],
+            strict=False,
         ),
     )
     if "ui_elements_1" in doc_config:
-        # Only add the elements specified in config file
+        # Dont add elements specified 0 in config file
         ui_layout = column(
             [
                 ui_elements_1[el]
-                for el in doc_config["ui_elements_1"]
-                if doc_config["ui_elements_1"][el] == 1
+                for el in ui_elements_1
+                if doc_config["ui_elements_1"].get(el, 1) == 1
             ],
             sizing_mode="stretch_width",
         )
@@ -1643,13 +1998,16 @@ def gather_ui_elements(  # noqa: PLR0915
                 "pt_size_spinner",
                 "edge_size_spinner",
                 "res_switch",
+                "channel_select",
             ],
             [
                 opt_buttons,
                 pt_size_spinner,
                 edge_size_spinner,
                 res_switch,
+                create_channel_color_ui(),
             ],
+            strict=False,
         ),
     )
     if "ui_elements_2" in doc_config:
@@ -1658,7 +2016,7 @@ def gather_ui_elements(  # noqa: PLR0915
             [
                 ui_elements_2[el]
                 for el in doc_config["ui_elements_2"]
-                if doc_config["ui_elements_2"][el] == 1
+                if doc_config["ui_elements_2"].get(el, 1) == 1
             ],
         )
     else:
@@ -1746,13 +2104,15 @@ def make_window(vstate: ViewerState) -> dict:  # noqa: PLR0915
 
     # Set up a session for communicating with tile server
     s = requests.Session()
+    s.trust_env = False  # bypass system proxies for local tile server requests
+    s.proxies.update({"http": None, "https": None})
     retries = Retry(
         total=5,
         backoff_factor=0.1,
     )
     s.mount("http://", HTTPAdapter(max_retries=retries))
 
-    resp = s.get(f"http://{host2}:5000/tileserver/session_id")
+    resp = s.get(f"http://{host2}:{port}/tileserver/session_id")
     user = resp.cookies.get("session_id")
     if curdoc().session_context:
         curdoc().session_context.request.arguments["user"] = user
@@ -1782,6 +2142,22 @@ def make_window(vstate: ViewerState) -> dict:  # noqa: PLR0915
     p.add_tools(BoxEditTool(renderers=[r], num_objects=1))
     p.add_tools(PointDrawTool(renderers=[c]))
     p.add_tools(TapTool())
+    clear_code = """
+            box_source.clear()
+            pt_source.clear()
+            """
+    p.add_tools(
+        CustomAction(
+            callback=CustomJS(
+                args={
+                    "box_source": box_source,
+                    "pt_source": pt_source,
+                },
+                code=clear_code,
+            ),
+            description="Clear",
+        ),
+    )
     if get_from_config(["opts", "hover_on"], 0) == 0:
         p.toolbar.active_inspect = None
 
@@ -1922,7 +2298,7 @@ first_z = [1]
 # Set hosts and ports
 host = "127.0.0.1"
 host2 = "127.0.0.1"
-port = "5000"
+port = os.environ.get("TIATOOLBOX_TILESERVER_PORT", "5000")
 
 
 def update() -> None:
@@ -1985,7 +2361,7 @@ def setup_config_ui_settings(config: dict) -> None:
             update_renderer(k, config["UI_settings"][k])
         if "default_cprop" in config and config["default_cprop"] is not None:
             UI["s"].put(
-                f"http://{host2}:5000/tileserver/color_prop",
+                f"http://{host2}:{port}/tileserver/color_prop",
                 data={"prop": json.dumps(config["default_cprop"])},
             )
     # Open up initial slide
@@ -2086,7 +2462,17 @@ class DocConfig:
 
         # Set initial slide to first one in base folder
         slide_list = []
-        for ext in ["*.svs", "*ndpi", "*.tiff", "*.tif", "*.mrxs", "*.png", "*.jpg"]:
+        for ext in [
+            "*.svs",
+            "*.ndpi",
+            "*.tiff",
+            "*.tif",
+            "*.mrxs",
+            "*.png",
+            "*.jpg",
+            "*.qptiff",
+            "*.dcm",
+        ]:
             slide_list.extend(list(doc_config["slide_folder"].glob(ext)))
             slide_list.extend(
                 list(doc_config["slide_folder"].glob(str(Path("*") / ext))),

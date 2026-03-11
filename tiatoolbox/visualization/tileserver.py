@@ -23,13 +23,20 @@ from shapely.geometry import Point
 from tiatoolbox import data, logger
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
 from tiatoolbox.tools.pyramid import AnnotationTileGenerator, ZoomifyGenerator
-from tiatoolbox.utils.misc import add_from_dat, store_from_dat
+from tiatoolbox.utils.misc import store_from_dat
+from tiatoolbox.utils.postproc_defs import MultichannelToRGB
 from tiatoolbox.utils.visualization import AnnotationRenderer, colourise_image
-from tiatoolbox.wsicore.wsireader import OpenSlideWSIReader, VirtualWSIReader, WSIReader
+from tiatoolbox.wsicore.wsireader import (
+    OpenSlideWSIReader,
+    TransformedWSIReader,
+    VirtualWSIReader,
+    WSIReader,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from matplotlib.colors import Colormap
 
+    from tiatoolbox.annotation.storage import Annotation
     from tiatoolbox.wsicore import WSIMeta
 
 
@@ -102,7 +109,7 @@ class TileServer(Flask):
         if isinstance(layers, list):
             layers_dict = {"slide": layers[0]}
             for i, p in enumerate(layers[1:]):
-                layers_dict[f"layer-{i+1}"] = p
+                layers_dict[f"layer-{i + 1}"] = p
             layers = layers_dict
         # Set up the layer dict.
         meta = None
@@ -137,6 +144,7 @@ class TileServer(Flask):
         self.route("/tileserver/session_id")(self.session_id)
         self.route("/tileserver/color_prop", methods=["PUT"])(self.change_prop)
         self.route("/tileserver/slide", methods=["PUT"])(self.change_slide)
+        self.route("/tileserver/clear_overlays", methods=["PUT"])(self.clear_overlays)
         self.route("/tileserver/cmap", methods=["PUT"])(self.change_mapper)
         self.route(
             "/tileserver/annotations",
@@ -164,7 +172,12 @@ class TileServer(Flask):
         )
         self.route("/tileserver/tap_query/<x>/<y>")(self.tap_query)
         self.route("/tileserver/prop_range", methods=["PUT"])(self.prop_range)
+        self.route("/tileserver/channels", methods=["GET"])(self.get_channels)
+        self.route("/tileserver/channels", methods=["PUT"])(self.set_channels)
+        self.route("/tileserver/enhance", methods=["PUT"])(self.set_enhance)
         self.route("/tileserver/shutdown", methods=["POST"])(self.shutdown)
+        self.route("/tileserver/sessions", methods=["GET"])(self.sessions)
+        self.route("/tileserver/healthcheck", methods=["GET"])(self.healthcheck)
 
     def _get_session_id(self: TileServer) -> str:
         """Get the session_id from the request.
@@ -409,12 +422,22 @@ class TileServer(Flask):
 
         return "done"
 
+    def clear_overlays(self: TileServer) -> str:
+        """Clear all overlays."""
+        session_id = self._get_session_id()
+        slide_layer = self.layers[session_id]["slide"]
+        self.layers[session_id] = {"slide": slide_layer}
+        self.pyramids[session_id] = {
+            "slide": ZoomifyGenerator(slide_layer, tile_size=256),
+        }
+        return "done"
+
     def change_mapper(self: TileServer) -> str:
         """Change the colour mapper for the overlay."""
         session_id = self._get_session_id()
         cmap = json.loads(request.form["cmap"])
         if isinstance(cmap, dict):
-            cmap = dict(zip(cmap["keys"], cmap["values"]))
+            cmap = dict(zip(cmap["keys"], cmap["values"], strict=False))
             self.renderers[session_id].score_fn = lambda x: x
         self.renderers[session_id].mapper = cmap
         self.renderers[session_id].function_mapper = None
@@ -465,26 +488,18 @@ class TileServer(Flask):
         """
         session_id = self._get_session_id()
         file_path = request.form["file_path"]
-        model_mpp = json.loads(request.form["model_mpp"])
         file_path = self.decode_safe_name(file_path)
 
         for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
-                add_from_dat(
-                    layer.store,
-                    file_path,
-                    np.array(model_mpp) / np.array(self.slide_mpps[session_id]),
-                )
+                to_add = SQLiteStore(file_path)
+                layer.store.append_many(list(to_add.values()))
+                to_add.close()
                 types = self.update_types(layer.store)
                 return json.dumps(types)
 
-        sq = store_from_dat(
-            file_path,
-            np.array(model_mpp) / np.array(self.slide_mpps[session_id]),
-        )
-        tmp_path = Path(tempfile.gettempdir()) / "temp.db"
-        sq.dump(tmp_path)
-        sq = SQLiteStore(tmp_path)
+        sq = SQLiteStore(file_path)
+
         self.pyramids[session_id]["overlay"] = AnnotationTileGenerator(
             self.layers[session_id]["slide"].info,
             sq,
@@ -510,33 +525,121 @@ class TileServer(Flask):
         overlay_path = request.form["overlay_path"]
         overlay_path = self.decode_safe_name(overlay_path)
 
-        if overlay_path.suffix in [".jpg", ".png", ".tiff", ".svs", ".ndpi", ".mrxs"]:
-            layer = f"layer{len(self.pyramids[session_id])}"
-            if overlay_path.suffix == ".tiff":
-                self.layers[session_id][layer] = OpenSlideWSIReader(
-                    overlay_path,
-                    mpp=self.layers[session_id]["slide"].info.mpp[0],
-                )
-            elif overlay_path.suffix in [".jpg", ".png"]:
-                self.layers[session_id][layer] = VirtualWSIReader(
-                    Path(overlay_path),
-                    info=self.layers[session_id]["slide"].info,
-                )
-            else:
-                self.layers[session_id][layer] = WSIReader.open(overlay_path)
-            self.pyramids[session_id][layer] = ZoomifyGenerator(
-                self.layers[session_id][layer],
+        # Get other session id
+        session_ids = list(self.layers.keys())
+        session_ids.remove(session_id)
+
+        # Get the first remaining session_id (if any exist)
+        other_session_id = session_ids[0] if session_ids else None
+
+        if overlay_path.suffix in [".npy", ".mha"]:
+            return self._handle_registration_overlay(
+                session_id, overlay_path, other_session_id
             )
-            return json.dumps(layer)
+
+        if overlay_path.suffix in [".jpg", ".png", ".tiff", ".svs", ".ndpi", ".mrxs"]:
+            return self._add_image_overlay(session_id, overlay_path)
+
+        return self._add_annotation_overlay(session_id, overlay_path)
+
+    def _handle_registration_overlay(
+        self,
+        session_id: str,
+        overlay_path: Path,
+        other_session_id: str | None,
+    ) -> str:
+        def _apply_transform(source_fp: str, target_fp: str) -> None:
+            # loading a registration transformation
+            self.layers[session_id]["slide"] = TransformedWSIReader(
+                source_fp,
+                target_img=target_fp,
+                transform=overlay_path,
+            )
+            self.pyramids[session_id]["slide"] = ZoomifyGenerator(
+                self.layers[session_id]["slide"]
+            )
+
+        if other_session_id is not None:
+            logger.warning("Using slide in other window as target slide.")
+            _apply_transform(
+                self.layers[session_id]["slide"].info.file_path,
+                self.layers[other_session_id]["slide"].info.file_path,
+            )
+            return json.dumps("slide")
+
+        layer_keys = [
+            k for k in self.layers[session_id] if k not in ["slide", "overlay"]
+        ]
+        layer_keys.reverse()  # try newest first
+        for key in layer_keys:
+            target_fp = self.layers[session_id][key].info.file_path
+            if Path(target_fp).suffix in [".tiff", ".svs", ".ndpi", ".mrxs"]:
+                logger.warning(
+                    "Using slide as source and last overlay as target for registration."
+                )
+                _apply_transform(
+                    self.layers[session_id]["slide"].info.file_path,
+                    target_fp,
+                )
+                return json.dumps("slide")
+
+        logger.warning(
+            "No suitable overlay found. Using current slide as target. "
+            "This may display incorrectly if dimensions differ."
+        )
+        _apply_transform(
+            self.layers[session_id]["slide"].info.file_path,
+            self.layers[session_id]["slide"].info.file_path,
+        )
+        return json.dumps("slide")
+
+    def _add_image_overlay(self, session_id: str, overlay_path: Path) -> str:
+        layer = overlay_path.stem
+        if layer in self.layers[session_id]:
+            # use full file name to disambiguate
+            layer = overlay_path.name
+        if overlay_path.suffix == ".tiff":
+            self.layers[session_id][layer] = OpenSlideWSIReader(
+                overlay_path,
+                mpp=self.layers[session_id]["slide"].info.mpp[0],
+            )
+        elif overlay_path.suffix in [".jpg", ".png"]:
+            info = self.layers[session_id]["slide"].info
+            info.file_path = str(overlay_path)
+            self.layers[session_id][layer] = VirtualWSIReader(
+                overlay_path,
+                info=info,
+            )
+        else:
+            self.layers[session_id][layer] = WSIReader.open(overlay_path)
+
+        self.pyramids[session_id][layer] = ZoomifyGenerator(
+            self.layers[session_id][layer]
+        )
+        return json.dumps(layer)
+
+    def _add_annotation_overlay(self, session_id: str, overlay_path: Path) -> str:
         if overlay_path.suffix == ".geojson":
-            sq = SQLiteStore.from_geojson(overlay_path)
+
+            def unpack_qupath(ann: Annotation) -> Annotation:
+                # Helper function to unpack QuPath measurements if present.
+                props = ann.properties
+                if "measurements" in props:
+                    measurements = props.pop("measurements")
+                    for k, v in measurements.items():
+                        props[k] = v
+                if "objectType" in props:
+                    props["type"] = props.pop("objectType")
+                return ann
+
+            sq = SQLiteStore.from_geojson(overlay_path, transform=unpack_qupath)
         elif overlay_path.suffix == ".dat":
             sq = store_from_dat(overlay_path)
         if overlay_path.suffix == ".db":
             sq = SQLiteStore(overlay_path, auto_commit=False)
         else:
             # make a temporary db for the new annotations
-            tmp_path = Path(tempfile.gettempdir()) / "temp.db"
+            tmp_path = Path(tempfile.gettempdir()) / f"temp_{session_id}.db"
             sq.dump(tmp_path)
             sq = SQLiteStore(tmp_path)
 
@@ -546,17 +649,17 @@ class TileServer(Flask):
                 logger.info("Loaded %d annotations.", len(sq))
                 types = self.update_types(sq)
                 return json.dumps(types)
+
         self.pyramids[session_id]["overlay"] = AnnotationTileGenerator(
             self.layers[session_id]["slide"].info,
             sq,
             self.renderers[session_id],
             overlap=self.overlaps[session_id],
         )
-        logger.info(
-            "Loaded %d annotations.",
-            len(self.pyramids[session_id]["overlay"].store),
-        )
         self.layers[session_id]["overlay"] = self.pyramids[session_id]["overlay"]
+        logger.info(
+            "Loaded %d annotations.", len(self.pyramids[session_id]["overlay"].store)
+        )
         types = self.update_types(sq)
         return json.dumps(types)
 
@@ -621,7 +724,8 @@ class TileServer(Flask):
             if isinstance(layer, AnnotationTileGenerator):
                 if (
                     layer.store.path.suffix == ".db"
-                    and layer.store.path.name != "temp.db"
+                    and layer.store.path.name != f"temp_{session_id}.db"
+                    and not str(layer.store.path.parent.name).endswith("bokeh_temp")
                 ):
                     logger.info("%s*.db committed.", layer.store.path.stem)
                     layer.store.commit()
@@ -717,6 +821,70 @@ class TileServer(Flask):
         minv, maxv = prop_range
         self.renderers[session_id].score_fn = lambda x: (x - minv) / (maxv - minv)
         return "done"
+
+    def get_channels(self: TileServer) -> Response:
+        """Get the channels of the slide."""
+        session_id = self._get_session_id()
+        if isinstance(self.layers[session_id]["slide"].post_proc, MultichannelToRGB):
+            if not self.layers[session_id]["slide"].post_proc.is_validated:
+                # trigger validation of channels with small read
+                _ = self.layers[session_id]["slide"].read_rect((0, 0), (100, 100))
+            return jsonify(
+                {
+                    "channels": self.layers[session_id]["slide"].post_proc.color_dict,
+                    "active": self.layers[session_id]["slide"].post_proc.channels,
+                },
+            )
+        return jsonify({"channels": {}, "active": []})
+
+    def set_channels(self: TileServer) -> str:
+        """Set the channels of the slide."""
+        session_id = self._get_session_id()
+        if isinstance(self.layers[session_id]["slide"].post_proc, MultichannelToRGB):
+            channels = json.loads(request.form["channels"])
+            active = json.loads(request.form["active"])
+            self.layers[session_id]["slide"].post_proc.color_dict = channels
+            self.layers[session_id]["slide"].post_proc.channels = active
+            self.layers[session_id]["slide"].post_proc.is_validated = False
+        return "done"
+
+    def set_enhance(self: TileServer) -> str:
+        """Set the enhance factor of the slide."""
+        session_id = self._get_session_id()
+        enhance = json.loads(request.form["val"])
+        if isinstance(self.layers[session_id]["slide"].post_proc, MultichannelToRGB):
+            self.layers[session_id]["slide"].post_proc.enhance = enhance
+        return "done"
+
+    def sessions(self: TileServer) -> Response:
+        """Retrieve a mapping of session keys to their corresponding slide file paths.
+
+        Returns:
+            Response:
+                A JSON response containing a mapping of session keys
+                and their respective slide file paths.
+
+        """
+        session_paths = {}
+        for key, layer in self.layers.items():
+            slide = layer.get("slide")
+            if slide is not None:
+                session_paths[key] = str(slide.info.as_dict().get("file_path", ""))
+        return jsonify(session_paths)
+
+    @staticmethod
+    def healthcheck() -> Response:
+        """Simple health check endpoint to verify the server is running.
+
+        Useful for load balancers or uptime monitoring tools to check
+        if the service is operational.
+
+        Returns:
+            Response:
+                A JSON response with status "OK" and HTTP status code 200.
+
+        """
+        return jsonify({"status": "OK"})
 
     @staticmethod
     def shutdown() -> None:

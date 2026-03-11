@@ -3,6 +3,9 @@
 
 name: Python package
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [ develop, pre-release, master, main ]
@@ -17,23 +20,24 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
+        sudo apt-get install -y libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-        python -m pip install ruff==0.8.2 pytest pytest-cov pytest-runner
+        python -m pip install ruff==0.15.4 pytest pytest-cov pytest-runner
+        pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
         pip install -r requirements/requirements.txt
     - name: Cache tiatoolbox static assets
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         key: tiatoolbox-home-static
         path: ~/.tiatoolbox
@@ -42,8 +46,6 @@ jobs:
         echo "---SQlite---"
         sqlite3 --version
         sqlite3 ":memory:" -list ".output stdout" "pragma compile_options" ".exit"
-        echo "---Openslide---"
-        openslide-quickhash1sum --version
         echo "---OpenJPEG---"
         opj_dump -h | head -n 5
         echo "---Python---"
@@ -78,6 +80,17 @@ jobs:
         coverage-file: coverage.xml
         dsn: ${{ secrets.DEEPSOURCE_DSN }}
         fail-ci-on-error: false
+    - name: List tiatoolbox contents
+      run: ls -lahR ~/.tiatoolbox
+    - name: Delete Hugging Face cache for large models
+      run: |
+        find ~/.tiatoolbox/models -type f -size +250M -exec bash -c '
+          for model_path; do
+            model_name=$(basename "$model_path")
+            cache_dir="$HOME/.tiatoolbox/models/.cache/huggingface/download"
+            rm -vf "$cache_dir/${model_name}.lock" "$cache_dir/${model_name}.metadata"
+          done
+          ' bash {} +
 
   release:
     runs-on: ubuntu-24.04
@@ -86,10 +99,10 @@ jobs:
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/pre-release' || startsWith(github.ref, 'refs/tags/v')
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Set up Python 3.10
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: '3.10'
         cache: 'pip'
@@ -98,6 +111,7 @@ jobs:
       run: |
         sudo apt-get install -y libopenslide-dev libopenjp2-7
         python -m pip install --upgrade pip
+        pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
         pip install -r requirements/requirements.txt
         pip install build
     - name: Build package

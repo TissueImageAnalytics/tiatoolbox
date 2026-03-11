@@ -1,6 +1,6 @@
 """Unit test package for HoVerNet+."""
 
-from typing import Callable
+from collections.abc import Callable
 
 import torch
 
@@ -32,6 +32,6 @@ def test_functionality(remote_sample: Callable) -> None:
     output = model.infer_batch(model, batch, device=select_device(on_gpu=False))
     assert len(output) == 4, "Must contain predictions for: np, hv, tp and ls branches."
     output = [v[0] for v in output]
-    output = model.postproc(output)
-    assert len(output[1]) > 0, "Must have some nuclei."
-    assert len(output[3]) > 0, "Must have some layers."
+    output = model.postproc(output, offset=(0, 0))
+    assert len(output[0]["info_dict"]) > 0, "Must have some nuclei."
+    assert len(output[1]["info_dict"]) > 0, "Must have some layers."

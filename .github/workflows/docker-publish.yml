@@ -6,7 +6,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: TissueImageAnalytics/tiatoolbox
   image: ghcr.io/tissueimageanalytics/tiatoolbox
-  TOOLBOX_VER: 1.6.0
+  TOOLBOX_VER: 2.0.0
 
 jobs:
   build-and-push-image:
@@ -15,10 +15,6 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - dockerfile: ./docker/3.9/Debian/Dockerfile
-            mtag: py3.9-debian
-          - dockerfile: ./docker/3.9/Ubuntu/Dockerfile
-            mtag: py3.9-ubuntu
           - dockerfile: ./docker/3.10/Debian/Dockerfile
             mtag: py3.10-debian
           - dockerfile: ./docker/3.10/Ubuntu/Dockerfile
@@ -31,7 +27,11 @@ jobs:
             mtag: py3.12-debian
           - dockerfile: ./docker/3.12/Ubuntu/Dockerfile
             mtag: py3.12-ubuntu
-          - dockerfile: ./docker/3.12/Ubuntu/Dockerfile
+          - dockerfile: ./docker/3.13/Ubuntu/Dockerfile
+            mtag: py3.13-debian
+          - dockerfile: ./docker/3.13/Ubuntu/Dockerfile
+            mtag: py3.13-ubuntu
+          - dockerfile: ./docker/3.13/Ubuntu/Dockerfile
             mtag: latest
     permissions:
       contents: read

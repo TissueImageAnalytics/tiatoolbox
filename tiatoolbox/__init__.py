@@ -15,8 +15,8 @@ if TYPE_CHECKING:  # pragma: no cover
     from types import ModuleType
 
 __author__ = """TIA Centre"""
-__email__ = "tialab@dcs.warwick.ac.uk"
-__version__ = "1.6.0"
+__email__ = "TIA@warwick.ac.uk"
+__version__ = "2.0.0"
 
 # This will set the tiatoolbox external data
 # default to be the user home folder, should work on both Window and Unix/Linux

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, cast
 
 import cv2
 import numpy as np
@@ -24,7 +24,9 @@ from tiatoolbox.utils.transforms import imresize
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.typing import IntBounds, Resolution, Units
+    from collections.abc import Callable
+
+    from tiatoolbox.type_hints import IntBounds, Resolution, Units
 
 RGB_IMAGE_DIM = 3
 BIN_MASK_DIM = 2
@@ -338,11 +340,16 @@ class DFBRFeatureExtractor(torch.nn.Module):
         super().__init__()
         output_layers_id: list[str] = ["16", "23", "30"]
         output_layers_key: list[str] = ["block3_pool", "block4_pool", "block5_pool"]
-        self.features: dict = dict.fromkeys(output_layers_key, None)
-        self.pretrained: torch.nn.Sequential = compile_model(
+        self.features: dict[str, torch.Tensor] = dict.fromkeys(
+            output_layers_key, torch.Tensor()
+        )
+
+        compiled_model = compile_model(
             torchvision.models.vgg16(weights=VGG16_Weights.IMAGENET1K_V1),
             mode=rcParam["torch_compile_mode"],
-        ).features
+        )
+        self.pretrained = cast("torch.nn.Module", compiled_model.features)
+
         self.f_hooks = [
             getattr(self.pretrained, layer).register_forward_hook(
                 self.forward_hook(output_layers_key[i]),
@@ -350,7 +357,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
             for i, layer in enumerate(output_layers_id)
         ]
 
-    def forward_hook(self: torch.nn.Module, layer_name: str) -> Callable:
+    def forward_hook(self: DFBRFeatureExtractor, layer_name: str) -> Callable:
         """Register a hook.
 
         Args:
@@ -386,7 +393,7 @@ class DFBRFeatureExtractor(torch.nn.Module):
 
         return hook
 
-    def forward(self: torch.nn.Module, x: torch.Tensor) -> dict[str, torch.Tensor]:
+    def forward(self: DFBRFeatureExtractor, x: torch.Tensor) -> dict[str, torch.Tensor]:
         """Forward pass for feature extraction.
 
         Args:
@@ -791,13 +798,13 @@ class DFBRegister:
                 Indices of points enclosed by a boundary.
 
         """
-        kernel = np.ones((25, 25), np.uint8)
+        kernel: np.ndarray = np.ones((25, 25), np.uint8)
         mask = cv2.dilate(mask, kernel, iterations=1)
         mask_reader = VirtualWSIReader(mask)
 
         # convert coordinates of shape [N, 2] to [N, 4]
-        end_x_y = points[:, 0:2] + 1
-        bbox_coord = np.c_[points, end_x_y].astype(int)
+        end_x_y: np.ndarray = points[:, 0:2] + 1
+        bbox_coord: np.ndarray = np.c_[points, end_x_y].astype(int)
         return PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_coord,
@@ -1377,11 +1384,14 @@ def estimate_bspline_transform(
         for size, spacing in zip(
             fixed_image_inv_sitk.GetSize(),
             fixed_image_inv_sitk.GetSpacing(),
+            strict=False,
         )
     ]
     mesh_size = [
         int(image_size / grid_spacing + 0.5)
-        for image_size, grid_spacing in zip(image_physical_size, grid_physical_spacing)
+        for image_size, grid_spacing in zip(
+            image_physical_size, grid_physical_spacing, strict=False
+        )
     ]
     mesh_size = [int(sz / 4 + 0.5) for sz in mesh_size]
 

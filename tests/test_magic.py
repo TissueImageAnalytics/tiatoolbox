@@ -2,27 +2,28 @@
 
 import sqlite3
 import zipfile
+from collections.abc import Callable
 from io import BytesIO
 from pathlib import Path
-from typing import BinaryIO, Callable
+from typing import BinaryIO
 
 import pytest
 
 from tiatoolbox.utils.magic import _normalize_binaryio, is_dcm, is_sqlite3, is_zip
 
 
-def test_is_sqlite3(tmp_path: Path) -> None:
+def test_is_sqlite3(track_tmp_path: Path) -> None:
     """Create a dummy sqlite database and use tiatoolbox.magic.is_sqlite3()."""
-    db = sqlite3.connect(tmp_path / "test.db")
+    db = sqlite3.connect(track_tmp_path / "test.db")
     db.execute("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT);")
     db.execute("INSERT INTO test (name) VALUES ('test');")
     db.commit()
     db.close()
 
-    (tmp_path / "test.txt").write_text("test")
+    (track_tmp_path / "test.txt").write_text("test")
 
-    assert is_sqlite3(tmp_path / "test.db")
-    assert not is_sqlite3(tmp_path / "test.txt")
+    assert is_sqlite3(track_tmp_path / "test.db")
+    assert not is_sqlite3(track_tmp_path / "test.txt")
 
 
 def test_is_dcm(remote_sample: Callable) -> None:
@@ -32,14 +33,14 @@ def test_is_dcm(remote_sample: Callable) -> None:
         assert is_dcm(subpath)
 
 
-def test_is_zip(tmp_path: Path) -> None:
+def test_is_zip(track_tmp_path: Path) -> None:
     """Create a dummy zip file and use tiatoolbox.magic.is_zip()."""
-    (tmp_path / "test.txt").write_text("test")
-    with zipfile.ZipFile(tmp_path / "test.zip", "w") as zf:
-        zf.write(tmp_path / "test.txt")
+    (track_tmp_path / "test.txt").write_text("test")
+    with zipfile.ZipFile(track_tmp_path / "test.zip", "w") as zf:
+        zf.write(track_tmp_path / "test.txt")
 
-    assert is_zip(tmp_path / "test.zip")
-    assert not is_zip(tmp_path / "test.txt")
+    assert is_zip(track_tmp_path / "test.zip")
+    assert not is_zip(track_tmp_path / "test.txt")
 
 
 def test_normalize_must_exist() -> None:
@@ -70,24 +71,24 @@ def test_normalize_type_error() -> None:
         _normalize_binaryio(1, must_exist=False)
 
 
-def test_normalize_non_existent(tmp_path: Path) -> None:
+def test_normalize_non_existent(track_tmp_path: Path) -> None:
     """Test that _normalize_binaryio() returns empty BinaryIO for non-existant file."""
     assert isinstance(
-        _normalize_binaryio(tmp_path / "foo", must_exist=False),
+        _normalize_binaryio(track_tmp_path / "foo", must_exist=False),
         (BytesIO, BinaryIO),
     )
 
 
-def test_is_sqlite3_dir(tmp_path: Path) -> None:
+def test_is_sqlite3_dir(track_tmp_path: Path) -> None:
     """Test that is_sqlite3() returns False for directories."""
-    assert not is_sqlite3(tmp_path)
+    assert not is_sqlite3(track_tmp_path)
 
 
-def test_is_dcm_dir(tmp_path: Path) -> None:
+def test_is_dcm_dir(track_tmp_path: Path) -> None:
     """Test that is_dcm() returns False for directories."""
-    assert not is_dcm(tmp_path)
+    assert not is_dcm(track_tmp_path)
 
 
-def test_is_zip_dir(tmp_path: Path) -> None:
+def test_is_zip_dir(track_tmp_path: Path) -> None:
     """Test that is_zip() returns False for directories."""
-    assert not is_zip(tmp_path)
+    assert not is_zip(track_tmp_path)

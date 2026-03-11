@@ -1,6 +1,8 @@
 # This workflow will perform code type checking using mypy
 
 name: mypy type checking
+permissions:
+  contents: read
 
 on:
   push:
@@ -16,7 +18,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
 
@@ -33,6 +35,7 @@ jobs:
         sudo apt update
         sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
+        pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
         pip install -r requirements/requirements_dev.txt
 
     - name: Perform type checking
@@ -40,10 +43,17 @@ jobs:
         mypy --install-types --non-interactive --follow-imports=skip \
           tiatoolbox/__init__.py \
           tiatoolbox/__main__.py \
-          tiatoolbox/typing.py \
+          tiatoolbox/type_hints.py \
           tiatoolbox/tiatoolbox.py \
           tiatoolbox/utils \
           tiatoolbox/tools \
           tiatoolbox/data \
           tiatoolbox/annotation \
-          tiatoolbox/cli/common.py
+          tiatoolbox/cli/common.py \
+          tiatoolbox/models/__init__.py \
+          tiatoolbox/models/models_abc.py \
+          tiatoolbox/models/architecture/__init__.py \
+          tiatoolbox/models/architecture/utils.py \
+          tiatoolbox/wsicore/__init__.py \
+          tiatoolbox/wsicore/wsimeta.py \
+          tiatoolbox/wsicore/metadata/

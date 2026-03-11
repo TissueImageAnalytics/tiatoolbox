@@ -4,34 +4,44 @@ from __future__ import annotations
 
 import copy
 import json
+import multiprocessing
 import shutil
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import IO, TYPE_CHECKING
+from typing import IO, TYPE_CHECKING, cast
 
 import cv2
+import dask.array as da
 import joblib
-import numcodecs
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import psutil
 import requests
+import tifffile
 import yaml
 import zarr
+from dask import compute
 from filelock import FileLock
 from shapely.affinity import translate
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, mapping
 from shapely.geometry import shape as feature2geometry
 from skimage import exposure
+from tqdm.auto import tqdm, trange
+from tqdm.dask import TqdmCallback
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Iterable, Iterator
     from os import PathLike
 
     from shapely import geometry
+
+    from tiatoolbox.type_hints import JSON
 
 
 def split_path_name_ext(
@@ -159,8 +169,8 @@ def imwrite(image_path: PathLike, img: np.ndarray) -> None:
         raise OSError(msg)
 
 
-def imread(image_path: PathLike, as_uint8: bool | None = None) -> np.ndarray:
-    """Read an image as numpy array.
+def imread(image_path: PathLike, *, as_uint8: bool | None = None) -> np.ndarray:
+    """Read an image as :class:`numpy.ndarray`.
 
     Args:
         image_path (PathLike):
@@ -220,8 +230,7 @@ def load_stain_matrix(stain_matrix_input: np.ndarray | PathLike) -> np.ndarray:
         _, __, suffixes = split_path_name_ext(stain_matrix_input)
         if suffixes[-1] not in [".csv", ".npy"]:
             msg = (
-                "If supplying a path to a stain matrix, "
-                "use either a npy or a csv file"
+                "If supplying a path to a stain matrix, use either a npy or a csv file"
             )
             raise FileNotSupportedError(
                 msg,
@@ -330,7 +339,7 @@ mpp2common_objective_power = np.vectorize(
 
 @np.vectorize
 def objective_power2mpp(
-    objective_power: float | tuple[float, ...],
+    objective_power: float | tuple[float, ...] | np.ndarray,
 ) -> float | np.ndarray:
     r"""Approximate mpp from objective power.
 
@@ -713,7 +722,7 @@ def download_data(
 
     with FileLock(lock_path):
         if not overwrite and save_path.exists():
-            pass  # file was downloaded by another process
+            pass  # pragma: no cover - file was downloaded by another process
         else:
             # Start the connection with a 5-second timeout
             # to avoid hanging indefinitely.
@@ -1202,19 +1211,463 @@ def add_from_dat(
     store.append_many(anns)
 
 
-def dict_to_store(
-    patch_output: dict,
-    scale_factor: tuple[int, int],
-    class_dict: dict | None = None,
-    save_path: Path | None = None,
-) -> AnnotationStore | Path:
-    """Converts (and optionally saves) output of TIAToolbox engines as AnnotationStore.
+def patch_predictions_as_annotations(
+    preds: list | np.ndarray,
+    keys: list,
+    class_dict: dict,
+    class_probs: list | np.ndarray,
+    patch_coords: list | np.ndarray,
+    classes_predicted: list,
+    labels: list,
+    *,
+    verbose: bool = True,
+) -> list:
+    """Helper function to generate annotation per patch predictions."""
+    annotations = []
+    tqdm_loop = tqdm(
+        patch_coords,
+        leave=False,
+        desc="Converting outputs to AnnotationStore.",
+        disable=not verbose,
+    )
+
+    for i, _ in enumerate(tqdm_loop):
+        if "probabilities" in keys:
+            props = {
+                f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
+            }
+        else:
+            props = {}
+        if "labels" in keys:
+            props["label"] = class_dict[labels[i]]
+        if len(preds) > 0:
+            props["type"] = class_dict[preds[i]]
+        annotations.append(Annotation(Polygon.from_bounds(*patch_coords[i]), props))
+
+    return annotations
+
+
+def patch_predictions_as_qupath_json(
+    preds: list | np.ndarray,
+    class_dict: dict,
+    patch_coords: list | np.ndarray,
+    *,
+    verbose: bool = True,
+) -> dict:
+    """Helper function to generate QuPath JSON per patch predictions."""
+    features = []
+    # pick a color for each class based on the class index, using a colormap
+    num_classes = len(class_dict)
+    cmap = plt.cm.get_cmap("tab20", num_classes)
+    class_colours = {
+        class_idx: [
+            int(cmap(class_idx)[0] * 255),
+            int(cmap(class_idx)[1] * 255),
+            int(cmap(class_idx)[2] * 255),
+        ]
+        for class_idx in class_dict
+    }
+
+    tqdm_loop = tqdm(
+        range(np.asarray(patch_coords).shape[0]),
+        leave=False,
+        desc="Converting outputs to QuPath JSON.",
+        disable=not verbose,
+    )
+
+    for i in tqdm_loop:
+        class_idx = int(preds[i])
+        class_name = class_dict[class_idx]
+        polygon_geo = Polygon.from_bounds(*patch_coords[i])
+        polygon_feat = mapping(polygon_geo)
+
+        feature = {
+            "type": "Feature",
+            "id": f"patch_{i}",
+            "geometry": polygon_feat,
+            "properties": {
+                "classification": {
+                    "name": class_name,
+                    "color": class_colours[class_idx],
+                }
+            },
+            "objectType": "annotation",
+            "name": class_name,
+            "class_value": class_idx,
+        }
+
+        features.append(feature)
+
+    return {"type": "FeatureCollection", "features": features}
+
+
+def get_zarr_array(zarr_array: zarr.core.Array | np.ndarray | list) -> np.ndarray:
+    """Converts a zarr array into a numpy array."""
+    if isinstance(zarr_array, zarr.core.Array):
+        return zarr_array[:]
+
+    return np.array(zarr_array).astype(float)
+
+
+def process_contours(
+    contours: list[np.ndarray],
+    hierarchy: np.ndarray,
+    scale_factor: tuple[float, float] = (1, 1),
+    offset: np.ndarray | None = None,
+    properties: dict[str, JSON] | None = None,
+) -> list[Annotation]:
+    """Process contours and hierarchy to create annotations.
 
     Args:
-        patch_output (dict):
-            A dictionary in the TIAToolbox Engines output format. Important
-            keys are "probabilities", "predictions", "coordinates", and "labels".
-        scale_factor (tuple[int, int]):
+        contours (list[np.ndarray]):
+            A list of contours.
+        hierarchy (list[np.ndarray]):
+            A list of hierarchy.
+        scale_factor (tuple[float, float]):
+            The scale factor to use when loading the annotations.
+        offset (np.ndarray | None):
+            Optional offset to be added to the coordinates of the annotations.
+        properties (dict | None):
+            Optional properties to include with each annotation type.
+
+    Returns:
+        list:
+            A list of annotations.
+
+    """
+    annotations_list: list[Annotation] = []
+    outer_contours: dict[int, np.ndarray] = {}
+    holes_dict: dict[int, list[np.ndarray]] = {}
+    base_props: dict[str, JSON] = {"type": "mask"}
+    if properties:
+        base_props.update(properties)
+
+    for i, layer_ in enumerate(contours):
+        coords: np.ndarray = layer_.squeeze()
+        scaled_coords: np.ndarray = np.array([np.array(scale_factor) * coords])
+        if offset is not None:
+            scaled_coords += offset
+
+        # save one points as a line, otherwise save the Polygon
+        if len(layer_) > 2:  # noqa: PLR2004
+            if int(hierarchy[0][i][3]) == -1:  # Outer contour
+                outer_contours[i] = scaled_coords[0]
+            else:  # Hole
+                parent_idx: int = int(hierarchy[0][i][3])
+                if parent_idx not in holes_dict:
+                    holes_dict[parent_idx] = []
+                holes_dict[parent_idx].append(scaled_coords[0])
+        # if two points, save as a line string
+        elif len(layer_) == 2:  # noqa: PLR2004
+            feature_geom = feature2geometry(
+                {
+                    "type": "linestring",
+                    "coordinates": scaled_coords[0],
+                },
+            )
+            annotations_list.extend(
+                [
+                    Annotation(
+                        geometry=feature_geom,
+                        properties=base_props,
+                    )
+                ]
+            )
+        # if single point, save it is a point
+        else:
+            feature_geom = feature2geometry(
+                {
+                    "type": "point",
+                    "coordinates": scaled_coords,
+                },
+            )
+            annotations_list.extend(
+                [
+                    Annotation(
+                        geometry=feature_geom,
+                        properties=base_props,
+                    )
+                ]
+            )
+
+    for idx, outer in outer_contours.items():
+        holes: list[np.ndarray] = holes_dict.get(idx, [])
+        if len(holes) != 0:
+            feature_geom = feature2geometry(
+                {
+                    "type": "Polygon",
+                    "coordinates": [outer, *holes],
+                },
+            )
+        else:
+            feature_geom = feature2geometry(
+                {
+                    "type": "Polygon",
+                    "coordinates": [outer],
+                },
+            )
+        feature_geom = make_valid_poly(feature_geom)
+        annotations_list.extend(
+            [
+                Annotation(
+                    geometry=feature_geom,
+                    properties=base_props,
+                )
+            ]
+        )
+
+    return annotations_list
+
+
+def dict_to_store_semantic_segmentor(
+    patch_output: dict | zarr.Group,
+    scale_factor: tuple[float, float],
+    output_type: str,
+    class_dict: dict | None = None,
+    save_path: Path | None = None,
+    offset: np.ndarray | None = None,
+    *,
+    ignore_index: int | None = None,
+    verbose: bool = True,
+) -> AnnotationStore | dict | Path:
+    """Converts output of TIAToolbox SemanticSegmentor engine to AnnotationStore.
+
+    Args:
+        patch_output (dict | zarr.Group):
+            A dictionary with "probabilities", "predictions", and "labels" keys.
+        scale_factor (tuple[float, float]):
+            The scale factor to use when loading the
+            annotations. All coordinates will be multiplied by this factor to allow
+            conversion of annotations saved at non-baseline resolution to baseline.
+            Should be model_mpp/slide_mpp.
+        output_type (str):
+            "annotationstore" → return AnnotationStore
+            "qupath" → return QuPath JSON dict
+        class_dict (dict):
+            Optional dictionary mapping class indices to class names.
+        save_path (str or Path):
+            Optional Output directory to save the Annotation
+            Store results.
+        offset (np.ndarray | None):
+            Optional offset to be added to the coordinates of the annotations.
+        ignore_index (int | None):
+            Any index to ignore in the layer list. e.g., background.
+            Defaults to 0 (background). If None, all the layers are saved to
+            the annotationstore or JSON file.
+        verbose (bool):
+            Whether to display logs and progress bar.
+
+    Returns:
+        (SQLiteStore or Path):
+            An SQLiteStore containing Annotations for each patch
+            or Path to file storing SQLiteStore containing Annotations
+            for each patch.
+
+    """
+    preds = da.from_array(patch_output["predictions"], chunks="auto")
+
+    ignore_index = -1 if ignore_index is None else ignore_index
+    # Get the number of unique predictions
+    layer_list = da.unique(preds).compute()
+    layer_list = np.delete(layer_list, np.where(layer_list == ignore_index))
+
+    if class_dict is None:
+        class_dict = {int(i): int(i) for i in layer_list.tolist()}
+
+    if output_type.lower() == "qupath":
+        return _semantic_segmentations_as_qupath_json(
+            layer_list=layer_list,
+            preds=preds,
+            scale_factor=scale_factor,
+            class_dict=class_dict,
+            save_path=save_path,
+            verbose=verbose,
+        )
+
+    return _semantic_segmentations_as_annotations(
+        layer_list=layer_list,
+        preds=preds,
+        scale_factor=scale_factor,
+        class_dict=class_dict,
+        save_path=save_path,
+        offset=offset,
+        verbose=verbose,
+    )
+
+
+def _semantic_segmentations_as_qupath_json(
+    layer_list: list,
+    preds: da.Array,
+    scale_factor: tuple[float, float],
+    class_dict: dict,
+    save_path: Path | None = None,
+    *,
+    verbose: bool = True,
+) -> dict | Path:
+    """Helper function to save semantic segmentation as QuPath json."""
+    features: list = []
+
+    # color map for classes
+    num_classes = len(class_dict)
+    cmap = plt.cm.get_cmap("tab20", num_classes)
+    class_colours = {
+        class_idx: [
+            int(cmap(class_idx)[0] * 255),
+            int(cmap(class_idx)[1] * 255),
+            int(cmap(class_idx)[2] * 255),
+        ]
+        for class_idx in class_dict
+    }
+
+    tqdm_loop = tqdm(
+        layer_list,
+        leave=False,
+        desc="Converting outputs to QuPath JSON.",
+        disable=not verbose,
+    )
+
+    for type_class in tqdm_loop:
+        class_id = int(type_class)
+        class_label = class_dict[class_id]
+
+        # binary mask for this class
+        layer = da.where(preds == type_class, 1, 0).astype("uint8").compute()
+
+        contours, _ = cv2.findContours(layer, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+
+        contours = cast("list[np.ndarray]", contours)
+
+        # Convert contours to polygons
+        for cnt in contours:
+            if cnt.shape[0] < 3:  # noqa: PLR2004
+                continue
+
+            # scale coordinates
+            cnt_scaled: np.ndarray = cnt.squeeze(1).astype(float)
+            cnt_scaled[:, 0] *= scale_factor[0]
+            cnt_scaled[:, 1] *= scale_factor[1]
+
+            poly = Polygon(cnt_scaled)
+            poly_geo = mapping(poly)
+
+            feature = {
+                "type": "Feature",
+                "geometry": poly_geo,
+                "id": f"class_{class_id}_{len(features)}",
+                "properties": {
+                    "classification": {
+                        "name": class_label,
+                        "color": class_colours[class_id],
+                    }
+                },
+                "objectType": "annotation",
+                "name": class_label,
+                "class_value": class_id,
+            }
+
+            features.append(feature)
+
+    qupath_json = {"type": "FeatureCollection", "features": features}
+
+    # if a save directory is provided, then dump JSON into a file
+    if save_path:
+        return save_qupath_json(save_path=save_path, qupath_json=qupath_json)
+
+    return qupath_json
+
+
+def _semantic_segmentations_as_annotations(
+    layer_list: list,
+    preds: da.Array,
+    scale_factor: tuple[float, float],
+    class_dict: dict,
+    save_path: Path | None = None,
+    offset: np.ndarray | None = None,
+    *,
+    verbose: bool = True,
+) -> AnnotationStore | Path:
+    """Helper function to save semantic segmentation as annotations."""
+    store = SQLiteStore()
+    annotations_list: list[Annotation] = []
+
+    tqdm_loop = tqdm(
+        layer_list,
+        leave=False,
+        desc="Converting outputs to AnnotationStore.",
+        disable=not verbose,
+    )
+
+    for type_class in tqdm_loop:
+        class_id = int(type_class)
+        class_label = class_dict.get(class_id, class_id)
+        layer = da.where(preds == type_class, 1, 0).astype("uint8").compute()
+        contours, hierarchy = cv2.findContours(
+            layer,
+            cv2.RETR_CCOMP,
+            cv2.CHAIN_APPROX_NONE,
+        )
+
+        contours = cast("list[np.ndarray]", contours)
+
+        annotations_list_ = process_contours(
+            contours=contours,
+            hierarchy=hierarchy,
+            scale_factor=scale_factor,
+            offset=offset,
+            properties={"type": class_label, "class": class_id},
+        )
+        annotations_list.extend(annotations_list_)
+
+    _ = store.append_many(
+        annotations_list, [str(i) for i in range(len(annotations_list))]
+    )
+
+    # # if a save directory is provided, then dump store into a file
+    if save_path:
+        return save_annotations(
+            save_path=save_path,
+            store=store,
+        )
+
+    return store
+
+
+def save_annotations(
+    save_path: Path,
+    store: AnnotationStore,
+) -> Path:
+    """Saves Annotation Store to disk."""
+    # ensure proper db extension
+    save_path = save_path.parent.absolute() / (save_path.stem + ".db")
+    store.commit()
+    store.dump(save_path)
+    return save_path
+
+
+def save_qupath_json(save_path: Path, qupath_json: dict) -> Path:
+    """Saves QuPath JSON to disk."""
+    save_path = save_path.with_suffix(".json")
+    with Path.open(save_path, "w") as f:
+        json.dump(qupath_json, f, indent=2)
+    return save_path
+
+
+def dict_to_store_patch_predictions(
+    patch_output: dict | zarr.group,
+    scale_factor: tuple[float, float],
+    class_dict: dict | None = None,
+    save_path: Path | None = None,
+    output_type: str = "AnnotationStore",
+    *,
+    verbose: bool = True,
+) -> AnnotationStore | dict | Path:
+    """Converts output of the PatchPredictor engine to AnnotationStore or QuPath json.
+
+    Args:
+        patch_output (dict | zarr.Group):
+            A dictionary with "probabilities", "predictions", "coordinates",
+            and "labels" keys.
+        scale_factor (tuple[float, float]):
             The scale factor to use when loading the
             annotations. All coordinates will be multiplied by this factor to allow
             conversion of annotations saved at non-baseline resolution to baseline.
@@ -1224,6 +1677,11 @@ def dict_to_store(
         save_path (str or Path):
             Optional Output directory to save the Annotation
             Store results.
+        output_type (str):
+            "AnnotationStore" → return AnnotationStore
+            "QuPath" → return QuPath JSON dict
+        verbose (bool):
+            Whether to display logs and progress bar.
 
     Returns:
         (SQLiteStore or Path):
@@ -1236,92 +1694,357 @@ def dict_to_store(
         # we cant create annotations without coordinates
         msg = "Patch output must contain coordinates."
         raise ValueError(msg)
+
     # get relevant keys
-    class_probs = patch_output.get("probabilities", [])
-    preds = patch_output.get("predictions", [])
+    class_probs = get_zarr_array(patch_output.get("probabilities", []))
+    preds = get_zarr_array(patch_output.get("predictions", []))
     patch_coords = np.array(patch_output.get("coordinates", []))
+
+    # Scale coordinates
     if not np.all(np.array(scale_factor) == 1):
         patch_coords = patch_coords * (np.tile(scale_factor, 2))  # to baseline mpp
+
     labels = patch_output.get("labels", [])
-    # get classes to consider
+
+    # Determine classes
     if len(class_probs) == 0:
         classes_predicted = np.unique(preds).tolist()
     else:
         classes_predicted = range(len(class_probs[0]))
+
     if class_dict is None:
         # if no class dict create a default one
-        class_dict = {i: i for i in np.unique(preds + labels).tolist()}
+        if len(class_probs) == 0:
+            class_dict = {i: i for i in np.unique(np.append(preds, labels)).tolist()}
+        else:
+            class_dict = {i: i for i in range(len(class_probs[0]))}
 
-    # find what keys we need to save
+    # Keys to save
     keys = ["predictions"]
     keys = keys + [key for key in ["probabilities", "labels"] if key in patch_output]
 
+    if output_type.lower() == "qupath":
+        qupath_json = patch_predictions_as_qupath_json(
+            preds=preds,
+            class_dict=class_dict,
+            patch_coords=patch_coords,
+            verbose=verbose,
+        )
+
+        if save_path:
+            return save_qupath_json(save_path=save_path, qupath_json=qupath_json)
+
+        return qupath_json
+
     # put patch predictions into a store
-    annotations = []
-    for i, pred in enumerate(preds):
-        if "probabilities" in keys:
-            props = {
-                f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
-            }
-        else:
-            props = {}
-        if "labels" in keys:
-            props["label"] = class_dict[labels[i]]
-        props["type"] = class_dict[pred]
-        annotations.append(Annotation(Polygon.from_bounds(*patch_coords[i]), props))
+    annotations_ = patch_predictions_as_annotations(
+        preds.astype(float),
+        keys,
+        class_dict,
+        class_probs.astype(float),
+        patch_coords.astype(float),
+        classes_predicted,
+        labels,
+        verbose=verbose,
+    )
+
     store = SQLiteStore()
-    keys = store.append_many(annotations, [str(i) for i in range(len(annotations))])
+    _ = store.append_many(annotations_, [str(i) for i in range(len(annotations_))])
 
     # if a save director is provided, then dump store into a file
     if save_path:
-        # ensure parent directory exisits
-        save_path.parent.absolute().mkdir(parents=True, exist_ok=True)
-        # ensure proper db extension
-        save_path = save_path.parent.absolute() / (save_path.stem + ".db")
-        store.dump(save_path)
-        return save_path
+        return save_annotations(
+            save_path=save_path,
+            store=store,
+        )
 
     return store
 
 
-def dict_to_zarr(
-    raw_predictions: dict,
-    save_path: Path,
-    **kwargs: dict,
-) -> Path:
-    """Saves the output of TIAToolbox engines to a zarr file.
+def _tiles(
+    in_img: np.ndarray | zarr.core.Array,
+    tile_size: tuple[int, int],
+    colormap: int = cv2.COLORMAP_JET,
+    level: int = 0,
+) -> Iterator[np.ndarray]:
+    """Generate color-mapped tiles from an input image or Zarr array.
 
-    Args:
-        raw_predictions (dict):
-            A dictionary in the TIAToolbox Engines output format.
-        save_path (str or Path):
-            Path to save the zarr file.
-        **kwargs (dict):
-            Keyword Args to update patch_pred_store_zarr attributes.
+    This function iterates over the input image in non-overlapping tiles of the
+    specified size, optionally downsampling by a power-of-two factor (`level`),
+    and applies a colormap to each tile before yielding it.
 
+    Parameters:
+        in_img (np.ndarray | zarr.core.Array):
+            Input image or Zarr array to be tiled.
+        tile_size (tuple[int, int]):
+            Height and width of each tile.
+        colormap (int, optional):
+            OpenCV colormap to apply to each tile. Defaults to cv2.COLORMAP_JET.
+        level (int, optional):
+            Downsampling factor as a power of two. Defaults to 0 (no downsampling).
 
-    Returns:
-        Path to zarr file storing the patch predictor output
+    Yields:
+        np.ndarray:
+            A color-mapped tile extracted from the input image.
 
     """
-    # Default values for Compressor and Chunks set if not received from kwargs.
-    compressor = (
-        kwargs["compressor"] if "compressor" in kwargs else numcodecs.Zstd(level=1)
-    )
-    chunks = kwargs.get("chunks", 10000)
+    for y in trange(0, in_img.shape[0], tile_size[0]):
+        for x in range(0, in_img.shape[1], tile_size[1]):
+            in_img_ = in_img[
+                y : y + tile_size[0] : 2**level, x : x + tile_size[1] : 2**level
+            ]
+            yield cv2.applyColorMap(in_img_, colormap)
 
-    # ensure proper zarr extension
-    save_path = save_path.parent.absolute() / (save_path.stem + ".zarr")
 
-    # save to zarr
-    predictions_array = np.array(raw_predictions["predictions"])
-    z = zarr.open(
-        save_path,
-        mode="w",
-        shape=predictions_array.shape,
+def write_probability_heatmap_as_ome_tiff(
+    image_path: Path,
+    probability: np.ndarray | zarr.core.Array,
+    tile_size: tuple[int, int] = (64, 64),
+    levels: int = 2,
+    mpp: tuple[float, float] = (0.25, 0.25),
+    colormap: int = cv2.COLORMAP_JET,
+) -> None:
+    """Saves output probability maps from segmentation models as heatmaps.
+
+    This function converts the probability maps from individual classes to heatmaps
+    and saves them as pyramidal ome tiffs.
+
+    Args:
+        image_path (Path):
+            File path (including extension) to save image to.
+        probability (np.ndarray or zarr.core.Array):
+            The input image data in YXC (Height, Width, Channels) format.
+        tile_size (tuple):
+            Tile/Chunk size (YX/HW) for writing the tiff file.
+            Only allows tile shapes allowed by tifffile. Default is (64, 64).
+        levels (int):
+            Number of levels for saving pyramidal ome tiffs. Default is 2.
+        mpp (tuple[float, float]):
+            Tuple of mpp values in y and x (YX/HW). Default is (0.25, 0.25).
+        colormap (int):
+            Colormap to save the heatmaps. Default is 2 (cv2.COLORMAP_JET).
+
+    Raises:
+        TypeError:
+            If the input `img` is not a NumPy or Zarr array or does not have 3
+            dimensions.
+        ValueError:
+            If input dimensions is not 3 (HWC) dimensions.
+
+    Examples:
+        >>> probability_map = imread("path/to/probability_map")
+        >>> write_probability_heatmap_as_ome_tiff(
+        ... image_path=image_path,
+        ... probability=probability_map,
+        ... tile_size=(64, 64),
+        ... class_name="tumor",
+        ... levels=2,
+        ... mpp=(0.5, 0.5),
+        ... colormap=cv2.COLORMAP_JET,
+        ... )
+
+    """
+    if not isinstance(probability, (zarr.core.Array, np.ndarray)):
+        msg = "Input 'probability' must be a NumPy array or a Zarr array."
+        raise TypeError(msg)
+
+    if probability.ndim != 2:  # noqa: PLR2004
+        msg = "Input 'probability' must have 2 (YX) dimensions."
+        raise ValueError(msg)
+
+    ome_metadata = {
+        "axes": "YXC",
+        "PhysicalSizeX": mpp[1],
+        "PhysicalSizeXUnit": "µm",
+        "PhysicalSizeY": mpp[0],
+        "PhysicalSizeYUnit": "µm",
+    }
+
+    h = probability.shape[0]
+    w = probability.shape[1]
+
+    with tifffile.TiffWriter(image_path, bigtiff=True, ome=True) as tif:
+        tif.write(
+            _tiles(in_img=probability, tile_size=tile_size, colormap=colormap),
+            dtype="uint8",
+            shape=(h, w, 3),
+            tile=tile_size,
+            compression="jpeg",
+            metadata=ome_metadata,
+            subifds=levels - 1,
+        )
+
+        for level_ in range(1, levels):
+            tif.write(
+                _tiles(
+                    in_img=probability,
+                    tile_size=tile_size,
+                    colormap=colormap,
+                    level=level_,
+                ),
+                dtype="uint8",
+                shape=(h // 2**level_, w // 2**level_, 3),
+                tile=(tile_size[0] // 2**level_, tile_size[1] // 2**level_),
+                compression="jpeg",
+                subfiletype=0,
+            )
+
+    msg = f"Image saved as OME-TIFF to {image_path}."
+    logger.info(msg)
+
+
+def update_tqdm_desc(
+    tqdm_loop: tqdm | Iterable,
+    desc: str,
+) -> None:
+    """Helper function to update tqdm progress bar description.
+
+    Args:
+        tqdm_loop (tqdm):
+            tqdm progress bar.
+        desc (str):
+            tqdm progress bar description.
+
+    Returns:
+        None
+
+    """
+    if hasattr(tqdm_loop, "desc"):
+        tqdm_loop.desc = desc
+
+
+def cast_to_min_dtype(array: np.ndarray | da.Array) -> np.ndarray | da.Array:
+    """Cast the input array to the minimal data type required to represent its values.
+
+    This function determines the maximum value in the array and casts it to the smallest
+    unsigned integer type (or boolean) that can accommodate all values. It supports both
+    NumPy and Dask arrays and preserves the input type in the output.
+
+    For Dask arrays, the maximum value is computed lazily and only when needed.
+
+    Args:
+        array (Union[np.ndarray, da.Array]): Input array containing integer values.
+
+    Returns:
+        (np.ndarray or da.Array):
+             A copy of the input array cast to the minimal required dtype.
+            - If the maximum value is 1, the array is cast to boolean.
+            - Otherwise, it is cast to the smallest suitable unsigned integer type.
+
+    """
+    is_dask = isinstance(array, da.Array)
+    max_value = da.max(array) if is_dask else np.max(array)
+    max_value = max_value.compute() if is_dask else max_value
+
+    if max_value == 1:
+        return array.astype(bool)
+
+    dtypes = [np.uint8, np.uint16, np.uint32, np.uint64]
+    for dtype in dtypes:
+        if max_value <= np.iinfo(dtype).max:
+            return array.astype(dtype)
+
+    return array
+
+
+def create_smart_array(
+    shape: tuple[int, ...],
+    dtype: np.dtype | str,
+    memory_threshold: float,
+    name: str,
+    zarr_path: str | Path,
+    chunks: tuple[int, ...] | str = "auto",
+) -> np.ndarray | zarr.Array:
+    """Allocate a NumPy or Zarr array depending on available memory and a threshold.
+
+    This function estimates the memory required for an array of the given shape and
+    dtype. If the required memory is below the allowed fraction of available RAM
+    (defined by `memory_threshold`), a NumPy array is created in memory. Otherwise,
+    a Zarr array is created on disk. This enables seamless scaling between in-memory
+    and out-of-core workflows.
+
+    Args:
+        shape (tuple(int,...)):
+            Shape of the array to allocate, e.g., (height, width, channels).
+        dtype (np.dtype | str):
+            NumPy dtype or dtype string for the array, e.g., np.float32 or "float32".
+        memory_threshold (float):
+            Fraction of available RAM allowed for this allocation. Must be between
+            0.0 and 100. A value of 100 allows using all available RAM; 0.0 forces
+            Zarr allocation.
+        name (str | None):
+            Name for the zarr dataset.
+        zarr_path (str | None):
+            Filesystem path where the Zarr array will be created if needed.
+        chunks (tuple(int,...) | None):
+            Chunk shape for the Zarr array. If None, a reasonable default is chosen
+            based on the array shape.
+
+    Returns:
+        np.ndarray | zarr.core.Array:
+            - The allocated array (NumPy or Zarr).
+
+    """
+    # Compute required bytes
+    bytes_needed = np.prod(shape) * np.dtype(dtype).itemsize
+
+    # Available memory
+    available = psutil.virtual_memory().available
+    allowed = available * (memory_threshold / 100.0)
+
+    fits_in_memory = bytes_needed <= allowed
+
+    if fits_in_memory:
+        # Allocate in-memory NumPy array
+        return np.zeros(shape, dtype=dtype)
+
+    # Allocate Zarr array on disk
+    # Default chunking: try to chunk along spatial dims
+    chunks = shape if chunks is None else chunks
+
+    zarr_group = zarr.open(zarr_path, mode="a")
+
+    return zarr_group.create_dataset(
+        name=name,
+        shape=shape,
         chunks=chunks,
-        compressor=compressor,
+        dtype=dtype,
     )
-    z[:] = predictions_array
 
-    return save_path
+
+def tqdm_dask_progress_bar(
+    write_tasks: list,
+    num_workers: int = multiprocessing.cpu_count(),
+    scheduler: str = "threads",
+    desc: str = "Processing data",
+    *,
+    leave: bool = False,
+    verbose: bool = True,
+) -> list:
+    """Helper function for tqdm_dask_progress_bar.
+
+    Args:
+        write_tasks (list):
+            List of dask tasks to compute.
+        num_workers (int):
+            Number of workers to use.
+        scheduler (str):
+            dask compute scheduler to use e.g., "threads" or "processes".
+        desc (str):
+            Message to display for the progress bar.
+        leave (bool):
+            Whether to leave progress bar after completion.
+        verbose (bool):
+            Whether to display progress bar.
+
+    Returns:
+        List:
+            list of outputs from dask compute.
+
+    """
+    num_workers = max(num_workers, 1)
+    if verbose:
+        with TqdmCallback(desc=desc, leave=leave):
+            return compute(*write_tasks, scheduler=scheduler, num_workers=num_workers)
+
+    return compute(*write_tasks, scheduler=scheduler, num_workers=num_workers)

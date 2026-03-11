@@ -31,8 +31,8 @@ def show_wsi(
     colour_map: str,
 ) -> None:  # pragma: no cover
     """Show a slide together with any overlays."""
-    from tiatoolbox.utils.visualization import AnnotationRenderer
-    from tiatoolbox.visualization.tileserver import TileServer
+    from tiatoolbox.utils.visualization import AnnotationRenderer  # noqa: PLC0415
+    from tiatoolbox.visualization.tileserver import TileServer  # noqa: PLC0415
 
     renderer = AnnotationRenderer()
     if colour_by is not None:
@@ -49,7 +49,9 @@ def show_wsi(
     if len(name) == 0:
         app = TileServer("TileServer", list(img_input), renderer=renderer)
     elif len(name) == len(img_input):
-        app = TileServer("TileServer", dict(zip(name, img_input)), renderer=renderer)
+        app = TileServer(
+            "TileServer", dict(zip(name, img_input, strict=False)), renderer=renderer
+        )
     else:
         msg = "if names are provided, must match the number of paths provided"
         raise ValueError(msg)

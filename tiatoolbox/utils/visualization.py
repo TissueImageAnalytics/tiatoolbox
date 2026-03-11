@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import colorsys
 import random
-from typing import TYPE_CHECKING, Callable, TypedDict, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import cv2
 import matplotlib as mpl
@@ -18,6 +18,8 @@ from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.enums import GeometryType
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
+
     from matplotlib.axes import Axes
     from matplotlib.cm import ScalarMappable
     from numpy.typing import ArrayLike
@@ -56,6 +58,10 @@ def random_colors(num_colors: int, *, bright: bool) -> np.ndarray:
         np.ndarray:
             Array of (r, g, b) colors.
 
+    Examples:
+        >>> from tiatoolbox.utils.visualization import random_colors
+        >>> colors = random_colors(10, bright=True)
+
     """
     brightness = 1.0 if bright else 0.7
     hsv = [(i / num_colors, 1, brightness) for i in range(num_colors)]
@@ -75,6 +81,15 @@ def colourise_image(img: np.ndarray, cmap: str = "viridis") -> np.ndarray:
 
     Returns:
         img(ndarray): An RGB image.
+
+    Examples:
+        >>> from tiatoolbox.utils.visualization import colourise_image
+        >>> import numpy as np
+        >>> # Generate a random example; replace with your own data
+        >>> img = np.random.rand(255, 255)
+        >>> # Example usage of colourise_image
+        >>> coloured_image = colourise_image(img, 'viridis')
+
     """
     if len(img.shape) == 2:  # noqa: PLR2004
         # Single channel, make into rgb with colormap.
@@ -124,6 +139,30 @@ def overlay_prediction_mask(
         If return_ax is True, return the matplotlib ax object. Else,
         return the overlay array.
 
+    Examples:
+        >>> from tiatoolbox.utils.visualization import overlay_prediction_mask
+        >>> import numpy as np
+        >>> from matplotlib import pyplot as plt
+        >>> # Generate a random example; replace with your own data
+        >>> img = np.random.randint(0, 256, size=(256, 256, 3), dtype=np.uint8)
+        >>> prediction = np.random.randint(0, 3, size=(256, 256), dtype=np.uint8)
+        >>> label_info = {
+        ...     0: ("Background", (0, 0, 0)),
+        ...     1: ("Tumor", (255, 0, 0)),
+        ...     2: ("Stroma", (0, 255, 0))
+        ... }
+        >>> # Example usage of overlay_prediction_mask
+        >>> ax = overlay_prediction_mask(
+        ...     img=img,
+        ...     prediction=prediction,
+        ...     alpha=0.5,
+        ...     label_info=label_info,
+        ...     min_val=0.0,
+        ...     ax=None,
+        ...     return_ax=True
+        ... )
+        >>> plt.show()
+
     """
     # Validate inputs
     if img.shape[:2] != prediction.shape[:2]:
@@ -140,6 +179,7 @@ def overlay_prediction_mask(
             raise ValueError(msg)
         img = np.array(img * 255, dtype=np.uint8)
     # If `min_val` is defined, only display the overlay for areas with pred > min_val
+    prediction_sel: np.ndarray = np.ones_like(prediction, dtype=bool)
     if min_val > 0:
         prediction_sel = prediction >= min_val
 
@@ -147,13 +187,13 @@ def overlay_prediction_mask(
 
     predicted_classes = sorted(np.unique(prediction).tolist())
     # Generate random colours if None are given
-    rand_state = np.random.default_rng().__getstate__()
+    rand_state = np.random.default_rng().bit_generator.state
     rng = np.random.default_rng(123)
     label_info = label_info or {  # Use label_info if provided OR generate
         label_uid: (str(label_uid), rng.integers(0, 255, 3))
         for label_uid in predicted_classes
     }
-    np.random.default_rng().__setstate__(rand_state)
+    np.random.default_rng().bit_generator.state = rand_state
 
     # Validate label_info
     missing_label_uids = _validate_label_info(label_info, predicted_classes)
@@ -161,7 +201,7 @@ def overlay_prediction_mask(
         msg = f"Missing label for: {missing_label_uids}."
         raise ValueError(msg)
 
-    rgb_prediction = np.zeros(
+    rgb_prediction: np.ndarray = np.zeros(
         [prediction.shape[0], prediction.shape[1], 3],
         dtype=np.uint8,
     )
@@ -180,7 +220,7 @@ def overlay_prediction_mask(
         return overlay
 
     # Create colorbar parameters
-    name_list, color_list = zip(*label_info.values())  # Unzip values
+    name_list, color_list = zip(*label_info.values(), strict=False)  # Unzip values
     color_list_arr = np.array(color_list) / 255
     uid_list = list(label_info.keys())
     cmap = mpl.colors.ListedColormap(color_list_arr)
@@ -309,6 +349,25 @@ def overlay_probability_map(
     Returns:
         If return_ax is True, return the matplotlib ax object. Else,
         return the overlay array.
+
+    Examples:
+        >>> from tiatoolbox.utils.visualization import overlay_probability_map
+        >>> import numpy as np
+        >>> from matplotlib import pyplot as plt
+        >>> # Generate a random example; replace with your own data
+        >>> img = np.random.randint(0, 256, size=(256, 256, 3), dtype=np.uint8)
+        >>> probability_map = np.random.rand(256, 256).astype(np.float32)
+        >>> # Example usage of overlay_probability_map
+        >>> ax = overlay_probability_map(
+        ...     img=img,
+        ...     prediction=probability_map,
+        ...     alpha=0.35,
+        ...     colour_map="jet",
+        ...     min_val=0.0,
+        ...     ax=None,
+        ...     return_ax=True,
+        ... )
+        >>> plt.show()
 
     """
     prediction = prediction.astype(np.float32)
@@ -455,6 +514,40 @@ def overlay_prediction_contours(
         :class:`numpy.ndarray`:
             The overlaid image.
 
+    Examples:
+        >>> from tiatoolbox.utils.visualization import overlay_prediction_contours
+        >>> import numpy as np
+        >>> from matplotlib import pyplot as plt
+        >>> # Generate a random example; replace with your own data
+        >>> canvas = np.zeros((256, 256, 3), dtype=np.uint8)
+        >>> inst_dict = {
+        ...     1: {
+        ...         "type": 0,
+        ...         "contour": [[50, 50], [60, 45], [70, 50],
+        ...                     [70, 60], [60, 65], [50, 60]],
+        ...         "centroid": [60, 55]
+        ...         },
+        ...     2: {
+        ...         "type": 1,
+        ...         "contour": [[100, 100], [120, 100], [120, 120], [100, 120]],
+        ...         "centroid": [110, 110]
+        ...         }
+        ... }
+        >>> type_colours = {
+        ...     0: ("Type A", (0, 255, 0)),
+        ...     1: ("Type B", (0, 0, 255))
+        ... }
+        >>> # Example usage of overlay_prediction_contours
+        >>> overlaid_canvas = overlay_prediction_contours(
+        ...     canvas=canvas,
+        ...     inst_dict=inst_dict,
+        ...     type_colours=type_colours,
+        ...     line_thickness=1,
+        ...     draw_dot=True
+        ... )
+        >>> plt.imshow(overlaid_canvas)
+        >>> plt.show()
+
     """
     overlay = np.copy(canvas)
 
@@ -475,14 +568,15 @@ def overlay_prediction_contours(
     inst_colours_array = inst_colours_array.astype(np.uint8)
 
     for idx, [_, inst_info] in enumerate(inst_dict.items()):
-        inst_contour = inst_info["contour"]
+        inst_contour: np.ndarray = inst_info["contour"]
         if "type" in inst_info and type_colours is not None:
             inst_colour = type_colours[inst_info["type"]][1]
         else:
             inst_colour = (inst_colours_array[idx]).tolist()
+        contours: list[np.ndarray] = [np.array(inst_contour)]
         cv2.drawContours(
             overlay,
-            [np.array(inst_contour)],
+            contours,
             -1,
             inst_colour,
             line_thickness,
@@ -529,6 +623,28 @@ def plot_graph(
             Radius of each node.
         edge_size (int):
             Line width of the edge.
+
+    Examples:
+        >>> from tiatoolbox.utils.visualization import plot_graph
+        >>> import numpy as np
+        >>> # Generate a random example; replace with your own data
+        >>> canvas = np.zeros((256, 256, 3), dtype=np.uint8)
+        >>> num_nodes = 10
+        >>> nodes = np.random.randint(0, 255, size=(num_nodes, 2))
+        >>> num_edges = 15
+        >>> edges = np.random.randint(0, num_nodes, size=(num_edges, 2))
+        >>> node_colors = np.random.randint(0, 256, size=(num_nodes, 3))
+        >>> edge_colors = np.random.randint(0, 256, size=(num_edges, 3))
+        >>> # Example usage of overlay_prediction_contours
+        >>> overlaid_canvas = plot_graph(
+        ...     canvas=canvas,
+        ...     nodes=nodes,
+        ...     edges=edges,
+        ...     node_colors=node_colors,
+        ...     node_size=8,
+        ...     edge_colors=edge_colors,
+        ...     edge_size=3
+        ... )
 
     """
     if isinstance(node_colors, tuple):
@@ -732,7 +848,7 @@ class AnnotationRenderer:
                 # use colors directly specified in annotation properties
                 rgb = []
                 for c in annotation.properties["color"]:  # type: ignore[union-attr]
-                    c = cast(int, c)
+                    c = cast("int", c)
                     rgb.append(int(255 * c))
                 # rgb = [int(255 * c) for cast(int,c) in annotation.properties["color"]]
                 return (*rgb, 255)
@@ -850,10 +966,40 @@ class AnnotationRenderer:
                 top_left,
                 scale,
             )[0][0],
-            np.maximum(self.edge_thickness, 1),
+            np.maximum(int(16 / scale**0.5), 1),
             col,
-            thickness=self.thickness,
+            thickness=-1,
         )
+
+    def render_pts(
+        self: AnnotationRenderer,
+        tile: np.ndarray,
+        annotation: Annotation,
+        top_left: tuple[float, float],
+        scale: float,
+    ) -> None:
+        """Render a multipoint annotation onto a tile using cv2.
+
+        Args:
+            tile (ndarray):
+                The rgb(a) tile image to render onto.
+            annotation (Annotation):
+                The annotation to render.
+            top_left (tuple):
+                The top left corner of the tile in wsi.
+            scale (float):
+                The zoom scale at which we are rendering.
+
+        """
+        col = self.get_color(annotation, edge=False)
+        for pt in annotation.coords:
+            cv2.circle(
+                tile,
+                self.to_tile_coords([pt], top_left, scale)[0][0],
+                np.maximum(int(16 / scale**0.5), 1),
+                col,
+                thickness=-1,
+            )
 
     def render_line(
         self: AnnotationRenderer,
@@ -881,9 +1027,10 @@ class AnnotationRenderer:
             top_left,
             scale,
         )
+        pts: list[np.ndarray] = [np.array(cnt)]
         cv2.polylines(
             tile,
-            [np.array(cnt)],
+            pts,
             isClosed=False,
             color=col,
             thickness=3,
@@ -904,7 +1051,7 @@ class AnnotationRenderer:
         if isinstance(value, list):
             colors = random_colors(len(value), bright=True)
             self.__dict__["mapper"] = {
-                key: (*color, 1) for key, color in zip(value, colors)
+                key: (*color, 1) for key, color in zip(value, colors, strict=False)
             }
         if isinstance(value, dict):
             self.raw_mapper = value
@@ -983,7 +1130,9 @@ class AnnotationRenderer:
 
         min_area = 0.0005 * (output_size[0] * output_size[1]) * (scale * mpp_sf) ** 2
 
-        tile = np.zeros((output_size[0] * res, output_size[1] * res, 4), dtype=np.uint8)
+        tile: np.ndarray = np.zeros(
+            (output_size[0] * res, output_size[1] * res, 4), dtype=np.uint8
+        )
 
         if scale <= self.max_scale:
             # get all annotations
@@ -1058,5 +1207,7 @@ class AnnotationRenderer:
             self.render_poly(tile, annotation, top_left, scale)
         elif geom_type == GeometryType.LINE_STRING:
             self.render_line(tile, annotation, top_left, scale)
+        elif geom_type == GeometryType.MULTI_POINT:
+            self.render_pts(tile, annotation, top_left, scale)
         else:
             logger.warning("Unknown geometry: %s", geom_type, stacklevel=3)

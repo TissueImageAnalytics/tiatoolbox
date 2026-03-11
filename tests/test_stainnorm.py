@@ -170,7 +170,7 @@ def test_vahadane_normalize(
 # -------------------------------------------------------------------------------------
 
 
-def test_command_line_stainnorm(source_image: Path, tmp_path: Path) -> None:
+def test_command_line_stainnorm(source_image: Path, track_tmp_path: Path) -> None:
     """Test for the stain normalization CLI."""
     source_img = Path(source_image)
     target_img = _local_sample_path("target_image.png")
@@ -184,7 +184,7 @@ def test_command_line_stainnorm(source_image: Path, tmp_path: Path) -> None:
             "--target-input",
             target_img,
             "--output-path",
-            str(tmp_path / "stainnorm_output"),
+            str(track_tmp_path / "stainnorm_output"),
             "--method",
             "reinhard",
         ],
@@ -201,7 +201,7 @@ def test_command_line_stainnorm(source_image: Path, tmp_path: Path) -> None:
             "--target-input",
             target_img,
             "--output-path",
-            str(tmp_path / "stainnorm_output"),
+            str(track_tmp_path / "stainnorm_output"),
             "--method",
             "ruifrok",
         ],
@@ -218,7 +218,7 @@ def test_command_line_stainnorm(source_image: Path, tmp_path: Path) -> None:
             "--target-input",
             target_img,
             "--output-path",
-            str(tmp_path / "stainnorm_output"),
+            str(track_tmp_path / "stainnorm_output"),
             "--method",
             "macenko",
         ],
@@ -235,7 +235,7 @@ def test_command_line_stainnorm(source_image: Path, tmp_path: Path) -> None:
             "--target-input",
             target_img,
             "--output-path",
-            str(tmp_path / "stainnorm_output"),
+            str(track_tmp_path / "stainnorm_output"),
             "--method",
             "vahadane",
         ],
@@ -244,7 +244,7 @@ def test_command_line_stainnorm(source_image: Path, tmp_path: Path) -> None:
     assert stainnorm_result.exit_code == 0
 
 
-def test_cli_stainnorm_dir(source_image: Path, tmp_path: Path) -> None:
+def test_cli_stainnorm_dir(source_image: Path, track_tmp_path: Path) -> None:
     """Test directory input for the stain normalization CLI."""
     source_img = source_image.parent
     target_img = _local_sample_path("target_image.png")
@@ -258,7 +258,7 @@ def test_cli_stainnorm_dir(source_image: Path, tmp_path: Path) -> None:
             "--target-input",
             target_img,
             "--output-path",
-            str(tmp_path / "stainnorm_ouput"),
+            str(track_tmp_path / "stainnorm_ouput"),
             "--method",
             "ruifrok",
         ],
@@ -267,7 +267,9 @@ def test_cli_stainnorm_dir(source_image: Path, tmp_path: Path) -> None:
     assert stainnorm_result.exit_code == 0
 
 
-def test_cli_stainnorm_file_not_found_error(source_image: Path, tmp_path: Path) -> None:
+def test_cli_stainnorm_file_not_found_error(
+    source_image: Path, track_tmp_path: Path
+) -> None:
     """Test file not found error for the stain normalization CLI."""
     source_img = Path(source_image)
     target_img = stain_norm_target()
@@ -281,7 +283,7 @@ def test_cli_stainnorm_file_not_found_error(source_image: Path, tmp_path: Path) 
             "--target-input",
             target_img,
             "--output-path",
-            str(tmp_path / "stainnorm_output"),
+            str(track_tmp_path / "stainnorm_output"),
             "--method",
             "vahadane",
         ],
@@ -292,7 +294,9 @@ def test_cli_stainnorm_file_not_found_error(source_image: Path, tmp_path: Path) 
     assert isinstance(stainnorm_result.exception, FileNotFoundError)
 
 
-def test_cli_stainnorm_method_not_supported(source_image: Path, tmp_path: Path) -> None:
+def test_cli_stainnorm_method_not_supported(
+    source_image: Path, track_tmp_path: Path
+) -> None:
     """Test method not supported for the stain normalization CLI."""
     source_img = Path(source_image)
     target_img = stain_norm_target()
@@ -306,7 +310,7 @@ def test_cli_stainnorm_method_not_supported(source_image: Path, tmp_path: Path) 
             "--target-input",
             target_img,
             "--output-path",
-            str(tmp_path / "stainnorm_output"),
+            str(track_tmp_path / "stainnorm_output"),
             "--method",
             "Test",
         ],

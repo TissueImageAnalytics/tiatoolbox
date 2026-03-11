@@ -1,6 +1,7 @@
 """Unit test package for SCCNN."""
 
-from typing import Callable
+from collections.abc import Callable
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -14,15 +15,15 @@ from tiatoolbox.wsicore.wsireader import WSIReader
 ON_GPU = toolbox_env.has_gpu()
 
 
-def _load_mapde(name: str) -> torch.nn.Module:
+def _load_mapde(name: str) -> tuple[MapDe, str]:
     """Loads MapDe model with specified weights."""
     model = MapDe()
     weights_path = fetch_pretrained_weights(name)
     map_location = select_device(on_gpu=ON_GPU)
     pretrained = torch.load(weights_path, map_location=map_location)
     model.load_state_dict(pretrained)
-
-    return model
+    model.to(map_location)
+    return model, weights_path
 
 
 def test_functionality(remote_sample: Callable) -> None:
@@ -42,10 +43,100 @@ def test_functionality(remote_sample: Callable) -> None:
         coord_space="resolution",
     )
 
-    model = _load_mapde(name="mapde-conic")
+    model, weights_path = _load_mapde(name="mapde-conic")
     patch = model.preproc(patch)
     batch = torch.from_numpy(patch)[None]
-    model = model.to()
     output = model.infer_batch(model, batch, device=select_device(on_gpu=ON_GPU))
     output = model.postproc(output[0])
-    assert np.all(output[0:2] == [[19, 171], [53, 89]])
+    (
+        ys,
+        xs,
+        _,
+    ) = np.nonzero(output)
+
+    np.testing.assert_array_equal(xs[0:2], np.array([242, 192]))
+    np.testing.assert_array_equal(ys[0:2], np.array([10, 13]))
+
+    patch = reader.read_bounds(
+        (0, 0, 252, 252),
+        resolution=0.50,
+        units="mpp",
+        coord_space="resolution",
+    )
+
+    patch = model.preproc(patch)
+    batch = torch.from_numpy(patch)[None]
+    output = model.infer_batch(model, batch, device=select_device(on_gpu=ON_GPU))
+    block_info = {
+        0: {
+            "array-location": [
+                [0, 1],
+                [0, 1],
+            ],  # dummy block to test no valid detections
+        }
+    }
+    output = model.postproc(output[0], block_info=block_info)
+    ys, xs, _ = np.nonzero(output)
+    np.testing.assert_array_equal(xs, np.array([]))
+    np.testing.assert_array_equal(ys, np.array([]))
+
+    Path(weights_path).unlink()
+
+
+def test_postproc_params_override(remote_sample: Callable) -> None:
+    """Test MapDe post-processing with overridden parameters."""
+    sample_wsi = str(remote_sample("wsi1_2k_2k_svs"))
+    reader = WSIReader.open(sample_wsi)
+
+    # * test fast mode (architecture used in PanNuke paper)
+    patch = reader.read_bounds(
+        (0, 0, 252, 252),
+        resolution=0.50,
+        units="mpp",
+        coord_space="resolution",
+    )
+
+    model, weight_path = _load_mapde(name="mapde-conic")
+    patch = model.preproc(patch)
+    batch = torch.from_numpy(patch)[None]
+    raw_output = model.infer_batch(model, batch, device=select_device(on_gpu=ON_GPU))
+
+    output_normal = model.postproc(raw_output[0])
+    (
+        ys_normal,
+        xs_normal,
+        _,
+    ) = np.nonzero(output_normal)
+
+    # Use higher threshold should result in less detections
+    output_high_threshold = model.postproc(raw_output[0], threshold_abs=500)
+    (
+        ys_high_threshold,
+        xs_high_threshold,
+        _,
+    ) = np.nonzero(output_high_threshold)
+
+    # Use bigger min_distance should result in less detections
+    output_large_min_distance = model.postproc(raw_output[0], min_distance=9)
+    (
+        ys_large_min_distance,
+        xs_large_min_distance,
+        _,
+    ) = np.nonzero(output_large_min_distance)
+
+    assert len(xs_high_threshold) < len(xs_normal)
+    assert len(ys_high_threshold) < len(ys_normal)
+
+    assert len(xs_large_min_distance) < len(xs_normal)
+    assert len(ys_large_min_distance) < len(ys_normal)
+
+    Path(weight_path).unlink()
+
+
+def test_multiclass_output() -> None:
+    """Test the architecture for multi-class output."""
+    multiclass_model = MapDe(num_input_channels=3, num_classes=3)
+    test_input = torch.rand((1, 3, 252, 252))
+
+    output = multiclass_model(test_input)
+    assert output.shape == (1, 3, 252, 252)

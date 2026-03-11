@@ -3,24 +3,25 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Callable, TypedDict, overload
+from typing import TYPE_CHECKING, TypedDict, overload
 
 import numpy as np
 from typing_extensions import Unpack
 
 from tiatoolbox import logger
+from tiatoolbox.annotation.storage import AnnotationStore
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError, MethodNotSupportedError
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore import wsireader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
     from pathlib import Path
 
     from pandas import DataFrame
 
-    from tiatoolbox.annotation.storage import AnnotationStore
-    from tiatoolbox.typing import Resolution, Units
+    from tiatoolbox.type_hints import Resolution, Units
 
 
 def validate_shape(shape: np.ndarray) -> bool:
@@ -237,7 +238,9 @@ class PatchExtractor(PatchExtractorABC):
 
         if input_mask is None:
             self.mask = None
-        elif isinstance(input_mask, str) and input_mask.endswith(".db"):
+        elif (isinstance(input_mask, str) and input_mask.endswith(".db")) or isinstance(
+            input_mask, AnnotationStore
+        ):
             # input_mask is an annotation store
             renderer = AnnotationRenderer(
                 max_scale=10000, edge_thickness=0, where=store_filter
@@ -416,7 +419,7 @@ class PatchExtractor(PatchExtractorABC):
 
         # Scaling the coordinates_list to the `tissue_mask` array resolution
         scale_factors = np.array(tissue_mask.shape[1::-1]) / np.array(wsi_shape)
-        scaled_coords = coordinates_list.copy().astype(np.float32)
+        scaled_coords: np.ndarray = coordinates_list.copy().astype(np.float32)
         scaled_coords[:, [0, 2]] *= scale_factors[0]
         scaled_coords[:, [0, 2]] = np.clip(
             scaled_coords[:, [0, 2]],
@@ -670,7 +673,12 @@ class SlidingWindowPatchExtractor(PatchExtractor):
         self: SlidingWindowPatchExtractor,
         input_img: str | Path | np.ndarray | wsireader.WSIReader,
         patch_size: int | tuple[int, int],
-        input_mask: str | Path | np.ndarray | wsireader.VirtualWSIReader | None = None,
+        input_mask: str
+        | Path
+        | np.ndarray
+        | wsireader.VirtualWSIReader
+        | AnnotationStore
+        | None = None,
         resolution: Resolution = 0,
         units: Units = "level",
         stride: int | tuple[int, int] | None = None,

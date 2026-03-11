@@ -34,10 +34,10 @@ def slide_thumbnail(
     file-types="*.ndpi, *.svs, *.mrxs, *.jp2".
 
     """
-    from PIL import Image
+    from PIL import Image  # noqa: PLC0415
 
-    from tiatoolbox.utils import imwrite
-    from tiatoolbox.wsicore.wsireader import WSIReader
+    from tiatoolbox.utils import imwrite  # noqa: PLC0415
+    from tiatoolbox.wsicore.wsireader import WSIReader  # noqa: PLC0415
 
     files_all, output_path = prepare_file_dir_cli(
         img_input,

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import os
 import shutil
+import socket
 import time
+from contextlib import closing
 from pathlib import Path
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import pytest
 import torch
@@ -15,6 +17,16 @@ import tiatoolbox
 from tiatoolbox import logger
 from tiatoolbox.data import _fetch_remote_sample
 from tiatoolbox.utils.env_detection import has_gpu, running_on_ci
+
+# Reserve a free port for tileserver tests
+_TILES_ENV = "TIATOOLBOX_TILESERVER_PORT"
+if _TILES_ENV not in os.environ:
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+        sock.bind(("127.0.0.1", 0))
+        os.environ[_TILES_ENV] = str(sock.getsockname()[1])
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # -------------------------------------------------------------------------------------
 # Generate Parameterized Tests
@@ -113,6 +125,16 @@ def sample_svs(remote_sample: Callable) -> Path:
 
 
 @pytest.fixture(scope="session")
+def sample_qptiff(remote_sample: Callable) -> Path:
+    """Sample pytest fixture for qptiff images.
+
+    Download qptiff image for pytest.
+
+    """
+    return remote_sample("qptiff_sample")
+
+
+@pytest.fixture(scope="session")
 def sample_ome_tiff(remote_sample: Callable) -> Path:
     """Sample pytest fixture for ome-tiff (brightfield pyramid) images.
 
@@ -160,6 +182,17 @@ def sample_jp2(remote_sample: Callable) -> Path:
 
     """
     return remote_sample("jp2-omnyx-small")
+
+
+@pytest.fixture(scope="session")
+def sample_dicom(remote_sample: Callable) -> Path:
+    """Sample pytest fixture for DICOM images.
+
+    This fixture downloads a sample DICOM file in a standard format for testing.
+    The file represents a single DICOM image and is stored in a temporary directory.
+
+    """
+    return remote_sample("dicom-1")
 
 
 @pytest.fixture(scope="session")
@@ -520,6 +553,7 @@ def sample_wsi_dict(remote_sample: Callable) -> dict:
         "wsi4_4k_4k_svs",
         "wsi3_20k_20k_pred",
         "wsi4_4k_4k_pred",
+        "wsi4_1k_1k_svs",
     ]
     return {name: remote_sample(name) for name in file_names}
 
@@ -578,9 +612,9 @@ def chdir() -> Callable:
 
     """
     try:
-        from contextlib import chdir
+        from contextlib import chdir  # noqa: PLC0415
     except ImportError:
-        from contextlib import AbstractContextManager
+        from contextlib import AbstractContextManager  # noqa: PLC0415
 
         class chdir(AbstractContextManager):  # noqa: N801
             """Non thread-safe context manager to change the current working directory.
@@ -629,7 +663,6 @@ def timed(fn: Callable, *args: object) -> (Callable, float):
         and the time taken to execute it in seconds.
 
     """
-    compile_time = 0.0
     if has_gpu():
         start = torch.cuda.Event(enable_timing=True)
         end = torch.cuda.Event(enable_timing=True)
@@ -644,3 +677,51 @@ def timed(fn: Callable, *args: object) -> (Callable, float):
         end = time.time()
         compile_time = end - start
     return result, compile_time
+
+
+_tmp_paths: list[Path] = []
+
+
+@pytest.fixture
+def track_tmp_path(tmp_path: Path) -> Path:
+    """This fixture tracks `tmp_path` for clean up.
+
+    Fixture that wraps pytest's built-in `tmp_path` and tracks each temporary path
+    for later cleanup at the module level.
+
+    Returns:
+        Path: The temporary directory path for the current test function.
+
+    """
+    _tmp_paths.append(tmp_path)
+    return tmp_path
+
+
+@pytest.fixture(scope="module", autouse=True)
+def module_teardown() -> None:
+    """This module tears down temporary data directories.
+
+    Module-scoped fixture that automatically runs after all tests in a module.
+    It cleans up all temporary paths tracked during the module's execution.
+
+    Yields:
+        None: Allows pytest to run tests before executing the teardown logic.
+
+    """
+    yield
+    for path in _tmp_paths:
+        if path.exists():
+            shutil.rmtree(path)
+            print(f"Cleaned up: {path}")
+
+
+@pytest.fixture(scope="session")
+def rm_dir(tmp_samples_path: str) -> Callable:  # noqa: ARG001
+    """Factory fixture to remove directory."""
+
+    def _rm_dir(tmp_samples_path: Path) -> None:
+        """Helper func to remove directory."""
+        if tmp_samples_path.exists():
+            shutil.rmtree(tmp_samples_path, ignore_errors=True)
+
+    return _rm_dir

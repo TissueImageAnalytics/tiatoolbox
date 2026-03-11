@@ -2,28 +2,34 @@
 
 ## Development Lead
 
-- TIA Centre led by Nasir Rajpoot <tia@dcs.warwick.ac.uk>
+- Tissue Image Analytics Centre <TIA@warwick.ac.uk>
 - Shan E Ahmed Raza \<@shaneahmed>
 - John Pocock \<@John-P>
 - Mark Eastwood \<@measty>
+- Jiaqi Lv \<@Jiaqi-Lv>
+- Mostafa Jahanifar \<@mostafajahanifar>
+- Adam Shephard \<@adamshephard>
 - Simon Graham \<@simongraham>
 - Dang Vu \<@vqdang>
-- Mostafa Jahanifar \<@mostafajahanifar>
 - David Epstein \<@DavidBAEpstein>
-- Adam Shephard \<@adamshephard>
 - Abdullah Alsalemi \<@Abdol>
 - Ruqayya Awan \<@ruqayya>
-- Jiaqi Lv \<@Jiaqi-Lv>
 - Dmitrii Blaginin \<@blaginin>
+- Yijie Zhu \<@YijieZhu15>
 - Srijay Deshpande \<@Srijay-lab>
 - George Hadjigeorgiou \<@ghadjigeorghiou>
+- Gozde Gunesli \<@gozdeg>
 - Abishekraj Vinayagar Gnanasambandam \<@AbishekRajVG>
 - Wenqi Lu \<@wenqi006>
 - Saad Bashir \<@rajasaad>
+- Behnaz Elhaminia \<@behnazelhaminia>
 
 ## Contributors
 
+- Nasir Rajpoot \<@nmrajpoot>
+- Fayyaz Minhas \<@foxtrotmike>
 - George Batchkala \<@GeorgeBatch>
+- Aleksandar Acic \<@aacic>
 - Rob Jewsbury \<@R-J96>
 - Mohsin Bilal \<@mbhahsmi>
-- Fayyaz Minhas \<@foxtrotmike>
+- Musraf Basheer \<mbasheer04>

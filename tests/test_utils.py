@@ -3,32 +3,50 @@
 from __future__ import annotations
 
 import hashlib
-import os
+import json
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
 import cv2
+import dask.array as da
 import joblib
 import numpy as np
 import pandas as pd
+import psutil
 import pytest
+import shapely
+import tifffile
 import torch
+import zarr
+from defusedxml import ElementTree as ET  # noqa: N817
 from PIL import Image
 from requests import HTTPError
 from shapely.geometry import Polygon
+from tifffile import TiffFile
 
 from tests.test_annotation_stores import cell_polygon
 from tiatoolbox import rcParam, utils
 from tiatoolbox.annotation.storage import DictionaryStore, SQLiteStore
+from tiatoolbox.enums import GeometryType
 from tiatoolbox.models.architecture import fetch_pretrained_weights
-from tiatoolbox.models.architecture.utils import compile_model
+from tiatoolbox.models.architecture.utils import (
+    compile_model,
+    is_torch_compile_compatible,
+)
 from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError
+from tiatoolbox.utils.misc import (
+    _semantic_segmentations_as_qupath_json,
+    _tiles,
+    cast_to_min_dtype,
+    create_smart_array,
+    dict_to_store_patch_predictions,
+)
 from tiatoolbox.utils.transforms import locsize2bounds
 
 if TYPE_CHECKING:
-    from tiatoolbox.typing import IntBounds
+    from tiatoolbox.type_hints import IntBounds
 
 RNG = np.random.default_rng()  # Numpy Random Generator
 
@@ -113,7 +131,7 @@ def test_imresize() -> None:
     # test for not supporting dtype
     img = RNG.integers(0, 256, (4, 4, 16))
     with pytest.raises((AttributeError, ValueError), match=r".*float128.*"):
-        resized_img = utils.transforms.imresize(
+        _ = utils.transforms.imresize(
             img.astype(np.float128),
             scale_factor=4,
             interpolation=cv2.INTER_CUBIC,
@@ -778,7 +796,7 @@ def test_sub_pixel_read_empty_bounds() -> None:
     bounds = (0, 0, 2, 2)
     image = np.ones((10, 10))
 
-    with pytest.raises(ValueError, match="Bounds have zero size after padding."):
+    with pytest.raises(ValueError, match=r"Bounds have zero size after padding."):
         utils.image.sub_pixel_read(
             image,
             bounds=bounds,
@@ -794,7 +812,7 @@ def test_fuzz_bounds2locsize() -> None:
     for _ in range(1000):
         size = (rng.integers(-1000, 1000), rng.integers(-1000, 1000))
         location = (rng.integers(-1000, 1000), rng.integers(-1000, 1000))
-        bounds = (*location, *(sum(x) for x in zip(size, location)))
+        bounds = (*location, *(sum(x) for x in zip(size, location, strict=False)))
         assert utils.transforms.bounds2locsize(bounds)[1] == pytest.approx(size)
 
 
@@ -891,7 +909,7 @@ def test_contrast_enhancer() -> None:
     assert np.all(result_array == output_array)
 
 
-def test_load_stain_matrix(tmp_path: Path) -> None:
+def test_load_stain_matrix(track_tmp_path: Path) -> None:
     """Test to load stain matrix."""
     with pytest.raises(FileNotSupportedError):
         utils.misc.load_stain_matrix("/samplefile.xlsx")
@@ -901,12 +919,18 @@ def test_load_stain_matrix(tmp_path: Path) -> None:
         utils.misc.load_stain_matrix([1, 2, 3])
 
     stain_matrix = np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
-    pd.DataFrame(stain_matrix).to_csv(Path(tmp_path).joinpath("sm.csv"), index=False)
-    out_stain_matrix = utils.misc.load_stain_matrix(Path(tmp_path).joinpath("sm.csv"))
+    pd.DataFrame(stain_matrix).to_csv(
+        Path(track_tmp_path).joinpath("sm.csv"), index=False
+    )
+    out_stain_matrix = utils.misc.load_stain_matrix(
+        Path(track_tmp_path).joinpath("sm.csv")
+    )
     assert np.all(out_stain_matrix == stain_matrix)
 
-    np.save(str(Path(tmp_path).joinpath("sm.npy")), stain_matrix)
-    out_stain_matrix = utils.misc.load_stain_matrix(Path(tmp_path).joinpath("sm.npy"))
+    np.save(str(Path(track_tmp_path).joinpath("sm.npy")), stain_matrix)
+    out_stain_matrix = utils.misc.load_stain_matrix(
+        Path(track_tmp_path).joinpath("sm.npy")
+    )
     assert np.all(out_stain_matrix == stain_matrix)
 
 
@@ -917,7 +941,7 @@ def test_get_luminosity_tissue_mask() -> None:
 
 
 def test_read_point_annotations(  # noqa: PLR0915
-    tmp_path: Path,
+    track_tmp_path: Path,
     patch_extr_csv: Path,
     patch_extr_csv_noheader: Path,
     patch_extr_svs_csv: Path,
@@ -992,7 +1016,7 @@ def test_read_point_annotations(  # noqa: PLR0915
         _ = utils.misc.read_locations(labels_table.to_numpy()[:, 0:1])
 
     # Test if input npy does not have 2 or 3 columns
-    labels = tmp_path.joinpath("test_gt_3col.npy")
+    labels = track_tmp_path.joinpath("test_gt_3col.npy")
     with Path.open(labels, "wb") as f:
         np.save(f, np.zeros((3, 4)))
 
@@ -1036,11 +1060,10 @@ def test_grab_files_from_dir(sample_visual_fields: Path) -> None:
     assert len(out) == 0
 
 
-def test_download_unzip_data(tmp_path: Path) -> None:
+def test_download_unzip_data(track_tmp_path: Path) -> None:
     """Test download and unzip data from utils.misc."""
-    url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
-    save_dir_path = tmp_path / "tmp"
-
+    url = "https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/testdata/utils/test_directory.zip"
+    save_dir_path = track_tmp_path / "tmp"
     save_dir_path.mkdir()
     save_zip_path1 = misc.download_data(url, save_dir=save_dir_path)
     save_zip_path2 = misc.download_data(
@@ -1056,18 +1079,22 @@ def test_download_unzip_data(tmp_path: Path) -> None:
 
     extracted_path = save_dir_path / "test_directory"
     # to avoid hidden files in case of MAC-OS or Windows (?)
-    extracted_dirs = [f for f in os.listdir(extracted_path) if not f.startswith(".")]
+    extracted_dirs = [
+        f.name
+        for f in extracted_path.iterdir()
+        if f.is_dir() and not f.name.startswith(".")
+    ]
     extracted_dirs.sort()  # ensure same ordering
     assert extracted_dirs == ["dir1", "dir2", "dir3"]
 
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
 
-def test_download_data(tmp_path: Path) -> None:
+def test_download_data(track_tmp_path: Path) -> None:
     """Test download data from utils.misc."""
-    url = "https://tiatoolbox.dcs.warwick.ac.uk/testdata/utils/test_directory.zip"
+    url = "https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/testdata/utils/test_directory.zip"
 
-    save_dir_path = tmp_path / "downloads"
+    save_dir_path = track_tmp_path / "downloads"
     save_zip_path = save_dir_path / "test_directory.zip"
 
     misc.download_data(url, save_zip_path, overwrite=True)  # overwrite
@@ -1099,6 +1126,19 @@ def test_download_data(tmp_path: Path) -> None:
     shutil.rmtree(save_dir_path, ignore_errors=True)  # remove data
     misc.download_data(url, save_zip_path)  # to test skip download
     assert Path.exists(save_zip_path)
+
+    # Test that file exists and no unzip - should return early
+    result_path = misc.download_data(url, save_zip_path, overwrite=False, unzip=False)
+    assert result_path == save_zip_path
+    assert save_zip_path.exists()
+
+    # Test download with unzip=True
+    unzip_save_path = save_dir_path / "test_unzip.zip"
+    unzipped_path = misc.download_data(url, unzip_save_path, overwrite=True, unzip=True)
+    assert unzipped_path.exists()
+    assert unzipped_path.is_dir()
+    assert unzipped_path.name == "test_unzip"  # stem of the zip file
+
     shutil.rmtree(save_dir_path, ignore_errors=True)
 
     # URL not valid
@@ -1106,7 +1146,7 @@ def test_download_data(tmp_path: Path) -> None:
     save_path = save_dir_path / "temp"
     with pytest.raises(HTTPError):
         misc.download_data(
-            "https://tiatoolbox.dcs.warwick.ac.uk/invalid-url",
+            "https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/invalid_url",
             save_path,
         )
 
@@ -1124,7 +1164,7 @@ def test_parse_cv2_interpolaton() -> None:
     cases = [str.upper, str.lower, str.capitalize]
     mode_strings = ["cubic", "linear", "area", "lanczos"]
     mode_enums = [cv2.INTER_CUBIC, cv2.INTER_LINEAR, cv2.INTER_AREA, cv2.INTER_LANCZOS4]
-    for string, cv2_enum in zip(mode_strings, mode_enums):
+    for string, cv2_enum in zip(mode_strings, mode_enums, strict=False):
         for case in cases:
             assert utils.misc.parse_cv2_interpolaton(case(string)) == cv2_enum
             assert utils.misc.parse_cv2_interpolaton(cv2_enum) == cv2_enum
@@ -1187,7 +1227,7 @@ def test_crop_and_pad_edges() -> None:
     size = (10, 10)
     bounds = utils.transforms.locsize2bounds(loc, size)
     under, over = edge_mask(bounds)
-    region = -under + over
+    _ = -under + over
     region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
     output = utils.image.crop_and_pad_edges(
         bounds=bounds,
@@ -1203,7 +1243,7 @@ def test_crop_and_pad_edges() -> None:
 
     loc = (slide_width - 5, slide_height - 5)
     bounds = utils.transforms.locsize2bounds(loc, size)
-    under, over = edge_mask(bounds)
+    _, _ = edge_mask(bounds)
     region = np.sum(np.meshgrid(np.arange(10, 20), np.arange(10, 20)), axis=0)
     output = utils.image.crop_and_pad_edges(
         bounds=bounds,
@@ -1302,7 +1342,7 @@ def test_crop_and_pad_edges_negative_max_dims() -> None:
 
 def test_crop_and_pad_edges_non_positive_bounds_size() -> None:
     """Test crop and pad edges for non positive bound size."""
-    with pytest.raises(ValueError, match="[bB]ounds.*> 0"):
+    with pytest.raises(ValueError, match=r"[bB]ounds.*> 0"):
         # Zero dimensions and negative bounds size
         utils.image.crop_and_pad_edges(
             bounds=(0, 0, -1, -1),
@@ -1336,11 +1376,9 @@ def test_select_device() -> None:
     assert device == "cpu"
 
 
-def test_save_as_json(tmp_path: Path) -> None:
+def test_save_as_json(track_tmp_path: Path) -> None:
     """Test save data to json."""
     # This should be broken up into separate tests!
-    import json
-
     # dict with nested dict, list, and np.array
     key_dict = {
         "a1": {"name": "John", "age": 23, "sex": "male"},
@@ -1364,35 +1402,37 @@ def test_save_as_json(tmp_path: Path) -> None:
     with pytest.raises(TypeError, match=r".*Key.*.*not jsonified.*"):
         misc.save_as_json(
             data={frozenset(key_dict): sample},
-            save_path=tmp_path / "sample_json.json",
+            save_path=track_tmp_path / "sample_json.json",
             exist_ok=True,
         )
     with pytest.raises(TypeError, match=r".*Value.*.*not jsonified.*"):
-        misc.save_as_json(not_jsonable, tmp_path / "sample_json.json", exist_ok=True)
+        misc.save_as_json(
+            not_jsonable, track_tmp_path / "sample_json.json", exist_ok=True
+        )
     with pytest.raises(TypeError, match=r".*Value.*.*not jsonified.*"):
         misc.save_as_json(
             list(not_jsonable.values()),
-            tmp_path / "sample_json.json",
+            track_tmp_path / "sample_json.json",
             exist_ok=True,
         )
     with pytest.raises(TypeError, match=r"Type.*`data`.*.*must.*dict, list.*"):
         misc.save_as_json(
             RNG.random((2, 2)),
-            tmp_path / "sample_json.json",
+            track_tmp_path / "sample_json.json",
             exist_ok=True,
         )
     # test complex nested dict
     print(sample)
-    misc.save_as_json(sample, tmp_path / "sample_json.json", exist_ok=True)
-    with Path.open(tmp_path / "sample_json.json") as fptr:
+    misc.save_as_json(sample, track_tmp_path / "sample_json.json", exist_ok=True)
+    with Path.open(track_tmp_path / "sample_json.json") as fptr:
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
     assert read_sample["c"]["a4"]["a5"]["c"][-1][-1] == 6
 
     # Allow parent directories
-    misc.save_as_json(sample, tmp_path / "foo" / "sample_json.json", parents=True)
-    with Path.open(tmp_path / "foo" / "sample_json.json") as fptr:
+    misc.save_as_json(sample, track_tmp_path / "foo" / "sample_json.json", parents=True)
+    with Path.open(track_tmp_path / "foo" / "sample_json.json") as fptr:
         read_sample = json.load(fptr)
     # test read because == is useless when value is mutable
     assert read_sample["c"]["a4"]["a5"]["a6"] == "a7"
@@ -1401,11 +1441,11 @@ def test_save_as_json(tmp_path: Path) -> None:
     # test complex list of data
     misc.save_as_json(
         list(sample.values()),
-        tmp_path / "sample_json.json",
+        track_tmp_path / "sample_json.json",
         exist_ok=True,
     )
     # test read because == is useless when value is mutable
-    with Path.open(tmp_path / "sample_json.json") as fptr:
+    with Path.open(track_tmp_path / "sample_json.json") as fptr:
         read_sample = json.load(fptr)
     assert read_sample[-3]["a4"]["a5"]["a6"] == "a7"
     assert read_sample[-3]["a4"]["a5"]["c"][-1][-1] == 6
@@ -1413,48 +1453,50 @@ def test_save_as_json(tmp_path: Path) -> None:
     # test numpy generic
     misc.save_as_json(
         [np.int32(1), np.float32(2)],
-        tmp_path / "sample_json.json",
+        track_tmp_path / "sample_json.json",
         exist_ok=True,
     )
     misc.save_as_json(
         {"a": np.int32(1), "b": np.float32(2)},
-        tmp_path / "sample_json.json",
+        track_tmp_path / "sample_json.json",
         exist_ok=True,
     )
 
 
-def test_save_as_json_exists(tmp_path: Path) -> None:
+def test_save_as_json_exists(track_tmp_path: Path) -> None:
     """Test save data to json which already exists."""
     dictionary = {"a": 1, "b": 2}
-    misc.save_as_json(dictionary, tmp_path / "sample_json.json")
+    misc.save_as_json(dictionary, track_tmp_path / "sample_json.json")
     with pytest.raises(FileExistsError, match="File already exists"):
-        misc.save_as_json(dictionary, tmp_path / "sample_json.json")
-    misc.save_as_json(dictionary, tmp_path / "sample_json.json", exist_ok=True)
+        misc.save_as_json(dictionary, track_tmp_path / "sample_json.json")
+    misc.save_as_json(dictionary, track_tmp_path / "sample_json.json", exist_ok=True)
 
 
-def test_save_as_json_parents(tmp_path: Path) -> None:
+def test_save_as_json_parents(track_tmp_path: Path) -> None:
     """Test save data to json where parents need to be created and parents is False."""
     dictionary = {"a": 1, "b": 2}
     with pytest.raises(FileNotFoundError, match="No such file or directory"):
-        misc.save_as_json(dictionary, tmp_path / "foo" / "sample_json.json")
+        misc.save_as_json(dictionary, track_tmp_path / "foo" / "sample_json.json")
 
 
-def test_save_yaml_exists(tmp_path: Path) -> None:
+def test_save_yaml_exists(track_tmp_path: Path) -> None:
     """Test save data to yaml which already exists."""
     dictionary = {"a": 1, "b": 2}
-    utils.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
+    utils.save_yaml(dictionary, track_tmp_path / "sample_yaml.yaml")
     with pytest.raises(FileExistsError, match="File already exists"):
-        utils.save_yaml(dictionary, tmp_path / "sample_yaml.yaml")
-    utils.save_yaml(dictionary, tmp_path / "sample_yaml.yaml", exist_ok=True)
+        utils.save_yaml(dictionary, track_tmp_path / "sample_yaml.yaml")
+    utils.save_yaml(dictionary, track_tmp_path / "sample_yaml.yaml", exist_ok=True)
 
 
-def test_save_yaml_parents(tmp_path: Path) -> None:
+def test_save_yaml_parents(track_tmp_path: Path) -> None:
     """Test save data to yaml where parents need to be created."""
     dictionary = {"a": 1, "b": 2}
     with pytest.raises(FileNotFoundError, match="No such file or directory"):
-        utils.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml")
+        utils.save_yaml(dictionary, track_tmp_path / "foo" / "sample_yaml.yaml")
 
-    utils.save_yaml(dictionary, tmp_path / "foo" / "sample_yaml.yaml", parents=True)
+    utils.save_yaml(
+        dictionary, track_tmp_path / "foo" / "sample_yaml.yaml", parents=True
+    )
 
 
 def test_imread_none_args() -> None:
@@ -1504,40 +1546,40 @@ def make_simple_dat(centroids: tuple[tuple, tuple] = ((0, 0), (100, 100))) -> di
     }
 
 
-def test_from_dat(tmp_path: Path) -> None:
+def test_from_dat(track_tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file."""
     data = make_simple_dat()
-    joblib.dump(data, tmp_path / "test.dat")
-    store = utils.misc.store_from_dat(tmp_path / "test.dat", cls=SQLiteStore)
+    joblib.dump(data, track_tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(track_tmp_path / "test.dat", cls=SQLiteStore)
     assert len(store) == 2
 
 
-def test_dict_store_from_dat(tmp_path: Path) -> None:
+def test_dict_store_from_dat(track_tmp_path: Path) -> None:
     """Test generating a DictionaryStore from a .dat file."""
     data = make_simple_dat()
-    joblib.dump(data, tmp_path / "test.dat")
-    store = utils.misc.store_from_dat(tmp_path / "test.dat", cls=DictionaryStore)
+    joblib.dump(data, track_tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(track_tmp_path / "test.dat", cls=DictionaryStore)
     assert len(store) == 2
 
 
-def test_from_dat_type_dict(tmp_path: Path) -> None:
+def test_from_dat_type_dict(track_tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file with a type dict."""
     data = make_simple_dat()
-    joblib.dump(data, tmp_path / "test.dat")
+    joblib.dump(data, track_tmp_path / "test.dat")
     store = utils.misc.store_from_dat(
-        tmp_path / "test.dat",
+        track_tmp_path / "test.dat",
         typedict={0: "cell0", 1: "cell1"},
     )
     result = store.query(where="props['type'] == 'cell1'")
     assert len(result) == 1
 
 
-def test_from_dat_transformed(tmp_path: Path) -> None:
+def test_from_dat_transformed(track_tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file with a transform."""
     data = make_simple_dat()
-    joblib.dump(data, tmp_path / "test.dat")
+    joblib.dump(data, track_tmp_path / "test.dat")
     store = utils.misc.store_from_dat(
-        tmp_path / "test.dat",
+        track_tmp_path / "test.dat",
         scale_factor=2,
         origin=(50, 50),
     )
@@ -1548,7 +1590,7 @@ def test_from_dat_transformed(tmp_path: Path) -> None:
     assert np.rint(poly.geometry.centroid.y) == 150
 
 
-def test_from_multi_head_dat(tmp_path: Path) -> None:
+def test_from_multi_head_dat(track_tmp_path: Path) -> None:
     """Test generating an annotation store from a .dat file with multiple heads."""
     head_a = make_simple_dat()
     head_b = make_simple_dat([(200, 200), (300, 300)])
@@ -1559,15 +1601,15 @@ def test_from_multi_head_dat(tmp_path: Path) -> None:
         "base_resolution": {"resolution": 0.25, "units": "mpp"},
         "other_meta_data": {"foo": "bar"},
     }
-    joblib.dump(data, tmp_path / "test.dat")
-    store = utils.misc.store_from_dat(tmp_path / "test.dat")
+    joblib.dump(data, track_tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(track_tmp_path / "test.dat")
     assert len(store) == 4
 
     result = store.query(where="props['type'] == 'A: 1'")
     assert len(result) == 1
 
 
-def test_invalid_poly(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+def test_invalid_poly(track_tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     """Test that invalid polygons are dealt with correctly."""
     coords = [(0, 0), (0, 2), (1, 1), (2, 2), (2, 0), (1, 1), (0, 0)]
     poly = Polygon(coords)
@@ -1578,8 +1620,8 @@ def test_invalid_poly(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
         "contour": np.array(poly.exterior.coords).tolist(),
         "type": 2,
     }
-    joblib.dump(data, tmp_path / "test.dat")
-    store = utils.misc.store_from_dat(tmp_path / "test.dat")
+    joblib.dump(data, track_tmp_path / "test.dat")
+    store = utils.misc.store_from_dat(track_tmp_path / "test.dat")
 
     assert "Invalid geometry found, fix" in caplog.text
 
@@ -1587,14 +1629,14 @@ def test_invalid_poly(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     assert next(iter(result.values())).geometry.is_valid
 
 
-def test_from_multi_head_dat_type_dict(tmp_path: Path) -> None:
+def test_from_multi_head_dat_type_dict(track_tmp_path: Path) -> None:
     """Test generating a store from a .dat file with multiple heads, with typedict."""
     head_a = make_simple_dat()
     head_b = make_simple_dat([(200, 200), (300, 300)])
     data = {"A": head_a, "B": head_b}
-    joblib.dump(data, tmp_path / "test.dat")
+    joblib.dump(data, track_tmp_path / "test.dat")
     store = utils.misc.store_from_dat(
-        tmp_path / "test.dat",
+        track_tmp_path / "test.dat",
         typedict={"A": {0: "cell0", 1: "cell1"}, "B": {0: "gland0", 1: "gland1"}},
     )
     assert len(store) == 4
@@ -1605,23 +1647,33 @@ def test_from_multi_head_dat_type_dict(tmp_path: Path) -> None:
     assert len(result) == 2
 
 
-def test_fetch_pretrained_weights(tmp_path: Path) -> None:
+def test_fetch_pretrained_weights(track_tmp_path: Path) -> None:
     """Test fetching pretrained weights for a model."""
-    file_path = tmp_path / "test_fetch_pretrained_weights.pth"
+    model_name = "mobilenet_v3_small-pcam"
+    file_path = track_tmp_path / f"{model_name}.pth"
     if file_path.exists():
         file_path.unlink()
 
-    fetch_pretrained_weights(model_name="mobilenet_v3_small-pcam", save_path=file_path)
+    _ = fetch_pretrained_weights(
+        model_name="mobilenet_v3_small-pcam", save_path=track_tmp_path
+    )
+
     assert file_path.exists()
     assert file_path.stat().st_size > 0
+    file_path.unlink()
 
     with pytest.raises(ValueError, match="does not exist"):
-        fetch_pretrained_weights("abc", file_path)
+        fetch_pretrained_weights("abc", track_tmp_path)
+
+    # Test save_path is str
+    file_path = fetch_pretrained_weights(model_name, str(track_tmp_path))
+    assert Path(file_path).exists()
+    assert Path(file_path).stat().st_size > 0
 
 
-def test_imwrite(tmp_path: Path) -> NoReturn:
+def test_imwrite(track_tmp_path: Path) -> NoReturn:
     """Create a temporary file path."""
-    image_path = tmp_path / "test_imwrite.jpg"
+    image_path = track_tmp_path / "test_imwrite.jpg"
 
     # Create a test image
     img = np.ones([100, 100, 3]).astype("uint8") * 255
@@ -1639,7 +1691,7 @@ def test_imwrite(tmp_path: Path) -> NoReturn:
 
     with pytest.raises(IOError, match="Could not write image"):
         utils.misc.imwrite(
-            tmp_path / "this_folder_does_not_exist" / "test_imwrite.jpg",
+            track_tmp_path / "this_folder_does_not_exist" / "test_imwrite.jpg",
             img,
         )
 
@@ -1648,12 +1700,13 @@ def test_patch_pred_store() -> None:
     """Test patch_pred_store."""
     # Define a mock patch_output
     patch_output = {
+        "probabilities": [(0.99, 0.01), (0.01, 0.99), (0.99, 0.01)],
         "predictions": [1, 0, 1],
         "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
         "other": "other",
     }
 
-    store = misc.dict_to_store(patch_output, (1.0, 1.0))
+    store = misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0))
 
     # Check that it is an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
@@ -1666,7 +1719,18 @@ def test_patch_pred_store() -> None:
     patch_output.pop("coordinates")
     # check correct error is raised if coordinates are missing
     with pytest.raises(ValueError, match="coordinates"):
-        misc.dict_to_store(patch_output, (1.0, 1.0))
+        misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0))
+
+    patch_output = {
+        "predictions": [1, 0, 1],
+        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
+        "other": "other",
+    }
+
+    store = misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0))
+
+    # Check that it is an SQLiteStore containing the expected annotations
+    assert isinstance(store, SQLiteStore)
 
 
 def test_patch_pred_store_cdict() -> None:
@@ -1680,7 +1744,9 @@ def test_patch_pred_store_cdict() -> None:
         "other": "other",
     }
     class_dict = {0: "class0", 1: "class1"}
-    store = misc.dict_to_store(patch_output, (1.0, 1.0), class_dict=class_dict)
+    store = misc.dict_to_store_patch_predictions(
+        patch_output, (1.0, 1.0), class_dict=class_dict
+    )
 
     # Check that it is an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
@@ -1701,7 +1767,7 @@ def test_patch_pred_store_sf() -> None:
         "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
         "labels": [1, 0, 1],
     }
-    store = misc.dict_to_store(patch_output, (2.0, 2.0))
+    store = misc.dict_to_store_patch_predictions(patch_output, (2.0, 2.0))
 
     # Check that its an SQLiteStore containing the expected annotations
     assert isinstance(store, SQLiteStore)
@@ -1710,44 +1776,7 @@ def test_patch_pred_store_sf() -> None:
         assert annotation.geometry.area == 4
 
 
-def test_patch_pred_store_zarr(tmp_path: pytest.TempPathFactory) -> None:
-    """Test patch_pred_store_zarr."""
-    # Define a mock patch_output
-    patch_output = {
-        "predictions": [1, 0, 1],
-        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
-        "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
-        "labels": [1, 0, 1],
-    }
-
-    save_path = tmp_path / "patch_output" / "output.zarr"
-
-    store_path = misc.dict_to_zarr(patch_output, save_path=save_path)
-
-    print("Zarr path: ", store_path)
-    assert Path.exists(store_path), "Zarr output file does not exist"
-
-
-def test_patch_pred_store_zarr_ext(tmp_path: pytest.TempPathFactory) -> None:
-    """Test patch_pred_store_zarr and ensures the output file extension is `.zarr`."""
-    # Define a mock patch_output
-    patch_output = {
-        "predictions": [1, 0, 1],
-        "coordinates": [(0, 0, 1, 1), (1, 1, 2, 2), (2, 2, 3, 3)],
-        "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
-        "labels": [1, 0, 1],
-    }
-
-    # sends the path of a jpeg source image, expects .zarr file in the same directory
-    save_path = tmp_path / "patch_output" / "patch.jpeg"
-
-    store_path = misc.dict_to_zarr(patch_output, save_path=save_path)
-
-    print("Zarr path: ", store_path)
-    assert Path.exists(store_path), "Zarr output file does not exist"
-
-
-def test_patch_pred_store_persist(tmp_path: pytest.TempPathFactory) -> None:
+def test_patch_pred_store_persist(track_tmp_path: pytest.TempPathFactory) -> None:
     """Test patch_pred_store. and persists store output to a .db file."""
     # Define a mock patch_output
     patch_output = {
@@ -1756,9 +1785,12 @@ def test_patch_pred_store_persist(tmp_path: pytest.TempPathFactory) -> None:
         "probabilities": [[0.1, 0.9], [0.9, 0.1], [0.4, 0.6]],
         "labels": [1, 0, 1],
     }
-    save_path = tmp_path / "patch_output" / "output.db"
+    save_path = track_tmp_path / "patch_output" / "output.db"
+    save_path.parent.mkdir()
 
-    store_path = misc.dict_to_store(patch_output, (1.0, 1.0), save_path=save_path)
+    store_path = misc.dict_to_store_patch_predictions(
+        patch_output, (1.0, 1.0), save_path=save_path
+    )
 
     print("Annotation store path: ", store_path)
     assert Path.exists(store_path), "Annotation Store output file does not exist"
@@ -1776,10 +1808,10 @@ def test_patch_pred_store_persist(tmp_path: pytest.TempPathFactory) -> None:
     patch_output.pop("coordinates")
     # check correct error is raised if coordinates are missing
     with pytest.raises(ValueError, match="coordinates"):
-        misc.dict_to_store(patch_output, (1.0, 1.0))
+        misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0))
 
 
-def test_patch_pred_store_persist_ext(tmp_path: pytest.TempPathFactory) -> None:
+def test_patch_pred_store_persist_ext(track_tmp_path: pytest.TempPathFactory) -> None:
     """Test patch_pred_store and ensures the output file extension is `.db`."""
     # Define a mock patch_output
     patch_output = {
@@ -1790,9 +1822,12 @@ def test_patch_pred_store_persist_ext(tmp_path: pytest.TempPathFactory) -> None:
     }
 
     # sends the path of a jpeg source image, expects .db file in the same directory
-    save_path = tmp_path / "patch_output" / "output.jpeg"
+    save_path = track_tmp_path / "patch_output" / "output.jpeg"
+    save_path.parent.mkdir()
 
-    store_path = misc.dict_to_store(patch_output, (1.0, 1.0), save_path=save_path)
+    store_path = misc.dict_to_store_patch_predictions(
+        patch_output, (1.0, 1.0), save_path=save_path
+    )
 
     print("Annotation store path: ", store_path)
     assert Path.exists(store_path), "Annotation Store output file does not exist"
@@ -1810,7 +1845,7 @@ def test_patch_pred_store_persist_ext(tmp_path: pytest.TempPathFactory) -> None:
     patch_output.pop("coordinates")
     # check correct error is raised if coordinates are missing
     with pytest.raises(ValueError, match="coordinates"):
-        misc.dict_to_store(patch_output, (1.0, 1.0))
+        misc.dict_to_store_patch_predictions(patch_output, (1.0, 1.0))
 
 
 def test_torch_compile_already_compiled() -> None:
@@ -1844,7 +1879,581 @@ def test_torch_compile_disable() -> None:
 
 def test_torch_compile_compatibility(caplog: pytest.LogCaptureFixture) -> None:
     """Test if torch-compile compatibility is checked correctly."""
-    from tiatoolbox.models.architecture.utils import is_torch_compile_compatible
-
     is_torch_compile_compatible()
     assert "torch.compile" in caplog.text
+
+
+def test_dict_to_store_semantic_segment() -> None:
+    """Tests multipoint behaviour in dict_to_store."""
+    test_pred = np.zeros(shape=(224, 224))
+
+    patch_output = {"predictions": test_pred}
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+        output_type="annotationstore",
+    )
+    assert len(store_) == 1
+    for annotation in store_.values():
+        assert annotation.properties["type"] == 0
+
+    # single point
+    patch_output["predictions"][100, 100] = 1
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+        output_type="annotationstore",
+    )
+    assert len(store_) == 2
+
+    annotations_ = store_.values()
+
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+
+    assert "Point" in annotations_geometry_type
+    assert "Polygon" in annotations_geometry_type
+
+    patch_output["predictions"][110:155, 110:115] = 1
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+        output_type="annotationstore",
+        ignore_index=0,
+    )
+    assert len(store_) == 2
+
+    annotations_ = store_.values()
+
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+
+    assert "Point" in annotations_geometry_type
+    assert "Polygon" in annotations_geometry_type
+
+    patch_output["predictions"][50, 50] = 1
+    patch_output["predictions"][50, 51] = 1
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict=None,
+        save_path=None,
+        output_type="annotationstore",
+    )
+    assert len(store_) == 4
+    annotations_ = store_.values()
+
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+
+    assert "Point" in annotations_geometry_type
+    assert "Polygon" in annotations_geometry_type
+    assert "Line String" in annotations_geometry_type
+
+
+def test_dict_to_store_semantic_segment_holes(track_tmp_path: Path) -> None:
+    """Tests behaviour of holes in dict_to_store and save_path."""
+    test_pred = np.array(
+        [
+            [0, 0, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+            [1, 1, 0, 1, 1],
+            [1, 1, 0, 1, 1],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 0, 0],
+        ]
+    )
+
+    patch_output = {"predictions": test_pred}
+
+    save_dir_path = track_tmp_path / "tmp"
+    save_dir_path.mkdir()
+
+    _ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict={0: "background", 1: "object"},
+        save_path=save_dir_path,
+        output_type="annotationstore",
+    )
+
+    assert save_dir_path.exists()
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict={0: "background", 1: "object"},
+        save_path=None,
+        output_type="annotationstore",
+    )
+
+    # outer contour and inner contour/hole are now within the same geometry
+    object_count = 0
+    object_annotation = None
+    for annotation in store_.values():
+        if annotation.properties["type"] == "object":
+            object_count += 1
+            object_annotation = annotation
+    assert object_count == 1, "There should be one geometry"
+
+    annotations_ = list(store_.values())
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+    assert "Polygon" in annotations_geometry_type
+    assert "Point" not in annotations_geometry_type
+
+    assert isinstance(object_annotation.geometry_type, GeometryType)
+
+    # Check number of holes
+    polygon = object_annotation.geometry
+    assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
+        "The annotation should be a Polygon"
+    )
+    assert len(polygon.interiors) == 1, "There should be one hole in the Polygon"
+
+
+def test_dict_to_store_semantic_segment_multiple_holes() -> None:
+    """Tests behaviour of multiple holes in dict_to_store."""
+    test_pred = np.array(
+        [
+            [0, 0, 1, 0, 0],
+            [0, 1, 0, 1, 0],
+            [1, 1, 0, 1, 1],
+            [1, 1, 1, 1, 1],
+            [1, 1, 0, 1, 1],
+            [1, 1, 0, 1, 1],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 0, 0],
+        ]
+    )
+
+    patch_output = {"predictions": test_pred}
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict={0: "background", 1: "object"},
+        save_path=None,
+        output_type="annotationstore",
+    )
+
+    # outer contour and inner contour/hole are now within the same geometry
+    object_count = 0
+    object_annotation = None
+    for annotation in store_.values():
+        if annotation.properties["type"] == "object":
+            object_count += 1
+            object_annotation = annotation
+    assert object_count == 1, "There should be one geometry"
+
+    annotations_ = list(store_.values())
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+    assert "Polygon" in annotations_geometry_type
+    assert "Point" not in annotations_geometry_type
+
+    assert isinstance(object_annotation.geometry_type, GeometryType)
+
+    # Check number of holes
+    polygon = object_annotation.geometry
+    assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
+        "The annotation should be a Polygon"
+    )
+    assert len(polygon.interiors) == 2, "There should be two holes in the Polygon"
+
+
+def test_dict_to_store_semantic_segment_no_holes() -> None:
+    """Tests behaviour of no holes in dict_to_store."""
+    test_pred = np.array(
+        [
+            [0, 0, 1, 0, 0],
+            [0, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 0],
+            [0, 0, 1, 0, 0],
+        ]
+    )
+
+    patch_output = {"predictions": test_pred}
+
+    store_ = misc.dict_to_store_semantic_segmentor(
+        patch_output=patch_output,
+        scale_factor=(1.0, 1.0),
+        class_dict={0: "background", 1: "object"},
+        save_path=None,
+        output_type="annotationstore",
+    )
+
+    # outer contour and inner contour/hole are now within the same geometry
+    object_count = 0
+    object_annotation = None
+    for annotation in store_.values():
+        if annotation.properties["type"] == "object":
+            object_count += 1
+            object_annotation = annotation
+    assert object_count == 1, "There should be one geometry"
+
+    annotations_ = list(store_.values())
+    annotations_geometry_type = [
+        str(annotation_.geometry_type) for annotation_ in annotations_
+    ]
+    assert "Polygon" in annotations_geometry_type
+    assert "Point" not in annotations_geometry_type
+
+    assert isinstance(object_annotation.geometry_type, GeometryType)
+
+    # Check number of holes
+    polygon = object_annotation.geometry
+    assert isinstance(polygon, shapely.geometry.polygon.Polygon), (
+        "The annotation should be a Polygon"
+    )
+    assert len(polygon.interiors) == 0, "There should be no holes in the Polygon"
+
+
+def get_ome_metadata(tiff_path: Path) -> str | None:
+    """Extracts the OME metadata string from a TIFF file."""
+    with TiffFile(tiff_path) as tif:
+        if tif.ome_metadata:
+            return tif.ome_metadata
+    return None
+
+
+def assert_ome_metadata_value(
+    ome_xml: ET.Element, tag: str, expected_value: str
+) -> None:
+    """Asserts the value of a specific OME metadata tag (as an attribute)."""
+    namespace = "{http://www.openmicroscopy.org/Schemas/OME/2016-06}"
+    image_elements = ome_xml.findall(f".//{namespace}Image")
+    if image_elements:
+        pixels_elements = image_elements[0].findall(f"./{namespace}Pixels")
+        if pixels_elements:
+            actual_value = pixels_elements[0].get(tag)
+            assert actual_value == expected_value, (
+                f"Expected attribute '{tag}' to be '{expected_value}', "
+                f"but got '{actual_value}'."
+            )
+            return
+
+    # If we reach here, the tag or attribute was not found
+    pytest.fail(f"Attribute '{tag}' not found in OME metadata.")
+
+
+def test_iwrite_probability_heatmap_as_ome_tiff_errors(track_tmp_path: Path) -> None:
+    """Test expected errors in `write_probability_heatmap_as_ome_tiff`."""
+    probability = np.zeros(shape=(256, 256, 3))
+
+    # Input image must have 2 (CY) dimensions.
+    with pytest.raises(ValueError, match=r".*must have 2 \(YX\).*"):
+        misc.write_probability_heatmap_as_ome_tiff(
+            image_path=track_tmp_path / "failed_test.tif",
+            probability=probability,
+        )
+
+    probability = np.zeros(shape=(256, 256, 3))
+    probability = torch.from_numpy(probability)
+
+    # Input image must be a NumPy array or a Zarr array.
+    with pytest.raises(TypeError, match=r".*must be a NumPy array or a Zarr.*"):
+        misc.write_probability_heatmap_as_ome_tiff(
+            image_path=track_tmp_path / "failed_test.tif",
+            probability=probability,
+        )
+
+
+def test_save_numpy_array_proability_ome_tiff(
+    track_tmp_path: Path, source_image: Path
+) -> None:
+    """Tests saving a basic NumPy array."""
+    image_path = track_tmp_path / "numpy_image.ome.tif"
+    probability = utils.imread(source_image)
+    probability_0 = probability[:, :, 0]
+    misc.write_probability_heatmap_as_ome_tiff(
+        image_path=image_path,
+        probability=probability_0,
+        tile_size=(64, 64),
+        mpp=(0.5, 0.5),
+        levels=2,
+        colormap=cv2.COLORMAP_JET,
+    )
+    assert image_path.is_file()
+    saved_img = tifffile.imread(image_path)
+    assert probability.shape == saved_img.shape
+    assert probability.dtype == saved_img.dtype
+    ome_xml = ET.fromstring(get_ome_metadata(image_path))
+    assert ome_xml is not None
+
+    assert_ome_metadata_value(ome_xml, "SizeY", str(probability.shape[0]))
+    assert_ome_metadata_value(ome_xml, "SizeX", str(probability.shape[1]))
+    assert_ome_metadata_value(ome_xml, "SizeC", str(3))
+    assert_ome_metadata_value(ome_xml, "DimensionOrder", "XYCZT")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeX", "0.5")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeY", "0.5")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeXUnit", "µm")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeYUnit", "µm")
+
+
+def test_save_zarr_array_probability_ome_tiff(
+    track_tmp_path: Path, source_image: Path
+) -> None:
+    """Tests saving a Zarr array with uint8 dtype."""
+    image_path = track_tmp_path / "zarr_uint8_image.ome.tif"
+
+    img = utils.imread(source_image)
+    probability = img[:, 0:200, 0]
+    img_zarr = zarr.zeros(shape=probability.shape, dtype=np.uint8)
+    img_zarr[:] = probability
+
+    misc.write_probability_heatmap_as_ome_tiff(
+        image_path,
+        img_zarr,
+        tile_size=(32, 32),
+        levels=2,
+        colormap=cv2.COLORMAP_INFERNO,
+    )
+    assert image_path.is_file()
+    saved_img = tifffile.imread(image_path, squeeze=True)
+    assert img_zarr.shape == saved_img.shape[0:2]
+    assert img_zarr.dtype == saved_img.dtype
+    ome_xml = ET.fromstring(get_ome_metadata(image_path))
+    assert ome_xml is not None
+
+    assert_ome_metadata_value(ome_xml, "SizeY", str(img_zarr.shape[0]))
+    assert_ome_metadata_value(ome_xml, "SizeX", str(img_zarr.shape[1]))
+    assert_ome_metadata_value(ome_xml, "SizeC", str(3))
+    assert_ome_metadata_value(ome_xml, "DimensionOrder", "XYCZT")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeX", "0.25")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeY", "0.25")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeXUnit", "µm")
+    assert_ome_metadata_value(ome_xml, "PhysicalSizeYUnit", "µm")
+
+
+@pytest.mark.parametrize(
+    ("input_array", "expected_dtype"),
+    [
+        (np.array([0, 1]), np.bool_),  # Should cast to bool
+        (np.array([0, 255]), np.uint8),  # Should cast to uint8
+        (np.array([0, 256]), np.uint16),  # Should cast to uint16
+        (np.array([0, 70000]), np.uint32),  # Should cast to uint32
+        (np.array([0, 2**32]), np.uint64),  # Should cast to uint64
+    ],
+)
+def test_cast_to_min_dtype_numpy(input_array: np.ndarray, expected_dtype: type) -> None:
+    """Check expected np array dtype cast_to_min_dtype."""
+    result = cast_to_min_dtype(input_array)
+    assert isinstance(result, np.ndarray)
+    assert result.dtype == expected_dtype
+
+
+@pytest.mark.parametrize(
+    ("input_array", "expected_dtype"),
+    [
+        (da.from_array(np.array([0, 1])), np.bool_),  # Should cast to bool
+        (da.from_array(np.array([0, 255])), np.uint8),  # Should cast to uint8
+        (da.from_array(np.array([0, 256])), np.uint16),  # Should cast to uint16
+        (da.from_array(np.array([0, 70000])), np.uint32),  # Should cast to uint32
+        (da.from_array(np.array([0, 2**32])), np.uint64),  # Should cast to uint64
+    ],
+)
+def test_cast_to_min_dtype_dask(input_array: da.Array, expected_dtype: type) -> None:
+    """Check expected dask array dtype cast_to_min_dtype."""
+    result = cast_to_min_dtype(input_array)
+    assert isinstance(result, da.Array)
+    assert result.dtype == expected_dtype
+
+
+def test_cast_to_min_dtype_numpy_large_value() -> None:
+    """Check if return type is changed for large value."""
+    large_value = np.array([np.iinfo(np.uint64).max + 1], dtype=object)
+    result = cast_to_min_dtype(large_value)
+    assert result == large_value
+    assert result.dtype == object
+
+
+def test_process_contours_without_properties() -> None:
+    """Test process_contours when properties parameter is None."""
+    # Create a simple square contour
+    contours = [np.array([[10, 10], [10, 20], [20, 20], [20, 10]])]
+    hierarchy = np.array([[[1, -1, -1, -1]]])  # Single outer contour
+
+    annotations = misc.process_contours(
+        contours=contours,
+        hierarchy=hierarchy,
+        scale_factor=(1.0, 1.0),
+        properties=None,
+    )
+
+    assert len(annotations) == 1
+    # When properties is None, base_props should only have "type": "mask"
+    assert annotations[0].properties == {"type": "mask"}
+
+
+def test_process_contours_with_properties() -> None:
+    """Test process_contours when custom properties are provided."""
+    # Create a simple square contour
+    contours = [np.array([[10, 10], [10, 20], [20, 20], [20, 10]])]
+    hierarchy = np.array([[[1, -1, -1, -1]]])  # Single outer contour
+
+    custom_props = {"label": "test_label", "confidence": 0.95}
+
+    annotations = misc.process_contours(
+        contours=contours,
+        hierarchy=hierarchy,
+        scale_factor=(1.0, 1.0),
+        properties=custom_props,
+    )
+
+    assert len(annotations) == 1
+    # When properties are provided, base_props should be updated with custom properties
+    expected_props = {"type": "mask", "label": "test_label", "confidence": 0.95}
+    assert annotations[0].properties == expected_props
+
+
+def test_returns_numpy_when_fits_in_memory(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Test that a NumPy array is returned when the array fits in memory."""
+    shape = (10, 10, 3)
+    dtype = np.float32
+    bytes_needed = np.prod(shape) * np.dtype(dtype).itemsize
+
+    class FakeVM:
+        """Mock available memory to be very large."""
+
+        available = bytes_needed * 10
+
+    monkeypatch.setattr(psutil, "virtual_memory", FakeVM)
+
+    arr = create_smart_array(
+        shape=shape,
+        dtype=dtype,
+        memory_threshold=100,  # allow full RAM
+        name="test",
+        zarr_path=tmp_path / "array.zarr",
+    )
+
+    assert isinstance(arr, np.ndarray)
+    assert arr.shape == shape
+    assert arr.dtype == dtype
+
+
+def test_tiles_zero_iterations() -> None:
+    """Test helper function with zero iterations."""
+    in_img = np.zeros((0, 0), dtype=np.uint8)
+
+    tile_size = (32, 32)  # larger than the image
+    colormap = 2  # arbitrary valid OpenCV colormap
+
+    tile_iter = _tiles(in_img, tile_size, colormap=colormap, level=0)
+
+    tiles = list(tile_iter)
+
+    assert tiles == []  # no tiles generated
+
+
+def test_semantic_segmentation_returns_json_dict() -> None:
+    """Test for semantic_segmentation QuPath JSON dict."""
+    # Fake 4 x 4 prediction map with two classes: 0 and 1
+    preds_np = np.array(
+        [
+            [0, 0, 1, 1],
+            [0, 0, 1, 1],
+            [0, 0, 1, 1],
+            [0, 0, 1, 1],
+        ],
+        dtype=np.uint8,
+    )
+
+    preds = da.from_array(preds_np, chunks=(4, 4))
+
+    layer_list = [0, 1]  # two classes
+    scale_factor = (1.0, 1.0)
+    class_dict = {0: "Background", 1: "Tumor"}
+
+    qupath_json = _semantic_segmentations_as_qupath_json(
+        layer_list=layer_list,
+        preds=preds,
+        scale_factor=scale_factor,
+        class_dict=class_dict,
+        save_path=None,
+        verbose=False,
+    )
+
+    # --- Assert ---
+    assert isinstance(qupath_json, dict)
+    assert "type" in qupath_json
+    assert qupath_json["type"] == "FeatureCollection"
+    assert "features" in qupath_json
+    assert isinstance(qupath_json["features"], list)
+    assert len(qupath_json["features"]) > 0
+
+    for feature in qupath_json["features"]:
+        assert feature["properties"]["classification"]["name"] in class_dict.values()
+        assert feature["properties"]["classification"]["color"] is not None
+        assert feature["name"] in class_dict.values()
+        assert feature["class_value"] in class_dict
+
+
+def test_dict_to_store_patch_predictions_returns_qupath_json() -> None:
+    """Test for dict_to_store_patch_predictions QuPath JSON dict."""
+    # Fake patch output
+    patch_output = {
+        "predictions": np.array([0, 1, 0, 1], dtype=np.uint8),
+        "coordinates": np.array(
+            [
+                [0, 0, 10, 10],
+                [10, 0, 20, 10],
+                [0, 10, 10, 20],
+                [10, 10, 20, 20],
+            ]
+        ),
+        "labels": np.array([0, 1, 0, 1]),
+    }
+
+    scale_factor = (1.0, 1.0)
+    class_dict = {0: "Background", 1: "Tumor"}
+
+    result = dict_to_store_patch_predictions(
+        patch_output=patch_output,
+        scale_factor=scale_factor,
+        class_dict=class_dict,
+        save_path=None,
+        output_type="qupath",
+        verbose=False,
+    )
+
+    assert isinstance(result, dict)
+
+    assert "type" in result
+    assert result["type"] == "FeatureCollection"
+    assert "features" in result
+    assert isinstance(result["features"], list)
+
+    assert len(result["features"]) > 0
+
+    for feature in result["features"]:
+        assert feature["type"] == "Feature"
+        assert "geometry" in feature
+        assert "properties" in feature
+        assert "classification" in feature["properties"]
+        assert "name" in feature
+        assert "class_value" in feature
+
+        assert feature["class_value"] in class_dict
+        assert feature["properties"]["classification"]["name"] in class_dict.values()
+        assert feature["properties"]["classification"]["color"] is not None

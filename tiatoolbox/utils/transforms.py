@@ -95,7 +95,7 @@ def imresize(
     img: np.ndarray,
     scale_factor: float | tuple[float, float] | None = None,
     output_size: int | tuple[int, int] | None = None,
-    interpolation: str = "optimise",
+    interpolation: str | int = "optimise",
 ) -> np.ndarray:
     """Resize input image.
 
@@ -153,7 +153,7 @@ def imresize(
     # can work on out-of-the-box (anything else will cause
     # error). The `converted type` has been selected so that
     # they can maintain the numeric precision of the `original type`.
-    dtype_mapping = [
+    dtype_mapping: list[tuple[type, type]] = [
         (np.bool_, np.uint8),
         (np.int8, np.int16),
         (np.int16, np.int16),
@@ -167,7 +167,7 @@ def imresize(
         (np.float32, np.float32),
         (np.float64, np.float64),
     ]
-    source_dtypes = [v[0] for v in dtype_mapping]
+    source_dtypes = [np.dtype(v[0]) for v in dtype_mapping]
     original_dtype = img.dtype
     if original_dtype not in source_dtypes:
         msg = f"Does not support resizing for array of dtype: {original_dtype}"
@@ -189,7 +189,7 @@ def imresize(
         img_channels = [
             cv2.resize(
                 src=img[..., ch],
-                dsize=output_size_array,
+                dsize=(output_size_array[0], output_size_array[1]),
                 interpolation=cv2_interpolation,
             )[
                 ...,
@@ -199,7 +199,11 @@ def imresize(
         ]
         return np.concatenate(img_channels, axis=-1)
 
-    return cv2.resize(src=img, dsize=output_size_array, interpolation=cv2_interpolation)
+    return cv2.resize(
+        src=img,
+        dsize=(output_size_array[0], output_size_array[1]),
+        interpolation=cv2_interpolation,
+    )
 
 
 def rgb2od(img: np.ndarray) -> np.ndarray:
@@ -369,7 +373,7 @@ def bounds2slices(
     slice_array = np.stack([start[::-1], stop[::-1]], axis=1)
 
     slices = []
-    for x, s in zip(slice_array, stride_array):
+    for x, s in zip(slice_array, stride_array, strict=False):
         slices.append(slice(x[0], x[1], s))
 
     return tuple(slices)
@@ -411,6 +415,6 @@ def pad_bounds(
     elif np.size(padding) == ndims:  # pragma: no cover
         padding = np.tile(padding, 2)
 
-    signs = np.repeat([-1, 1], ndims)
+    signs: np.ndarray = np.repeat([-1, 1], ndims)
     result = np.add(bounds, padding * signs)
     return (result[0], result[1], result[2], result[3])

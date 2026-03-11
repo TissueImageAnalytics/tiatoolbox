@@ -11,9 +11,9 @@ from __future__ import annotations
 import numpy as np
 import torch
 import torch.nn.functional as F  # noqa: N812
-from skimage.feature import peak_local_max
 
 from tiatoolbox.models.architecture.micronet import MicroNet
+from tiatoolbox.models.architecture.utils import peak_detection_map_overlap
 
 
 class MapDe(MicroNet):
@@ -78,6 +78,8 @@ class MapDe(MicroNet):
         min_distance: int = 4,
         threshold_abs: float = 250,
         num_classes: int = 1,
+        tile_shape: tuple[int, int] = (2048, 2048),
+        class_dict: dict[int, str] | None = None,
     ) -> None:
         """Initialize :class:`MapDe`."""
         super().__init__(
@@ -85,6 +87,8 @@ class MapDe(MicroNet):
             num_input_channels=num_input_channels,
             out_activation="relu",
         )
+        self.class_dict = class_dict
+        self.tile_shape = tile_shape
 
         dist_filter = np.array(
             [
@@ -199,8 +203,11 @@ class MapDe(MicroNet):
             dtype=np.float32,
         )
 
-        dist_filter = np.expand_dims(dist_filter, axis=(0, 1))  # NCHW
+        # For conv2d, filter shape = (out_channels, in_channels//groups, H, W)
+        dist_filter = np.expand_dims(dist_filter, axis=(0, 1))
         dist_filter = np.repeat(dist_filter, repeats=num_classes * 2, axis=1)
+        # Need to repeat for out_channels
+        dist_filter = np.repeat(dist_filter, repeats=num_classes, axis=0)
 
         self.min_distance = min_distance
         self.threshold_abs = threshold_abs
@@ -230,28 +237,60 @@ class MapDe(MicroNet):
         return F.relu(out)
 
     #  skipcq: PYL-W0221  # noqa: ERA001
-    def postproc(self: MapDe, prediction_map: np.ndarray) -> np.ndarray:
-        """Post-processing script for MicroNet.
+    def postproc(
+        self: MapDe,
+        block: np.ndarray,
+        min_distance: int | None = None,
+        threshold_abs: float | None = None,
+        threshold_rel: float | None = None,
+        block_info: dict | None = None,
+        depth_h: int = 0,
+        depth_w: int = 0,
+    ) -> np.ndarray:
+        """MapDe post-processing function.
 
-        Performs peak detection and extracts coordinates in x, y format.
+        Builds a processed mask per input channel, runs peak_local_max then
+        writes 1.0 at peak pixels.
+
+        Returns same spatial shape as the input block
 
         Args:
-            prediction_map (ndarray):
-                Input image of type numpy array.
+            block (np.ndarray):
+                shape (H, W, C).
+            min_distance (int | None):
+                The minimal allowed distance separating peaks.
+            threshold_abs (float | None):
+                Minimum intensity of peaks.
+            threshold_rel (float | None):
+                Minimum intensity of peaks.
+            block_info (dict | None):
+                Dask block info dict. Only used when called from
+                dask.array.map_overlap.
+            depth_h (int):
+                Halo size in pixels for height (rows). Only used
+                when it's called from dask.array.map_overlap.
+            depth_w (int):
+                Halo size in pixels for width (cols). Only used
+                when it's called from dask.array.map_overlap.
 
         Returns:
-            :class:`numpy.ndarray`:
-                Pixel-wise nuclear instance segmentation
-                prediction.
-
+            out: NumPy array (H, W, C) with 1.0 at peaks, 0 elsewhere.
         """
-        coordinates = peak_local_max(
-            np.squeeze(prediction_map[0], axis=2),
-            min_distance=self.min_distance,
-            threshold_abs=self.threshold_abs,
-            exclude_border=False,
+        min_distance_to_use = (
+            self.min_distance if min_distance is None else min_distance
         )
-        return np.fliplr(coordinates)
+        threshold_abs_to_use = (
+            self.threshold_abs if threshold_abs is None else threshold_abs
+        )
+        return peak_detection_map_overlap(
+            block,
+            min_distance=min_distance_to_use,
+            threshold_abs=threshold_abs_to_use,
+            threshold_rel=threshold_rel,
+            block_info=block_info,
+            depth_h=depth_h,
+            depth_w=depth_w,
+        )
 
     @staticmethod
     def infer_batch(
@@ -259,7 +298,7 @@ class MapDe(MicroNet):
         batch_data: torch.Tensor,
         *,
         device: str,
-    ) -> list[np.ndarray]:
+    ) -> np.ndarray:
         """Run inference on an input batch.
 
         This contains logic for forward operation as well as batch I/O
@@ -290,8 +329,4 @@ class MapDe(MicroNet):
             pred = model(patch_imgs_gpu)
 
         pred = pred.permute(0, 2, 3, 1).contiguous()
-        pred = pred.cpu().numpy()
-
-        return [
-            pred,
-        ]
+        return pred.cpu().numpy()

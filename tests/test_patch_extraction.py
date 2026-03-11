@@ -21,7 +21,7 @@ from tiatoolbox.wsicore.wsireader import (
 )
 
 if TYPE_CHECKING:
-    from tiatoolbox.typing import IntPair, Resolution, Units
+    from tiatoolbox.type_hints import IntPair, Resolution, Units
 
 
 def read_points_patches(
@@ -322,6 +322,7 @@ def test_get_coordinates() -> None:
         stride_shape=(9, 9),
         input_within_bound=False,
     )
+    assert np.all(output == [0, 0, 9, 9])
     # test when output patch shape is out of bound
     # but input is in bound
     input_bounds, output_bounds = PatchExtractor.get_coordinates(  # skipcq: PYL-E0633
@@ -465,12 +466,12 @@ def test_filter_coordinates() -> None:
         slide_shape,
     )
     assert np.sum(flag_list - np.array([1, 1, 0, 0, 0, 0])) == 0
-    _flag_list = PatchExtractor.filter_coordinates(mask_reader, bbox_list, slide_shape)
+    _ = PatchExtractor.filter_coordinates(mask_reader, bbox_list, slide_shape)
 
     # Test for bad mask input
     with pytest.raises(
         TypeError,
-        match="`mask_reader` should be wsireader.VirtualWSIReader.",
+        match=r"`mask_reader` should be wsireader.VirtualWSIReader.",
     ):
         PatchExtractor.filter_coordinates(
             mask,
@@ -495,14 +496,14 @@ def test_filter_coordinates() -> None:
         )
 
     # Test for put of range min_mask_ratio
-    with pytest.raises(ValueError, match="`min_mask_ratio` must be between 0 and 1."):
+    with pytest.raises(ValueError, match=r"`min_mask_ratio` must be between 0 and 1."):
         PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_list,
             slide_shape,
             min_mask_ratio=-0.5,
         )
-    with pytest.raises(ValueError, match="`min_mask_ratio` must be between 0 and 1."):
+    with pytest.raises(ValueError, match=r"`min_mask_ratio` must be between 0 and 1."):
         PatchExtractor.filter_coordinates(
             mask_reader,
             bbox_list,
@@ -514,7 +515,7 @@ def test_filter_coordinates() -> None:
 def test_mask_based_patch_extractor_ndpi(
     sample_ndpi: Path,
     caplog: pytest.LogCaptureFixture,
-    tmp_path: Path,
+    track_tmp_path: Path,
 ) -> None:
     """Test SlidingWindowPatchExtractor with mask for ndpi image."""
     res = 0
@@ -622,13 +623,13 @@ def test_mask_based_patch_extractor_ndpi(
         ),
         {"label": "region2"},
     )
-    store = SQLiteStore(tmp_path / "test.db")
+    store = SQLiteStore(track_tmp_path / "test.db")
     store.append_many([ann, ann2])
     store.close()
 
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
-        input_mask=str(tmp_path / "test.db"),
+        input_mask=str(track_tmp_path / "test.db"),
         method_name="slidingwindow",
         patch_size=patch_size,
         resolution=res,
@@ -640,7 +641,7 @@ def test_mask_based_patch_extractor_ndpi(
 
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
-        input_mask=str(tmp_path / "test.db"),
+        input_mask=str(track_tmp_path / "test.db"),
         method_name="slidingwindow",
         patch_size=patch_size,
         resolution=res,
@@ -652,7 +653,7 @@ def test_mask_based_patch_extractor_ndpi(
 
     patches = patchextraction.get_patch_extractor(
         input_img=input_img,
-        input_mask=str(tmp_path / "test.db"),
+        input_mask=str(track_tmp_path / "test.db"),
         method_name="slidingwindow",
         patch_size=patch_size,
         resolution=res,

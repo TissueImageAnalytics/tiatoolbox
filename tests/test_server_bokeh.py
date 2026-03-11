@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import time
 from contextlib import suppress
 from threading import Thread
@@ -15,6 +16,8 @@ from click.testing import CliRunner
 from tiatoolbox import cli
 from tiatoolbox.cli.visualize import run_bokeh, run_tileserver
 from tiatoolbox.data import _fetch_remote_sample
+
+PORT = os.environ.get("TIATOOLBOX_TILESERVER_PORT", "5000")
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -53,7 +56,10 @@ def bk_session(data_path: dict[str, Path]) -> ClientSession:
     time.sleep(1)  # allow time for server to start
 
     args = [
-        [str(data_path["base_path"].parent)],
+        [
+            str(data_path["base_path"] / "slides" / "sample_wsis"),
+            str(data_path["base_path"] / "overlays" / "testdata" / "annotation"),
+        ],
         5006,
     ]
     kwargs = {"noshow": True}
@@ -72,19 +78,23 @@ def bk_session(data_path: dict[str, Path]) -> ClientSession:
     yield session
     session.close()
     with suppress(requests.exceptions.ConnectionError):
-        requests.post("http://localhost:5000/tileserver/shutdown", timeout=2)
+        requests.post(
+            f"http://localhost:{PORT}/tileserver/shutdown",
+            timeout=2,
+        )
 
 
 def test_slides_available(bk_session: ClientSession) -> None:
     """Test that the slides and overlays are available."""
     doc = bk_session.document
     slide_select = doc.get_model_by_name("slide_select0")
-    # check there are two available slides
     assert len(slide_select.options) == 2
 
     # check that the overlays are available.
-    slide_select.value = ["CMU-1-Small-region.svs"]
+    slide_select.value = ["CMU-1.ndpi"]
     layer_drop = doc.get_model_by_name("layer_drop0")
+    assert len(layer_drop.menu) == 2
+    slide_select.value = ["CMU-1-Small-region.svs"]
     assert len(layer_drop.menu) == 2
 
     bk_session.document.clear()

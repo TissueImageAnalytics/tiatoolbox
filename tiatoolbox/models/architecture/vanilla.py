@@ -4,68 +4,155 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import numpy as np
 import timm
 import torch
 import torchvision.models as torch_models
+from timm.layers import SwiGLUPacked
 from torch import nn
 
+from tiatoolbox.models.architecture.utils import argmax_last_axis
 from tiatoolbox.models.models_abc import ModelABC
 
 if TYPE_CHECKING:  # pragma: no cover
+    import numpy as np
+    from torch.nn import Module, Sequential
     from torchvision.models import WeightsEnum
+
+torch_cnn_backbone_dict = {
+    "alexnet": torch_models.alexnet,
+    "resnet18": torch_models.resnet18,
+    "resnet34": torch_models.resnet34,
+    "resnet50": torch_models.resnet50,
+    "resnet101": torch_models.resnet101,
+    "resnext50_32x4d": torch_models.resnext50_32x4d,
+    "resnext101_32x8d": torch_models.resnext101_32x8d,
+    "wide_resnet50_2": torch_models.wide_resnet50_2,
+    "wide_resnet101_2": torch_models.wide_resnet101_2,
+    "densenet121": torch_models.densenet121,
+    "densenet161": torch_models.densenet161,
+    "densenet169": torch_models.densenet169,
+    "densenet201": torch_models.densenet201,
+    "inception_v3": torch_models.inception_v3,
+    "googlenet": torch_models.googlenet,
+    "mobilenet_v2": torch_models.mobilenet_v2,
+    "mobilenet_v3_large": torch_models.mobilenet_v3_large,
+    "mobilenet_v3_small": torch_models.mobilenet_v3_small,
+}
+
+timm_arch_dict = {
+    # UNI tile encoder: https://huggingface.co/MahmoodLab/UNI
+    "UNI": {
+        "model": "hf-hub:MahmoodLab/UNI",
+        "init_values": 1e-5,
+        "dynamic_img_size": True,
+    },
+    # Prov-GigaPath tile encoder: https://huggingface.co/prov-gigapath/prov-gigapath
+    "prov-gigapath": {"model": "hf_hub:prov-gigapath/prov-gigapath"},
+    # H-Optimus-0 tile encoder: https://huggingface.co/bioptimus/H-optimus-0
+    "H-optimus-0": {
+        "model": "hf-hub:bioptimus/H-optimus-0",
+        "init_values": 1e-5,
+        "dynamic_img_size": False,
+    },
+    # H-Optimus-1 tile encoder: https://huggingface.co/bioptimus/H-optimus-1
+    "H-optimus-1": {
+        "model": "hf-hub:bioptimus/H-optimus-1",
+        "init_values": 1e-5,
+        "dynamic_img_size": False,
+    },
+    # HO-mini tile encoder: https://huggingface.co/bioptimus/H0-mini
+    "H0-mini": {
+        "model": "hf-hub:bioptimus/H0-mini",
+        "init_values": 1e-5,
+        "dynamic_img_size": False,
+        "mlp_layer": timm.layers.SwiGLUPacked,
+        "act_layer": torch.nn.SiLU,
+    },
+    # UNI2-h tile encoder: https://huggingface.co/MahmoodLab/UNI2-h
+    "UNI2": {
+        "model": "hf-hub:MahmoodLab/UNI2-h",
+        "img_size": 224,
+        "patch_size": 14,
+        "depth": 24,
+        "num_heads": 24,
+        "init_values": 1e-5,
+        "embed_dim": 1536,
+        "mlp_ratio": 2.66667 * 2,
+        "num_classes": 0,
+        "no_embed_class": True,
+        "mlp_layer": timm.layers.SwiGLUPacked,
+        "act_layer": torch.nn.SiLU,
+        "reg_tokens": 8,
+        "dynamic_img_size": True,
+    },
+    # Virchow tile encoder: https://huggingface.co/paige-ai/Virchow
+    "Virchow": {
+        "model": "hf_hub:paige-ai/Virchow",
+        "mlp_layer": SwiGLUPacked,
+        "act_layer": torch.nn.SiLU,
+    },
+    # Virchow2 tile encoder: https://huggingface.co/paige-ai/Virchow2
+    "Virchow2": {
+        "model": "hf_hub:paige-ai/Virchow2",
+        "mlp_layer": SwiGLUPacked,
+        "act_layer": torch.nn.SiLU,
+    },
+    # Kaiko tile encoder:
+    # https://huggingface.co/1aurent/vit_large_patch14_reg4_224.kaiko_ai_towards_large_pathology_fms
+    "kaiko": {
+        "model": (
+            "hf_hub:1aurent/"
+            "vit_large_patch14_reg4_224.kaiko_ai_towards_large_pathology_fms"
+        ),
+        "dynamic_img_size": True,
+    },
+}
 
 
 def _get_architecture(
     arch_name: str,
-    weights: str or WeightsEnum = "DEFAULT",
+    weights: str | WeightsEnum | None = None,
     **kwargs: dict,
 ) -> list[nn.Sequential, ...] | nn.Sequential:
-    """Get a model.
+    """Retrieve a CNN model architecture.
 
-    Model architectures are either already defined within torchvision or
-    they can be custom-made within tiatoolbox.
+    This function fetches a Convolutional Neural Network (CNN) model architecture,
+    either predefined in torchvision or custom-made within tiatoolbox, for
+    patch classification tasks.
 
     Args:
         arch_name (str):
-            Architecture name.
-        weights (str or WeightsEnum):
-            torchvision model weights (get_model_weights).
-        kwargs (dict):
+            Name of the architecture (e.g. 'resnet50', 'alexnet').
+        weights (str, WeightsEnum, or None):
+            Pretrained torchvision model weights to use (get_model_weights).
+            Default is None to avoid downloading ImageNet weights.
+            To initiate the models with ImageNet weights, use "DEFAULT".
+        **kwargs (dict):
             Key-word arguments.
 
     Returns:
-        List of PyTorch network layers wrapped with `nn.Sequential`.
-        https://pytorch.org/docs/stable/generated/torch.nn.Sequential.html
+        list[nn.Sequential, ...] | nn.Sequential:
+            A list of PyTorch network layers wrapped with `nn.Sequential`.
+
+    Raises:
+        ValueError:
+            If `arch_name` is not supported.
+
+    Example:
+        >>> model = _get_architecture("resnet18")
+        >>> print(model)
 
     """
-    backbone_dict = {
-        "alexnet": torch_models.alexnet,
-        "resnet18": torch_models.resnet18,
-        "resnet34": torch_models.resnet34,
-        "resnet50": torch_models.resnet50,
-        "resnet101": torch_models.resnet101,
-        "resnext50_32x4d": torch_models.resnext50_32x4d,
-        "resnext101_32x8d": torch_models.resnext101_32x8d,
-        "wide_resnet50_2": torch_models.wide_resnet50_2,
-        "wide_resnet101_2": torch_models.wide_resnet101_2,
-        "densenet121": torch_models.densenet121,
-        "densenet161": torch_models.densenet161,
-        "densenet169": torch_models.densenet169,
-        "densenet201": torch_models.densenet201,
-        "inception_v3": torch_models.inception_v3,
-        "googlenet": torch_models.googlenet,
-        "mobilenet_v2": torch_models.mobilenet_v2,
-        "mobilenet_v3_large": torch_models.mobilenet_v3_large,
-        "mobilenet_v3_small": torch_models.mobilenet_v3_small,
-    }
-    if arch_name not in backbone_dict:
+    if arch_name not in torch_cnn_backbone_dict:
         msg = f"Backbone `{arch_name}` is not supported."
         raise ValueError(msg)
 
-    creator = backbone_dict[arch_name]
-    model = creator(weights=weights, **kwargs)
+    creator = torch_cnn_backbone_dict[arch_name]
+    if "inception_v3" in arch_name or "googlenet" in arch_name:
+        model = creator(weights=weights, aux_logits=False, num_classes=1000)
+        return nn.Sequential(*list(model.children())[:-3])
 
+    model = creator(weights=weights, **kwargs)
     # Unroll all the definition and strip off the final GAP and FCN
     if "resnet" in arch_name or "resnext" in arch_name:
         return nn.Sequential(*list(model.children())[:-2])
@@ -73,8 +160,6 @@ def _get_architecture(
         return model.features
     if "alexnet" in arch_name:
         return model.features
-    if "inception_v3" in arch_name or "googlenet" in arch_name:
-        return nn.Sequential(*list(model.children())[:-3])
 
     return model.features
 
@@ -83,73 +168,55 @@ def _get_timm_architecture(
     arch_name: str,
     *,
     pretrained: bool,
-) -> list[nn.Sequential, ...] | nn.Sequential:
-    """Get architecture and weights for pathology-specific timm models.
+) -> Module | Sequential:
+    """Retrieve a timm model architecture.
+
+    This function fetches a model architecture from the timm library, specifically for
+    pathology-related tasks.
 
     Args:
         arch_name (str):
-            Architecture name.
+            Name of the architecture (e.g. 'UNI', 'UN2', 'H-optimus-0',
+            'efficientnet_b0', etc.).
         pretrained (bool, keyword-only):
             Whether to load pretrained weights.
 
     Returns:
-        A ready-to-use timm model.
+        list[nn.Sequential, ...] | nn.Sequential:
+            A ready-to-use timm model.
 
     Raises:
         ValueError:
-            If the backbone architecture is not supported.
+            If the backbone architecture `arch_name` is not supported.
+
+    Example:
+        >>> model = _get_timm_architecture("UNI", pretrained=True)
+        >>> print(model)
 
     """
-    if arch_name in [f"efficientnet_b{i}" for i in range(8)]:
+    if arch_name in timm_arch_dict:  # pragma: no cover
+        # Coverage skipped timm API is tested using efficient U-Net.
+        config = dict(timm_arch_dict[arch_name])
+        model_name = config.pop("model")
+        return timm.create_model(
+            model_name,
+            pretrained=pretrained,
+            **config,
+        )
+
+    if arch_name in timm.list_models():
         model = timm.create_model(arch_name, pretrained=pretrained)
         return nn.Sequential(*list(model.children())[:-1])
 
-    if arch_name == "UNI":  # pragma: no cover
-        # UNI tile encoder: https://huggingface.co/MahmoodLab/UNI
-        # Coverage skipped timm API is tested using efficient U-Net.
-        return timm.create_model(
-            "hf-hub:MahmoodLab/UNI",
-            pretrained=pretrained,
-            init_values=1e-5,
-            dynamic_img_size=True,
-        )
-
-    if arch_name == "prov-gigapath":  # pragma: no cover
-        # Prov-GigaPath tile encoder: https://huggingface.co/prov-gigapath/prov-gigapath
-        # Coverage skipped timm API is tested using efficient U-Net.
-        return timm.create_model(
-            "hf_hub:prov-gigapath/prov-gigapath",
-            pretrained=pretrained,
-        )
-
-    if arch_name == "H-optimus-0":  # pragma: no cover
-        # H-Optimus-0 tile encoder: https://huggingface.co/bioptimus/H-optimus-0
-        # Coverage skipped timm API is tested using efficient U-Net.
-        return timm.create_model(
-            "hf-hub:bioptimus/H-optimus-0",
-            pretrained=pretrained,
-            init_values=1e-5,
-            dynamic_img_size=False,
-        )
-
     msg = f"Backbone {arch_name} not supported. "
     raise ValueError(msg)
-
-
-def _postproc(image: np.ndarray) -> np.ndarray:
-    """Define the post-processing of this class of model.
-
-    This simply applies argmax along last axis of the input.
-
-    """
-    return np.argmax(image, axis=-1)
 
 
 def _infer_batch(
     model: nn.Module,
     batch_data: torch.Tensor,
     device: str,
-) -> dict[str, np.ndarray]:
+) -> np.ndarray:
     """Run inference on an input batch.
 
     Contains logic for forward operation as well as i/o aggregation.
@@ -161,7 +228,15 @@ def _infer_batch(
             A batch of data generated by
             `torch.utils.data.DataLoader`.
         device (str):
-                Transfers model to the specified device. Default is "cpu".
+            Transfers model to the specified device. Default is "cpu".
+
+    Returns:
+        dict[str, np.ndarray]:
+            The model predictions as a NumPy array.
+
+    Example:
+        >>> output = _infer_batch(model, batch_data, "cuda")
+        >>> print(output)
 
     """
     img_patches_device = batch_data.to(device=device).type(
@@ -181,11 +256,14 @@ def _infer_batch(
 class CNNModel(ModelABC):
     """Retrieve the model backbone and attach an extra FCN to perform classification.
 
+    This class initializes a Convolutional Neural Network (CNN) model with a specified
+    backbone and attaches a fully connected layer for classification tasks.
+
     Args:
         backbone (str):
-            Model name.
+            Name of the CNN model backbone (e.g., "resnet18", "densenet121").
         num_classes (int):
-            Number of classes output by model.
+            Number of classes output by model. Defaults to 1.
 
     Attributes:
         num_classes (int):
@@ -195,8 +273,12 @@ class CNNModel(ModelABC):
         pool (nn.Module):
             Type of pooling applied after feature extraction.
         classifier (nn.Module):
-            Linear classifier module used to map the features to the
-            output.
+            Linear classifier module used to map the features to the output.
+
+    Example:
+        >>> model = CNNModel("resnet18", num_classes=2)
+        >>> output = model(torch.randn(1, 3, 224, 224))
+        >>> print(output.shape)
 
     """
 
@@ -205,6 +287,7 @@ class CNNModel(ModelABC):
         super().__init__()
         self.num_classes = num_classes
 
+        # By default pretrained weights are not downloaded
         self.feat_extract = _get_architecture(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
 
@@ -221,6 +304,10 @@ class CNNModel(ModelABC):
             imgs (torch.Tensor):
                 Model input.
 
+        Returns:
+            torch.Tensor:
+                The output logits after passing through the model.
+
         """
         feat = self.feat_extract(imgs)
         gap_feat = self.pool(feat)
@@ -234,15 +321,23 @@ class CNNModel(ModelABC):
 
         This simply applies argmax along last axis of the input.
 
+        Args:
+            image (np.ndarray):
+                The input image array.
+
+        Returns:
+            np.ndarray:
+                The post-processed image array.
+
         """
-        return _postproc(image=image)
+        return argmax_last_axis(image=image)
 
     @staticmethod
     def infer_batch(
         model: nn.Module,
         batch_data: torch.Tensor,
         device: str = "cpu",
-    ) -> dict[str, np.ndarray]:
+    ) -> np.ndarray:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as i/o aggregation.
@@ -255,6 +350,10 @@ class CNNModel(ModelABC):
                 `torch.utils.data.DataLoader`.
             device (str):
                 Transfers model to the specified device. Default is "cpu".
+
+        Example:
+            >>> output = _infer_batch(model, batch_data, "cuda")
+            >>> print(output)
 
         """
         return _infer_batch(model=model, batch_data=batch_data, device=device)
@@ -272,6 +371,13 @@ class TimmModel(ModelABC):
              - "efficientnet_b{i}" for i in [0, 1, ..., 7]
              - "UNI"
              - "prov-gigapath"
+             - "UNI2"
+             - "Virchow"
+             - "Virchow2"
+             - "kaiko"
+             - "H-optimus-0"
+             - "H-optimus-1"
+             - "H0-mini"
         num_classes (int):
             Number of classes output by model.
         pretrained (bool, keyword-only):
@@ -287,6 +393,12 @@ class TimmModel(ModelABC):
         classifier (nn.Module):
             Linear classifier module used to map the features to the
             output.
+
+    Example:
+        >>> model = TimmModel("UNI", pretrained=True)
+        >>> output = model(torch.randn(1, 3, 224, 224))
+        >>> print(output.shape)
+
     """
 
     def __init__(
@@ -317,6 +429,10 @@ class TimmModel(ModelABC):
             imgs (torch.Tensor):
                 Model input.
 
+        Returns:
+            torch.Tensor:
+                The output logits after passing through the model.
+
         """
         feat = self.feat_extract(imgs)
         feat = torch.flatten(feat, 1)
@@ -329,15 +445,23 @@ class TimmModel(ModelABC):
 
         This simply applies argmax along last axis of the input.
 
+        Args:
+            image (np.ndarray):
+                The input image array.
+
+        Returns:
+            np.ndarray:
+                The post-processed image array.
+
         """
-        return _postproc(image=image)
+        return argmax_last_axis(image=image)
 
     @staticmethod
     def infer_batch(
         model: nn.Module,
         batch_data: torch.Tensor,
         device: str,
-    ) -> dict[str, np.ndarray]:
+    ) -> np.ndarray:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as i/o aggregation.
@@ -349,7 +473,15 @@ class TimmModel(ModelABC):
                 A batch of data generated by
                 `torch.utils.data.DataLoader`.
             device (str):
-                Transfers model to the specified device. Default is "cpu".
+                Transfers model to the specified device.
+
+        Returns:
+            np.ndarray:
+                The model predictions as a NumPy array.
+
+        Example:
+            >>> output = _infer_batch(model, batch_data, "cuda")
+            >>> print(output)
 
         """
         return _infer_batch(model=model, batch_data=batch_data, device=device)
@@ -383,6 +515,12 @@ class CNNBackbone(ModelABC):
                 - "mobilenet_v3_large"
                 - "mobilenet_v3_small"
 
+    Attributes:
+        feat_extract (nn.Module):
+            Backbone CNN model.
+        pool (nn.Module):
+            Type of pooling applied after feature extraction.
+
     Examples:
         >>> # Creating resnet50 architecture from default pytorch
         >>> # without the classification layer with its associated
@@ -400,6 +538,7 @@ class CNNBackbone(ModelABC):
     def __init__(self: CNNBackbone, backbone: str) -> None:
         """Initialize :class:`CNNBackbone`."""
         super().__init__()
+        # By default pretrained weights are not downloaded
         self.feat_extract = _get_architecture(backbone)
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
 
@@ -412,6 +551,10 @@ class CNNBackbone(ModelABC):
             imgs (torch.Tensor):
                 Model input.
 
+        Returns:
+            torch.Tensor:
+                The extracted features.
+
         """
         feat = self.feat_extract(imgs)
         gap_feat = self.pool(feat)
@@ -422,7 +565,7 @@ class CNNBackbone(ModelABC):
         model: nn.Module,
         batch_data: torch.Tensor,
         device: str,
-    ) -> list[dict[str, np.ndarray]]:
+    ) -> list[np.ndarray]:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as i/o aggregation.
@@ -437,8 +580,12 @@ class CNNBackbone(ModelABC):
                 Transfers model to the specified device. Default is "cpu".
 
         Returns:
-            list[dict[str, np.ndarray]]:
+            list[np.ndarray]:
                 list of dictionary values with numpy arrays.
+
+        Example:
+            >>> output = CNNBackbone.infer_batch(model, batch_data, "cuda")
+            >>> print(output)
 
         """
         return [_infer_batch(model=model, batch_data=batch_data, device=device)]
@@ -451,13 +598,23 @@ class TimmBackbone(ModelABC):
 
     Args:
         backbone (str):
-            Model name. Currently, the tool supports following
-             model names and their default associated weights from timm.
-             - "efficientnet_b{i}" for i in [0, 1, ..., 7]
-             - "UNI"
-             - "prov-gigapath"
+            Model name. Supported model names include:
+                - "efficientnet_b{i}" for i in [0, 1, ..., 7]
+                - "UNI"
+                - "prov-gigapath"
+                - "UNI2"
+                - "Virchow"
+                - "Virchow2"
+                - "kaiko"
+                - "H-optimus-0"
+                - "H-optimus-1"
+                - "H0-mini"
         pretrained (bool, keyword-only):
             Whether to load pretrained weights.
+
+    Attributes:
+        feat_extract (nn.Module):
+            Backbone timm model.
 
     Examples:
         >>> # Creating UNI tile encoder
@@ -487,6 +644,10 @@ class TimmBackbone(ModelABC):
             imgs (torch.Tensor):
                 Model input.
 
+        Returns:
+            torch.Tensor:
+                The extracted features.
+
         """
         feats = self.feat_extract(imgs)
         return torch.flatten(feats, 1)
@@ -496,7 +657,7 @@ class TimmBackbone(ModelABC):
         model: nn.Module,
         batch_data: torch.Tensor,
         device: str,
-    ) -> list[dict[str, np.ndarray]]:
+    ) -> list[np.ndarray]:
         """Run inference on an input batch.
 
         Contains logic for forward operation as well as i/o aggregation.
@@ -511,8 +672,12 @@ class TimmBackbone(ModelABC):
                 Transfers model to the specified device. Default is "cpu".
 
         Returns:
-            list[dict[str, np.ndarray]]:
+            list[np.ndarray]:
                 list of dictionary values with numpy arrays.
+
+        Example:
+            >>> output = TimmBackbone.infer_batch(model, batch_data, "cuda")
+            >>> print(output)
 
         """
         return [_infer_batch(model=model, batch_data=batch_data, device=device)]

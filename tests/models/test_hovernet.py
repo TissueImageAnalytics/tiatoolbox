@@ -1,6 +1,6 @@
 """Unit test package for HoVerNet."""
 
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -37,25 +37,8 @@ def test_functionality(remote_sample: Callable) -> None:
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, device=select_device(on_gpu=False))
     output = [v[0] for v in output]
-    output = model.postproc(output)
-    assert len(output[1]) > 0, "Must have some nuclei."
-
-    # * test fast mode (architecture used for MoNuSAC data)
-    patch = reader.read_bounds(
-        (0, 0, 256, 256),
-        resolution=0.25,
-        units="mpp",
-        coord_space="resolution",
-    )
-    batch = torch.from_numpy(patch)[None]
-    model = HoVerNet(num_types=5, mode="fast")
-    weights_path = fetch_pretrained_weights("hovernet_fast-monusac")
-    pretrained = torch.load(weights_path)
-    model.load_state_dict(pretrained)
-    output = model.infer_batch(model, batch, device=select_device(on_gpu=False))
-    output = [v[0] for v in output]
-    output = model.postproc(output)
-    assert len(output[1]) > 0, "Must have some nuclei."
+    output = model.postproc(output, offset=(0, 0))
+    assert len(output[0]["info_dict"]) > 0, "Must have some nuclei."
 
     # * test original mode on CoNSeP dataset (architecture used in HoVerNet paper)
     patch = reader.read_bounds(
@@ -71,29 +54,12 @@ def test_functionality(remote_sample: Callable) -> None:
     model.load_state_dict(pretrained)
     output = model.infer_batch(model, batch, device=select_device(on_gpu=False))
     output = [v[0] for v in output]
-    output = model.postproc(output)
-    assert len(output[1]) > 0, "Must have some nuclei."
-
-    # * test original mode on Kumar dataset (architecture used in HoVerNet paper)
-    patch = reader.read_bounds(
-        (0, 0, 270, 270),
-        resolution=0.25,
-        units="mpp",
-        coord_space="resolution",
-    )
-    batch = torch.from_numpy(patch)[None]
-    model = HoVerNet(num_types=None, mode="original")
-    weights_path = fetch_pretrained_weights("hovernet_original-kumar")
-    pretrained = torch.load(weights_path)
-    model.load_state_dict(pretrained)
-    output = model.infer_batch(model, batch, device=select_device(on_gpu=False))
-    output = [v[0] for v in output]
-    output = model.postproc(output)
-    assert len(output[1]) > 0, "Must have some nuclei."
+    output = model.postproc(output, offset=(0, 0))
+    assert len(output[0]["info_dict"]) > 0, "Must have some nuclei."
 
     # test crash when providing exotic mode
     with pytest.raises(ValueError, match=r".*Invalid mode.*"):
-        model = HoVerNet(num_types=None, mode="super")
+        _ = HoVerNet(num_types=None, mode="super")
 
 
 def test_unit_blocks() -> None:

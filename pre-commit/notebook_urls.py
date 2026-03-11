@@ -14,7 +14,7 @@ from pathlib import Path
 def git_branch_name() -> str:
     """Get the current branch name."""
     return (
-        subprocess.check_output(  # noqa: S603
+        subprocess.check_output(
             ["/usr/bin/git", "rev-parse", "--abbrev-ref", "HEAD"],
         )
         .decode()
@@ -45,7 +45,7 @@ def git_previous_commit_modified_paths() -> set[Path]:
     """Get a set of file paths modified in the previous commit."""
     return {
         Path(p)
-        for p in subprocess.check_output(  # noqa: S603
+        for p in subprocess.check_output(
             ["/usr/bin/git", "diff", "--name-only", "HEAD~"],
         )
         .decode()
@@ -197,7 +197,9 @@ def check_notebook(
         for line_num, line in enumerate(cell["source"]):
             new_line = replace_line(line, to_ref, replacements)
             if new_line != line:
-                print(f"{path.name}: Changed (cell {cell_num+1}, line {line_num+1})")
+                print(
+                    f"{path.name}: Changed (cell {cell_num + 1}, line {line_num + 1})"
+                )
                 changed = True
                 cell["source"][line_num] = new_line
     return changed, notebook
