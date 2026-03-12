@@ -58,6 +58,15 @@ TIAViz now integrates Meta’s Segment Anything Model (SAM), enabling:
 
 Simplified SAM usage (#968) streamlines its integration into analysis pipelines.
 
+### 🖼️ WSI Registration Visualization in TIAViz
+
+TIAViz now supports **interactive WSI registration visualisation**, allowing users to compare aligned slides in two modes:
+
+- **Side‑by‑side view** — view fixed and moving WSIs next to each other for direct comparison
+- **Overlay mode** — blend registered WSIs with adjustable transparency for visual inspection of alignment quality
+
+This feature enables intuitive, high‑resolution exploration of slide registration results directly within TIAViz.
+
 ### 🧩 Enhanced WSIReader & Metadata Handling
 
 Major improvements include:
