@@ -58,6 +58,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
+    Self,
     TypeVar,
     cast,
     overload,
@@ -72,7 +73,6 @@ from shapely.affinity import scale, translate
 from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
-from typing_extensions import Self
 
 import tiatoolbox
 from tiatoolbox import DuplicateFilter, logger
