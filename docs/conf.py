@@ -88,7 +88,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "TIA Toolbox"
-copyright = "2025, TIA Lab"  # noqa: A001
+copyright = "2026, TIA Lab"  # noqa: A001
 author = "TIA Lab"
 
 # The version info for the project you're documenting, acts as replacement

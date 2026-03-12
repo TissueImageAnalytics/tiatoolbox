@@ -1,5 +1,207 @@
 # History
 
+## TIAToolbox v2.0.0 (2026-03-11)
+
+### ✨ Major Updates and Feature Improvements
+
+#### ⚙️ Engine Redesign (PR #578)
+
+TIAToolbox 2.0.0 introduces a completely re-engineered inference engine designed for significant performance, scalability, and memory-efficiency improvements.
+
+#### Key Enhancements
+
+- A modern processing stack built on **Dask** (parallel/distributed execution) and **Zarr** (chunked, out-of-core storage)
+- **Standardised output formats** across all engines:
+  - Python `dict`
+  - **Zarr**
+  - **AnnotationStore** (SQLite-backed)
+  - **QuPath JSON**
+- Cleaner runtime behavior with reduced warning noise and a unified progress bar
+- More predictable memory usage through chunked streaming
+- Broader test coverage across engine components
+
+### 🗺️ Improved QuPath Support
+
+Enhancements include:
+
+- Better handling of **GeoJSON**
+- Support for **multipoint geometries** (#841)
+- Improved semantic output helpers:
+  - `dict_to_store_semantic_segmentor` (#926)
+  - OME-TIFF probability overlays (#929)
+
+### 🔬 New Nucleus Detection Engine
+
+A dedicated nucleus detection pipeline has been added, built on the redesigned engine for improved accuracy and efficient large-scale processing.
+
+#### 🧠 KongNet Model Family
+
+TIAToolbox 2.0.0 introduces **KongNet**, a high-performance architecture that achieved top results across multiple international challenges:
+
+- 🥇 **1st place: MONKEY Challenge (overall detection)**
+- 🥇 **1st place: MIDOG (mitosis detection)**
+- ⭐ Top-tier performance on **PUMA**
+
+Multiple pretrained variants are available (CoNIC, PanNuke, MONKEY, PUMA, MIDOG), each with standardised IO configurations.
+
+### 🧬 Expanded Foundation Model Support
+
+Additional foundation models are now supported (#906), broadening the range of high-capacity architectures available for feature extraction and downstream tasks.
+
+### 🖼️ SAM Segmentation in TIAViz
+
+TIAViz now integrates Meta’s Segment Anything Model (SAM), enabling:
+
+- Interactive segmentation
+- Rapid region extraction
+- Exploratory annotation workflows
+
+Simplified SAM usage (#968) streamlines its integration into analysis pipelines.
+
+### 🖼️ WSI Registration Visualization in TIAViz
+
+TIAViz now supports **interactive WSI registration visualisation**, allowing users to compare aligned slides in two modes:
+
+- **Side‑by‑side view** — view fixed and moving WSIs next to each other for direct comparison
+- **Overlay mode** — blend registered WSIs with adjustable transparency for visual inspection of alignment quality
+
+This feature enables intuitive, high‑resolution exploration of slide registration results directly within TIAViz.
+
+### 🧩 Enhanced WSIReader & Metadata Handling
+
+Major improvements include:
+
+- More robust cross-vendor **metadata extraction** (#1001)
+- **Multichannel image support** (PR #825) for immunofluorescence and non-RGB modalities
+- Simplified Windows installation using `openslide-bin` (no manual DLL steps)
+- macOS Tileserver fix (#976)
+- Improved DICOM reading (#934)
+
+### ☁️ New Cloud-Native Reader: FsspecJSONWSIReader (PR #897)
+
+A new reader supporting **fsspec-compatible filesystems**, enabling seamless access to WSIs stored on:
+
+- S3
+- GCS
+- Azure
+- HPC clusters
+- Any fsspec-supported backend
+
+This enables cloud-native and distributed data workflows.
+Contributed by @aacic
+
+### 🤗 Pretrained Models Migrated to Hugging Face
+
+All pretrained models and sample assets have been migrated (#945, #983), improving:
+
+- Download reliability
+- Versioning and reproducibility
+- Caching and CI integration
+- Licensing clarity per model family
+
+### 🛡️ Security, Compatibility & Tooling
+
+#### 🔐 Security & Dependency Updates
+
+- Dependency upgrades
+- Internal security improvements
+- Explicit workflow permissions added (#1021, #1023)
+
+#### 🐍 Python Version Support
+
+- **Dropped:** Python **3.9**
+- **Added:** Python **3.13**
+- **Supported:** Python 3.10–3.13
+- Updated CUDA wheel source to **cu126**
+
+#### 🛠️ Developer Tooling & CI/CD
+
+- Expanded **mypy** type-checking coverage (#912, #931, #935, #951)
+- Updated pre-commit hooks and general formatting
+- CI uses **CPU-only PyTorch** for faster, more reliable builds (#974, #979)
+- Updated pip install workflow (#1013)
+- Added new **Python 3.13 Docker images** (#1014, #1019)
+
+### 🧹 Bug Fixes & Stability Improvements
+
+- Fixed multi-GPU behaviour with `torch.compile` (#923)
+- Fixed DICOM reading issue (#934)
+- Fixed annotation contour handling with holes (#956)
+- Fixed consecutive annotation load bug (#927)
+- Fixed SCCNN model issues (#970)
+- Fixed MapDe `dist_filter` shape issue (#914)
+- Improved notebook reliability on Colab (#1026–#1030)
+- macOS TileServer issues resolved (#976)
+
+### 🧭 Migration Guide for Users
+
+#### 🔄 Updating from 1.x to 2.0.0
+
+#### Update calls: replace `.predict()` with `.run()`
+
+```python
+# Old
+results = segmentor.predict(imgs=[...], ioconfig=config)
+
+# New
+results = segmentor.run(images=[...], ioconfig=config)
+```
+
+#### Use `patch_mode`: replace `mode="patch"` with `patch_mode=True` and `mode="tile"` or "wsi" with `patch_mode=False`
+
+```python
+# Old
+results = segmentor.predict(imgs=[...], mode="patch", ioconfig=config)
+
+# New
+results = segmentor.run(images=[...], patch_mode=True, ioconfig=config)
+```
+
+```python
+# Old
+results = segmentor.predict(imgs=[...], mode="wsi", ioconfig=config)
+
+# New
+results = segmentor.run(images=[...], patch_mode=False, ioconfig=config)
+```
+
+#### Use the new I/O configs
+
+```python
+from tiatoolbox.models.engine.io_config import IOSegmentorConfig
+
+config = IOSegmentorConfig(
+    patch_input_shape=(256, 256),
+    stride_shape=(240, 240),
+    input_resolutions=[{"resolution": 0.25, "units": "mpp"}],
+    save_resolution={"units": "baseline", "resolution": 1.0},
+)
+```
+
+#### Specify the output format
+
+```python
+results = segmentor.run(
+    images=[...],
+    ioconfig=ioconfig,
+    output_type="zarr",  # or "dict", "annotationstore", "qupath"
+    save_dir="outputs/",
+)
+```
+
+#### Update imports
+
+- `tiatoolbox.typing` → `tiatoolbox.type_hints`
+
+#### Install requirements
+
+- Python **3.10+** required
+- On Windows: install OpenSlide via `pip install openslide-bin`
+
+**Full Changelog:** https://github.com/TissueImageAnalytics/tiatoolbox/compare/v1.6.0...v2.0.0
+
+______________________________________________________________________
+
 ## TIAToolbox v1.6.0 (2024-12-12)
 
 ### Major Updates and Feature Improvements
