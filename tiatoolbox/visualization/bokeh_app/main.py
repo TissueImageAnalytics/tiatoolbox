@@ -29,6 +29,7 @@ from bokeh.models import (
     ColorPicker,
     Column,
     ColumnDataSource,
+    CustomAction,
     CustomJS,
     CustomJSTickFormatter,
     DataTable,
@@ -68,8 +69,9 @@ from requests.adapters import HTTPAdapter, Retry
 # GitHub actions seems unable to find TIAToolbox unless this is here
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 from tiatoolbox import logger
-from tiatoolbox.models.engine.nucleus_instance_segmentor import (
-    NucleusInstanceSegmentor,
+from tiatoolbox.models.engine.nucleus_instance_segmentor import NucleusInstanceSegmentor
+from tiatoolbox.models.engine.prompt_segmentor import (  # skipcq: FLK-E402
+    PromptSegmentor,
 )
 from tiatoolbox.tools.pyramid import ZoomifyGenerator
 from tiatoolbox.utils.misc import select_device
@@ -1096,6 +1098,23 @@ def slide_select_cb(attr: str, old: str, new: str) -> None:  # noqa: ARG001
             layer_drop_cb(dummy_attr)
 
 
+def clear_overlay_cb(attr: str) -> None:  # noqa: ARG001
+    """Clear all overlays and reset to just the slide."""
+    UI["pt_source"].data = {"x": [], "y": []}
+    UI["box_source"].data = {"x": [], "y": [], "width": [], "height": []}
+    UI["node_source"].data = {"x_": [], "y_": [], "node_color_": []}
+    UI["edge_source"].data = {"x0_": [], "y0_": [], "x1_": [], "y1_": []}
+    UI["hover"].tooltips = None
+    if len(UI["p"].renderers) > N_PERMANENT_RENDERERS:
+        for r in UI["p"].renderers[N_PERMANENT_RENDERERS:].copy():
+            UI["p"].renderers.remove(r)
+    UI["vstate"].layer_dict = {"slide": 0, "rect": 1, "pts": 2, "nodes": 3, "edges": 4}
+    UI["color_column"].children = []
+    UI["type_column"].children = []
+    UI["s"].put(f"http://{host2}:{port}/tileserver/clear_overlays")
+    change_tiles("slide")
+
+
 def handle_graph_layer(attr: MenuItemClick) -> None:  # skipcq: PY-R1000
     """Handle adding a graph layer."""
     do_feats = False
@@ -1322,6 +1341,8 @@ def to_model_cb(attr: ButtonClick) -> None:  # noqa: ARG001
     """Callback to run currently selected model."""
     if UI["vstate"].current_model == "hovernet":
         segment_on_box()
+    elif UI["vstate"].current_model == "SAM":
+        sam_segment()
     # Add any other models here
     else:  # pragma: no cover
         logger.warning("unknown model")
@@ -1477,6 +1498,103 @@ def segment_on_box() -> None:
 
     # Clean up temp files
     rmtree(tmp_mask_dir)
+
+
+def sam_segment() -> None:
+    """Callback to run SAM using a point on the slide.
+
+    Will run PromptSegmentor on selected region of wsi defined
+    by the point in pt_source.
+
+    """
+    prompt_segmentor = PromptSegmentor()
+    x_start = max(0, UI["p"].x_range.start)
+    y_start = max(0, -UI["p"].y_range.end)
+    x_end = min(UI["p"].x_range.end, UI["vstate"].dims[0])
+    y_end = min(-UI["p"].y_range.start, UI["vstate"].dims[1])
+    offset = np.array([x_start, y_start])
+    prompt_segmentor.offset = offset
+
+    height = y_end - y_start
+    width = x_end - x_start
+    res, scale_factor = prompt_segmentor.calc_mpp(
+        (width, height), UI["vstate"].mpp[0], 1500
+    )
+
+    # Get point coordinates
+    x = np.round(UI["pt_source"].data["x"])
+    y = np.round(UI["pt_source"].data["y"])
+    point_coords = (
+        (
+            np.array([[[x[i], -y[i]] for i in range(len(x))]], np.uint32)
+            - np.array([[x_start, y_start]])
+        )
+        / scale_factor
+        if len(x) > 0
+        else None
+    )
+
+    # Get box coordinates
+    x = np.round(UI["box_source"].data["x"])
+    y = np.round(UI["box_source"].data["y"])
+
+    x = [
+        round(UI["box_source"].data["x"][i] - 0.5 * UI["box_source"].data["width"][i])
+        for i in range(len(x))
+    ]
+    y = [
+        -round(UI["box_source"].data["y"][i] + 0.5 * UI["box_source"].data["height"][i])
+        for i in range(len(y))
+    ]
+    width = [round(UI["box_source"].data["width"][i]) for i in range(len(x))]
+    height = [round(UI["box_source"].data["height"][i]) for i in range(len(x))]
+    box_coords = (
+        (
+            np.array(
+                [
+                    [
+                        [x[i], y[i], x[i] + width[i], height[i] + y[i]]
+                        for i in range(len(x))
+                    ]
+                ],
+                np.uint32,
+            )
+            - np.array(
+                [[x_start, y_start, x_start, y_start]],
+            )
+        )
+        / scale_factor
+        if len(x) > 0
+        else None
+    )
+
+    tmp_save_dir = Path(tempfile.mkdtemp(suffix="bokeh_temp"))
+
+    # read the region of interest from the slide
+    roi = UI["vstate"].wsi.read_bounds(
+        (int(x_start), int(y_start), int(x_end), int(y_end)),
+        resolution=res,
+        units="mpp",
+    )
+
+    # Run SAM on the point
+    prediction = prompt_segmentor.run(
+        images=[roi],
+        device=select_device(on_gpu=torch.cuda.is_available()),
+        save_dir=tmp_save_dir,
+        point_coords=point_coords,
+        box_coords=box_coords,
+    )
+
+    ann_loc = str(prediction[0])
+
+    fname = make_safe_name(ann_loc)
+    resp = UI["s"].put(
+        f"http://{host2}:{port}/tileserver/overlay",
+        data={"overlay_path": fname},
+    )
+    ann_types = json.loads(resp.text)
+    update_ui_on_new_annotations(ann_types)
 
 
 # endregion
@@ -1695,7 +1813,7 @@ def gather_ui_elements(  # noqa: PLR0915
         button_type="success",
         width=80,
         max_width=90,
-        height=35,
+        height=45,
         sizing_mode="stretch_width",
         name=f"to_model{win_num}",
     )
@@ -1707,7 +1825,7 @@ def gather_ui_elements(  # noqa: PLR0915
     )
     model_drop = Select(
         title="choose model:",
-        options=["hovernet"],
+        options=["hovernet", "SAM"],
         height=25,
         width=120,
         max_width=120,
@@ -1720,9 +1838,17 @@ def gather_ui_elements(  # noqa: PLR0915
         button_type="success",
         max_width=90,
         width=80,
-        height=35,
+        height=45,
         sizing_mode="stretch_width",
         name=f"save_button{win_num}",
+    )
+    clear_button = Button(
+        label="Clear Overlays",
+        button_type="warning",
+        width=120,
+        height=40,
+        sizing_mode="stretch_width",
+        name=f"clear_button{win_num}",
     )
     type_cprop_tt = Tooltip(
         content=HTML(
@@ -1791,6 +1917,7 @@ def gather_ui_elements(  # noqa: PLR0915
     filter_input.on_change("value", filter_input_cb)
     cprop_input.on_change("value", cprop_input_cb)
     type_cmap_select.on_change("value", type_cmap_cb)
+    clear_button.on_click(clear_overlay_cb)
 
     # Create some layouts
     type_column = column(children=layer_boxes, name=f"type_column{win_num}")
@@ -1828,6 +1955,7 @@ def gather_ui_elements(  # noqa: PLR0915
                 "cmap_row",
                 "type_cmap_select",
                 "model_row",
+                "clear_button",
                 "type_select_row",
             ],
             [
@@ -1840,18 +1968,19 @@ def gather_ui_elements(  # noqa: PLR0915
                 cmap_row,
                 type_cmap_select,
                 model_row,
+                clear_button,
                 type_select_row,
             ],
             strict=False,
         ),
     )
     if "ui_elements_1" in doc_config:
-        # Only add the elements specified in config file
+        # Dont add elements specified 0 in config file
         ui_layout = column(
             [
                 ui_elements_1[el]
-                for el in doc_config["ui_elements_1"]
-                if doc_config["ui_elements_1"][el] == 1
+                for el in ui_elements_1
+                if doc_config["ui_elements_1"].get(el, 1) == 1
             ],
             sizing_mode="stretch_width",
         )
@@ -1887,7 +2016,7 @@ def gather_ui_elements(  # noqa: PLR0915
             [
                 ui_elements_2[el]
                 for el in doc_config["ui_elements_2"]
-                if doc_config["ui_elements_2"][el] == 1
+                if doc_config["ui_elements_2"].get(el, 1) == 1
             ],
         )
     else:
@@ -2013,6 +2142,22 @@ def make_window(vstate: ViewerState) -> dict:  # noqa: PLR0915
     p.add_tools(BoxEditTool(renderers=[r], num_objects=1))
     p.add_tools(PointDrawTool(renderers=[c]))
     p.add_tools(TapTool())
+    clear_code = """
+            box_source.clear()
+            pt_source.clear()
+            """
+    p.add_tools(
+        CustomAction(
+            callback=CustomJS(
+                args={
+                    "box_source": box_source,
+                    "pt_source": pt_source,
+                },
+                code=clear_code,
+            ),
+            description="Clear",
+        ),
+    )
     if get_from_config(["opts", "hover_on"], 0) == 0:
         p.toolbar.active_inspect = None
 

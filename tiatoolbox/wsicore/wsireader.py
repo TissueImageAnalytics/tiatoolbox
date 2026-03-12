@@ -515,12 +515,31 @@ class WSIReader:
                 input_path, suffixes, last_suffix, mpp, power, post_proc
             )
             or WSIReader.try_tiff(input_path, last_suffix, mpp, power, post_proc)
+            or WSIReader.try_openslide(input_path, last_suffix, mpp, power)
         )
 
         if reader is None:
             reader = _handle_virtual_wsi(last_suffix, input_path, mpp, power)
 
         return reader
+
+    @staticmethod
+    def try_openslide(
+        input_path: Path,
+        last_suffix: str,
+        mpp: tuple[Number, Number] | None,
+        power: Number | None,
+    ) -> OpenSlideWSIReader | None:
+        """Try to create an OpenSlideWSIReader if the input is a TIFF file."""
+        if last_suffix in (".tif", ".tiff"):
+            try:
+                return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
+            except (
+                openslide.OpenSlideUnsupportedFormatError,
+                openslide.OpenSlideError,
+            ):
+                return None
+        return None
 
     @staticmethod
     def try_dicom(
@@ -633,12 +652,12 @@ class WSIReader:
         self._m_info = None
 
         # Set a manual mpp value
-        if mpp and isinstance(mpp, Number):
+        if mpp is not None and isinstance(mpp, Number):
             mpp = (mpp, mpp)
-        if mpp and (not hasattr(mpp, "__len__") or len(mpp) != 2):  # noqa: PLR2004
+        if mpp is not None and (not hasattr(mpp, "__len__") or len(mpp) != 2):  # noqa: PLR2004
             msg = "`mpp` must be a number or iterable of length 2."
             raise TypeError(msg)
-        self._manual_mpp = tuple(mpp) if mpp else None
+        self._manual_mpp = tuple(mpp) if mpp is not None else None
 
         # Set a manual power value
         if power and not isinstance(power, Number):
@@ -1908,6 +1927,45 @@ class WSIReader:
         if verbose:
             logger.setLevel(logging.INFO)
 
+    @staticmethod
+    def _estimate_mpp_objective_power(
+        objective_power: float | None,
+        mpp: float | tuple[float] | tuple[float, float] | None,
+    ) -> tuple[
+        float | None,
+        float | tuple[float] | tuple[float, float] | np.ndarray | None,
+    ]:
+        """Estimate objective power or mpp if one of these is available."""
+        if objective_power is not None and mpp is not None:
+            return objective_power, mpp  # use slide metadata
+
+        if objective_power is None and mpp is None:
+            logger.warning(
+                "Metadata: Unable to determine objective power "
+                "or microns-per-pixel (MPP)."
+            )
+            return objective_power, mpp  # Unable to determine
+
+        if objective_power is None:
+            objective_power = utils.misc.mpp2common_objective_power(
+                mpp=float(np.mean(mpp)),
+            )
+            logger.warning(
+                "Metadata: Objective power inferred from microns-per-pixel (MPP).",
+            )
+            return objective_power, mpp  # estimate objective power from mpp
+
+        # mpp is None
+        mpp = utils.misc.objective_power2mpp(
+            objective_power=np.asarray(objective_power),  # ensures ndarray output
+        )
+        # float ensures expected output type
+        mpp = np.array([float(mpp), float(mpp)]) if mpp.ndim == 0 else mpp
+        logger.warning(
+            "Metadata: microns-per-pixel (MPP) inferred from Objective power.",
+        )
+        return objective_power, mpp  # estimate objective power from mpp
+
 
 class OpenSlideWSIReader(WSIReader):
     """Reader for OpenSlide supported whole-slide images.
@@ -2435,17 +2493,11 @@ class OpenSlideWSIReader(WSIReader):
 
         mpp = self._estimate_mpp(props)
 
-        # Fallback to calculating objective power from mpp
-        if objective_power is None:
-            if mpp is not None:  # pragma: no cover
-                objective_power = utils.misc.mpp2common_objective_power(
-                    float(np.mean(mpp)),
-                )
-                logger.warning(
-                    "Metadata: Objective power inferred from microns-per-pixel (MPP).",
-                )
-            else:
-                logger.warning("Metadata: Unable to determine objective power.")
+        # Fallback to calculating objective power & mpp
+        objective_power, mpp = self._estimate_mpp_objective_power(
+            objective_power=objective_power,
+            mpp=mpp,
+        )
 
         return WSIMeta(
             file_path=self.input_path,
@@ -3022,6 +3074,12 @@ class JP2WSIReader(WSIReader):
                     mpp_x = float(matches[1])
                     mpp_y = float(matches[1])
                     mpp = [mpp_x, mpp_y]
+
+        # Fallback to calculating objective power & mpp
+        objective_power, mpp = self._estimate_mpp_objective_power(
+            objective_power=objective_power,
+            mpp=mpp,
+        )
 
         # Get image dimensions
         image_header = boxes["ihdr"]
@@ -4238,6 +4296,28 @@ class TIFFWSIReader(WSIReader):
             )
         filetype_params["raw"]["TIFF Tags"] = tiff_tags
 
+        # Fallback to calculating objective power from mpp
+        objective_power = filetype_params["objective_power"]
+        mpp = (
+            np.asarray(filetype_params["mpp"]).astype(float)
+            if filetype_params["mpp"] is not None
+            else None
+        )
+        # Fallback to calculating objective power & mpp
+        objective_power, mpp = self._estimate_mpp_objective_power(
+            objective_power=objective_power,
+            mpp=mpp,
+        )
+        filetype_params["objective_power"] = objective_power
+        filetype_params["mpp"] = mpp
+
+        # Updating for mypy checks
+        slide_dimensions = (slide_dimensions[0], slide_dimensions[1])
+        level_dimensions = [
+            (level_dimensions_[0], level_dimensions_[1])
+            for level_dimensions_ in level_dimensions
+        ]
+
         return WSIMeta(
             file_path=self.input_path,
             slide_dimensions=slide_dimensions,
@@ -4465,6 +4545,14 @@ class FsspecJsonWSIReader(WSIReader):
             ]  # List of multiscale metadata entries
             for entry in multiscales:
                 filetype_params = entry.get("metadata", {})
+
+        # Fallback to calculating objective power & mpp
+        objective_power, mpp = self._estimate_mpp_objective_power(
+            objective_power=filetype_params["objective_power"],
+            mpp=filetype_params["mpp"],
+        )
+        filetype_params["mpp"] = mpp
+        filetype_params["objective_power"] = objective_power
 
         return WSIMeta(
             file_path=self.input_path,
@@ -5144,12 +5232,26 @@ class DICOMWSIReader(WSIReader):
         mm_per_pixel = dataset.pixel_spacing
         mpp = (mm_per_pixel.width * 1e3, mm_per_pixel.height * 1e3)
 
+        objective_power = None
+        ops_seq = getattr(dataset, "OpticalPathSequence", None)
+        if ops_seq:
+            ops = ops_seq[0]
+            if hasattr(ops, "ObjectiveLensPower"):
+                objective_power = ops.ObjectiveLensPower
+
+        # Fallback to calculating objective power & mpp when metadata is missing.
+        objective_power, mpp = self._estimate_mpp_objective_power(
+            objective_power=objective_power,
+            mpp=mpp,
+        )
+
         return WSIMeta(
             slide_dimensions=level_dimensions[0],
             level_dimensions=level_dimensions,
             level_downsamples=level_downsamples,
             axes="YXS",
             mpp=mpp,
+            objective_power=objective_power,
             level_count=len(level_dimensions),
             vendor=dataset.Manufacturer,
             file_path=self.input_path,
@@ -5685,6 +5787,15 @@ class NGFFWSIReader(WSIReader):
 
         """
         multiscales = self.zattrs.multiscales
+        mpp = self._get_mpp()
+        # This needs to be replaced once an appropriate image is available for test.
+        objective_power = None
+
+        # Fallback to calculating objective power & mpp
+        objective_power, mpp = self._estimate_mpp_objective_power(
+            objective_power=objective_power,
+            mpp=mpp,
+        )
         return WSIMeta(
             axes="".join(axis.name.upper() for axis in multiscales.axes),
             level_dimensions=[
@@ -5694,7 +5805,8 @@ class NGFFWSIReader(WSIReader):
             slide_dimensions=self._zarr_group[0].shape[:2][::-1],
             vendor=self.zattrs._creator.name,  # skipcq: PYL-W0212  # noqa: SLF001
             raw=self._zarr_group.attrs,
-            mpp=self._get_mpp(),
+            mpp=mpp,
+            objective_power=objective_power,
         )
 
     def _get_mpp(self: NGFFWSIReader) -> tuple[float, float] | None:
@@ -7417,7 +7529,7 @@ class TransformedWSIReader(WSIReader):
                 A transformed region/patch.
 
         Example:
-            >>> from tiatoolbox.wsicore import TransformedWSIReader
+            >>> from tiatoolbox.wsicore.wsireader import TransformedWSIReader
             >>> wsi = TransformedWSIReader(
             ...    input_img="cmu-1.ndpi", target_img="cmu-1.ndpi",
             ...    transform="transform.mha"

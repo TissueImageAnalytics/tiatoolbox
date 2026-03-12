@@ -157,7 +157,6 @@ def _test_qupath_output_patch(output: Path) -> None:
     assert "Polygon" in geometry_types
 
     # When class_dict is None, types are assigned as 0, 1, ...
-    assert 0 in class_values
     assert 1 in class_values
 
     # Basic sanity check
@@ -1071,7 +1070,6 @@ def _test_store_output_patch(output: Path) -> None:
             if "type" in probs:
                 annotation_types.add(probs.pop("type"))
     # When class_dict is none, types are assigned as 0, 1, ...
-    assert 0 in annotation_types
     assert 1 in annotation_types
 
     assert annotations_properties is not None

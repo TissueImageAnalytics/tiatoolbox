@@ -12,11 +12,12 @@ from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import cv2
 import glymur
 import numpy as np
+import openslide
 import pytest
 import SimpleITK as sitk  # noqa: N813
 import tifffile
@@ -2544,7 +2545,6 @@ def test_ngff_non_numeric_version(
 ) -> None:
     """Test that the reader can handle non-numeric omero versions."""
     # Patch the is_ngff function to change the min/max version
-    if_ngff = wsireader.is_ngff  # noqa: F841
     min_version = Version("0.4")
     max_version = Version("0.5")
 
@@ -3251,6 +3251,10 @@ def test_oob_read_dicom(sample_dicom: Path) -> None:
 
     """
     wsi = DICOMWSIReader(sample_dicom)
+
+    # assert reading of metadata
+    assert np.all(wsi.info.mpp == np.array([0.499, 0.499]))
+    assert wsi.info.objective_power == 20.0
     # Read a region that is out of bounds
     region = wsi.read_rect(
         location=(200000, 200),
@@ -3260,6 +3264,26 @@ def test_oob_read_dicom(sample_dicom: Path) -> None:
     assert region.shape == (100, 100, 3)
     # Check that the region is white (255)
     assert np.all(region == 255)
+
+
+def test_read_dicom_with_metadata(remote_sample: Callable) -> None:
+    """Test DICOMWSIReader when mpp and objective are available."""
+    wsi_path = remote_sample("dicom-2")
+    wsi = DICOMWSIReader(wsi_path)
+    wsi._info()
+
+    # Assert mpp and objective power are read correctly.
+    assert np.all(wsi.info.mpp == np.array([0.2498, 0.2498]))
+    assert wsi.info.objective_power == 40.0
+
+    wsi = DICOMWSIReader(wsi_path)
+    # Force delete attribute for objective power.
+    delattr(wsi.wsi.levels.base_level.datasets[0], "OpticalPathSequence")
+    wsi._info()
+
+    # Assert objective power inferred from mpp.
+    assert np.all(wsi.info.mpp == np.array([0.2498, 0.2498]))
+    assert wsi.info.objective_power == 40.0
 
 
 def test_read_rect_transformedreader_svs_baseline(
@@ -3289,7 +3313,7 @@ def test_read_rect_transformedreader_svs_baseline(
         ValueError,
         match=r"Transform cannot be None. Please provide a valid transformation",
     ):
-        wsi2 = wsireader.TransformedWSIReader(
+        _ = wsireader.TransformedWSIReader(
             sample_svs, target_img=sample_svs, transform=None
         )
 
@@ -3580,7 +3604,7 @@ def test_jp2wsireader_get_jp2_boxes_edge_cases(track_tmp_path: Path) -> None:
     """Test JP2WSIReader._get_jp2_boxes with edge cases."""
     # Create a minimal JP2 file
     path = track_tmp_path / "test.jp2"
-    _jp2 = glymur.Jp2k(path, data=np.ones((64, 64, 3), np.uint8))
+    _ = glymur.Jp2k(path, data=np.ones((64, 64, 3), np.uint8))
 
     wsi = JP2WSIReader(path)
 
@@ -4014,7 +4038,7 @@ def test_jp2wsireader_find_box_edge_cases(track_tmp_path: Path) -> None:
     """Test JP2WSIReader find_box method edge cases."""
     # Create a minimal JP2 file
     path = track_tmp_path / "test.jp2"
-    _jp2 = glymur.Jp2k(path, data=np.ones((64, 64, 3), np.uint8))
+    _ = glymur.Jp2k(path, data=np.ones((64, 64, 3), np.uint8))
 
     wsi = JP2WSIReader(path)
     boxes = wsi._get_jp2_boxes(wsi.glymur_jp2)
@@ -4204,3 +4228,41 @@ def test_virtual_read_rect_resolution_coord_space_roundtrip() -> None:
     r1 = v.read_rect((0, 0), (8, 8), coord_space="resolution")
     r2 = v.read_bounds((0, 0, 8, 8))
     assert np.array_equal(r1, r2)
+
+
+class TestTryOpenSlide:
+    """Unit tests for the WSIReader.try_openslide static method."""
+
+    @patch("tiatoolbox.wsicore.wsireader.OpenSlideWSIReader")
+    def test_tiff_suffix_success(self, mock_reader: MagicMock) -> None:
+        """Test that a valid TIFF file results in an OpenSlideWSIReader instance."""
+        mock_instance = MagicMock()
+        mock_reader.return_value = mock_instance
+
+        result: OpenSlideWSIReader | None = WSIReader.try_openslide(
+            input_path=Path("sample.tif"),
+            last_suffix=".tif",
+            mpp=(0.5, 0.5),
+            power=20,
+        )
+
+        mock_reader.assert_called_once_with(
+            Path("sample.tif"),
+            mpp=(0.5, 0.5),
+            power=20,
+        )
+        assert result is mock_instance
+
+    @patch("tiatoolbox.wsicore.wsireader.OpenSlideWSIReader")
+    def test_tiff_suffix_raises_openslide_error(self, mock_reader: MagicMock) -> None:
+        """Test that OpenSlide errors are caught and the function returns None."""
+        mock_reader.side_effect = openslide.OpenSlideError("bad file")
+
+        result: OpenSlideWSIReader | None = WSIReader.try_openslide(
+            input_path=Path("bad.tiff"),
+            last_suffix=".tiff",
+            mpp=None,
+            power=None,
+        )
+
+        assert result is None
