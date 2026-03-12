@@ -9,6 +9,6 @@ dependencies:
   - openslide
   - pip>=20.0.2
   - pixman>=0.39.0
-  - python>=3.10, <=3.13
+  - python>=3.11, <=3.14
   - pip:
       - -r requirements_dev.txt

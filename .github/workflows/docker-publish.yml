@@ -15,10 +15,10 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          - dockerfile: ./docker/3.10/Debian/Dockerfile
-            mtag: py3.10-debian
-          - dockerfile: ./docker/3.10/Ubuntu/Dockerfile
-            mtag: py3.10-ubuntu
+          - dockerfile: ./docker/3.14/Debian/Dockerfile
+            mtag: py3.14-debian
+          - dockerfile: ./docker/3.14/Ubuntu/Dockerfile
+            mtag: py3.14-ubuntu
           - dockerfile: ./docker/3.11/Debian/Dockerfile
             mtag: py3.11-debian
           - dockerfile: ./docker/3.11/Ubuntu/Dockerfile

@@ -34,16 +34,16 @@ test_requirements = [
 setup(
     author="TIA Centre",
     author_email="TIA@warwick.ac.uk",
-    python_requires=">=3.10, <3.14",
+    python_requires=">=3.11, <=3.14",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Intended Audience :: Developers",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
     ],
     description="Computational pathology toolbox developed by TIA Centre.",
     dependency_links=dependency_links,
