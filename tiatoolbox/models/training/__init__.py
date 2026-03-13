@@ -40,6 +40,7 @@ from tiatoolbox.models.training.tasks import (
 )
 from tiatoolbox.models.training.trainer import (
     Trainer,
+    create_dataloader,
     create_optimizer,
     create_scheduler,
     create_task,
@@ -67,6 +68,7 @@ __all__ = [
     "Trainer",
     "TrainerConfig",
     "TrainingTaskABC",
+    "create_dataloader",
     "create_dataset",
     "create_optimizer",
     "create_scheduler",

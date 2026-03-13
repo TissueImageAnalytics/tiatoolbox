@@ -15,12 +15,14 @@ from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.models.training import (
     CheckpointConfig,
     ClassificationTask,
+    DataLoaderConfig,
     PatchFolderClassificationDataset,
     PatchMaskPairDataset,
     SegmentationTask,
     TaskConfig,
     Trainer,
     TrainerConfig,
+    create_dataloader,
     create_task,
     save_checkpoint,
     save_model_weights,
@@ -106,6 +108,35 @@ def test_patch_folder_classification_dataset(track_tmp_path: Path) -> None:
     assert isinstance(sample["image"], torch.Tensor)
     assert sample["image"].shape == (3, 16, 16)
     assert sample["target"].dtype == torch.long
+
+
+def test_create_dataloader_uses_config(track_tmp_path: Path) -> None:
+    """DataLoaderConfig should drive dataloader construction."""
+    dataset_root = _build_classification_dataset(track_tmp_path / "class_dataset")
+    dataset = PatchFolderClassificationDataset(dataset_root)
+
+    dataloader = create_dataloader(
+        dataset,
+        DataLoaderConfig(batch_size=3, shuffle=False, drop_last=True),
+    )
+
+    batch = next(iter(dataloader))
+    assert dataloader.batch_size == 3
+    assert dataloader.drop_last is True
+    assert batch["image"].shape[0] == 3
+
+
+def test_create_dataloader_rejects_shuffle_with_sampler(track_tmp_path: Path) -> None:
+    """Explicit samplers should not be combined with shuffle=True."""
+    dataset_root = _build_classification_dataset(track_tmp_path / "class_dataset")
+    dataset = PatchFolderClassificationDataset(dataset_root)
+
+    with pytest.raises(ValueError, match="cannot be combined with an explicit sampler"):
+        _ = create_dataloader(
+            dataset,
+            DataLoaderConfig(batch_size=2, shuffle=True),
+            sampler=torch.utils.data.SequentialSampler(dataset),
+        )
 
 
 def test_patch_mask_pair_dataset(track_tmp_path: Path) -> None:
@@ -299,6 +330,13 @@ def test_task_config_validation_for_classification_target_modes() -> None:
 
     with pytest.raises(ValueError, match="requires an explicit loss"):
         _ = TaskConfig(task_type="classification", loss="auto")
+
+    with pytest.raises(ValueError, match="requires `loss='bce_with_logits'`"):
+        _ = TaskConfig(
+            task_type="classification",
+            loss="cross_entropy",
+            target_mode="binary",
+        )
 
     with pytest.raises(ValueError, match="requires `loss='bce_with_logits'`"):
         _ = TaskConfig(

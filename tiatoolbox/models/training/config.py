@@ -92,6 +92,12 @@ class TaskConfig:
             if self.loss == "auto":
                 msg = "`task_type='classification'` requires an explicit loss."
                 raise ValueError(msg)
+            if self.loss == "cross_entropy" and self.target_mode == "binary":
+                msg = (
+                    "`target_mode='binary'` requires "
+                    "`loss='bce_with_logits'` for classification."
+                )
+                raise ValueError(msg)
             if self.loss == "cross_entropy" and self.target_mode == "multi_label":
                 msg = (
                     "`target_mode='multi_label'` requires "

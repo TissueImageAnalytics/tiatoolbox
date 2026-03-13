@@ -50,6 +50,25 @@ def _normalize_output_shape(
     return height, width
 
 
+def _normalize_min_fraction(min_fraction: float) -> float:
+    """Validate and normalize a fractional threshold in the interval [0, 1]."""
+    value = float(min_fraction)
+    if not 0.0 <= value <= 1.0:
+        msg = "`min_fraction` must be in the interval [0, 1]."
+        raise ValueError(msg)
+    return value
+
+
+def _normalize_overlap_method(
+    overlap_method: str,
+) -> Literal["exact", "rasterized"]:
+    """Validate overlap method values used by coverage-based builders."""
+    if overlap_method not in {"exact", "rasterized"}:
+        msg = "`overlap_method` must be either `'exact'` or `'rasterized'`."
+        raise ValueError(msg)
+    return overlap_method
+
+
 def _patch_box(bounds: Bounds) -> Polygon:
     """Create a shapely box from bounds."""
     return box(*bounds)
@@ -209,7 +228,11 @@ class TargetBuilderABC(ABC):
 
 
 class MaskTargetBuilder(TargetBuilderABC):
-    """Build integer semantic masks from annotations."""
+    """Build integer semantic masks from annotations.
+
+    Overlapping annotations are rasterized in query iteration order, so later
+    annotations overwrite earlier labels where they intersect.
+    """
 
     def __init__(
         self: MaskTargetBuilder,
@@ -229,6 +252,12 @@ class MaskTargetBuilder(TargetBuilderABC):
         self.default_label = int(default_label)
         self.line_width = int(line_width)
         self.point_radius = int(point_radius)
+        if self.line_width <= 0:
+            msg = "`line_width` must be a positive integer."
+            raise ValueError(msg)
+        if self.point_radius <= 0:
+            msg = "`point_radius` must be a positive integer."
+            raise ValueError(msg)
 
     def _label_for_annotation(
         self: MaskTargetBuilder,
@@ -293,10 +322,10 @@ class PresenceTargetBuilder(TargetBuilderABC):
     ) -> None:
         """Initialize :class:`PresenceTargetBuilder`."""
         super().__init__(where=where, geometry_predicate=geometry_predicate)
-        self.min_fraction = float(min_fraction)
+        self.min_fraction = _normalize_min_fraction(min_fraction)
         self.positive_label = int(positive_label)
         self.negative_label = int(negative_label)
-        self.overlap_method = overlap_method
+        self.overlap_method = _normalize_overlap_method(overlap_method)
 
     def build_target(
         self: PresenceTargetBuilder,
@@ -334,9 +363,9 @@ class CoverageClassTargetBuilder(TargetBuilderABC):
         super().__init__(where=where, geometry_predicate=geometry_predicate)
         self.class_mapping = class_mapping
         self.class_property = class_property
-        self.min_fraction = float(min_fraction)
+        self.min_fraction = _normalize_min_fraction(min_fraction)
         self.default_label = int(default_label)
-        self.overlap_method = overlap_method
+        self.overlap_method = _normalize_overlap_method(overlap_method)
 
     def build_target(
         self: CoverageClassTargetBuilder,
@@ -384,8 +413,8 @@ class MultiLabelTargetBuilder(TargetBuilderABC):
         super().__init__(where=where, geometry_predicate=geometry_predicate)
         self.class_mapping = class_mapping
         self.class_property = class_property
-        self.min_fraction = float(min_fraction)
-        self.overlap_method = overlap_method
+        self.min_fraction = _normalize_min_fraction(min_fraction)
+        self.overlap_method = _normalize_overlap_method(overlap_method)
 
         mapped_values = list(class_mapping.values())
         if not mapped_values:

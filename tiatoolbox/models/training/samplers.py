@@ -7,14 +7,14 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
-from torch.utils.data import Sampler
+from torch.utils.data import WeightedRandomSampler
 
 from tiatoolbox.annotation import AnnotationStore
 from tiatoolbox.tools.patchextraction import get_patch_extractor
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Iterator, Sequence
+    from collections.abc import Sequence
 
     from tiatoolbox.type_hints import Resolution, Units
 
@@ -110,7 +110,7 @@ def _normalize_labels(
     return labels_array.astype(np.int64, copy=False)
 
 
-class ClassBalancedIndexSampler(Sampler[int]):
+class ClassBalancedIndexSampler(WeightedRandomSampler):
     """Index sampler that inversely weights samples by class frequency."""
 
     def __init__(  # noqa: PLR0913
@@ -123,7 +123,6 @@ class ClassBalancedIndexSampler(Sampler[int]):
         generator: torch.Generator | None = None,
     ) -> None:
         """Initialize :class:`ClassBalancedIndexSampler`."""
-        super().__init__()
         labels_array = _normalize_labels(labels)
 
         ignored = set(ignore_labels or set())
@@ -147,28 +146,23 @@ class ClassBalancedIndexSampler(Sampler[int]):
             if int(label) in label_weights:
                 sample_weights[index] = label_weights[int(label)]
 
-        self.weights = torch.as_tensor(sample_weights, dtype=torch.double)
-        self.replacement = bool(replacement)
-        self.generator = generator
-
         default_num_samples = int(np.sum(eligible_mask))
-        self.num_samples = (
+        resolved_num_samples = (
             int(num_samples) if num_samples is not None else default_num_samples
         )
-        if self.num_samples <= 0:
+        if resolved_num_samples <= 0:
             msg = "`num_samples` must be a positive integer."
             raise ValueError(msg)
+        if not replacement and resolved_num_samples > default_num_samples:
+            msg = (
+                "`num_samples` cannot exceed the number of non-ignored samples "
+                "when `replacement=False`."
+            )
+            raise ValueError(msg)
 
-    def __iter__(self: ClassBalancedIndexSampler) -> Iterator[int]:
-        """Yield sampled indices according to precomputed class-balanced weights."""
-        sampled_indices = torch.multinomial(
-            self.weights,
-            self.num_samples,
-            self.replacement,
-            generator=self.generator,
+        super().__init__(
+            weights=torch.as_tensor(sample_weights, dtype=torch.double),
+            num_samples=resolved_num_samples,
+            replacement=bool(replacement),
+            generator=generator,
         )
-        return iter(sampled_indices.tolist())
-
-    def __len__(self: ClassBalancedIndexSampler) -> int:
-        """Return the number of samples drawn in one sampler epoch."""
-        return self.num_samples

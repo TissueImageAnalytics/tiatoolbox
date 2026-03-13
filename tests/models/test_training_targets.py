@@ -132,6 +132,36 @@ def test_presence_coverage_and_multilabel_builders(track_tmp_path: Path) -> None
     assert np.array_equal(target, np.array([1, 1, 0]))
 
 
+def test_target_builders_validate_fractional_thresholds() -> None:
+    """Coverage-based builders should reject invalid min_fraction values."""
+    with pytest.raises(ValueError, match="`min_fraction` must be in the interval"):
+        _ = PresenceTargetBuilder(min_fraction=-0.1)
+
+    with pytest.raises(ValueError, match="`min_fraction` must be in the interval"):
+        _ = CoverageClassTargetBuilder(
+            class_mapping={"tumor": 1},
+            min_fraction=1.1,
+        )
+
+    with pytest.raises(ValueError, match="`min_fraction` must be in the interval"):
+        _ = MultiLabelTargetBuilder(
+            class_mapping={"tumor": 0},
+            min_fraction=2.0,
+        )
+
+
+def test_target_builders_validate_other_constructor_arguments() -> None:
+    """Target builders should reject invalid overlap and rasterization arguments."""
+    with pytest.raises(ValueError, match="`line_width` must be a positive integer"):
+        _ = MaskTargetBuilder(line_width=0)
+
+    with pytest.raises(ValueError, match="`point_radius` must be a positive integer"):
+        _ = MaskTargetBuilder(point_radius=0)
+
+    with pytest.raises(ValueError, match="`overlap_method` must be either"):
+        _ = PresenceTargetBuilder(overlap_method="unknown")  # type: ignore[arg-type]
+
+
 def test_patch_annotation_dataset_with_bounds_and_where(track_tmp_path: Path) -> None:
     """Patch+annotation dataset should generate per-patch targets from one store."""
     store_path = track_tmp_path / "dataset_targets.db"
@@ -466,3 +496,11 @@ def test_class_balanced_index_sampler() -> None:
     )
     ignore_labels = np.array([0, 0, 1, 2], dtype=np.int64)[list(iter(ignore_sampler))]
     assert np.all(ignore_labels != 2)
+
+    with pytest.raises(ValueError, match="cannot exceed the number of non-ignored"):
+        _ = ClassBalancedIndexSampler(
+            labels=np.array([0, 0, 1], dtype=np.int64),
+            num_samples=3,
+            ignore_labels={1},
+            replacement=False,
+        )

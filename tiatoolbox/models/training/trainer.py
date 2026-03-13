@@ -13,6 +13,7 @@ from torch.amp import GradScaler, autocast
 from torch import nn
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import CosineAnnealingLR, LRScheduler, StepLR
+from torch.utils.data import DataLoader
 
 from tiatoolbox import logger
 from tiatoolbox.models.training.checkpoint import (
@@ -24,6 +25,7 @@ from tiatoolbox.models.training.checkpoint import (
 )
 from tiatoolbox.models.training.config import (
     CheckpointConfig,
+    DataLoaderConfig,
     OptimizerConfig,
     SchedulerConfig,
     TaskConfig,
@@ -36,7 +38,9 @@ from tiatoolbox.models.training.tasks import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    from torch.utils.data import DataLoader
+    from collections.abc import Callable
+
+    from torch.utils.data import Dataset, Sampler
 
 
 def set_seed(seed: int, *, deterministic: bool = False) -> None:
@@ -73,6 +77,31 @@ def create_optimizer(model: nn.Module, config: OptimizerConfig) -> Optimizer:
 
     msg = f"Unsupported optimizer `{config.name}`."
     raise ValueError(msg)
+
+
+def create_dataloader(
+    dataset: Dataset,
+    config: DataLoaderConfig,
+    *,
+    sampler: Sampler[int] | None = None,
+    collate_fn: Callable | None = None,
+) -> DataLoader:
+    """Create a dataloader from :class:`DataLoaderConfig`."""
+    if sampler is not None and config.shuffle:
+        msg = "`shuffle=True` cannot be combined with an explicit sampler."
+        raise ValueError(msg)
+
+    return DataLoader(
+        dataset=dataset,
+        batch_size=config.batch_size,
+        num_workers=config.num_workers,
+        shuffle=config.shuffle if sampler is None else False,
+        sampler=sampler,
+        pin_memory=config.pin_memory,
+        drop_last=config.drop_last,
+        persistent_workers=config.persistent_workers,
+        collate_fn=collate_fn,
+    )
 
 
 def create_scheduler(
