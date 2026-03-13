@@ -1458,7 +1458,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
             return removal_flag
 
         w, h = image_shape
-        boxes = tile_outputs[1]
         #  expand to full four corners
         boxes_br = boxes[:, 2:]
         boxes_tr = np.dstack([boxes[:, 2], boxes[:, 1]])[0]
