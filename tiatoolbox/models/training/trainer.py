@@ -18,6 +18,7 @@ from tiatoolbox import logger
 from tiatoolbox.models.training.checkpoint import (
     extract_model_state_dict,
     load_checkpoint,
+    load_model_state_dict,
     save_checkpoint,
     save_model_weights,
 )
@@ -349,7 +350,7 @@ class Trainer:
         checkpoint = load_checkpoint(checkpoint_path, map_location=str(self.device))
 
         model_state_dict = checkpoint["model_state_dict"]
-        self.model.load_state_dict(model_state_dict, strict=True)
+        load_model_state_dict(self.model, model_state_dict, strict=True)
 
         if "optimizer_state_dict" in checkpoint and checkpoint["optimizer_state_dict"]:
             self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])

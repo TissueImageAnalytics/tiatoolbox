@@ -3,6 +3,7 @@
 from tiatoolbox.models.training.checkpoint import (
     extract_model_state_dict,
     load_checkpoint,
+    load_model_state_dict,
     save_checkpoint,
     save_model_weights,
 )
@@ -72,6 +73,7 @@ __all__ = [
     "create_task",
     "extract_model_state_dict",
     "load_checkpoint",
+    "load_model_state_dict",
     "save_checkpoint",
     "save_model_weights",
     "set_seed",

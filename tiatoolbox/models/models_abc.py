@@ -39,8 +39,10 @@ def load_torch_model(model: nn.Module, weights: str | Path) -> nn.Module:
     """
     # ! assume to be saved in single GPU mode
     # always load on to the CPU
+    from tiatoolbox.models.training.checkpoint import load_model_state_dict
+
     saved_state_dict = torch.load(weights, map_location="cpu")
-    model.load_state_dict(saved_state_dict, strict=True)
+    load_model_state_dict(model, saved_state_dict, strict=True)
     return model
 
 

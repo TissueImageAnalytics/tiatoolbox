@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from torch import nn
 from torch.utils.data import DataLoader
 
+from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.models.training import (
     CheckpointConfig,
     ClassificationTask,
@@ -21,6 +22,8 @@ from tiatoolbox.models.training import (
     Trainer,
     TrainerConfig,
     create_task,
+    save_checkpoint,
+    save_model_weights,
 )
 
 
@@ -62,6 +65,34 @@ def _build_dummy_loader() -> DataLoader:
     targets = torch.zeros(4, dtype=torch.long)
     dataset = torch.utils.data.TensorDataset(images, targets)
     return DataLoader(dataset, batch_size=2, shuffle=False)
+
+
+class WrappedStateDictModel(nn.Module):
+    """Small model that expects weights wrapped under a `model` key."""
+
+    def __init__(self) -> None:
+        """Initialize the wrapped-state test model."""
+        super().__init__()
+        self.flatten = nn.Flatten()
+        self.linear = nn.Linear(3 * 4 * 4, 2)
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        """Run a forward pass."""
+        return self.linear(self.flatten(inputs))
+
+    def load_state_dict(  # type: ignore[override]
+        self,
+        state_dict: dict[str, torch.Tensor],
+        *,
+        strict: bool = True,
+        assign: bool = False,
+    ) -> nn.Module:
+        """Load weights from a payload wrapped under `model`."""
+        return super().load_state_dict(
+            state_dict["model"],
+            strict=strict,
+            assign=assign,
+        )
 
 
 def test_patch_folder_classification_dataset(track_tmp_path: Path) -> None:
@@ -539,6 +570,73 @@ def test_reduce_on_plateau_steps_only_when_monitor_is_available(
     _ = trainer.fit()
 
     assert scheduler.metrics_seen == [4.0]
+
+
+def test_save_model_weights_supports_wrapped_load_state_dict_models(
+    track_tmp_path: Path,
+) -> None:
+    """Exported weights should load through TIAToolbox helpers for wrapped models."""
+    model = WrappedStateDictModel()
+    with torch.no_grad():
+        model.linear.weight.fill_(1.5)
+        model.linear.bias.fill_(-0.25)
+
+    weights_path = track_tmp_path / "wrapped_weights.pth"
+    save_model_weights(model, weights_path)
+
+    reloaded_model = WrappedStateDictModel()
+    load_torch_model(reloaded_model, weights_path)
+
+    assert torch.allclose(reloaded_model.linear.weight, model.linear.weight)
+    assert torch.allclose(reloaded_model.linear.bias, model.linear.bias)
+
+
+def test_trainer_resume_supports_wrapped_load_state_dict_models(
+    track_tmp_path: Path,
+) -> None:
+    """Trainer resume should restore wrapped-load models from training checkpoints."""
+    model = WrappedStateDictModel()
+    with torch.no_grad():
+        model.linear.weight.fill_(2.0)
+        model.linear.bias.fill_(0.5)
+
+    trainer = Trainer(
+        model=model,
+        task=ClassificationTask(),
+        optimizer=torch.optim.AdamW(model.parameters(), lr=1e-3),
+        train_loader=_build_dummy_loader(),
+        val_loader=_build_dummy_loader(),
+        config=TrainerConfig(
+            max_epochs=1,
+            amp=False,
+            output_dir=track_tmp_path / "wrapped_resume_source",
+        ),
+        checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
+    )
+
+    checkpoint_path = track_tmp_path / "wrapped_resume.ckpt"
+    save_checkpoint(trainer._build_checkpoint_state(epoch=1), checkpoint_path)
+
+    resumed_model = WrappedStateDictModel()
+    resumed_trainer = Trainer(
+        model=resumed_model,
+        task=ClassificationTask(),
+        optimizer=torch.optim.AdamW(resumed_model.parameters(), lr=1e-3),
+        train_loader=_build_dummy_loader(),
+        val_loader=_build_dummy_loader(),
+        config=TrainerConfig(
+            max_epochs=1,
+            amp=False,
+            output_dir=track_tmp_path / "wrapped_resume_target",
+        ),
+        checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
+    )
+
+    start_epoch = resumed_trainer._resume_from_checkpoint(checkpoint_path)
+
+    assert start_epoch == 1
+    assert torch.allclose(resumed_model.linear.weight, model.linear.weight)
+    assert torch.allclose(resumed_model.linear.bias, model.linear.bias)
 
 
 def test_binary_segmentation_task_bce_loss_respects_ignore_index() -> None:
