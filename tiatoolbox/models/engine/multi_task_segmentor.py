@@ -149,7 +149,7 @@ from tiatoolbox.utils.misc import (
     tqdm_dask_progress_bar,
     update_tqdm_desc,
 )
-from tiatoolbox.wsicore.wsireader import is_zarr
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, is_zarr
 
 from .semantic_segmentor import (
     SemanticSegmentor,
@@ -1159,14 +1159,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
         # assume ioconfig has already been converted to `baseline` for `tile` mode
         wsi_proc_shape = wsi_reader.slide_dimensions(**highest_input_resolution)
 
-        masked_output_shape = (
-            self.mask_bounds[2] - self.mask_bounds[0],  # X/row
-            self.mask_bounds[3] - self.mask_bounds[1],  # Y/col
-        )
-
         # * retrieve tile placement and tile info flag
         # tile shape will always be corrected to be multiple of output
-        tile_info_sets = self._get_tile_info(masked_output_shape, self._ioconfig)
+        tile_info_sets = self._get_tile_info(wsi_proc_shape=wsi_proc_shape)
         ioconfig = self._ioconfig.to_baseline()
 
         tile_metadata = _build_tile_tasks(
@@ -1358,10 +1353,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
         postproc_func = self._get_model_attr("postproc_func")
         return postproc_func(head_raws)  # offset is (0, 0) by default.
 
-    @staticmethod
     def _get_tile_info(
-        image_shape: list[int, int] | tuple[int, int] | np.ndarray,
-        ioconfig: IOSegmentorConfig,
+        self: MultiTaskSegmentor,
+        wsi_proc_shape: tuple[int, int],
     ) -> list[list, ...]:
         """Generating tile information.
 
@@ -1376,11 +1370,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
         should be done to achieve the above goal.
 
         Args:
-            image_shape (:class:`numpy.ndarray`, list(int, int), tuple(int, int)):
+            wsi_proc_shape (tuple(int, int)):
                 The shape of WSI to extract the tile from, assumed to be
                 in `[width, height]` / `[x, y]`.
-            ioconfig (:obj:IOSegmentorConfig):
-                The input and output configuration objects.
 
         Returns:
             list:
@@ -1398,26 +1390,35 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     - :class:`numpy.ndarray` - Removal flags
 
         """
+        ioconfig = self._ioconfig
         margin = 0 if ioconfig.margin is None else np.array(ioconfig.margin)
         tile_shape = np.array(ioconfig.tile_shape)
         tile_shape = (
             np.floor(tile_shape / ioconfig.patch_output_shape)
             * ioconfig.patch_output_shape
         ).astype(np.int32)
-        image_shape = np.array(image_shape)
+
         tile_outputs = PatchExtractor.get_coordinates(
-            image_shape=image_shape,
+            image_shape=wsi_proc_shape,
             patch_input_shape=tile_shape,
             patch_output_shape=tile_shape,
             stride_shape=tile_shape,
         )
 
-        # * === Now generating the flags to indicate which side should
-        # * === be removed in postproc callback
-        boxes = tile_outputs[1]
+        boxes = _get_boxes_for_post_processing(
+            tile_outputs=tile_outputs,
+            mask_reader=self.dataloader.dataset.mask_reader,
+            wsi_proc_shape=wsi_proc_shape,
+            mask_padding=self.mask_padding,
+        )
+
+        masked_output_shape = (
+            self.mask_bounds[2] - self.mask_bounds[0],  # X/row
+            self.mask_bounds[3] - self.mask_bounds[1],  # Y/col
+        )
 
         # This saves computation time if the image is smaller than the expected tile
-        if np.all(image_shape <= tile_shape):
+        if np.all(masked_output_shape <= tile_shape):
             flag = np.zeros([boxes.shape[0], 4], dtype=np.int32)
             return [[boxes, flag]]
 
@@ -1439,8 +1440,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 removal_flag[sel_indices, idx] = 0
             return removal_flag
 
-        w, h = image_shape
-        boxes = tile_outputs[1]
+        w, h = masked_output_shape
         #  expand to full four corners
         boxes_br = boxes[:, 2:]
         boxes_tr = np.dstack([boxes[:, 2], boxes[:, 1]])[0]
@@ -3803,3 +3803,41 @@ def apply_coordinate_offset(
         result[i] = (item + shift_vector).astype(item.dtype)
 
     return result
+
+
+def _get_boxes_for_post_processing(
+    tile_outputs: np.ndarray,
+    mask_reader: VirtualWSIReader,
+    wsi_proc_shape: np.ndarray | tuple[int, int],
+    mask_padding: tuple[int, int, int, int] | np.ndarray,
+) -> np.ndarray:
+    """Helps filter boxes for post-processing."""
+    # * === Now generating the flags to indicate which side should
+    # * === be removed in postproc callback
+    boxes = tile_outputs[1]
+
+    # Filter masked regions
+    if mask_reader is not None:
+        selected = PatchExtractor.filter_coordinates(
+            mask_reader,  # must be at the same resolution
+            boxes,  # must already be at requested resolution
+            wsi_shape=wsi_proc_shape,
+            min_mask_ratio=0,
+        )
+        boxes = boxes[selected]
+
+    # remove offset
+    offset = np.array(mask_padding[:2])
+    boxes = boxes - np.array((*offset, *offset))
+    # remove negative values
+    boxes[:, 0:2] = np.clip(boxes[:, 0:2], 0, None)
+
+    # max x index
+    max_x = wsi_proc_shape[0] - mask_padding[2] - offset[0]
+    boxes[:, 2] = np.clip(boxes[:, 2], None, max_x)
+    # max y index
+    max_y = wsi_proc_shape[1] - mask_padding[3] - offset[1]
+    boxes[:, 3] = np.clip(boxes[:, 3], None, max_y)
+
+    # remove empty boxes
+    boxes = boxes[~((boxes[:, 3] == boxes[:, 1]) | (boxes[:, 2] == boxes[:, 0]))]

@@ -1049,7 +1049,8 @@ def test_get_tile_info_small_image_triggers_early_return(
     )
 
     # --- Act ---
-    result = MultiTaskSegmentor._get_tile_info(image_shape, ioconfig)
+    MultiTaskSegmentor._ioconfig = ioconfig
+    result = MultiTaskSegmentor._get_tile_info(wsi_proc_shape=image_shape)
 
     # --- Assert ---
     assert isinstance(result, list)
