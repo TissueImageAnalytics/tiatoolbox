@@ -1398,15 +1398,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
             * ioconfig.patch_output_shape
         ).astype(np.int32)
 
-        tile_outputs = PatchExtractor.get_coordinates(
-            image_shape=wsi_proc_shape,
-            patch_input_shape=tile_shape,
-            patch_output_shape=tile_shape,
-            stride_shape=tile_shape,
-        )
-
         boxes = _get_boxes_for_post_processing(
-            tile_outputs=tile_outputs,
+            tile_shape=tile_shape,
             mask_reader=self.dataloader.dataset.mask_reader,
             wsi_proc_shape=wsi_proc_shape,
             mask_padding=self.mask_padding,
@@ -3806,12 +3799,19 @@ def apply_coordinate_offset(
 
 
 def _get_boxes_for_post_processing(
-    tile_outputs: np.ndarray,
+    tile_shape: np.ndarray | tuple[int, int],
     mask_reader: VirtualWSIReader,
     wsi_proc_shape: np.ndarray | tuple[int, int],
     mask_padding: tuple[int, int, int, int] | np.ndarray,
 ) -> np.ndarray:
     """Helps filter boxes for post-processing."""
+    tile_outputs = PatchExtractor.get_coordinates(
+        image_shape=wsi_proc_shape,
+        patch_input_shape=tile_shape,
+        patch_output_shape=tile_shape,
+        stride_shape=tile_shape,
+    )
+
     # * === Now generating the flags to indicate which side should
     # * === be removed in postproc callback
     boxes = tile_outputs[1]
@@ -3840,4 +3840,4 @@ def _get_boxes_for_post_processing(
     boxes[:, 3] = np.clip(boxes[:, 3], None, max_y)
 
     # remove empty boxes
-    boxes = boxes[~((boxes[:, 3] == boxes[:, 1]) | (boxes[:, 2] == boxes[:, 0]))]
+    return boxes[~((boxes[:, 3] == boxes[:, 1]) | (boxes[:, 2] == boxes[:, 0]))]
