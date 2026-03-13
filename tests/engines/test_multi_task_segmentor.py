@@ -1045,7 +1045,7 @@ def test_get_tile_info_small_image_triggers_early_return(
     fake_boxes = np.array([[0, 0, 100, 100]])
     monkeypatch.setattr(
         "tiatoolbox.tools.patchextraction.PatchExtractor.get_coordinates",
-        lambda: (None, fake_boxes),
+        lambda **_: (None, fake_boxes),
     )
 
     # Create a dummy dataset with required attributes
