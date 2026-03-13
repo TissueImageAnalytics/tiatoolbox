@@ -81,9 +81,34 @@ class TaskConfig:
 
     task_type: Literal["classification", "segmentation"] = "classification"
     loss: Literal["auto", "cross_entropy", "bce_with_logits"] = "cross_entropy"
+    target_mode: Literal["auto", "single_label", "binary", "multi_label"] = "auto"
     output_key: str | None = None
     output_index: int | None = None
     ignore_index: int = -100
+
+    def __post_init__(self: TaskConfig) -> None:
+        """Validate task configuration values."""
+        if self.task_type == "classification":
+            if self.loss == "auto":
+                msg = "`task_type='classification'` requires an explicit loss."
+                raise ValueError(msg)
+            if self.loss == "cross_entropy" and self.target_mode == "multi_label":
+                msg = (
+                    "`target_mode='multi_label'` requires "
+                    "`loss='bce_with_logits'` for classification."
+                )
+                raise ValueError(msg)
+            if self.loss == "bce_with_logits" and self.target_mode == "single_label":
+                msg = (
+                    "`loss='bce_with_logits'` does not support "
+                    "`target_mode='single_label'`."
+                )
+                raise ValueError(msg)
+            return
+
+        if self.target_mode != "auto":
+            msg = "`target_mode` is only supported for classification tasks."
+            raise ValueError(msg)
 
 
 @dataclass

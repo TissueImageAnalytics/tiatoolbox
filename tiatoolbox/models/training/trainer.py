@@ -104,6 +104,7 @@ def create_task(config: TaskConfig) -> TrainingTaskABC:
     }
 
     if config.task_type == "classification":
+        kwargs["target_mode"] = config.target_mode
         return ClassificationTask(**kwargs)
     if config.task_type == "segmentation":
         return SegmentationTask(**kwargs)

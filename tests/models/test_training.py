@@ -15,8 +15,10 @@ from tiatoolbox.models.training import (
     PatchFolderClassificationDataset,
     PatchMaskPairDataset,
     SegmentationTask,
+    TaskConfig,
     Trainer,
     TrainerConfig,
+    create_task,
 )
 
 
@@ -95,6 +97,128 @@ def test_patch_mask_pair_dataset_raises_when_no_pairs(track_tmp_path: Path) -> N
 
     with pytest.raises(ValueError, match="No image/mask pairs"):
         _ = PatchMaskPairDataset(image_dir=image_dir, mask_dir=mask_dir)
+
+
+def test_binary_bce_classification_task_supports_vector_and_column_logits() -> None:
+    """Binary BCE classification should support `(N,)` and `(N, 1)` logits."""
+    targets = torch.tensor([1, 0, 1, 0], dtype=torch.long)
+
+    vector_task = ClassificationTask(
+        loss="bce_with_logits",
+        target_mode="binary",
+    )
+    vector_logits = torch.tensor([6.0, -6.0, 6.0, -6.0], dtype=torch.float32)
+    vector_loss = vector_task.compute_loss(vector_logits, targets)
+    vector_metrics = vector_task.compute_metrics(vector_logits, targets)
+
+    assert torch.isfinite(vector_loss)
+    assert vector_metrics["accuracy"] == pytest.approx(1.0)
+    assert vector_metrics["f1"] == pytest.approx(1.0)
+
+    column_logits = vector_logits.unsqueeze(1)
+    column_loss = vector_task.compute_loss(column_logits, targets)
+    column_metrics = vector_task.compute_metrics(column_logits, targets)
+
+    assert torch.isfinite(column_loss)
+    assert column_metrics["accuracy"] == pytest.approx(1.0)
+    assert column_metrics["f1"] == pytest.approx(1.0)
+
+
+def test_multilabel_bce_classification_task_supports_multilabel_targets() -> None:
+    """Multi-label BCE classification should compute loss and metrics end-to-end."""
+    task = ClassificationTask(
+        loss="bce_with_logits",
+        target_mode="multi_label",
+    )
+    logits = torch.tensor(
+        [[6.0, -6.0, 6.0], [-6.0, 6.0, -6.0]],
+        dtype=torch.float32,
+    )
+    targets = torch.tensor([[1, 0, 1], [0, 1, 0]], dtype=torch.long)
+
+    loss = task.compute_loss(logits, targets)
+    metrics = task.compute_metrics(logits, targets)
+
+    assert torch.isfinite(loss)
+    assert metrics["accuracy"] == pytest.approx(1.0)
+    assert metrics["f1"] == pytest.approx(1.0)
+
+
+def test_classification_task_metrics_respect_ignore_index() -> None:
+    """Classification metrics should ignore masked targets."""
+    single_label_task = ClassificationTask(loss="cross_entropy", ignore_index=-100)
+    single_label_logits = torch.tensor(
+        [[6.0, -6.0], [6.0, -6.0], [-6.0, 6.0]],
+        dtype=torch.float32,
+    )
+    single_label_targets = torch.tensor([0, -100, 1], dtype=torch.long)
+    single_label_metrics = single_label_task.compute_metrics(
+        single_label_logits,
+        single_label_targets,
+    )
+
+    assert single_label_metrics["accuracy"] == pytest.approx(1.0)
+    assert single_label_metrics["f1"] == pytest.approx(1.0)
+
+    multilabel_task = ClassificationTask(
+        loss="bce_with_logits",
+        target_mode="multi_label",
+        ignore_index=-100,
+    )
+    multilabel_logits = torch.tensor(
+        [[6.0, -6.0], [-6.0, 6.0]],
+        dtype=torch.float32,
+    )
+    multilabel_targets = torch.tensor(
+        [[1, -100], [-100, 1]],
+        dtype=torch.long,
+    )
+    multilabel_metrics = multilabel_task.compute_metrics(
+        multilabel_logits,
+        multilabel_targets,
+    )
+
+    assert multilabel_metrics["accuracy"] == pytest.approx(1.0)
+    assert multilabel_metrics["f1"] == pytest.approx(1.0)
+
+
+def test_task_config_validation_for_classification_target_modes() -> None:
+    """Task config should reject incompatible classification settings."""
+    task = create_task(
+        TaskConfig(
+            task_type="classification",
+            loss="bce_with_logits",
+            target_mode="multi_label",
+        )
+    )
+    assert isinstance(task, ClassificationTask)
+
+    with pytest.raises(ValueError, match="requires an explicit loss"):
+        _ = TaskConfig(task_type="classification", loss="auto")
+
+    with pytest.raises(ValueError, match="requires `loss='bce_with_logits'`"):
+        _ = TaskConfig(
+            task_type="classification",
+            loss="cross_entropy",
+            target_mode="multi_label",
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="does not support `target_mode='single_label'`",
+    ):
+        _ = TaskConfig(
+            task_type="classification",
+            loss="bce_with_logits",
+            target_mode="single_label",
+        )
+
+    with pytest.raises(ValueError, match="only supported for classification tasks"):
+        _ = TaskConfig(
+            task_type="segmentation",
+            loss="cross_entropy",
+            target_mode="binary",
+        )
 
 
 def test_classification_trainer_and_resume(track_tmp_path: Path) -> None:
