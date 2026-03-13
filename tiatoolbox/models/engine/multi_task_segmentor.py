@@ -3183,7 +3183,11 @@ def _update_tile_based_predictions_array(
             final_combined = previous_predictions_.copy()
             final_combined[keep_mask] = new_predictions_[keep_mask] + max_inst_value
             new_predictions_ = final_combined  # Update for final merge
-            max_inst_value = np.max(new_predictions_[:][:]) + max_inst_value
+            max_inst_value = (
+                np.max(new_predictions_[:][:]) + max_inst_value
+                if np.any(keep_mask)
+                else max_inst_value
+            )
 
         wsi_info_dict[idx]["predictions"][y_start:y_end, x_start:x_end] = (
             new_predictions_
