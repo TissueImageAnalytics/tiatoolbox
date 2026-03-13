@@ -12,6 +12,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from tiatoolbox.models.training import (
+    CheckpointConfig,
     ClassificationTask,
     PatchFolderClassificationDataset,
     PatchMaskPairDataset,
@@ -53,6 +54,14 @@ def _build_patch_mask_dataset(image_dir: Path, mask_dir: Path) -> tuple[Path, Pa
         np.save(mask_dir / f"sample_{sample_index}.npy", mask)
 
     return image_dir, mask_dir
+
+
+def _build_dummy_loader() -> DataLoader:
+    """Create a minimal dataloader for trainer unit tests."""
+    images = torch.zeros((4, 3, 4, 4), dtype=torch.float32)
+    targets = torch.zeros(4, dtype=torch.long)
+    dataset = torch.utils.data.TensorDataset(images, targets)
+    return DataLoader(dataset, batch_size=2, shuffle=False)
 
 
 def test_patch_folder_classification_dataset(track_tmp_path: Path) -> None:
@@ -324,6 +333,149 @@ def test_segmentation_trainer(track_tmp_path: Path) -> None:
     assert history[-1]["train_loss"] <= history[0]["train_loss"]
     assert "train_dice" in history[-1]
     assert (track_tmp_path / "segmentation_run" / "last.ckpt").exists()
+
+
+def test_trainer_requires_validation_loader_for_val_monitor(
+    track_tmp_path: Path,
+) -> None:
+    """Validation monitors should require a validation dataloader."""
+    model = nn.Sequential(nn.Flatten(), nn.Linear(3 * 4 * 4, 2))
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+    train_loader = _build_dummy_loader()
+
+    with pytest.raises(ValueError, match="requires a validation loader"):
+        _ = Trainer(
+            model=model,
+            task=ClassificationTask(),
+            optimizer=optimizer,
+            train_loader=train_loader,
+            val_loader=None,
+            config=TrainerConfig(
+                max_epochs=1,
+                monitor="val_loss",
+                amp=False,
+                output_dir=track_tmp_path / "missing_val_loader",
+            ),
+            checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
+        )
+
+
+def test_trainer_val_monitor_updates_only_on_validation_epochs(
+    track_tmp_path: Path,
+) -> None:
+    """Validation monitors should ignore training-only epochs."""
+    model = nn.Sequential(nn.Flatten(), nn.Linear(3 * 4 * 4, 2))
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+    train_loader = _build_dummy_loader()
+    val_loader = _build_dummy_loader()
+
+    trainer = Trainer(
+        model=model,
+        task=ClassificationTask(),
+        optimizer=optimizer,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        config=TrainerConfig(
+            max_epochs=3,
+            val_interval=2,
+            monitor="val_loss",
+            early_stopping_patience=0,
+            amp=False,
+            output_dir=track_tmp_path / "val_monitor",
+        ),
+        checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
+    )
+
+    epoch_metrics = iter(
+        [
+            {"loss": 3.0, "accuracy": 0.25, "f1": 0.25},
+            {"loss": 2.0, "accuracy": 0.50, "f1": 0.50},
+            {"loss": 5.0, "accuracy": 0.10, "f1": 0.10},
+            {"loss": 1.0, "accuracy": 0.75, "f1": 0.75},
+        ]
+    )
+
+    def fake_run_epoch(
+        loader: DataLoader,
+        *,
+        training: bool,
+    ) -> dict[str, float]:
+        del loader, training
+        return next(epoch_metrics)
+
+    trainer._run_epoch = fake_run_epoch  # type: ignore[method-assign]
+    history = trainer.fit()
+
+    assert len(history) == 3
+    assert "val_loss" not in history[0]
+    assert history[1]["val_loss"] == pytest.approx(5.0)
+    assert "val_loss" not in history[2]
+    assert trainer.best_epoch == 2
+    assert trainer.best_monitor_value == pytest.approx(5.0)
+
+
+def test_reduce_on_plateau_steps_only_when_monitor_is_available(
+    track_tmp_path: Path,
+) -> None:
+    """ReduceLROnPlateau should only step on epochs with an available monitor."""
+
+    class TrackingReduceLROnPlateau(torch.optim.lr_scheduler.ReduceLROnPlateau):
+        """ReduceLROnPlateau that records each metric it sees."""
+
+        def __init__(self, optimizer: torch.optim.Optimizer) -> None:
+            """Initialize tracking scheduler."""
+            super().__init__(optimizer=optimizer, mode="min")
+            self.metrics_seen: list[float] = []
+
+        def step(self, metrics: float, epoch: int | None = None) -> None:
+            """Record the metric before stepping the scheduler."""
+            self.metrics_seen.append(float(metrics))
+            super().step(metrics, epoch=epoch)
+
+    model = nn.Sequential(nn.Flatten(), nn.Linear(3 * 4 * 4, 2))
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+    scheduler = TrackingReduceLROnPlateau(optimizer)
+    train_loader = _build_dummy_loader()
+    val_loader = _build_dummy_loader()
+
+    trainer = Trainer(
+        model=model,
+        task=ClassificationTask(),
+        optimizer=optimizer,
+        scheduler=scheduler,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        config=TrainerConfig(
+            max_epochs=3,
+            val_interval=2,
+            monitor="val_loss",
+            amp=False,
+            output_dir=track_tmp_path / "plateau_monitor",
+        ),
+        checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
+    )
+
+    epoch_metrics = iter(
+        [
+            {"loss": 3.0, "accuracy": 0.25, "f1": 0.25},
+            {"loss": 2.0, "accuracy": 0.50, "f1": 0.50},
+            {"loss": 4.0, "accuracy": 0.40, "f1": 0.40},
+            {"loss": 1.0, "accuracy": 0.75, "f1": 0.75},
+        ]
+    )
+
+    def fake_run_epoch(
+        loader: DataLoader,
+        *,
+        training: bool,
+    ) -> dict[str, float]:
+        del loader, training
+        return next(epoch_metrics)
+
+    trainer._run_epoch = fake_run_epoch  # type: ignore[method-assign]
+    _ = trainer.fit()
+
+    assert scheduler.metrics_seen == [4.0]
 
 
 def test_binary_segmentation_task_bce_loss_respects_ignore_index() -> None:

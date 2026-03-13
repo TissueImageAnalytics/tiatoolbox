@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import torch
+from torch.amp import GradScaler, autocast
 from torch import nn
-from torch.cuda.amp import GradScaler, autocast
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import CosineAnnealingLR, LRScheduler, StepLR
 
@@ -148,7 +148,9 @@ class Trainer:
         self.val_loader = val_loader
 
         self.use_amp = self.config.amp and self.device.type == "cuda"
-        self.grad_scaler = GradScaler(enabled=self.use_amp)
+        self.grad_scaler = GradScaler(self.device.type, enabled=self.use_amp)
+
+        self._validate_monitor_configuration()
 
         self.history: list[dict[str, float]] = []
         self.best_monitor_value = self._initial_monitor_value()
@@ -195,19 +197,25 @@ class Trainer:
             return value < self.best_monitor_value
         return value > self.best_monitor_value
 
-    def _resolve_monitor_value(self: Trainer, metrics: dict[str, float]) -> float:
-        """Resolve monitor value from epoch metrics."""
+    def _validate_monitor_configuration(self: Trainer) -> None:
+        """Validate monitor configuration against available loaders."""
+        if self.config.monitor.startswith("val_") and self.val_loader is None:
+            msg = (
+                f"Monitor `{self.config.monitor}` requires a validation loader, "
+                "but `val_loader` is `None`."
+            )
+            raise ValueError(msg)
+
+    def _resolve_monitor_value(
+        self: Trainer,
+        metrics: dict[str, float],
+    ) -> float | None:
+        """Resolve monitor value from epoch metrics, if available."""
         if self.config.monitor in metrics:
             return metrics[self.config.monitor]
 
-        fallback_key = self.config.monitor.replace("val_", "train_", 1)
-        if fallback_key in metrics:
-            logger.warning(
-                "Monitor metric `%s` is missing; falling back to `%s`.",
-                self.config.monitor,
-                fallback_key,
-            )
-            return metrics[fallback_key]
+        if self.config.monitor.startswith("val_"):
+            return None
 
         msg = (
             f"Monitor metric `{self.config.monitor}` not found in epoch metrics: "
@@ -233,11 +241,13 @@ class Trainer:
 
         self.optimizer.zero_grad(set_to_none=True)
 
-    def _step_scheduler(self: Trainer, monitor_value: float) -> None:
+    def _step_scheduler(self: Trainer, monitor_value: float | None) -> None:
         """Advance scheduler state."""
         if self.scheduler is None:
             return
         if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+            if monitor_value is None:
+                return
             self.scheduler.step(monitor_value)
             return
         self.scheduler.step()
@@ -264,7 +274,7 @@ class Trainer:
             targets = targets.to(self.device)
 
             with torch.set_grad_enabled(training):
-                with autocast(enabled=self.use_amp):
+                with autocast(device_type=self.device.type, enabled=self.use_amp):
                     output = self.model(images)
                     logits = self.task.select_output(output)
                     loss = self.task.compute_loss(logits, targets)
@@ -393,19 +403,22 @@ class Trainer:
                 )
 
             monitor_value = self._resolve_monitor_value(epoch_metrics)
-            improved = self._is_improved(monitor_value)
+            improved = False
+            if monitor_value is not None:
+                improved = self._is_improved(monitor_value)
 
-            if improved:
-                self.best_monitor_value = monitor_value
-                self.best_epoch = epoch_idx + 1
-                patience_counter = 0
-                if self.checkpoint_config.save_best:
-                    best_path = (
-                        self.output_dir / self.checkpoint_config.best_weights_filename
-                    )
-                    save_model_weights(self.model, best_path)
-            else:
-                patience_counter += 1
+                if improved:
+                    self.best_monitor_value = monitor_value
+                    self.best_epoch = epoch_idx + 1
+                    patience_counter = 0
+                    if self.checkpoint_config.save_best:
+                        best_path = (
+                            self.output_dir
+                            / self.checkpoint_config.best_weights_filename
+                        )
+                        save_model_weights(self.model, best_path)
+                else:
+                    patience_counter += 1
 
             self._step_scheduler(monitor_value)
             self.history.append(epoch_metrics)
@@ -417,17 +430,29 @@ class Trainer:
                     checkpoint_path,
                 )
 
-            logger.info(
-                "Epoch %d/%d | monitor `%s`=%.6f | best=%.6f",
-                epoch_idx + 1,
-                self.config.max_epochs,
-                self.config.monitor,
-                monitor_value,
-                self.best_monitor_value,
-            )
+            if monitor_value is None:
+                logger.info(
+                    "Epoch %d/%d | monitor `%s` unavailable (validation skipped) | "
+                    "best_epoch=%d",
+                    epoch_idx + 1,
+                    self.config.max_epochs,
+                    self.config.monitor,
+                    self.best_epoch,
+                )
+            else:
+                logger.info(
+                    "Epoch %d/%d | monitor `%s`=%.6f | best=%.6f",
+                    epoch_idx + 1,
+                    self.config.max_epochs,
+                    self.config.monitor,
+                    monitor_value,
+                    self.best_monitor_value,
+                )
 
             if (
-                self.config.early_stopping_patience is not None
+                monitor_value is not None
+                and not improved
+                and self.config.early_stopping_patience is not None
                 and patience_counter > self.config.early_stopping_patience
             ):
                 logger.info(
