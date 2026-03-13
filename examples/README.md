@@ -110,7 +110,7 @@ Demonstrates the use of the TIAToolbox implementation of the [KongNet model](htt
 
 Shows how to train a patch classifier using the new training package in `tiatoolbox.models.training` for the folder-based classification setup, where each class corresponds to a subfolder of patches. The notebook covers dataset construction, dataloaders, trainer configuration, checkpointing, and resuming training from `last.ckpt`.
 
-### 13. Training Tissue Segmentation from Slide + Annotation Store Pairs ([13-training-slide-annotation-segmentation](./13-training-slide-annotation-segmentation.ipynb))
+### 14. Training Tissue Segmentation from Slide + Annotation Store Pairs ([14-training-slide-annotation-segmentation](./14-training-slide-annotation-segmentation.ipynb))
 
 Shows how to train a semantic segmentation model directly from whole-slide images and paired TIAToolbox annotation stores using `SlideAnnotationPatchDataset`. The notebook demonstrates building baseline-coordinate tissue annotations from `WSIReader.tissue_mask()`, training at 2 mpp, running WSI inference with `SemanticSegmentor`, and comparing predicted vs. reference tissue masks side-by-side.
 
