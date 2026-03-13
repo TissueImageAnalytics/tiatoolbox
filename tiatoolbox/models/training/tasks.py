@@ -368,7 +368,7 @@ class SegmentationTask(TrainingTaskABC):
             self.cross_entropy_loss = None
 
         if self.loss in {"auto", "bce_with_logits"}:
-            self.bce_loss = nn.BCEWithLogitsLoss()
+            self.bce_loss = nn.BCEWithLogitsLoss(reduction="none")
         else:
             self.bce_loss = None
 
@@ -384,6 +384,34 @@ class SegmentationTask(TrainingTaskABC):
             return False
         return logits.shape[1] == 1
 
+    def _prepare_binary_tensors(
+        self: SegmentationTask,
+        logits: torch.Tensor,
+        targets: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Normalize binary segmentation tensors and derive a valid-element mask."""
+        if logits.ndim != 4 or logits.shape[1] != 1:
+            msg = (
+                "Binary segmentation expects logits with shape `(N, 1, H, W)`."
+            )
+            raise ValueError(msg)
+
+        if targets.ndim == 3:
+            targets = targets.unsqueeze(1)
+        if targets.ndim != 4 or targets.shape[1] != 1:
+            msg = (
+                "Binary segmentation targets must have shape `(N, H, W)` "
+                "or `(N, 1, H, W)`."
+            )
+            raise ValueError(msg)
+        if targets.shape != logits.shape:
+            msg = "Binary segmentation targets must match the logits shape."
+            raise ValueError(msg)
+
+        valid_mask = targets != self.ignore_index
+        safe_targets = torch.where(valid_mask, targets, torch.zeros_like(targets))
+        return logits, safe_targets.float(), valid_mask
+
     def compute_loss(
         self: SegmentationTask,
         logits: torch.Tensor,
@@ -397,10 +425,9 @@ class SegmentationTask(TrainingTaskABC):
                 msg = "Binary segmentation requested but BCE loss is not initialized."
                 raise RuntimeError(msg)
 
-            targets = targets.float()
-            if targets.ndim == 3:
-                targets = targets.unsqueeze(1)
-            return self.bce_loss(logits, targets)
+            logits, targets, valid_mask = self._prepare_binary_tensors(logits, targets)
+            losses = self.bce_loss(logits, targets)
+            return _masked_mean(losses, valid_mask, logits)
 
         if self.cross_entropy_loss is None:
             msg = "Cross-entropy segmentation requested but CE loss is not initialized."
@@ -421,17 +448,19 @@ class SegmentationTask(TrainingTaskABC):
         binary_mode = self._resolve_binary_mode(logits)
 
         if binary_mode:
-            if targets.ndim == 3:
-                targets = targets.unsqueeze(1)
+            logits, targets, valid_mask = self._prepare_binary_tensors(logits, targets)
+            if not torch.any(valid_mask):
+                return {"dice": 0.0, "iou": 0.0}
 
-            valid_mask = targets != self.ignore_index
-
-            target_mask = targets > 0
+            target_mask = targets > 0.5
             pred_mask = torch.sigmoid(logits) > 0.5
 
             intersection = (pred_mask & target_mask & valid_mask).sum().float()
             pred_area = (pred_mask & valid_mask).sum().float()
             target_area = (target_mask & valid_mask).sum().float()
+
+            if float(pred_area.item()) == 0 and float(target_area.item()) == 0:
+                return {"dice": 1.0, "iou": 1.0}
 
             dice_value = _safe_ratio(2.0 * intersection, pred_area + target_area)
             iou_value = _safe_ratio(

@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import torch
+import torch.nn.functional as F
 from torch import nn
 from torch.utils.data import DataLoader
 
@@ -323,3 +324,47 @@ def test_segmentation_trainer(track_tmp_path: Path) -> None:
     assert history[-1]["train_loss"] <= history[0]["train_loss"]
     assert "train_dice" in history[-1]
     assert (track_tmp_path / "segmentation_run" / "last.ckpt").exists()
+
+
+def test_binary_segmentation_task_bce_loss_respects_ignore_index() -> None:
+    """Binary segmentation BCE loss should ignore masked pixels."""
+    task = SegmentationTask(loss="bce_with_logits", ignore_index=-100)
+    logits = torch.tensor([[[[6.0, -6.0], [4.0, -4.0]]]], dtype=torch.float32)
+    targets = torch.tensor([[[1, 0], [-100, 1]]], dtype=torch.long)
+
+    loss = task.compute_loss(logits, targets)
+
+    expected_losses = F.binary_cross_entropy_with_logits(
+        logits,
+        torch.tensor([[[[1.0, 0.0], [0.0, 1.0]]]], dtype=torch.float32),
+        reduction="none",
+    )
+    expected = expected_losses[torch.tensor([[[[True, True], [False, True]]]])].mean()
+
+    assert loss.item() == pytest.approx(expected.item())
+
+
+def test_binary_segmentation_metrics_ignore_masked_pixels() -> None:
+    """Binary segmentation metrics should ignore pixels with ignore_index."""
+    task = SegmentationTask(loss="bce_with_logits", ignore_index=-100)
+    logits = torch.tensor([[[[-6.0, 6.0], [-6.0, -6.0]]]], dtype=torch.float32)
+    targets = torch.tensor([[[0, -100], [0, 0]]], dtype=torch.long)
+
+    metrics = task.compute_metrics(logits, targets)
+
+    assert metrics["dice"] == pytest.approx(1.0)
+    assert metrics["iou"] == pytest.approx(1.0)
+
+
+def test_binary_segmentation_task_handles_all_ignored_pixels() -> None:
+    """Binary segmentation should return zero loss and metrics when all pixels are ignored."""
+    task = SegmentationTask(loss="bce_with_logits", ignore_index=-100)
+    logits = torch.tensor([[[[2.0, -2.0], [1.0, -1.0]]]], dtype=torch.float32)
+    targets = torch.full((1, 2, 2), fill_value=-100, dtype=torch.long)
+
+    loss = task.compute_loss(logits, targets)
+    metrics = task.compute_metrics(logits, targets)
+
+    assert loss.item() == pytest.approx(0.0)
+    assert metrics["dice"] == pytest.approx(0.0)
+    assert metrics["iou"] == pytest.approx(0.0)
