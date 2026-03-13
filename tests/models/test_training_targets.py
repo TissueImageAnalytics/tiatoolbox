@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pickle
 from pathlib import Path
 
 import numpy as np
@@ -204,6 +205,38 @@ def test_patch_annotation_dataset_validation_errors(track_tmp_path: Path) -> Non
         _ = dataset[0]
 
 
+def test_patch_annotation_dataset_survives_pickle_roundtrip(
+    track_tmp_path: Path,
+) -> None:
+    """Path-backed annotation stores should be reopened after pickling."""
+    store_path = track_tmp_path / "pickle_patch_store.db"
+    store = SQLiteStore(store_path)
+    store.append(
+        Annotation(
+            Polygon([(0, 0), (8, 0), (8, 8), (0, 8)]),
+            properties={"class": "tumor"},
+        ),
+        key="tumor",
+    )
+
+    dataset = PatchAnnotationDataset(
+        patch_inputs=[np.zeros((8, 8, 3), dtype=np.uint8)],
+        annotation_stores=store_path,
+        target_builder=PresenceTargetBuilder(
+            where='props["class"] == "tumor"',
+            min_fraction=0.25,
+            positive_label=1,
+            negative_label=0,
+        ),
+    )
+    _ = dataset[0]
+
+    restored_dataset = pickle.loads(pickle.dumps(dataset))
+    sample = restored_dataset[0]
+
+    assert int(sample["target"].item()) == 1
+
+
 def test_generate_slide_patch_coordinates_with_mask(track_tmp_path: Path) -> None:
     """Coordinate generation should respect optional mask filtering."""
     slide = np.zeros((32, 32, 3), dtype=np.uint8)
@@ -320,6 +353,47 @@ def test_slide_annotation_patch_dataset_resolution_conversion(
     )
     targets = [int(dataset[index]["target"].item()) for index in range(len(dataset))]
     assert targets == [1, 0, 0, 0]
+
+
+def test_slide_annotation_patch_dataset_survives_pickle_roundtrip(
+    track_tmp_path: Path,
+) -> None:
+    """Path-backed slide datasets should reopen readers and stores after pickling."""
+    slide = np.zeros((32, 32, 3), dtype=np.uint8)
+    slide_path = track_tmp_path / "slide_pickle.npy"
+    np.save(slide_path, slide)
+
+    store_path = track_tmp_path / "store_pickle.db"
+    store = SQLiteStore(store_path)
+    store.append(
+        Annotation(
+            Polygon([(0, 0), (16, 0), (16, 16), (0, 16)]),
+            properties={"class": "tumor"},
+        ),
+        key="tumor",
+    )
+
+    dataset = SlideAnnotationPatchDataset(
+        slide_inputs=[slide_path],
+        annotation_stores=store_path,
+        target_builder=PresenceTargetBuilder(
+            where='props["class"] == "tumor"',
+            min_fraction=0.25,
+            positive_label=1,
+            negative_label=0,
+        ),
+        patch_size=(16, 16),
+        stride=(16, 16),
+        resolution=1.0,
+        units="baseline",
+    )
+    _ = dataset[0]
+
+    restored_dataset = pickle.loads(pickle.dumps(dataset))
+    sample = restored_dataset[0]
+
+    assert sample["image"].shape == (3, 16, 16)
+    assert int(sample["target"].item()) == 1
 
 
 def test_slide_annotation_patch_dataset_validation_errors(

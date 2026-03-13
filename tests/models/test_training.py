@@ -109,6 +109,69 @@ def test_patch_mask_pair_dataset_raises_when_no_pairs(track_tmp_path: Path) -> N
         _ = PatchMaskPairDataset(image_dir=image_dir, mask_dir=mask_dir)
 
 
+def test_patch_mask_pair_dataset_matches_nested_relative_paths(
+    track_tmp_path: Path,
+) -> None:
+    """Dataset should pair nested files by relative path, not bare stem."""
+    image_dir = track_tmp_path / "images"
+    mask_dir = track_tmp_path / "masks"
+
+    for subset, image_value, mask_value in (
+        ("case_a", 32, 1),
+        ("case_b", 224, 2),
+    ):
+        (image_dir / subset).mkdir(parents=True, exist_ok=True)
+        (mask_dir / subset).mkdir(parents=True, exist_ok=True)
+        np.save(
+            image_dir / subset / "sample.npy",
+            np.full((8, 8, 3), fill_value=image_value, dtype=np.uint8),
+        )
+        np.save(
+            mask_dir / subset / "sample.npy",
+            np.full((8, 8), fill_value=mask_value, dtype=np.uint8),
+        )
+
+    dataset = PatchMaskPairDataset(image_dir=image_dir, mask_dir=mask_dir)
+
+    assert len(dataset) == 2
+    assert int(dataset[0]["target"][0, 0].item()) == 1
+    assert int(dataset[1]["target"][0, 0].item()) == 2
+
+
+def test_patch_mask_pair_dataset_raises_on_unmatched_files(
+    track_tmp_path: Path,
+) -> None:
+    """Dataset should reject partial image/mask directory mismatches."""
+    image_dir = track_tmp_path / "images"
+    mask_dir = track_tmp_path / "masks"
+    image_dir.mkdir(parents=True, exist_ok=True)
+    mask_dir.mkdir(parents=True, exist_ok=True)
+
+    np.save(image_dir / "paired.npy", np.zeros((8, 8, 3), dtype=np.uint8))
+    np.save(mask_dir / "paired.npy", np.zeros((8, 8), dtype=np.uint8))
+    np.save(image_dir / "image_only.npy", np.zeros((8, 8, 3), dtype=np.uint8))
+
+    with pytest.raises(ValueError, match="Unmatched image/mask files"):
+        _ = PatchMaskPairDataset(image_dir=image_dir, mask_dir=mask_dir)
+
+
+def test_patch_mask_pair_dataset_raises_on_duplicate_relative_keys(
+    track_tmp_path: Path,
+) -> None:
+    """Dataset should reject duplicate files that collapse to the same key."""
+    image_dir = track_tmp_path / "images"
+    mask_dir = track_tmp_path / "masks"
+    image_dir.mkdir(parents=True, exist_ok=True)
+    mask_dir.mkdir(parents=True, exist_ok=True)
+
+    np.save(image_dir / "sample.npy", np.zeros((8, 8, 3), dtype=np.uint8))
+    (image_dir / "sample.png").write_bytes(b"")
+    np.save(mask_dir / "sample.npy", np.zeros((8, 8), dtype=np.uint8))
+
+    with pytest.raises(ValueError, match="Duplicate image files"):
+        _ = PatchMaskPairDataset(image_dir=image_dir, mask_dir=mask_dir)
+
+
 def test_binary_bce_classification_task_supports_vector_and_column_logits() -> None:
     """Binary BCE classification should support `(N,)` and `(N, 1)` logits."""
     targets = torch.tensor([1, 0, 1, 0], dtype=torch.long)

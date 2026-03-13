@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
@@ -117,6 +118,51 @@ def _discover_files(
             if path.is_file() and path.suffix.lower() in suffixes
         ]
     )
+
+
+def _normalize_runtime_spec_path(spec: object) -> Path | None:
+    """Extract a path from a path-backed runtime object when possible."""
+    if isinstance(spec, (str, Path)):
+        return Path(spec)
+
+    for attribute_name in ("input_path", "path", "connection"):
+        attribute_value = getattr(spec, attribute_name, None)
+        if isinstance(attribute_value, (str, Path)):
+            return Path(attribute_value)
+
+    return None
+
+
+def _format_key_preview(keys: set[str], *, limit: int = 5) -> str:
+    """Format a short preview of relative keys for error messages."""
+    preview = sorted(keys)[:limit]
+    suffix = "" if len(keys) <= limit else ", ..."
+    return ", ".join(preview) + suffix
+
+
+def _build_relative_stem_map(
+    paths: list[Path],
+    root: Path,
+    *,
+    kind: str,
+) -> dict[str, Path]:
+    """Build a relative-stem lookup and reject duplicate keys."""
+    grouped_paths: dict[str, list[Path]] = defaultdict(list)
+    for path in paths:
+        relative_key = str(path.relative_to(root).with_suffix(""))
+        grouped_paths[relative_key].append(path)
+
+    duplicate_keys = {
+        key for key, grouped in grouped_paths.items() if len(grouped) > 1
+    }
+    if duplicate_keys:
+        msg = (
+            f"Duplicate {kind} files were found for relative keys: "
+            f"{_format_key_preview(duplicate_keys)}."
+        )
+        raise ValueError(msg)
+
+    return {key: grouped[0] for key, grouped in grouped_paths.items()}
 
 
 class PatchFolderClassificationDataset(Dataset):
@@ -274,15 +320,40 @@ class PatchMaskPairDataset(Dataset):
 
         image_files = _discover_files(image_root, self.image_extensions)
         mask_files = _discover_files(mask_root, self.mask_extensions)
-        image_map = {image_path.stem: image_path for image_path in image_files}
-        mask_map = {mask_path.stem: mask_path for mask_path in mask_files}
+        image_map = _build_relative_stem_map(
+            image_files,
+            image_root,
+            kind="image",
+        )
+        mask_map = _build_relative_stem_map(
+            mask_files,
+            mask_root,
+            kind="mask",
+        )
 
         matched_keys = sorted(set(image_map).intersection(mask_map))
-        pairs = [(image_map[key], mask_map[key]) for key in matched_keys]
-        if not pairs:
+        unmatched_image_keys = set(image_map).difference(mask_map)
+        unmatched_mask_keys = set(mask_map).difference(image_map)
+        if not matched_keys:
             msg = "No image/mask pairs were found using file stem matching."
             raise ValueError(msg)
-        return pairs
+
+        if unmatched_image_keys or unmatched_mask_keys:
+            details = []
+            if unmatched_image_keys:
+                details.append(
+                    "missing masks for "
+                    f"{_format_key_preview(unmatched_image_keys)}"
+                )
+            if unmatched_mask_keys:
+                details.append(
+                    "missing images for "
+                    f"{_format_key_preview(unmatched_mask_keys)}"
+                )
+            msg = f"Unmatched image/mask files were found: {'; '.join(details)}."
+            raise ValueError(msg)
+
+        return [(image_map[key], mask_map[key]) for key in matched_keys]
 
     def __len__(self: PatchMaskPairDataset) -> int:
         """Return number of available pairs."""
@@ -400,9 +471,19 @@ class PatchAnnotationDataset(Dataset):
                     "length as `patch_inputs`."
                 )
                 raise ValueError(msg)
-            return annotation_stores
+            return [
+                _normalize_runtime_spec_path(store_spec) or store_spec
+                for store_spec in annotation_stores
+            ]
 
-        return [annotation_stores for _ in range(num_patches)]
+        normalized_store_spec = _normalize_runtime_spec_path(annotation_stores)
+        return [normalized_store_spec or annotation_stores for _ in range(num_patches)]
+
+    def __getstate__(self: PatchAnnotationDataset) -> dict:
+        """Drop cached runtime handles before pickling dataset state."""
+        state = self.__dict__.copy()
+        state["_store_cache"] = {}
+        return state
 
     @staticmethod
     def _normalize_patch_bounds(
@@ -558,6 +639,8 @@ class SlideAnnotationPatchDataset(Dataset):
             self.sample_slide_indices,
             self.sample_bounds,
         ) = self._build_patch_index()
+        self._reader_cache = {}
+        self._store_cache = {}
 
     @staticmethod
     def _normalize_slide_inputs(
@@ -570,7 +653,10 @@ class SlideAnnotationPatchDataset(Dataset):
         if not slide_inputs:
             msg = "`slide_inputs` must contain at least one slide."
             raise ValueError(msg)
-        return slide_inputs
+        return [
+            _normalize_runtime_spec_path(slide_spec) or slide_spec
+            for slide_spec in slide_inputs
+        ]
 
     @staticmethod
     def _normalize_annotation_stores(
@@ -590,9 +676,13 @@ class SlideAnnotationPatchDataset(Dataset):
                     "length as `slide_inputs`."
                 )
                 raise ValueError(msg)
-            return annotation_stores
+            return [
+                _normalize_runtime_spec_path(store_spec) or store_spec
+                for store_spec in annotation_stores
+            ]
 
-        return [annotation_stores for _ in range(num_slides)]
+        normalized_store_spec = _normalize_runtime_spec_path(annotation_stores)
+        return [normalized_store_spec or annotation_stores for _ in range(num_slides)]
 
     @staticmethod
     def _normalize_input_masks(
@@ -629,9 +719,20 @@ class SlideAnnotationPatchDataset(Dataset):
                     "length as `slide_inputs`."
                 )
                 raise ValueError(msg)
-            return input_masks
+            return [
+                _normalize_runtime_spec_path(mask_spec) or mask_spec
+                for mask_spec in input_masks
+            ]
 
-        return [input_masks for _ in range(num_slides)]
+        normalized_mask_spec = _normalize_runtime_spec_path(input_masks)
+        return [normalized_mask_spec or input_masks for _ in range(num_slides)]
+
+    def __getstate__(self: SlideAnnotationPatchDataset) -> dict:
+        """Drop cached runtime handles before pickling dataset state."""
+        state = self.__dict__.copy()
+        state["_reader_cache"] = {}
+        state["_store_cache"] = {}
+        return state
 
     def _get_reader(self: SlideAnnotationPatchDataset, index: int) -> WSIReader:
         """Get a cached WSI reader for one slide index."""
