@@ -9,10 +9,6 @@ from tiatoolbox.models.training.checkpoint import (
 )
 from tiatoolbox.models.training.config import (
     CheckpointConfig,
-    DataLoaderConfig,
-    OptimizerConfig,
-    SchedulerConfig,
-    TaskConfig,
     TrainerConfig,
 )
 from tiatoolbox.models.training.datasets import (
@@ -20,7 +16,6 @@ from tiatoolbox.models.training.datasets import (
     PatchAnnotationDataset,
     PatchMaskPairDataset,
     SlideAnnotationPatchDataset,
-    create_dataset,
 )
 from tiatoolbox.models.training.samplers import (
     ClassBalancedIndexSampler,
@@ -40,39 +35,26 @@ from tiatoolbox.models.training.tasks import (
 )
 from tiatoolbox.models.training.trainer import (
     Trainer,
-    create_dataloader,
-    create_optimizer,
-    create_scheduler,
-    create_task,
     set_seed,
 )
 
 __all__ = [
     "CheckpointConfig",
     "ClassificationTask",
-    "DataLoaderConfig",
     "CoverageClassTargetBuilder",
     "MaskTargetBuilder",
     "MultiLabelTargetBuilder",
-    "OptimizerConfig",
     "PatchAnnotationDataset",
     "PatchFolderClassificationDataset",
     "PatchMaskPairDataset",
     "SlideAnnotationPatchDataset",
     "ClassBalancedIndexSampler",
     "PresenceTargetBuilder",
-    "SchedulerConfig",
     "SegmentationTask",
-    "TaskConfig",
     "TargetBuilderABC",
     "Trainer",
     "TrainerConfig",
     "TrainingTaskABC",
-    "create_dataloader",
-    "create_dataset",
-    "create_optimizer",
-    "create_scheduler",
-    "create_task",
     "extract_model_state_dict",
     "load_checkpoint",
     "load_model_state_dict",

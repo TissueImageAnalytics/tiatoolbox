@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+from torchvision.datasets import DatasetFolder
 
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
 from tiatoolbox.models.training.samplers import generate_slide_patch_coordinates
@@ -33,8 +34,9 @@ DEFAULT_IMAGE_SUFFIXES = {
 }
 
 
-def _load_image(path: Path) -> np.ndarray:
+def _load_image(path: str | Path) -> np.ndarray:
     """Load an image-like array from disk."""
+    path = Path(path)
     if path.suffix.lower() == ".npy":
         return np.load(path)
     return imread(path, as_uint8=False)
@@ -221,7 +223,7 @@ def _open_cached_reader(
     return cache[cache_key]
 
 
-class PatchFolderClassificationDataset(Dataset):
+class PatchFolderClassificationDataset(DatasetFolder):
     """Classification dataset where each class is represented by one folder.
 
     Example directory structure:
@@ -246,37 +248,40 @@ class PatchFolderClassificationDataset(Dataset):
         file_extensions: set[str] | None = None,
     ) -> None:
         """Initialize :class:`PatchFolderClassificationDataset`."""
-        super().__init__()
         self.root_dir = Path(root_dir)
         if not self.root_dir.exists() or not self.root_dir.is_dir():
             msg = "`root_dir` must be an existing directory."
             raise ValueError(msg)
 
-        self.transform = transform
-        self.target_transform = target_transform
-        self.file_extensions = file_extensions or DEFAULT_IMAGE_SUFFIXES
+        self._provided_class_to_idx = class_to_idx
+        self.file_extensions = tuple(sorted(file_extensions or DEFAULT_IMAGE_SUFFIXES))
 
-        class_dirs = sorted([path for path in self.root_dir.iterdir() if path.is_dir()])
+        super().__init__(
+            root=self.root_dir,
+            loader=_load_image,
+            extensions=self.file_extensions,
+            transform=transform,
+            target_transform=target_transform,
+        )
+
+    def find_classes(
+        self: PatchFolderClassificationDataset,
+        directory: str | Path,
+    ) -> tuple[list[str], dict[str, int]]:
+        """Return sorted class folders, optionally filtered by a provided mapping."""
+        class_dirs = sorted(path for path in Path(directory).iterdir() if path.is_dir())
         if not class_dirs:
             msg = "`root_dir` does not contain any class directories."
             raise ValueError(msg)
 
-        if class_to_idx is None:
-            class_to_idx = {path.name: index for index, path in enumerate(class_dirs)}
+        if self._provided_class_to_idx is None:
+            classes = [path.name for path in class_dirs]
+            return classes, {class_name: index for index, class_name in enumerate(classes)}
 
-        self.class_to_idx = class_to_idx
-        self.samples: list[tuple[Path, int]] = []
-        for class_dir in class_dirs:
-            class_name = class_dir.name
-            if class_name not in self.class_to_idx:
-                continue
-            class_index = self.class_to_idx[class_name]
-            for image_path in _discover_files(class_dir, self.file_extensions):
-                self.samples.append((image_path, class_index))
-
-        if not self.samples:
-            msg = "No training samples were found under `root_dir`."
-            raise ValueError(msg)
+        classes = [
+            path.name for path in class_dirs if path.name in self._provided_class_to_idx
+        ]
+        return classes, self._provided_class_to_idx
 
     def __len__(self: PatchFolderClassificationDataset) -> int:
         """Return number of discovered samples."""
@@ -284,16 +289,8 @@ class PatchFolderClassificationDataset(Dataset):
 
     def __getitem__(self: PatchFolderClassificationDataset, index: int) -> dict:
         """Get one sample from the dataset."""
-        image_path, target = self.samples[index]
-        image = _load_image(image_path)
-
-        if self.transform is not None:
-            image = self.transform(image)
-
+        image, target = super().__getitem__(index)
         image_tensor = _ensure_tensor_image(image)
-
-        if self.target_transform is not None:
-            target = self.target_transform(target)
 
         if not isinstance(target, torch.Tensor):
             target = torch.tensor(target, dtype=torch.long)
@@ -844,30 +841,3 @@ class SlideAnnotationPatchDataset(Dataset):
             "slide_index": torch.tensor(slide_index, dtype=torch.long),
             "bounds": bounds_tensor,
         }
-
-
-def create_dataset(
-    dataset_type: Literal[
-        "patch_folder_classification",
-        "patch_mask_pair",
-        "patch_annotation",
-        "slide_annotation_patch",
-    ],
-    **kwargs: dict,
-) -> Dataset:
-    """Create a training dataset instance from a dataset type key."""
-    if dataset_type == "patch_folder_classification":
-        return PatchFolderClassificationDataset(**kwargs)
-    if dataset_type == "patch_mask_pair":
-        return PatchMaskPairDataset(**kwargs)
-    if dataset_type == "patch_annotation":
-        return PatchAnnotationDataset(**kwargs)
-    if dataset_type == "slide_annotation_patch":
-        return SlideAnnotationPatchDataset(**kwargs)
-
-    msg = (
-        "Unsupported `dataset_type`. "
-        "Supported values are: `patch_folder_classification`, "
-        "`patch_mask_pair`, `patch_annotation`, `slide_annotation_patch`."
-    )
-    raise ValueError(msg)

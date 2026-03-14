@@ -5,14 +5,14 @@ from __future__ import annotations
 import random
 from dataclasses import asdict
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import numpy as np
 import torch
 from torch.amp import GradScaler, autocast
 from torch import nn
 from torch.optim import Optimizer
-from torch.optim.lr_scheduler import CosineAnnealingLR, LRScheduler, StepLR
+from torch.optim.lr_scheduler import LRScheduler
 from torch.utils.data import DataLoader
 
 from tiatoolbox import logger
@@ -25,22 +25,9 @@ from tiatoolbox.models.training.checkpoint import (
 )
 from tiatoolbox.models.training.config import (
     CheckpointConfig,
-    DataLoaderConfig,
-    OptimizerConfig,
-    SchedulerConfig,
-    TaskConfig,
     TrainerConfig,
 )
-from tiatoolbox.models.training.tasks import (
-    ClassificationTask,
-    SegmentationTask,
-    TrainingTaskABC,
-)
-
-if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Callable
-
-    from torch.utils.data import Dataset, Sampler
+from tiatoolbox.models.training.tasks import TrainingTaskABC
 
 
 def set_seed(seed: int, *, deterministic: bool = False) -> None:
@@ -54,93 +41,6 @@ def set_seed(seed: int, *, deterministic: bool = False) -> None:
     if deterministic:
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-
-
-def create_optimizer(model: nn.Module, config: OptimizerConfig) -> Optimizer:
-    """Create an optimizer from :class:`OptimizerConfig`."""
-    if config.name == "adamw":
-        return torch.optim.AdamW(
-            params=model.parameters(),
-            lr=config.lr,
-            weight_decay=config.weight_decay,
-            betas=config.betas,
-            eps=config.eps,
-        )
-
-    if config.name == "sgd":
-        return torch.optim.SGD(
-            params=model.parameters(),
-            lr=config.lr,
-            weight_decay=config.weight_decay,
-            momentum=config.momentum,
-        )
-
-    msg = f"Unsupported optimizer `{config.name}`."
-    raise ValueError(msg)
-
-
-def create_dataloader(
-    dataset: Dataset,
-    config: DataLoaderConfig,
-    *,
-    sampler: Sampler[int] | None = None,
-    collate_fn: Callable | None = None,
-) -> DataLoader:
-    """Create a dataloader from :class:`DataLoaderConfig`."""
-    if sampler is not None and config.shuffle:
-        msg = "`shuffle=True` cannot be combined with an explicit sampler."
-        raise ValueError(msg)
-
-    return DataLoader(
-        dataset=dataset,
-        batch_size=config.batch_size,
-        num_workers=config.num_workers,
-        shuffle=config.shuffle if sampler is None else False,
-        sampler=sampler,
-        pin_memory=config.pin_memory,
-        drop_last=config.drop_last,
-        persistent_workers=config.persistent_workers,
-        collate_fn=collate_fn,
-    )
-
-
-def create_scheduler(
-    optimizer: Optimizer,
-    config: SchedulerConfig,
-) -> LRScheduler | None:
-    """Create a scheduler from :class:`SchedulerConfig`."""
-    if config.name == "none":
-        return None
-    if config.name == "cosine":
-        return CosineAnnealingLR(
-            optimizer,
-            T_max=config.t_max,
-            eta_min=config.eta_min,
-        )
-    if config.name == "step":
-        return StepLR(optimizer, step_size=config.step_size, gamma=config.gamma)
-
-    msg = f"Unsupported scheduler `{config.name}`."
-    raise ValueError(msg)
-
-
-def create_task(config: TaskConfig) -> TrainingTaskABC:
-    """Create a task adapter from :class:`TaskConfig`."""
-    kwargs = {
-        "loss": config.loss,
-        "output_key": config.output_key,
-        "output_index": config.output_index,
-        "ignore_index": config.ignore_index,
-    }
-
-    if config.task_type == "classification":
-        kwargs["target_mode"] = config.target_mode
-        return ClassificationTask(**kwargs)
-    if config.task_type == "segmentation":
-        return SegmentationTask(**kwargs)
-
-    msg = f"Unsupported task type `{config.task_type}`."
-    raise ValueError(msg)
 
 
 class Trainer:
