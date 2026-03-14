@@ -455,7 +455,7 @@ def test_slide_annotation_patch_dataset_validation_errors(
             input_masks=[None],
         )
 
-    with pytest.raises(ValueError, match="does not exist"):
+    with pytest.raises(FileNotFoundError, match="Input path does not exist"):
         _ = SlideAnnotationPatchDataset(
             slide_inputs=[track_tmp_path / "missing_slide.npy"],
             annotation_stores=store_path,

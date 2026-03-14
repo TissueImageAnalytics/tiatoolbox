@@ -133,6 +133,28 @@ def _normalize_runtime_spec_path(spec: object) -> Path | None:
     return None
 
 
+def _normalize_repeated_specs(
+    specs: object,
+    count: int,
+    *,
+    argument_name: str,
+    reference_name: str,
+) -> list[object]:
+    """Normalize a shared-or-per-sample runtime spec into a list."""
+    if isinstance(specs, list):
+        if len(specs) != count:
+            msg = (
+                f"When `{argument_name}` is a list it must have the same "
+                f"length as `{reference_name}`."
+            )
+            raise ValueError(msg)
+        values = specs
+    else:
+        values = [specs for _ in range(count)]
+
+    return [_normalize_runtime_spec_path(spec) or spec for spec in values]
+
+
 def _format_key_preview(keys: set[str], *, limit: int = 5) -> str:
     """Format a short preview of relative keys for error messages."""
     preview = sorted(keys)[:limit]
@@ -163,6 +185,40 @@ def _build_relative_stem_map(
         raise ValueError(msg)
 
     return {key: grouped[0] for key, grouped in grouped_paths.items()}
+
+
+def _open_cached_store(
+    store_spec: AnnotationStore | str | Path,
+    cache: dict[str, AnnotationStore],
+) -> AnnotationStore:
+    """Resolve and cache an annotation store."""
+    if isinstance(store_spec, AnnotationStore):
+        return store_spec
+
+    store_path = Path(store_spec)
+    if not store_path.exists():
+        msg = f"Annotation store path does not exist: `{store_path}`."
+        raise ValueError(msg)
+
+    cache_key = str(store_path.resolve())
+    if cache_key not in cache:
+        cache[cache_key] = SQLiteStore(store_path)
+    return cache[cache_key]
+
+
+def _open_cached_reader(
+    slide_spec: WSIReader | str | Path,
+    cache: dict[str, WSIReader],
+) -> WSIReader:
+    """Resolve and cache a slide reader."""
+    if isinstance(slide_spec, WSIReader):
+        return slide_spec
+
+    slide_path = Path(slide_spec)
+    cache_key = str(slide_path.resolve())
+    if cache_key not in cache:
+        cache[cache_key] = WSIReader.open(slide_path)
+    return cache[cache_key]
 
 
 class PatchFolderClassificationDataset(Dataset):
@@ -296,10 +352,6 @@ class PatchMaskPairDataset(Dataset):
                 (Path(image_path), Path(mask_path))
                 for image_path, mask_path in zip(image_paths, mask_paths)
             ]
-            for image_path, mask_path in pairs:
-                if not image_path.exists() or not mask_path.exists():
-                    msg = "All image and mask paths must exist."
-                    raise ValueError(msg)
             return pairs
 
         if image_dir is None or mask_dir is None:
@@ -464,20 +516,12 @@ class PatchAnnotationDataset(Dataset):
         num_patches: int,
     ) -> list[AnnotationStore | str | Path]:
         """Normalize annotation store input to a per-patch list."""
-        if isinstance(annotation_stores, list):
-            if len(annotation_stores) != num_patches:
-                msg = (
-                    "When `annotation_stores` is a list it must have the same "
-                    "length as `patch_inputs`."
-                )
-                raise ValueError(msg)
-            return [
-                _normalize_runtime_spec_path(store_spec) or store_spec
-                for store_spec in annotation_stores
-            ]
-
-        normalized_store_spec = _normalize_runtime_spec_path(annotation_stores)
-        return [normalized_store_spec or annotation_stores for _ in range(num_patches)]
+        return _normalize_repeated_specs(
+            annotation_stores,
+            num_patches,
+            argument_name="annotation_stores",
+            reference_name="patch_inputs",
+        )
 
     def __getstate__(self: PatchAnnotationDataset) -> dict:
         """Drop cached runtime handles before pickling dataset state."""
@@ -517,19 +561,7 @@ class PatchAnnotationDataset(Dataset):
 
     def _get_store(self: PatchAnnotationDataset, index: int) -> AnnotationStore:
         """Get an AnnotationStore for one sample index."""
-        store_spec = self.annotation_store_specs[index]
-        if isinstance(store_spec, AnnotationStore):
-            return store_spec
-
-        store_path = Path(store_spec)
-        if not store_path.exists():
-            msg = f"Annotation store path does not exist: `{store_path}`."
-            raise ValueError(msg)
-
-        cache_key = str(store_path.resolve())
-        if cache_key not in self._store_cache:
-            self._store_cache[cache_key] = SQLiteStore(store_path)
-        return self._store_cache[cache_key]
+        return _open_cached_store(self.annotation_store_specs[index], self._store_cache)
 
     def __len__(self: PatchAnnotationDataset) -> int:
         """Return number of samples."""
@@ -669,20 +701,12 @@ class SlideAnnotationPatchDataset(Dataset):
         num_slides: int,
     ) -> list[AnnotationStore | str | Path]:
         """Normalize annotation store specs to per-slide entries."""
-        if isinstance(annotation_stores, list):
-            if len(annotation_stores) != num_slides:
-                msg = (
-                    "When `annotation_stores` is a list it must have the same "
-                    "length as `slide_inputs`."
-                )
-                raise ValueError(msg)
-            return [
-                _normalize_runtime_spec_path(store_spec) or store_spec
-                for store_spec in annotation_stores
-            ]
-
-        normalized_store_spec = _normalize_runtime_spec_path(annotation_stores)
-        return [normalized_store_spec or annotation_stores for _ in range(num_slides)]
+        return _normalize_repeated_specs(
+            annotation_stores,
+            num_slides,
+            argument_name="annotation_stores",
+            reference_name="slide_inputs",
+        )
 
     @staticmethod
     def _normalize_input_masks(
@@ -712,20 +736,12 @@ class SlideAnnotationPatchDataset(Dataset):
         | None
     ]:
         """Normalize optional input-mask specs to per-slide entries."""
-        if isinstance(input_masks, list):
-            if len(input_masks) != num_slides:
-                msg = (
-                    "When `input_masks` is a list it must have the same "
-                    "length as `slide_inputs`."
-                )
-                raise ValueError(msg)
-            return [
-                _normalize_runtime_spec_path(mask_spec) or mask_spec
-                for mask_spec in input_masks
-            ]
-
-        normalized_mask_spec = _normalize_runtime_spec_path(input_masks)
-        return [normalized_mask_spec or input_masks for _ in range(num_slides)]
+        return _normalize_repeated_specs(
+            input_masks,
+            num_slides,
+            argument_name="input_masks",
+            reference_name="slide_inputs",
+        )
 
     def __getstate__(self: SlideAnnotationPatchDataset) -> dict:
         """Drop cached runtime handles before pickling dataset state."""
@@ -736,35 +752,11 @@ class SlideAnnotationPatchDataset(Dataset):
 
     def _get_reader(self: SlideAnnotationPatchDataset, index: int) -> WSIReader:
         """Get a cached WSI reader for one slide index."""
-        slide_spec = self.slide_inputs[index]
-        if isinstance(slide_spec, WSIReader):
-            return slide_spec
-
-        slide_path = Path(slide_spec)
-        if not slide_path.exists():
-            msg = f"Slide path does not exist: `{slide_path}`."
-            raise ValueError(msg)
-
-        cache_key = str(slide_path.resolve())
-        if cache_key not in self._reader_cache:
-            self._reader_cache[cache_key] = WSIReader.open(slide_path)
-        return self._reader_cache[cache_key]
+        return _open_cached_reader(self.slide_inputs[index], self._reader_cache)
 
     def _get_store(self: SlideAnnotationPatchDataset, index: int) -> AnnotationStore:
         """Get a cached annotation store for one slide index."""
-        store_spec = self.annotation_store_specs[index]
-        if isinstance(store_spec, AnnotationStore):
-            return store_spec
-
-        store_path = Path(store_spec)
-        if not store_path.exists():
-            msg = f"Annotation store path does not exist: `{store_path}`."
-            raise ValueError(msg)
-
-        cache_key = str(store_path.resolve())
-        if cache_key not in self._store_cache:
-            self._store_cache[cache_key] = SQLiteStore(store_path)
-        return self._store_cache[cache_key]
+        return _open_cached_store(self.annotation_store_specs[index], self._store_cache)
 
     def _build_patch_index(
         self: SlideAnnotationPatchDataset,

@@ -42,15 +42,6 @@ class OptimizerConfig:
     betas: tuple[float, float] = (0.9, 0.999)
     eps: float = 1e-8
 
-    def __post_init__(self: OptimizerConfig) -> None:
-        """Validate optimizer configuration values."""
-        if self.lr <= 0:
-            msg = "`lr` must be positive."
-            raise ValueError(msg)
-        if self.weight_decay < 0:
-            msg = "`weight_decay` must be non-negative."
-            raise ValueError(msg)
-
 
 @dataclass
 class SchedulerConfig:
@@ -61,18 +52,6 @@ class SchedulerConfig:
     gamma: float = 0.1
     t_max: int = 10
     eta_min: float = 0.0
-
-    def __post_init__(self: SchedulerConfig) -> None:
-        """Validate scheduler configuration values."""
-        if self.step_size <= 0:
-            msg = "`step_size` must be a positive integer."
-            raise ValueError(msg)
-        if self.t_max <= 0:
-            msg = "`t_max` must be a positive integer."
-            raise ValueError(msg)
-        if not 0 < self.gamma <= 1:
-            msg = "`gamma` must be in the interval (0, 1]."
-            raise ValueError(msg)
 
 
 @dataclass
@@ -88,31 +67,7 @@ class TaskConfig:
 
     def __post_init__(self: TaskConfig) -> None:
         """Validate task configuration values."""
-        if self.task_type == "classification":
-            if self.loss == "auto":
-                msg = "`task_type='classification'` requires an explicit loss."
-                raise ValueError(msg)
-            if self.loss == "cross_entropy" and self.target_mode == "binary":
-                msg = (
-                    "`target_mode='binary'` requires "
-                    "`loss='bce_with_logits'` for classification."
-                )
-                raise ValueError(msg)
-            if self.loss == "cross_entropy" and self.target_mode == "multi_label":
-                msg = (
-                    "`target_mode='multi_label'` requires "
-                    "`loss='bce_with_logits'` for classification."
-                )
-                raise ValueError(msg)
-            if self.loss == "bce_with_logits" and self.target_mode == "single_label":
-                msg = (
-                    "`loss='bce_with_logits'` does not support "
-                    "`target_mode='single_label'`."
-                )
-                raise ValueError(msg)
-            return
-
-        if self.target_mode != "auto":
+        if self.task_type != "classification" and self.target_mode != "auto":
             msg = "`target_mode` is only supported for classification tasks."
             raise ValueError(msg)
 

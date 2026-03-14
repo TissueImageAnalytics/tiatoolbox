@@ -89,7 +89,4 @@ def load_checkpoint(
 ) -> dict[str, Any]:
     """Load a checkpoint file from disk."""
     checkpoint_path = Path(checkpoint_path)
-    if not checkpoint_path.exists():
-        msg = f"Checkpoint file does not exist: `{checkpoint_path}`."
-        raise FileNotFoundError(msg)
     return torch.load(checkpoint_path, map_location=map_location)

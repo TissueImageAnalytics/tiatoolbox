@@ -328,31 +328,37 @@ def test_task_config_validation_for_classification_target_modes() -> None:
     )
     assert isinstance(task, ClassificationTask)
 
-    with pytest.raises(ValueError, match="requires an explicit loss"):
-        _ = TaskConfig(task_type="classification", loss="auto")
-
-    with pytest.raises(ValueError, match="requires `loss='bce_with_logits'`"):
-        _ = TaskConfig(
+    binary_ce_task = create_task(
+        TaskConfig(
             task_type="classification",
             loss="cross_entropy",
             target_mode="binary",
         )
+    )
+    assert isinstance(binary_ce_task, ClassificationTask)
+
+    with pytest.raises(ValueError, match="Unsupported classification loss `auto`"):
+        _ = create_task(TaskConfig(task_type="classification", loss="auto"))
 
     with pytest.raises(ValueError, match="requires `loss='bce_with_logits'`"):
-        _ = TaskConfig(
-            task_type="classification",
-            loss="cross_entropy",
-            target_mode="multi_label",
+        _ = create_task(
+            TaskConfig(
+                task_type="classification",
+                loss="cross_entropy",
+                target_mode="multi_label",
+            )
         )
 
     with pytest.raises(
         ValueError,
-        match="does not support `target_mode='single_label'`",
+        match="does not support single-label targets",
     ):
-        _ = TaskConfig(
-            task_type="classification",
-            loss="bce_with_logits",
-            target_mode="single_label",
+        _ = create_task(
+            TaskConfig(
+                task_type="classification",
+                loss="bce_with_logits",
+                target_mode="single_label",
+            )
         )
 
     with pytest.raises(ValueError, match="only supported for classification tasks"):
