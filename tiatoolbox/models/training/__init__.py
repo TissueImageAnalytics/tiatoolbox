@@ -37,6 +37,9 @@ from tiatoolbox.models.training.trainer import (
     Trainer,
     set_seed,
 )
+from tiatoolbox.models.training.utils import (
+    stratified_split_indices,
+)
 
 __all__ = [
     "CheckpointConfig",
@@ -62,4 +65,5 @@ __all__ = [
     "save_model_weights",
     "set_seed",
     "generate_slide_patch_coordinates",
+    "stratified_split_indices",
 ]

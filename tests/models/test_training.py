@@ -22,6 +22,7 @@ from tiatoolbox.models.training import (
     TrainerConfig,
     save_checkpoint,
     save_model_weights,
+    stratified_split_indices,
 )
 
 
@@ -119,6 +120,25 @@ def test_patch_folder_classification_dataset_works_with_dataloader(
     assert dataloader.batch_size == 3
     assert dataloader.drop_last is True
     assert batch["image"].shape[0] == 3
+
+
+def test_stratified_split_indices_preserves_class_balance() -> None:
+    """Stratified index splits should preserve per-class proportions."""
+    targets = [0] * 10 + [1] * 10 + [2] * 10
+
+    train_indices, val_indices = stratified_split_indices(
+        targets,
+        val_fraction=0.2,
+        seed=7,
+    )
+
+    train_targets = [targets[index] for index in train_indices]
+    val_targets = [targets[index] for index in val_indices]
+
+    assert len(train_indices) == 24
+    assert len(val_indices) == 6
+    assert np.bincount(train_targets).tolist() == [8, 8, 8]
+    assert np.bincount(val_targets).tolist() == [2, 2, 2]
 
 
 def test_patch_mask_pair_dataset(track_tmp_path: Path) -> None:
