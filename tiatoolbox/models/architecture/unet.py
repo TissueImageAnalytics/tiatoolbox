@@ -315,7 +315,7 @@ class UNetModel(ModelABC):
         if encoder == "resnet50":
             pre_activation = True
             self.backbone = ResNetEncoder.resnet50(num_input_channels)
-        if encoder == "unet":
+        elif encoder == "unet":
             pre_activation = False
             self.backbone = UnetEncoder(num_input_channels, encoder_levels)
 
