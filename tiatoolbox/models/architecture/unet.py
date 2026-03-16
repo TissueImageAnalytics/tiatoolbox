@@ -324,7 +324,8 @@ class UNetModel(ModelABC):
             raise ValueError(msg)
         self.skip_type = skip_type.lower()
 
-        img_list = torch.rand([1, num_input_channels, 256, 256])
+        dummy_spatial_size = 256
+        img_list = torch.rand([1, num_input_channels, dummy_spatial_size, dummy_spatial_size])
         out_list = self.backbone(img_list)
         # ordered from low to high resolution
         down_ch_list = [v.shape[1] for v in out_list][::-1]
