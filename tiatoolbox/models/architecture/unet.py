@@ -184,7 +184,7 @@ class UnetEncoder(nn.Module):
 
 def create_block(
     kernels: list,
-    input_ch: list,
+    input_ch: int,
     output_ch: int,
     *,
     pre_activation: bool,
