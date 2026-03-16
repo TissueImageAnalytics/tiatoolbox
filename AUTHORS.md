@@ -30,6 +30,7 @@
 - Fayyaz Minhas \<@foxtrotmike>
 - George Batchkala \<@GeorgeBatch>
 - Aleksandar Acic \<@aacic>
+- Esha Nasir \<@eshasadia>
 - Rob Jewsbury \<@R-J96>
 - Mohsin Bilal \<@mbhahsmi>
 - Musraf Basheer \<mbasheer04>
