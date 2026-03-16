@@ -309,6 +309,7 @@ class UNetModel(ModelABC):
             encoder_levels = [64, 128, 256, 512, 1024]
 
         if decoder_block is None:
+            # Use two 3x3 conv layers per decoder block by default (standard UNet design).
             decoder_block = [3, 3]
 
         pre_activation = None
