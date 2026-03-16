@@ -1,5 +1,11 @@
 """Training utilities for TIAToolbox models."""
 
+from tiatoolbox.models.training.augmentations import (
+    TrainingAugmentationPreset,
+    get_annotation_augmentation,
+    get_classification_augmentation,
+    get_segmentation_augmentation,
+)
 from tiatoolbox.models.training.checkpoint import (
     extract_model_state_dict,
     load_checkpoint,
@@ -42,6 +48,7 @@ from tiatoolbox.models.training.utils import (
 )
 
 __all__ = [
+    "TrainingAugmentationPreset",
     "CheckpointConfig",
     "ClassificationTask",
     "CoverageClassTargetBuilder",
@@ -65,5 +72,8 @@ __all__ = [
     "save_model_weights",
     "set_seed",
     "generate_slide_patch_coordinates",
+    "get_annotation_augmentation",
+    "get_classification_augmentation",
+    "get_segmentation_augmentation",
     "stratified_split_indices",
 ]

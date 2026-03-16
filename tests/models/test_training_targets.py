@@ -44,6 +44,17 @@ def _create_test_store(store_path: Path) -> SQLiteStore:
     return store
 
 
+def _flip_left_right(
+    image: np.ndarray,
+    target: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Flip an image and target together for deterministic alignment tests."""
+    return (
+        np.ascontiguousarray(np.fliplr(image)),
+        np.ascontiguousarray(np.fliplr(target)),
+    )
+
+
 def test_mask_target_builder(track_tmp_path: Path) -> None:
     """Mask target builder should rasterize class labels from annotations."""
     store = _create_test_store(track_tmp_path / "targets.db")
@@ -267,6 +278,34 @@ def test_patch_annotation_dataset_survives_pickle_roundtrip(
     assert int(sample["target"].item()) == 1
 
 
+def test_patch_annotation_dataset_pair_transform_keeps_mask_targets_aligned(
+    track_tmp_path: Path,
+) -> None:
+    """Pair transforms should keep annotation-derived masks aligned to images."""
+    store_path = track_tmp_path / "pair_patch_store.db"
+    _create_test_store(store_path)
+
+    patch = np.zeros((10, 10, 3), dtype=np.uint8)
+    patch[:, :5] = 32
+    patch[:, 5:] = 224
+
+    dataset = PatchAnnotationDataset(
+        patch_inputs=[patch],
+        annotation_stores=store_path,
+        target_builder=MaskTargetBuilder(
+            class_mapping={"tumor": 1, "stroma": 2},
+            class_property="class",
+            default_label=0,
+        ),
+        pair_transform=_flip_left_right,
+    )
+
+    sample = dataset[0]
+    assert sample["image"].shape == (3, 10, 10)
+    assert int(sample["target"][2, 2].item()) == 2
+    assert int(sample["target"][2, 7].item()) == 1
+
+
 def test_generate_slide_patch_coordinates_with_mask(track_tmp_path: Path) -> None:
     """Coordinate generation should respect optional mask filtering."""
     slide = np.zeros((32, 32, 3), dtype=np.uint8)
@@ -424,6 +463,54 @@ def test_slide_annotation_patch_dataset_survives_pickle_roundtrip(
 
     assert sample["image"].shape == (3, 16, 16)
     assert int(sample["target"].item()) == 1
+
+
+def test_slide_annotation_patch_dataset_pair_transform_keeps_masks_aligned(
+    track_tmp_path: Path,
+) -> None:
+    """Pair transforms should keep slide-derived masks aligned to images."""
+    slide = np.zeros((16, 16, 3), dtype=np.uint8)
+    slide[:, :8] = 48
+    slide[:, 8:] = 196
+    slide_path = track_tmp_path / "slide_pair.npy"
+    np.save(slide_path, slide)
+
+    store_path = track_tmp_path / "store_pair.db"
+    store = SQLiteStore(store_path)
+    store.append(
+        Annotation(
+            Polygon([(0, 0), (8, 0), (8, 16), (0, 16)]),
+            properties={"class": "tumor"},
+        ),
+        key="tumor",
+    )
+    store.append(
+        Annotation(
+            Polygon([(8, 0), (16, 0), (16, 8), (8, 8)]),
+            properties={"class": "stroma"},
+        ),
+        key="stroma",
+    )
+
+    dataset = SlideAnnotationPatchDataset(
+        slide_inputs=[slide_path],
+        annotation_stores=store_path,
+        target_builder=MaskTargetBuilder(
+            class_mapping={"tumor": 1, "stroma": 2},
+            class_property="class",
+            default_label=0,
+        ),
+        patch_size=(16, 16),
+        stride=(16, 16),
+        resolution=1.0,
+        units="baseline",
+        pair_transform=_flip_left_right,
+    )
+
+    sample = dataset[0]
+    assert sample["image"].shape == (3, 16, 16)
+    assert int(sample["target"][2, 2].item()) == 2
+    assert int(sample["target"][10, 12].item()) == 1
 
 
 def test_slide_annotation_patch_dataset_validation_errors(

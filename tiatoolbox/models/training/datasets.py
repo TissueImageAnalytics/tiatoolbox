@@ -451,6 +451,7 @@ class PatchAnnotationDataset(Dataset):
             | np.ndarray
             | None
         ) = None,
+        pair_transform: Callable | None = None,
         image_transform: Callable | None = None,
         target_transform: Callable | None = None,
     ) -> None:
@@ -476,6 +477,7 @@ class PatchAnnotationDataset(Dataset):
             msg = "`patch_bounds` must have the same length as `patch_inputs`."
             raise ValueError(msg)
 
+        self.pair_transform = pair_transform
         self.image_transform = image_transform
         self.target_transform = target_transform
         self._store_cache: dict[str, AnnotationStore] = {}
@@ -572,12 +574,7 @@ class PatchAnnotationDataset(Dataset):
             if isinstance(image_item, (str, Path))
             else image_item
         )
-
-        if self.image_transform is not None:
-            image = self.image_transform(image)
-
-        image_tensor = _ensure_tensor_image(image)
-        height, width = image_tensor.shape[1:]
+        height, width = image.shape[:2]
 
         bounds = (
             self.patch_bounds[index]
@@ -591,9 +588,16 @@ class PatchAnnotationDataset(Dataset):
             output_shape=(height, width),
         )
 
+        if self.pair_transform is not None:
+            image, target = self.pair_transform(image, target)
+
+        if self.image_transform is not None:
+            image = self.image_transform(image)
+
         if self.target_transform is not None:
             target = self.target_transform(target)
 
+        image_tensor = _ensure_tensor_image(image)
         target_tensor = _ensure_tensor_target(target)
 
         return {"image": image_tensor, "target": target_tensor}
@@ -636,6 +640,7 @@ class SlideAnnotationPatchDataset(Dataset):
         ) = None,
         min_mask_ratio: float = 0.0,
         store_filter: str | None = None,
+        pair_transform: Callable | None = None,
         image_transform: Callable | None = None,
         target_transform: Callable | None = None,
     ) -> None:
@@ -659,6 +664,7 @@ class SlideAnnotationPatchDataset(Dataset):
         self.within_bound = within_bound
         self.min_mask_ratio = float(min_mask_ratio)
         self.store_filter = store_filter
+        self.pair_transform = pair_transform
         self.image_transform = image_transform
         self.target_transform = target_transform
 
@@ -810,11 +816,7 @@ class SlideAnnotationPatchDataset(Dataset):
             units=self.units,
             coord_space="resolution",
         )
-        if self.image_transform is not None:
-            image = self.image_transform(image)
-
-        image_tensor = _ensure_tensor_image(image)
-        height, width = image_tensor.shape[1:]
+        height, width = image.shape[:2]
 
         bounds_at_baseline = tuple(
             float(value)
@@ -830,9 +832,16 @@ class SlideAnnotationPatchDataset(Dataset):
             patch_bounds=bounds_at_baseline,
             output_shape=(height, width),
         )
+
+        if self.pair_transform is not None:
+            image, target = self.pair_transform(image, target)
+
+        if self.image_transform is not None:
+            image = self.image_transform(image)
         if self.target_transform is not None:
             target = self.target_transform(target)
 
+        image_tensor = _ensure_tensor_image(image)
         target_tensor = _ensure_tensor_target(target)
         bounds_tensor = torch.as_tensor(bounds_at_resolution, dtype=torch.long)
         return {

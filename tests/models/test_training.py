@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -15,10 +16,15 @@ from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.models.training import (
     CheckpointConfig,
     ClassificationTask,
+    MaskTargetBuilder,
     PatchFolderClassificationDataset,
     PatchMaskPairDataset,
+    PresenceTargetBuilder,
     SegmentationTask,
     Trainer,
+    get_annotation_augmentation,
+    get_classification_augmentation,
+    get_segmentation_augmentation,
     TrainerConfig,
     save_checkpoint,
     save_model_weights,
@@ -234,6 +240,74 @@ def test_patch_mask_pair_dataset_raises_on_duplicate_relative_keys(
 
     with pytest.raises(ValueError, match="Duplicate image files"):
         _ = PatchMaskPairDataset(image_dir=image_dir, mask_dir=mask_dir)
+
+
+def test_classification_augmentation_preset_returns_image_transform() -> None:
+    """Classification presets should expose an image-only dataset transform."""
+    preset = get_classification_augmentation("light")
+    image = np.full((16, 16, 3), fill_value=128, dtype=np.uint8)
+
+    transformed = preset.transform(image)
+
+    assert preset.transform is not None
+    assert preset.pair_transform is None
+    assert preset.image_transform is None
+    assert transformed.shape == image.shape
+
+
+def test_segmentation_augmentation_preset_splits_pair_and_image_transforms() -> None:
+    """Segmentation presets should separate paired geometry from image effects."""
+    preset = get_segmentation_augmentation("light")
+    image = np.full((16, 16, 3), fill_value=128, dtype=np.uint8)
+    mask = np.zeros((16, 16), dtype=np.uint8)
+    mask[:, :8] = 1
+
+    transformed_image, transformed_mask = preset.pair_transform(image, mask)
+    transformed_image = preset.image_transform(transformed_image)
+
+    assert preset.transform is None
+    assert preset.pair_transform is not None
+    assert preset.image_transform is not None
+    assert transformed_image.shape == image.shape
+    assert transformed_mask.shape == mask.shape
+    assert set(np.unique(transformed_mask)).issubset({0, 1})
+
+
+def test_annotation_augmentation_preset_uses_pair_transform_for_masks() -> None:
+    """Annotation presets should only enable paired geometry for spatial targets."""
+    spatial_preset = get_annotation_augmentation(
+        "light",
+        target_builder=MaskTargetBuilder(class_mapping={"tumor": 1}),
+    )
+    scalar_preset = get_annotation_augmentation(
+        "light",
+        target_builder=PresenceTargetBuilder(),
+    )
+
+    assert spatial_preset.pair_transform is not None
+    assert spatial_preset.image_transform is not None
+    assert scalar_preset.pair_transform is None
+    assert scalar_preset.image_transform is not None
+
+
+def test_augmentation_presets_construct_for_all_levels() -> None:
+    """All preset levels should construct without error."""
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="Argument\\(s\\) 'always_apply' are not valid",
+            category=UserWarning,
+        )
+        for level in ("light", "medium", "heavy"):
+            assert get_classification_augmentation(level).transform is not None
+            assert get_segmentation_augmentation(level).pair_transform is not None
+            assert (
+                get_annotation_augmentation(
+                    level,
+                    target_builder=MaskTargetBuilder(class_mapping={"tumor": 1}),
+                ).pair_transform
+                is not None
+            )
 
 
 def test_binary_bce_classification_task_supports_vector_and_column_logits() -> None:
