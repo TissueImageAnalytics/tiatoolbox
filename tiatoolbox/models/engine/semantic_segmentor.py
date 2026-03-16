@@ -610,7 +610,7 @@ class SemanticSegmentor(PatchPredictor):
             # Wrap zarr in dask array
             canvas = da.from_zarr(canvas_zarr, chunks=canvas_zarr.chunks)
             count = da.from_zarr(count_zarr, chunks=count_zarr.chunks)
-            zarr_group = zarr.open(canvas_zarr.store.path, mode="a")
+            zarr_group = zarr.open(canvas_zarr.store.root, mode="a")
 
         # Final vertical merge
         raw_predictions["probabilities"] = merge_vertical_chunkwise(
@@ -1720,7 +1720,7 @@ def prepare_full_batch(
             tempfile.mkdtemp(prefix="full_batch_tmp_", dir=str(save_path_dir))
         )
 
-        store = zarr.DirectoryStore(str(temp_dir))
+        store = zarr.storage.LocalStore(str(temp_dir))
         full_batch_output = zarr.zeros(
             shape=(total_size, *sample_shape),
             chunks=(len(batch_output), *sample_shape),
@@ -1741,7 +1741,7 @@ def prepare_full_batch(
         pad_len = len(full_output_locs)
         if not use_numpy:
             # Resize zarr array to accommodate padding
-            full_batch_output.resize(total_size + pad_len, *sample_shape)
+            full_batch_output.resize((total_size + pad_len, *sample_shape))
         # For numpy, array is already pre-allocated to final_size
         full_batch_output[-pad_len:] = 0
 

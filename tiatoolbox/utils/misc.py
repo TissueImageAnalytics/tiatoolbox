@@ -1301,9 +1301,9 @@ def patch_predictions_as_qupath_json(
     return {"type": "FeatureCollection", "features": features}
 
 
-def get_zarr_array(zarr_array: zarr.core.Array | np.ndarray | list) -> np.ndarray:
+def get_zarr_array(zarr_array: zarr.Array | np.ndarray | list) -> np.ndarray:
     """Converts a zarr array into a numpy array."""
-    if isinstance(zarr_array, zarr.core.Array):
+    if isinstance(zarr_array, zarr.Array):
         return zarr_array[:]
 
     return np.array(zarr_array).astype(float)
