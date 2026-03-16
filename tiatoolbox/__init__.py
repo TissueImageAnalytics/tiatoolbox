@@ -113,7 +113,9 @@ rcParam: _RcParam = {  # noqa: N816
 def _lazy_import(name: str, module_location: Path) -> ModuleType:
     spec = importlib.util.spec_from_file_location(name, module_location)
     if spec is None or spec.loader is None:
-        raise ModuleNotFoundError(name=name, path=str(module_location))
+        raise ModuleNotFoundError(
+            f"Cannot find module {name!r} at path {module_location}",
+        )
     loader = importlib.util.LazyLoader(spec.loader)
     spec.loader = loader
     module = importlib.util.module_from_spec(spec)
