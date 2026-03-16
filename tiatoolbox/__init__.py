@@ -19,7 +19,7 @@ __email__ = "TIA@warwick.ac.uk"
 __version__ = "2.0.1"
 
 # This will set the tiatoolbox external data
-# default to be the user home folder, should work on both Window and Unix/Linux
+# default to be the user home folder, should work on both Windows and Unix/Linux
 # C:\Users\USER\.tiatoolbox
 # /home/USER/.tiatoolbox
 
