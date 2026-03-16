@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Final
 from unittest.mock import MagicMock
 
@@ -1029,7 +1030,6 @@ def test_get_tile_info_small_image_triggers_early_return(
 
     """
     # --- Arrange ---
-    # Make image smaller than tile_shape
     image_shape = [100, 100]
 
     # Configure tile_shape so that tile_shape >= image_shape
@@ -1041,25 +1041,35 @@ def test_get_tile_info_small_image_triggers_early_return(
         patch_input_shape=(200, 200),
     )
 
-    # Patch PatchExtractor.get_coordinates to return predictable boxes
+    # Fake return from PatchExtractor.get_coordinates
     fake_boxes = np.array([[0, 0, 100, 100]])
     monkeypatch.setattr(
         "tiatoolbox.tools.patchextraction.PatchExtractor.get_coordinates",
-        lambda **kwargs: (None, fake_boxes),  # noqa: ARG005
+        lambda **_: (None, fake_boxes),
     )
 
+    # Create a dummy dataset with required attributes
+    dummy_dataset = SimpleNamespace(mask_reader=None)
+
+    # Dummy dataloader-like container
+    dummy_dataloader = SimpleNamespace(dataset=dummy_dataset)
+
+    # Create a real instance and inject required fields
+    m = MultiTaskSegmentor(model="hovernet_fast-pannuke")
+    m._ioconfig = ioconfig
+    m.mask_padding = (0, 0, 0, 0)
+    m.dataloader = dummy_dataloader
+
     # --- Act ---
-    result = MultiTaskSegmentor._get_tile_info(image_shape, ioconfig)
+    result = m._get_tile_info(image_shape=image_shape, wsi_proc_shape=image_shape)
 
     # --- Assert ---
     assert isinstance(result, list)
-    assert len(result) == 1  # early return path
+    assert len(result) == 1
+
     boxes, flag = result[0]
 
-    # boxes should be exactly what we patched
     assert np.array_equal(boxes, fake_boxes)
-
-    # flag should be zeros with shape (N, 4)
     assert flag.shape == (1, 4)
     assert np.all(flag == 0)
 

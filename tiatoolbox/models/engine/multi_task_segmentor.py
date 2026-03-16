@@ -1166,7 +1166,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         # * retrieve tile placement and tile info flag
         # tile shape will always be corrected to be multiple of output
-        tile_info_sets = self._get_tile_info(masked_output_shape, self._ioconfig)
+        tile_info_sets = self._get_tile_info(
+            image_shape=masked_output_shape, wsi_proc_shape=wsi_proc_shape
+        )
         ioconfig = self._ioconfig.to_baseline()
 
         tile_metadata = _build_tile_tasks(
@@ -1358,10 +1360,10 @@ class MultiTaskSegmentor(SemanticSegmentor):
         postproc_func = self._get_model_attr("postproc_func")
         return postproc_func(head_raws)  # offset is (0, 0) by default.
 
-    @staticmethod
     def _get_tile_info(
+        self: MultiTaskSegmentor,
         image_shape: list[int, int] | tuple[int, int] | np.ndarray,
-        ioconfig: IOSegmentorConfig,
+        wsi_proc_shape: tuple[int, int] | np.ndarray,
     ) -> list[list, ...]:
         """Generating tile information.
 
@@ -1379,8 +1381,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
             image_shape (:class:`numpy.ndarray`, list(int, int), tuple(int, int)):
                 The shape of WSI to extract the tile from, assumed to be
                 in `[width, height]` / `[x, y]`.
-            ioconfig (:obj:IOSegmentorConfig):
-                The input and output configuration objects.
+            wsi_proc_shape (:class:`numpy.ndarray`, list(int, int), tuple(int, int)):
+                Full wsi processing shape.
 
         Returns:
             list:
@@ -1398,6 +1400,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     - :class:`numpy.ndarray` - Removal flags
 
         """
+        ioconfig = self._ioconfig
         margin = 0 if ioconfig.margin is None else np.array(ioconfig.margin)
         tile_shape = np.array(ioconfig.tile_shape)
         tile_shape = (
@@ -1415,6 +1418,21 @@ class MultiTaskSegmentor(SemanticSegmentor):
         # * === Now generating the flags to indicate which side should
         # * === be removed in postproc callback
         boxes = tile_outputs[1]
+        offset = self.mask_padding[:2]
+        boxes = boxes + np.array((*offset, *offset))
+        mask_reader = self.dataloader.dataset.mask_reader
+
+        # Filter masked regions
+        if mask_reader is not None:
+            selected = PatchExtractor.filter_coordinates(
+                mask_reader,  # must be at the same resolution
+                boxes,  # must already be at requested resolution
+                wsi_shape=wsi_proc_shape,
+                min_mask_ratio=0,
+            )
+            boxes = boxes[selected]
+
+        boxes = boxes - np.array((*offset, *offset))
 
         # This saves computation time if the image is smaller than the expected tile
         if np.all(image_shape <= tile_shape):
@@ -1440,7 +1458,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
             return removal_flag
 
         w, h = image_shape
-        boxes = tile_outputs[1]
         #  expand to full four corners
         boxes_br = boxes[:, 2:]
         boxes_tr = np.dstack([boxes[:, 2], boxes[:, 1]])[0]
@@ -3183,7 +3200,11 @@ def _update_tile_based_predictions_array(
             final_combined = previous_predictions_.copy()
             final_combined[keep_mask] = new_predictions_[keep_mask] + max_inst_value
             new_predictions_ = final_combined  # Update for final merge
-            max_inst_value = np.max(new_predictions_[:][:]) + max_inst_value
+            max_inst_value = (
+                np.max(new_predictions_[:][:]) + max_inst_value
+                if np.any(keep_mask)
+                else max_inst_value
+            )
 
         wsi_info_dict[idx]["predictions"][y_start:y_end, x_start:x_end] = (
             new_predictions_
