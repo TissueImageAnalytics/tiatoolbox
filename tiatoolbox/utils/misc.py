@@ -1844,7 +1844,7 @@ def write_probability_heatmap_as_ome_tiff(
         ... )
 
     """
-    if not isinstance(probability, (zarr.core.Array, np.ndarray)):
+    if not isinstance(probability, (zarr.Array, np.ndarray)):
         msg = "Input 'probability' must be a NumPy array or a Zarr array."
         raise TypeError(msg)
 
