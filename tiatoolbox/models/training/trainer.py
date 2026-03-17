@@ -93,8 +93,8 @@ class Trainer:
     def _extract_batch(
         self: Trainer,
         batch: dict | list | tuple,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        """Extract image and target tensors from a dataloader batch."""
+    ) -> tuple[torch.Tensor, object]:
+        """Extract image tensor and target object from a dataloader batch."""
         images = None
         targets = None
 
@@ -105,10 +105,10 @@ class Trainer:
             images = batch[0]
             targets = batch[1]
 
-        if not isinstance(images, torch.Tensor) or not isinstance(
-            targets, torch.Tensor
-        ):
-            msg = "Batch must provide tensor `image` and `target`/`label` entries."
+        if not isinstance(images, torch.Tensor) or targets is None:
+            msg = (
+                "Batch must provide a tensor `image` and `target`/`label` entries."
+            )
             raise ValueError(msg)
 
         # Accept NHWC tensors for convenience.
@@ -120,6 +120,30 @@ class Trainer:
             images = images.permute(0, 3, 1, 2).contiguous()
 
         return images, targets
+
+    def _move_to_device(self: Trainer, value: object) -> object:
+        """Recursively transfer supported batch values to the active device."""
+        if isinstance(value, torch.Tensor):
+            return value.to(self.device)
+        if isinstance(value, dict):
+            return {key: self._move_to_device(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [self._move_to_device(item) for item in value]
+        if isinstance(value, tuple):
+            return tuple(self._move_to_device(item) for item in value)
+        return value
+
+    def _detach(self: Trainer, value: object) -> object:
+        """Recursively detach tensors from the autograd graph."""
+        if isinstance(value, torch.Tensor):
+            return value.detach()
+        if isinstance(value, dict):
+            return {key: self._detach(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [self._detach(item) for item in value]
+        if isinstance(value, tuple):
+            return tuple(self._detach(item) for item in value)
+        return value
 
     def _is_improved(self: Trainer, value: float) -> bool:
         """Check whether monitored value improved."""
@@ -198,21 +222,25 @@ class Trainer:
         if training:
             self.optimizer.zero_grad(set_to_none=True)
 
+        self.task.reset_epoch_state(training=training)
+
         for step_index, batch in enumerate(loader, start=1):
             images, targets = self._extract_batch(batch)
             images = images.to(self.device).float()
-            targets = targets.to(self.device)
+            targets = self._move_to_device(targets)
 
             with torch.set_grad_enabled(training):
                 with autocast(device_type=self.device.type, enabled=self.use_amp):
                     output = self.model(images)
-                    logits = self.task.select_output(output)
-                    loss = self.task.compute_loss(logits, targets)
+                    loss = self.task.compute_loss(output, targets)
 
             batch_size = int(images.shape[0])
             total_samples += batch_size
 
-            batch_metrics = self.task.compute_metrics(logits.detach(), targets.detach())
+            detached_output = self._detach(output)
+            detached_targets = self._detach(targets)
+            batch_metrics = self.task.compute_metrics(detached_output, detached_targets)
+            self.task.update_epoch_state(detached_output, detached_targets)
             metric_totals["loss"] += float(loss.item()) * batch_size
             for metric_name, metric_value in batch_metrics.items():
                 metric_totals[metric_name] = (
@@ -249,10 +277,12 @@ class Trainer:
             msg = f"`{mode_name}` dataloader yielded zero samples."
             raise ValueError(msg)
 
-        return {
+        epoch_metrics = {
             metric_name: metric_total / total_samples
             for metric_name, metric_total in metric_totals.items()
         }
+        epoch_metrics.update(self.task.compute_epoch_metrics())
+        return epoch_metrics
 
     def _build_checkpoint_state(self: Trainer, epoch: int) -> dict[str, Any]:
         """Build serializable training state."""

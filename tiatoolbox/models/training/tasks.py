@@ -82,19 +82,39 @@ class TrainingTaskABC(ABC):
         msg = f"Unsupported model output type: `{type(output).__name__}`."
         raise TypeError(msg)
 
+    def reset_epoch_state(
+        self: TrainingTaskABC,
+        *,
+        training: bool,
+    ) -> None:
+        """Reset any task-specific state tracked across an epoch."""
+        del training
+
+    def update_epoch_state(
+        self: TrainingTaskABC,
+        output: object,
+        targets: object,
+    ) -> None:
+        """Update task-specific epoch state from one detached batch."""
+        del output, targets
+
+    def compute_epoch_metrics(self: TrainingTaskABC) -> dict[str, float]:
+        """Return any task-specific metrics accumulated across the epoch."""
+        return {}
+
     @abstractmethod
     def compute_loss(
         self: TrainingTaskABC,
-        logits: torch.Tensor,
-        targets: torch.Tensor,
+        output: object,
+        targets: object,
     ) -> torch.Tensor:
         """Compute training loss."""
 
     @abstractmethod
     def compute_metrics(
         self: TrainingTaskABC,
-        logits: torch.Tensor,
-        targets: torch.Tensor,
+        output: object,
+        targets: object,
     ) -> dict[str, float]:
         """Compute batch-level metrics."""
 
@@ -259,10 +279,14 @@ class ClassificationTask(TrainingTaskABC):
 
     def compute_loss(
         self: ClassificationTask,
-        logits: torch.Tensor,
-        targets: torch.Tensor,
+        output: object,
+        targets: object,
     ) -> torch.Tensor:
         """Compute classification loss."""
+        logits = self.select_output(output)
+        if not isinstance(targets, torch.Tensor):
+            msg = "Classification tasks require tensor targets."
+            raise ValueError(msg)
         target_mode = self._resolve_target_mode(logits, targets)
 
         if target_mode == "single_label":
@@ -281,10 +305,14 @@ class ClassificationTask(TrainingTaskABC):
 
     def compute_metrics(
         self: ClassificationTask,
-        logits: torch.Tensor,
-        targets: torch.Tensor,
+        output: object,
+        targets: object,
     ) -> dict[str, float]:
         """Compute classification accuracy and macro-F1."""
+        logits = self.select_output(output)
+        if not isinstance(targets, torch.Tensor):
+            msg = "Classification tasks require tensor targets."
+            raise ValueError(msg)
         target_mode = self._resolve_target_mode(logits, targets)
 
         if target_mode == "single_label":
@@ -414,10 +442,14 @@ class SegmentationTask(TrainingTaskABC):
 
     def compute_loss(
         self: SegmentationTask,
-        logits: torch.Tensor,
-        targets: torch.Tensor,
+        output: object,
+        targets: object,
     ) -> torch.Tensor:
         """Compute segmentation loss."""
+        logits = self.select_output(output)
+        if not isinstance(targets, torch.Tensor):
+            msg = "Segmentation tasks require tensor targets."
+            raise ValueError(msg)
         binary_mode = self._resolve_binary_mode(logits)
 
         if binary_mode:
@@ -441,10 +473,14 @@ class SegmentationTask(TrainingTaskABC):
 
     def compute_metrics(
         self: SegmentationTask,
-        logits: torch.Tensor,
-        targets: torch.Tensor,
+        output: object,
+        targets: object,
     ) -> dict[str, float]:
         """Compute segmentation Dice and IoU metrics."""
+        logits = self.select_output(output)
+        if not isinstance(targets, torch.Tensor):
+            msg = "Segmentation tasks require tensor targets."
+            raise ValueError(msg)
         binary_mode = self._resolve_binary_mode(logits)
 
         if binary_mode:

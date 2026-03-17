@@ -30,6 +30,7 @@ from tiatoolbox.models.training import (
     save_model_weights,
     stratified_split_indices,
 )
+from tiatoolbox.models.training.tasks import TrainingTaskABC
 
 
 def _build_classification_dataset(root_dir: Path) -> Path:
@@ -98,6 +99,83 @@ class WrappedStateDictModel(nn.Module):
             strict=strict,
             assign=assign,
         )
+
+
+class DictOutputClassifier(nn.Module):
+    """Small model returning logits under a mapping output."""
+
+    def __init__(self) -> None:
+        """Initialize the dict-output test model."""
+        super().__init__()
+        self.flatten = nn.Flatten()
+        self.linear = nn.Linear(3 * 4 * 4, 2)
+
+    def forward(self, inputs: torch.Tensor) -> dict[str, torch.Tensor]:
+        """Run a forward pass and wrap the logits in a dict."""
+        return {"logits": self.linear(self.flatten(inputs))}
+
+
+class StructuredClassificationTask(TrainingTaskABC):
+    """Test task consuming dict outputs, dict targets, and epoch hooks."""
+
+    def __init__(self) -> None:
+        """Initialize the structured test task."""
+        super().__init__(output_key="logits")
+        self.loss_fn = nn.CrossEntropyLoss()
+        self.reset_calls: list[bool] = []
+        self.correct = 0
+        self.total = 0
+
+    def reset_epoch_state(self, *, training: bool) -> None:
+        """Reset tracked prediction counts for the current epoch."""
+        self.reset_calls.append(training)
+        self.correct = 0
+        self.total = 0
+
+    def update_epoch_state(self, output: object, targets: object) -> None:
+        """Accumulate accuracy over detached epoch batches."""
+        if not isinstance(targets, dict) or not isinstance(
+            targets["label"], torch.Tensor
+        ):
+            msg = "StructuredClassificationTask expects dict targets with tensor labels."
+            raise ValueError(msg)
+
+        logits = self.select_output(output)
+        labels = targets["label"]
+        predictions = torch.argmax(logits, dim=1)
+        self.correct += int((predictions == labels).sum().item())
+        self.total += int(labels.shape[0])
+
+    def compute_epoch_metrics(self) -> dict[str, float]:
+        """Expose epoch-level accuracy based on accumulated state."""
+        if self.total == 0:
+            return {"epoch_accuracy": 0.0}
+        return {"epoch_accuracy": float(self.correct / self.total)}
+
+    def compute_loss(self, output: object, targets: object) -> torch.Tensor:
+        """Compute classification loss from dict outputs and targets."""
+        if not isinstance(targets, dict) or not isinstance(
+            targets["label"], torch.Tensor
+        ):
+            msg = "StructuredClassificationTask expects dict targets with tensor labels."
+            raise ValueError(msg)
+
+        logits = self.select_output(output)
+        return self.loss_fn(logits, targets["label"].long())
+
+    def compute_metrics(self, output: object, targets: object) -> dict[str, float]:
+        """Compute batch-level accuracy from dict outputs and targets."""
+        if not isinstance(targets, dict) or not isinstance(
+            targets["label"], torch.Tensor
+        ):
+            msg = "StructuredClassificationTask expects dict targets with tensor labels."
+            raise ValueError(msg)
+
+        logits = self.select_output(output)
+        labels = targets["label"].long()
+        predictions = torch.argmax(logits, dim=1)
+        accuracy = (predictions == labels).float().mean().item()
+        return {"accuracy": float(accuracy)}
 
 
 def test_patch_folder_classification_dataset(track_tmp_path: Path) -> None:
@@ -528,6 +606,82 @@ def test_segmentation_trainer(track_tmp_path: Path) -> None:
     assert history[-1]["train_loss"] <= history[0]["train_loss"]
     assert "train_dice" in history[-1]
     assert (track_tmp_path / "segmentation_run" / "last.ckpt").exists()
+
+
+def test_trainer_supports_structured_targets_and_epoch_hooks(
+    track_tmp_path: Path,
+) -> None:
+    """Trainer should support structured targets and epoch-level task metrics."""
+    dataset = [
+        {
+            "image": torch.zeros((3, 4, 4), dtype=torch.float32),
+            "target": {
+                "label": torch.tensor(0, dtype=torch.long),
+                "meta": {
+                    "weight": torch.tensor(1.0, dtype=torch.float32),
+                },
+            },
+        },
+        {
+            "image": torch.ones((3, 4, 4), dtype=torch.float32),
+            "target": {
+                "label": torch.tensor(1, dtype=torch.long),
+                "meta": {
+                    "weight": torch.tensor(1.0, dtype=torch.float32),
+                },
+            },
+        },
+        {
+            "image": torch.zeros((3, 4, 4), dtype=torch.float32),
+            "target": {
+                "label": torch.tensor(0, dtype=torch.long),
+                "meta": {
+                    "weight": torch.tensor(1.0, dtype=torch.float32),
+                },
+            },
+        },
+        {
+            "image": torch.ones((3, 4, 4), dtype=torch.float32),
+            "target": {
+                "label": torch.tensor(1, dtype=torch.long),
+                "meta": {
+                    "weight": torch.tensor(1.0, dtype=torch.float32),
+                },
+            },
+        },
+    ]
+    train_loader = DataLoader(dataset, batch_size=2, shuffle=False)
+    val_loader = DataLoader(dataset, batch_size=2, shuffle=False)
+
+    model = DictOutputClassifier()
+    with torch.no_grad():
+        model.linear.weight[0].fill_(-0.5)
+        model.linear.weight[1].fill_(0.5)
+        model.linear.bias.copy_(torch.tensor([1.0, -1.0]))
+
+    task = StructuredClassificationTask()
+    trainer = Trainer(
+        model=model,
+        task=task,
+        optimizer=torch.optim.AdamW(model.parameters(), lr=1e-3),
+        train_loader=train_loader,
+        val_loader=val_loader,
+        config=TrainerConfig(
+            max_epochs=1,
+            amp=False,
+            output_dir=track_tmp_path / "structured_targets",
+            log_every_n_steps=0,
+        ),
+        checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
+    )
+
+    history = trainer.fit()
+
+    assert history[-1]["train_accuracy"] == pytest.approx(1.0)
+    assert history[-1]["val_accuracy"] == pytest.approx(1.0)
+    assert history[-1]["train_epoch_accuracy"] == pytest.approx(1.0)
+    assert history[-1]["val_epoch_accuracy"] == pytest.approx(1.0)
+    assert task.reset_calls == [True, False]
 
 
 def test_trainer_requires_validation_loader_for_val_monitor(
