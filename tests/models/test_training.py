@@ -5,6 +5,7 @@ from __future__ import annotations
 import warnings
 from pathlib import Path
 
+import albumentations as A
 import numpy as np
 import pytest
 import torch
@@ -13,10 +14,14 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from tiatoolbox.models.models_abc import load_torch_model
+import tiatoolbox.models.training.augmentations as training_augmentations
 from tiatoolbox.models.training import (
+    BinaryDiskTargetBuilder,
     CheckpointConfig,
     ClassificationTask,
+    CompositeTargetBuilder,
     DenseHeadSpec,
+    GaussianHeatmapTargetBuilder,
     MaskTargetBuilder,
     PatchFolderClassificationDataset,
     PatchMaskPairDataset,
@@ -368,6 +373,79 @@ def test_annotation_augmentation_preset_uses_pair_transform_for_masks() -> None:
     assert spatial_preset.image_transform is not None
     assert scalar_preset.pair_transform is None
     assert scalar_preset.image_transform is not None
+
+
+def test_annotation_augmentation_preset_supports_structured_spatial_targets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Structured spatial leaves should share geometry while scalars stay fixed."""
+    monkeypatch.setattr(
+        training_augmentations,
+        "_geometric_ops",
+        lambda _level: [A.HorizontalFlip(p=1.0)],
+    )
+
+    preset = get_annotation_augmentation(
+        "light",
+        target_builder=CompositeTargetBuilder(
+            {
+                "mask": MaskTargetBuilder(class_mapping={"tumor": 1}),
+                "signals": CompositeTargetBuilder(
+                    {
+                        "disk": BinaryDiskTargetBuilder(radius=1),
+                        "heatmap": GaussianHeatmapTargetBuilder(sigma=1.0),
+                    },
+                ),
+                "presence": PresenceTargetBuilder(),
+            },
+        ),
+    )
+
+    image = np.arange(3 * 4 * 3, dtype=np.uint8).reshape(3, 4, 3)
+    target = {
+        "mask": np.array(
+            [
+                [0, 1, 2, 3],
+                [4, 5, 6, 7],
+                [8, 9, 10, 11],
+            ],
+            dtype=np.int64,
+        ),
+        "signals": {
+            "disk": np.array(
+                [
+                    [0.0, 1.0, 0.0, 1.0],
+                    [1.0, 0.0, 1.0, 0.0],
+                    [0.0, 1.0, 0.0, 1.0],
+                ],
+                dtype=np.float32,
+            ),
+            "heatmap": np.array(
+                [
+                    [0.1, 0.2, 0.3, 0.4],
+                    [0.5, 0.6, 0.7, 0.8],
+                    [0.9, 1.0, 1.1, 1.2],
+                ],
+                dtype=np.float32,
+            ),
+        },
+        "presence": 1,
+    }
+
+    transformed_image, transformed_target = preset.pair_transform(image, target)
+
+    assert preset.pair_transform is not None
+    assert np.array_equal(transformed_image, np.fliplr(image))
+    assert np.array_equal(transformed_target["mask"], np.fliplr(target["mask"]))
+    assert np.array_equal(
+        transformed_target["signals"]["disk"],
+        np.fliplr(target["signals"]["disk"]),
+    )
+    assert np.array_equal(
+        transformed_target["signals"]["heatmap"],
+        np.fliplr(target["signals"]["heatmap"]),
+    )
+    assert transformed_target["presence"] == 1
 
 
 def test_augmentation_presets_construct_for_all_levels() -> None:

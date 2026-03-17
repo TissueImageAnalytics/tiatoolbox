@@ -19,6 +19,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 Bounds = tuple[float, float, float, float]
 TargetType = np.ndarray | int | float | dict[str, "TargetType"]
+SpatialTargetSpec = Literal["mask", "image"] | dict[str, "SpatialTargetSpec"]
 
 
 def _as_bounds(bounds: tuple[float, ...] | list[float] | np.ndarray) -> Bounds:
@@ -253,6 +254,11 @@ class TargetBuilderABC(ABC):
             geometry_predicate=self.geometry_predicate,
         )
 
+    @property
+    def spatial_target_spec(self: TargetBuilderABC) -> SpatialTargetSpec | None:
+        """Describe which target leaves should share spatial transforms."""
+        return None
+
     def create_target(
         self: TargetBuilderABC,
         *,
@@ -308,6 +314,20 @@ class CompositeTargetBuilder(TargetBuilderABC):
             )
             for name, builder in self.builders.items()
         }
+
+    @property
+    def spatial_target_spec(
+        self: CompositeTargetBuilder,
+    ) -> dict[str, SpatialTargetSpec] | None:
+        """Describe the nested spatial leaves produced by child builders."""
+        spatial_specs: dict[str, SpatialTargetSpec] = {}
+        for name, builder in self.builders.items():
+            child_spec = builder.spatial_target_spec
+            if child_spec is not None:
+                spatial_specs[name] = child_spec
+        if not spatial_specs:
+            return None
+        return spatial_specs
 
     def build_target(
         self: CompositeTargetBuilder,
@@ -366,6 +386,11 @@ class MaskTargetBuilder(TargetBuilderABC):
         if class_value not in self.class_mapping:
             return None
         return int(self.class_mapping[class_value])
+
+    @property
+    def spatial_target_spec(self: MaskTargetBuilder) -> Literal["mask"]:
+        """Rasterized semantic masks should use mask interpolation."""
+        return "mask"
 
     def build_target(
         self: MaskTargetBuilder,
@@ -566,6 +591,11 @@ class BinaryDiskTargetBuilder(TargetBuilderABC):
             msg = "`radius` must be a non-negative integer."
             raise ValueError(msg)
 
+    @property
+    def spatial_target_spec(self: BinaryDiskTargetBuilder) -> Literal["mask"]:
+        """Binary disk maps should use mask interpolation."""
+        return "mask"
+
     def build_target(
         self: BinaryDiskTargetBuilder,
         annotations: dict[str, Annotation],
@@ -618,6 +648,13 @@ class GaussianHeatmapTargetBuilder(TargetBuilderABC):
         if self.truncate <= 0:
             msg = "`truncate` must be positive."
             raise ValueError(msg)
+
+    @property
+    def spatial_target_spec(
+        self: GaussianHeatmapTargetBuilder,
+    ) -> Literal["image"]:
+        """Continuous heatmaps should use image interpolation."""
+        return "image"
 
     def build_target(
         self: GaussianHeatmapTargetBuilder,
