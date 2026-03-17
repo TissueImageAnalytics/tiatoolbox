@@ -168,10 +168,14 @@ class StainAugmentor(ImageOnlyTransform):
             )
         self.n_stains = self.source_concentrations.shape[1]
         if not self.augment_background:
-            self.tissue_mask = get_luminosity_tissue_mask(
-                img,
-                threshold=threshold,
-            ).ravel()
+            try:
+                self.tissue_mask = get_luminosity_tissue_mask(
+                    img,
+                    threshold=threshold,
+                ).ravel()
+            except ValueError:
+                # make an empty mask - we wont augment
+                self.tissue_mask = np.zeros(img.shape[0] * img.shape[1], dtype=bool)
         self.img_shape = img.shape
 
     def augment(self: StainAugmentor) -> np.ndarray:
