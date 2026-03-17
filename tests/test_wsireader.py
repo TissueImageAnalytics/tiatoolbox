@@ -2174,26 +2174,27 @@ def test_is_zarr_array(track_tmp_path: Path) -> None:
     """Test is_zarr is true for a .zarr directory with an array."""
     zarr_dir = track_tmp_path / "zarr.zarr"
     zarr_dir.mkdir()
-    _zarray_path = zarr_dir / ".zarray"
-    minimal_zarray = {
+    # Zarr 3 uses zarr.json, NOT .zarray
+    metadata_path = zarr_dir / "zarr.json"
+
+    minimal_zarr3 = {
+        "zarr_format": 3,
+        "node_type": "array",
         "shape": [1, 1, 1],
-        "dtype": "uint8",
-        "compressor": {
-            "id": "lz4",
-        },
-        "chunks": [1, 1, 1],
-        "fill_value": 0,
-        "order": "C",
-        "filters": None,
-        "zarr_format": 2,
+        "data_type": "uint8",
+        "chunk_grid": {"name": "regular", "configuration": {"chunk_shape": [1, 1, 1]}},
+        "chunk_key_encoding": {"name": "default", "configuration": {"separator": "/"}},
+        "fill_value": 0,  # This was the missing key causing your error
+        "codecs": [{"name": "bytes", "configuration": {"endian": "little"}}],
+        "attributes": {},
     }
-    with Path.open(_zarray_path, "w") as f:
-        json.dump(minimal_zarray, f)
+    with Path.open(metadata_path, "w") as f:
+        json.dump(minimal_zarr3, f)
     assert is_zarr(zarr_dir)
 
 
 def test_is_zarr_group(track_tmp_path: Path) -> None:
-    """Test is_zarr is true for a .zarr directory with an group."""
+    """Test is_zarr is true for a .zarr directory with a group."""
     zarr_dir = track_tmp_path / "zarr.zarr"
     zarr_dir.mkdir()
     _zgroup_path = zarr_dir / ".zgroup"
@@ -2209,7 +2210,7 @@ def test_is_ngff_regular_zarr(track_tmp_path: Path) -> None:
     """Test is_ngff is false for a regular zarr."""
     zarr_path = track_tmp_path / "zarr.zarr"
     # Create zarr array on disk
-    zarr.array(RNG.random((32, 32)), store=zarr.DirectoryStore(zarr_path))
+    zarr.array(RNG.random((32, 32)), store=zarr.storage.LocalStore(zarr_path))
     assert is_zarr(zarr_path)
     assert not is_ngff(zarr_path)
 
@@ -2226,7 +2227,7 @@ def test_is_ngff_sqlite3(track_tmp_path: Path, remote_sample: Callable) -> None:
 
     """
     ngff_path = remote_sample("ngff-1")
-    source = zarr.DirectoryStore(ngff_path)
+    source = zarr.storage.LocalStore(ngff_path)
     dest = zarr.SQLiteStore(track_tmp_path / "ngff.sqlite3")
     # Copy the store to a sqlite3 file
     zarr.copy_store(source, dest)
@@ -2321,7 +2322,7 @@ def test_store_reader_info_from_base(
 def test_ngff_sqlitestore(track_tmp_path: Path, remote_sample: Callable) -> None:
     """Test SQLiteStore with an NGFF file."""
     ngff_path = remote_sample("ngff-1")
-    source = zarr.DirectoryStore(ngff_path)
+    source = zarr.storage.LocalStore(ngff_path)
     dest = zarr.SQLiteStore(track_tmp_path / "ngff.sqlite3")
     # Copy the store to a sqlite3 file
     zarr.copy_store(source, dest)

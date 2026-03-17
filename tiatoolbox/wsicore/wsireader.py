@@ -30,6 +30,8 @@ from numpy.linalg import inv
 from packaging.version import Version
 from PIL import Image
 from tifffile import TiffPages
+from zarr.experimental.cache_store import CacheStore
+from zarr.storage import MemoryStore
 
 from tiatoolbox import logger, utils
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
@@ -3802,16 +3804,27 @@ class TIFFWSIReader(WSIReader):
             series=self.series_n,
             aszarr=True,
         )
-        self._zarr_lru_cache = zarr.LRUStoreCache(self._zarr_store, max_size=cache_size)
-        self._zarr_group = zarr.open(self._zarr_lru_cache)
+        # Updated Zarr 3 logic for TIFFWSIReader
+        cache_backend = MemoryStore()
+        self._zarr_cache = CacheStore(
+            store=self._zarr_store, cache_store=cache_backend, max_size=cache_size
+        )
+        self._zarr_group = zarr.open(self._zarr_cache)
 
         if not isinstance(self._zarr_group, zarr.Group):
+            # 1. Create a new in-memory group
             group = zarr.open_group()
-            group[0] = self._zarr_group
+
+            # 2. Assign the data directly.
+            # [:] extracts the data from the TiffStore and saves it into group["0"]
+            group["0"] = self._zarr_group[:]
+
+            # 3. Update the reference so self._zarr_group is now a Group
             self._zarr_group = group
+
         self.level_arrays = {
             int(key): ArrayView(array, axes=self._axes)
-            for key, array in self._zarr_group.items()
+            for key, array in self._zarr_group.members()
         }
         # ensure level arrays are sorted by descending area
         self.level_arrays = dict(
