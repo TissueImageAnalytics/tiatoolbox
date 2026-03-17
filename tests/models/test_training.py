@@ -16,11 +16,13 @@ from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.models.training import (
     CheckpointConfig,
     ClassificationTask,
+    DenseHeadSpec,
     MaskTargetBuilder,
     PatchFolderClassificationDataset,
     PatchMaskPairDataset,
     PresenceTargetBuilder,
     SegmentationTask,
+    StructuredDenseTask,
     Trainer,
     get_annotation_augmentation,
     get_classification_augmentation,
@@ -606,6 +608,145 @@ def test_segmentation_trainer(track_tmp_path: Path) -> None:
     assert history[-1]["train_loss"] <= history[0]["train_loss"]
     assert "train_dice" in history[-1]
     assert (track_tmp_path / "segmentation_run" / "last.ckpt").exists()
+
+
+def test_structured_dense_task_supports_weighted_multi_head_tensor_outputs() -> None:
+    """Structured dense tasks should split concatenated outputs and weight losses."""
+    task = StructuredDenseTask(
+        heads=[
+            DenseHeadSpec(
+                name="segmentation",
+                loss="cross_entropy",
+                target_key="segmentation",
+                channel_slice=slice(0, 2),
+                metrics=("dice", "iou"),
+            ),
+            DenseHeadSpec(
+                name="auxiliary",
+                loss="mse",
+                target_mode="regression",
+                target_key="auxiliary",
+                channel_slice=2,
+                loss_weight=0.5,
+                metrics=("mae", "mse"),
+            ),
+        ]
+    )
+
+    output = torch.tensor(
+        [
+            [
+                [[6.0, -6.0], [-6.0, 6.0]],
+                [[-6.0, 6.0], [6.0, -6.0]],
+                [[1.0, 1.0], [1.0, 1.0]],
+            ]
+        ],
+        dtype=torch.float32,
+    )
+    targets = {
+        "segmentation": torch.tensor([[[0, 1], [1, 0]]], dtype=torch.long),
+        "auxiliary": torch.zeros((1, 1, 2, 2), dtype=torch.float32),
+    }
+
+    loss = task.compute_loss(output, targets)
+    metrics = task.compute_metrics(output, targets)
+
+    expected_seg_loss = F.cross_entropy(
+        output[:, :2, :, :],
+        targets["segmentation"],
+    )
+    expected_aux_loss = F.mse_loss(
+        output[:, 2:3, :, :],
+        targets["auxiliary"],
+    )
+    expected_total = expected_seg_loss + (0.5 * expected_aux_loss)
+
+    assert loss.item() == pytest.approx(expected_total.item())
+    assert metrics["segmentation_dice"] == pytest.approx(1.0)
+    assert metrics["segmentation_iou"] == pytest.approx(1.0)
+    assert metrics["auxiliary_loss"] == pytest.approx(1.0)
+    assert metrics["auxiliary_weighted_loss"] == pytest.approx(0.5)
+    assert metrics["auxiliary_mae"] == pytest.approx(1.0)
+    assert metrics["auxiliary_mse"] == pytest.approx(1.0)
+
+
+def test_structured_dense_task_supports_named_mapping_outputs() -> None:
+    """Structured dense tasks should resolve named heads from mapping outputs."""
+    task = StructuredDenseTask(
+        heads=[
+            DenseHeadSpec(
+                name="mask",
+                loss="cross_entropy",
+                metrics=("dice", "iou"),
+            ),
+            DenseHeadSpec(
+                name="heatmap",
+                loss="bce_with_logits",
+                metrics=("dice", "iou"),
+            ),
+        ]
+    )
+
+    output = {
+        "mask": torch.tensor(
+            [
+                [
+                    [[6.0, -6.0], [-6.0, 6.0]],
+                    [[-6.0, 6.0], [6.0, -6.0]],
+                ]
+            ],
+            dtype=torch.float32,
+        ),
+        "heatmap": torch.tensor([[[[6.0, -6.0], [6.0, -6.0]]]], dtype=torch.float32),
+    }
+    targets = {
+        "mask": torch.tensor([[[0, 1], [1, 0]]], dtype=torch.long),
+        "heatmap": torch.tensor([[[[1.0, 0.0], [1.0, 0.0]]]], dtype=torch.float32),
+    }
+
+    loss = task.compute_loss(output, targets)
+    metrics = task.compute_metrics(output, targets)
+
+    assert torch.isfinite(loss)
+    assert metrics["mask_dice"] == pytest.approx(1.0)
+    assert metrics["mask_iou"] == pytest.approx(1.0)
+    assert metrics["heatmap_dice"] == pytest.approx(1.0)
+    assert metrics["heatmap_iou"] == pytest.approx(1.0)
+
+
+def test_structured_dense_task_matches_single_head_segmentation_behavior() -> None:
+    """Single-head structured dense tasks should match segmentation-task outputs."""
+    structured_task = StructuredDenseTask(
+        heads=[
+            DenseHeadSpec(
+                name="segmentation",
+                loss="cross_entropy",
+                metrics=("dice", "iou"),
+            )
+        ],
+        prefix_head_metrics=False,
+        include_head_loss_metrics=False,
+    )
+    segmentation_task = SegmentationTask(loss="cross_entropy")
+
+    logits = torch.tensor(
+        [
+            [
+                [[6.0, -6.0], [-6.0, 6.0]],
+                [[-6.0, 6.0], [6.0, -6.0]],
+            ]
+        ],
+        dtype=torch.float32,
+    )
+    targets = torch.tensor([[[0, 1], [1, 0]]], dtype=torch.long)
+
+    structured_loss = structured_task.compute_loss(logits, targets)
+    structured_metrics = structured_task.compute_metrics(logits, targets)
+    segmentation_loss = segmentation_task.compute_loss(logits, targets)
+    segmentation_metrics = segmentation_task.compute_metrics(logits, targets)
+
+    assert structured_loss.item() == pytest.approx(segmentation_loss.item())
+    assert structured_metrics == segmentation_metrics
 
 
 def test_trainer_supports_structured_targets_and_epoch_hooks(

@@ -39,7 +39,9 @@ from tiatoolbox.models.training.targets import (
 )
 from tiatoolbox.models.training.tasks import (
     ClassificationTask,
+    DenseHeadSpec,
     SegmentationTask,
+    StructuredDenseTask,
     TrainingTaskABC,
 )
 from tiatoolbox.models.training.trainer import (
@@ -57,6 +59,7 @@ __all__ = [
     "ClassificationTask",
     "CompositeTargetBuilder",
     "CoverageClassTargetBuilder",
+    "DenseHeadSpec",
     "GaussianHeatmapTargetBuilder",
     "MaskTargetBuilder",
     "MultiLabelTargetBuilder",
@@ -67,6 +70,7 @@ __all__ = [
     "ClassBalancedIndexSampler",
     "PresenceTargetBuilder",
     "SegmentationTask",
+    "StructuredDenseTask",
     "TargetBuilderABC",
     "Trainer",
     "TrainerConfig",
