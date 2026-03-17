@@ -8,12 +8,15 @@ from pathlib import Path
 import numpy as np
 import pytest
 import torch
-from shapely.geometry import Polygon
+from shapely.geometry import Point, Polygon
 
 from tiatoolbox.annotation import Annotation, SQLiteStore
 from tiatoolbox.models.training import (
+    BinaryDiskTargetBuilder,
     ClassBalancedIndexSampler,
+    CompositeTargetBuilder,
     CoverageClassTargetBuilder,
+    GaussianHeatmapTargetBuilder,
     MaskTargetBuilder,
     MultiLabelTargetBuilder,
     PatchAnnotationDataset,
@@ -143,6 +146,82 @@ def test_presence_coverage_and_multilabel_builders(track_tmp_path: Path) -> None
     assert np.array_equal(target, np.array([1, 1, 0]))
 
 
+def test_dense_point_target_builders(track_tmp_path: Path) -> None:
+    """Dense point builders should generate centered detection maps."""
+    store_path = track_tmp_path / "dense_targets.db"
+    store = SQLiteStore(store_path)
+    store.append(
+        Annotation(Point(2, 2), properties={"class": "tumor"}),
+        key="point_a",
+    )
+    store.append(
+        Annotation(Point(7, 7), properties={"class": "tumor"}),
+        key="point_b",
+    )
+
+    disk_target = BinaryDiskTargetBuilder(radius=1).create_target(
+        store=store,
+        patch_bounds=(0, 0, 10, 10),
+        output_shape=(10, 10),
+    )
+    heatmap_target = GaussianHeatmapTargetBuilder(sigma=1.0).create_target(
+        store=store,
+        patch_bounds=(0, 0, 10, 10),
+        output_shape=(10, 10),
+    )
+
+    assert disk_target.shape == (10, 10)
+    assert disk_target.dtype == np.float32
+    assert disk_target[2, 2] == pytest.approx(1.0)
+    assert disk_target[7, 7] == pytest.approx(1.0)
+    assert disk_target[0, 9] == pytest.approx(0.0)
+
+    assert heatmap_target.shape == (10, 10)
+    assert heatmap_target.dtype == np.float32
+    assert heatmap_target[2, 2] == pytest.approx(1.0)
+    assert heatmap_target[7, 7] == pytest.approx(1.0)
+    assert heatmap_target[2, 3] < heatmap_target[2, 2]
+    assert heatmap_target[0, 9] == pytest.approx(0.0)
+
+
+def test_composite_target_builder(track_tmp_path: Path) -> None:
+    """Composite builders should return structured nested target dictionaries."""
+    store = _create_test_store(track_tmp_path / "composite_targets.db")
+
+    builder = CompositeTargetBuilder(
+        {
+            "mask": MaskTargetBuilder(
+                class_mapping={"tumor": 1, "stroma": 2},
+                class_property="class",
+                default_label=0,
+            ),
+            "signals": CompositeTargetBuilder(
+                {
+                    "presence": PresenceTargetBuilder(
+                        where='props["class"] == "tumor"',
+                        min_fraction=0.1,
+                    ),
+                    "disk": BinaryDiskTargetBuilder(
+                        where='props["class"] == "tumor"',
+                        radius=1,
+                    ),
+                }
+            ),
+        }
+    )
+
+    target = builder.create_target(
+        store=store,
+        patch_bounds=(0, 0, 10, 10),
+        output_shape=(10, 10),
+    )
+
+    assert set(target.keys()) == {"mask", "signals"}
+    assert target["mask"].shape == (10, 10)
+    assert int(target["signals"]["presence"]) == 1
+    assert target["signals"]["disk"].shape == (10, 10)
+
+
 def test_target_builders_validate_fractional_thresholds() -> None:
     """Coverage-based builders should reject invalid min_fraction values."""
     with pytest.raises(ValueError, match="`min_fraction` must be in the interval"):
@@ -171,6 +250,15 @@ def test_target_builders_validate_other_constructor_arguments() -> None:
 
     with pytest.raises(ValueError, match="`overlap_method` must be either"):
         _ = PresenceTargetBuilder(overlap_method="unknown")  # type: ignore[arg-type]
+
+    with pytest.raises(ValueError, match="`radius` must be a non-negative integer"):
+        _ = BinaryDiskTargetBuilder(radius=-1)
+
+    with pytest.raises(ValueError, match="`sigma` must be positive"):
+        _ = GaussianHeatmapTargetBuilder(sigma=0.0)
+
+    with pytest.raises(ValueError, match="`builders` must contain at least one"):
+        _ = CompositeTargetBuilder({})
 
 
 def test_patch_annotation_dataset_with_bounds_and_where(track_tmp_path: Path) -> None:
@@ -304,6 +392,51 @@ def test_patch_annotation_dataset_pair_transform_keeps_mask_targets_aligned(
     assert sample["image"].shape == (3, 10, 10)
     assert int(sample["target"][2, 2].item()) == 2
     assert int(sample["target"][2, 7].item()) == 1
+
+
+def test_patch_annotation_dataset_supports_structured_targets(
+    track_tmp_path: Path,
+) -> None:
+    """Patch annotation datasets should tensorize nested structured targets."""
+    store_path = track_tmp_path / "structured_patch_store.db"
+    _create_test_store(store_path)
+
+    builder = CompositeTargetBuilder(
+        {
+            "mask": MaskTargetBuilder(
+                class_mapping={"tumor": 1, "stroma": 2},
+                class_property="class",
+                default_label=0,
+            ),
+            "signals": CompositeTargetBuilder(
+                {
+                    "presence": PresenceTargetBuilder(
+                        where='props["class"] == "tumor"',
+                        min_fraction=0.1,
+                    ),
+                    "heatmap": GaussianHeatmapTargetBuilder(
+                        where='props["class"] == "tumor"',
+                        sigma=1.0,
+                    ),
+                }
+            ),
+        }
+    )
+
+    dataset = PatchAnnotationDataset(
+        patch_inputs=[np.zeros((10, 10, 3), dtype=np.uint8)],
+        annotation_stores=store_path,
+        target_builder=builder,
+    )
+
+    sample = dataset[0]
+
+    assert isinstance(sample["target"], dict)
+    assert isinstance(sample["target"]["mask"], torch.Tensor)
+    assert sample["target"]["mask"].shape == (10, 10)
+    assert isinstance(sample["target"]["signals"], dict)
+    assert sample["target"]["signals"]["presence"].shape == ()
+    assert sample["target"]["signals"]["heatmap"].shape == (10, 10)
 
 
 def test_generate_slide_patch_coordinates_with_mask(track_tmp_path: Path) -> None:
@@ -511,6 +644,54 @@ def test_slide_annotation_patch_dataset_pair_transform_keeps_masks_aligned(
     assert sample["image"].shape == (3, 16, 16)
     assert int(sample["target"][2, 2].item()) == 2
     assert int(sample["target"][10, 12].item()) == 1
+
+
+def test_slide_annotation_patch_dataset_supports_structured_targets(
+    track_tmp_path: Path,
+) -> None:
+    """Slide annotation datasets should tensorize nested structured targets."""
+    slide = np.zeros((16, 16, 3), dtype=np.uint8)
+    slide_path = track_tmp_path / "slide_structured.npy"
+    np.save(slide_path, slide)
+
+    store_path = track_tmp_path / "store_structured.db"
+    store = SQLiteStore(store_path)
+    store.append(
+        Annotation(
+            Polygon([(0, 0), (8, 0), (8, 8), (0, 8)]),
+            properties={"class": "tumor"},
+        ),
+        key="tumor",
+    )
+
+    builder = CompositeTargetBuilder(
+        {
+            "presence": PresenceTargetBuilder(
+                where='props["class"] == "tumor"',
+                min_fraction=0.1,
+            ),
+            "disk": BinaryDiskTargetBuilder(
+                where='props["class"] == "tumor"',
+                radius=1,
+            ),
+        }
+    )
+
+    dataset = SlideAnnotationPatchDataset(
+        slide_inputs=[slide_path],
+        annotation_stores=store_path,
+        target_builder=builder,
+        patch_size=(16, 16),
+        stride=(16, 16),
+        resolution=1.0,
+        units="baseline",
+    )
+
+    sample = dataset[0]
+
+    assert isinstance(sample["target"], dict)
+    assert sample["target"]["presence"].shape == ()
+    assert sample["target"]["disk"].shape == (16, 16)
 
 
 def test_slide_annotation_patch_dataset_validation_errors(

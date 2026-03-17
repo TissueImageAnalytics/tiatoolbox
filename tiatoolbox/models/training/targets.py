@@ -18,6 +18,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.type_hints import Predicate
 
 Bounds = tuple[float, float, float, float]
+TargetType = np.ndarray | int | float | dict[str, "TargetType"]
 
 
 def _as_bounds(bounds: tuple[float, ...] | list[float] | np.ndarray) -> Bounds:
@@ -72,6 +73,54 @@ def _normalize_overlap_method(
 def _patch_box(bounds: Bounds) -> Polygon:
     """Create a shapely box from bounds."""
     return box(*bounds)
+
+
+def _point_within_bounds(point: tuple[float, float], bounds: Bounds) -> bool:
+    """Return whether an XY point lies within half-open patch bounds."""
+    x_coord, y_coord = point
+    x_min, y_min, x_max, y_max = bounds
+    return x_min <= x_coord < x_max and y_min <= y_coord < y_max
+
+
+def _point_to_pixel_coordinates(
+    point: tuple[float, float],
+    bounds: Bounds,
+    output_shape: tuple[int, int],
+) -> tuple[float, float] | None:
+    """Map a point from patch coordinates into output pixel coordinates."""
+    if not _point_within_bounds(point, bounds):
+        return None
+
+    x_min, y_min, x_max, y_max = bounds
+    height, width = output_shape
+    x_coord, y_coord = point
+
+    scale_x = width / (x_max - x_min)
+    scale_y = height / (y_max - y_min)
+    pixel_x = (x_coord - x_min) * scale_x
+    pixel_y = (y_coord - y_min) * scale_y
+    pixel_x = float(np.clip(pixel_x, 0.0, max(width - 1, 0)))
+    pixel_y = float(np.clip(pixel_y, 0.0, max(height - 1, 0)))
+    return pixel_x, pixel_y
+
+
+def _annotation_centroids_in_patch(
+    annotations: dict[str, Annotation],
+    patch_bounds: Bounds,
+    output_shape: tuple[int, int],
+) -> list[tuple[float, float]]:
+    """Return annotation centroids that fall inside the patch in pixel space."""
+    points: list[tuple[float, float]] = []
+    for annotation in annotations.values():
+        centroid = annotation.geometry.centroid
+        pixel_point = _point_to_pixel_coordinates(
+            (float(centroid.x), float(centroid.y)),
+            patch_bounds,
+            output_shape,
+        )
+        if pixel_point is not None:
+            points.append(pixel_point)
+    return points
 
 
 def _clip_and_rescale_geometry(
@@ -210,7 +259,7 @@ class TargetBuilderABC(ABC):
         store: AnnotationStore,
         patch_bounds: tuple[float, ...] | list[float] | np.ndarray,
         output_shape: tuple[int, int] | list[int] | np.ndarray,
-    ) -> np.ndarray | int:
+    ) -> TargetType:
         """Query annotations and build a target for one patch."""
         normalized_bounds = _as_bounds(patch_bounds)
         normalized_shape = _normalize_output_shape(output_shape)
@@ -223,8 +272,54 @@ class TargetBuilderABC(ABC):
         annotations: dict[str, Annotation],
         patch_bounds: Bounds,
         output_shape: tuple[int, int],
-    ) -> np.ndarray | int:
+    ) -> TargetType:
         """Build target array/scalar from queried annotations."""
+
+
+class CompositeTargetBuilder(TargetBuilderABC):
+    """Combine multiple target builders into a nested target dictionary."""
+
+    def __init__(
+        self: CompositeTargetBuilder,
+        builders: dict[str, TargetBuilderABC],
+    ) -> None:
+        """Initialize :class:`CompositeTargetBuilder`."""
+        super().__init__()
+        if not builders:
+            msg = "`builders` must contain at least one target builder."
+            raise ValueError(msg)
+        self.builders = builders
+
+    def create_target(
+        self: CompositeTargetBuilder,
+        *,
+        store: AnnotationStore,
+        patch_bounds: tuple[float, ...] | list[float] | np.ndarray,
+        output_shape: tuple[int, int] | list[int] | np.ndarray,
+    ) -> dict[str, TargetType]:
+        """Build a structured target by delegating to named sub-builders."""
+        normalized_bounds = _as_bounds(patch_bounds)
+        normalized_shape = _normalize_output_shape(output_shape)
+        return {
+            name: builder.create_target(
+                store=store,
+                patch_bounds=normalized_bounds,
+                output_shape=normalized_shape,
+            )
+            for name, builder in self.builders.items()
+        }
+
+    def build_target(
+        self: CompositeTargetBuilder,
+        annotations: dict[str, Annotation],
+        patch_bounds: Bounds,
+        output_shape: tuple[int, int],
+    ) -> dict[str, TargetType]:
+        """Build a structured target from shared queried annotations."""
+        return {
+            name: builder.build_target(annotations, patch_bounds, output_shape)
+            for name, builder in self.builders.items()
+        }
 
 
 class MaskTargetBuilder(TargetBuilderABC):
@@ -442,6 +537,122 @@ class MultiLabelTargetBuilder(TargetBuilderABC):
         for class_label, fraction in class_coverages.items():
             if fraction >= self.min_fraction:
                 target[int(class_label)] = 1
+        return target
+
+
+class BinaryDiskTargetBuilder(TargetBuilderABC):
+    """Build a dense binary disk map centered on annotation centroids.
+
+    Annotations are converted to point targets using their original geometry
+    centroid. Only centroids whose original coordinates fall inside the patch
+    bounds are included.
+    """
+
+    def __init__(
+        self: BinaryDiskTargetBuilder,
+        *,
+        radius: int = 3,
+        positive_value: float = 1.0,
+        background_value: float = 0.0,
+        where: Predicate | None = None,
+        geometry_predicate: str = "intersects",
+    ) -> None:
+        """Initialize :class:`BinaryDiskTargetBuilder`."""
+        super().__init__(where=where, geometry_predicate=geometry_predicate)
+        self.radius = int(radius)
+        self.positive_value = float(positive_value)
+        self.background_value = float(background_value)
+        if self.radius < 0:
+            msg = "`radius` must be a non-negative integer."
+            raise ValueError(msg)
+
+    def build_target(
+        self: BinaryDiskTargetBuilder,
+        annotations: dict[str, Annotation],
+        patch_bounds: Bounds,
+        output_shape: tuple[int, int],
+    ) -> np.ndarray:
+        """Build a dense float32 disk target map."""
+        height, width = output_shape
+        target = np.full((height, width), self.background_value, dtype=np.float32)
+
+        for point_x, point_y in _annotation_centroids_in_patch(
+            annotations,
+            patch_bounds,
+            output_shape,
+        ):
+            center = (int(round(point_x)), int(round(point_y)))
+            cv2.circle(
+                target,
+                center,
+                self.radius,
+                color=self.positive_value,
+                thickness=-1,
+            )
+
+        return target
+
+
+class GaussianHeatmapTargetBuilder(TargetBuilderABC):
+    """Build a dense Gaussian heatmap centered on annotation centroids."""
+
+    def __init__(
+        self: GaussianHeatmapTargetBuilder,
+        *,
+        sigma: float = 2.0,
+        peak_value: float = 1.0,
+        truncate: float = 3.0,
+        background_value: float = 0.0,
+        where: Predicate | None = None,
+        geometry_predicate: str = "intersects",
+    ) -> None:
+        """Initialize :class:`GaussianHeatmapTargetBuilder`."""
+        super().__init__(where=where, geometry_predicate=geometry_predicate)
+        self.sigma = float(sigma)
+        self.peak_value = float(peak_value)
+        self.truncate = float(truncate)
+        self.background_value = float(background_value)
+        if self.sigma <= 0:
+            msg = "`sigma` must be positive."
+            raise ValueError(msg)
+        if self.truncate <= 0:
+            msg = "`truncate` must be positive."
+            raise ValueError(msg)
+
+    def build_target(
+        self: GaussianHeatmapTargetBuilder,
+        annotations: dict[str, Annotation],
+        patch_bounds: Bounds,
+        output_shape: tuple[int, int],
+    ) -> np.ndarray:
+        """Build a dense float32 Gaussian target map."""
+        height, width = output_shape
+        target = np.full((height, width), self.background_value, dtype=np.float32)
+        radius = int(np.ceil(self.truncate * self.sigma))
+
+        for point_x, point_y in _annotation_centroids_in_patch(
+            annotations,
+            patch_bounds,
+            output_shape,
+        ):
+            x_min = max(int(np.floor(point_x)) - radius, 0)
+            x_max = min(int(np.floor(point_x)) + radius + 1, width)
+            y_min = max(int(np.floor(point_y)) - radius, 0)
+            y_max = min(int(np.floor(point_y)) + radius + 1, height)
+
+            if x_min >= x_max or y_min >= y_max:
+                continue
+
+            y_coords, x_coords = np.mgrid[y_min:y_max, x_min:x_max]
+            squared_distance = (x_coords - point_x) ** 2 + (y_coords - point_y) ** 2
+            gaussian = self.peak_value * np.exp(
+                -squared_distance / (2.0 * self.sigma**2)
+            )
+            target[y_min:y_max, x_min:x_max] = np.maximum(
+                target[y_min:y_max, x_min:x_max],
+                gaussian.astype(np.float32, copy=False),
+            )
+
         return target
 
 

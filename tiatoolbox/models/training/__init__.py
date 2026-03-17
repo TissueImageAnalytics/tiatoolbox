@@ -28,7 +28,10 @@ from tiatoolbox.models.training.samplers import (
     generate_slide_patch_coordinates,
 )
 from tiatoolbox.models.training.targets import (
+    BinaryDiskTargetBuilder,
+    CompositeTargetBuilder,
     CoverageClassTargetBuilder,
+    GaussianHeatmapTargetBuilder,
     MaskTargetBuilder,
     MultiLabelTargetBuilder,
     PresenceTargetBuilder,
@@ -49,9 +52,12 @@ from tiatoolbox.models.training.utils import (
 
 __all__ = [
     "TrainingAugmentationPreset",
+    "BinaryDiskTargetBuilder",
     "CheckpointConfig",
     "ClassificationTask",
+    "CompositeTargetBuilder",
     "CoverageClassTargetBuilder",
+    "GaussianHeatmapTargetBuilder",
     "MaskTargetBuilder",
     "MultiLabelTargetBuilder",
     "PatchAnnotationDataset",

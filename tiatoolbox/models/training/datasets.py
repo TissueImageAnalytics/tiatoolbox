@@ -96,11 +96,17 @@ def _ensure_tensor_mask(mask: np.ndarray | torch.Tensor) -> torch.Tensor:
 
 
 def _ensure_tensor_target(
-    target: np.ndarray | torch.Tensor | int | float,
-) -> torch.Tensor:
-    """Convert a generic target output to a torch tensor."""
+    target: object,
+) -> object:
+    """Convert a generic target output to tensors recursively."""
     if isinstance(target, torch.Tensor):
         return target
+    if isinstance(target, dict):
+        return {key: _ensure_tensor_target(value) for key, value in target.items()}
+    if isinstance(target, list):
+        return [_ensure_tensor_target(value) for value in target]
+    if isinstance(target, tuple):
+        return tuple(_ensure_tensor_target(value) for value in target)
     if isinstance(target, np.ndarray):
         if target.ndim == 0:
             return torch.tensor(target.item())
