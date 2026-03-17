@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader
 
 from tiatoolbox.models.models_abc import load_torch_model
 import tiatoolbox.models.training.augmentations as training_augmentations
+from tiatoolbox.models.architecture.kongnet import KongNet
 from tiatoolbox.models.training import (
     BinaryDiskTargetBuilder,
     CheckpointConfig,
@@ -29,6 +30,7 @@ from tiatoolbox.models.training import (
     SegmentationTask,
     StructuredDenseTask,
     Trainer,
+    build_kongnet_training_task,
     get_annotation_augmentation,
     get_classification_augmentation,
     get_segmentation_augmentation,
@@ -825,6 +827,56 @@ def test_structured_dense_task_matches_single_head_segmentation_behavior() -> No
 
     assert structured_loss.item() == pytest.approx(segmentation_loss.item())
     assert structured_metrics == segmentation_metrics
+
+
+def test_build_kongnet_training_task_uses_model_output_metadata() -> None:
+    """KongNet training helpers should derive dense heads from model metadata."""
+    model = KongNet(
+        num_heads=3,
+        num_channels_per_head=[3, 3, 3],
+        target_channels=[5, 8],
+        min_distance=5,
+        threshold_abs=0.5,
+        class_dict={0: "Tumour Cell", 1: "Lymphocyte"},
+    )
+
+    task = build_kongnet_training_task(
+        model,
+        target_selection="inference_channels",
+        target_keys={
+            "tumour_cell": "tumour",
+            "lymphocyte": "lymphocyte",
+        },
+        include_head_loss_metrics=False,
+    )
+
+    assert [head.name for head in task.heads] == ["tumour_cell", "lymphocyte"]
+    assert [head.channel_slice for head in task.heads] == [5, 8]
+    assert [head.target_key for head in task.heads] == ["tumour", "lymphocyte"]
+
+    output = torch.zeros((1, 9, 2, 2), dtype=torch.float32)
+    output[:, 5:6, :, :] = torch.tensor(
+        [[[[6.0, -6.0], [6.0, -6.0]]]],
+        dtype=torch.float32,
+    )
+    output[:, 8:9, :, :] = torch.tensor(
+        [[[[ -6.0, 6.0], [-6.0, 6.0]]]],
+        dtype=torch.float32,
+    )
+    targets = {
+        "tumour": torch.tensor([[[[1.0, 0.0], [1.0, 0.0]]]], dtype=torch.float32),
+        "lymphocyte": torch.tensor(
+            [[[[0.0, 1.0], [0.0, 1.0]]]],
+            dtype=torch.float32,
+        ),
+    }
+
+    loss = task.compute_loss(output, targets)
+    metrics = task.compute_metrics(output, targets)
+
+    assert torch.isfinite(loss)
+    assert metrics["tumour_cell_dice"] == pytest.approx(1.0)
+    assert metrics["lymphocyte_dice"] == pytest.approx(1.0)
 
 
 def test_trainer_supports_structured_targets_and_epoch_hooks(

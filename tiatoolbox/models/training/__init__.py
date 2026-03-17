@@ -23,6 +23,10 @@ from tiatoolbox.models.training.datasets import (
     PatchMaskPairDataset,
     SlideAnnotationPatchDataset,
 )
+from tiatoolbox.models.training.kongnet import (
+    build_kongnet_dense_heads,
+    build_kongnet_training_task,
+)
 from tiatoolbox.models.training.samplers import (
     ClassBalancedIndexSampler,
     generate_slide_patch_coordinates,
@@ -75,6 +79,8 @@ __all__ = [
     "Trainer",
     "TrainerConfig",
     "TrainingTaskABC",
+    "build_kongnet_dense_heads",
+    "build_kongnet_training_task",
     "extract_model_state_dict",
     "load_checkpoint",
     "load_model_state_dict",
