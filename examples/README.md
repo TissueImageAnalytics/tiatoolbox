@@ -114,6 +114,10 @@ Shows how to train a patch classifier using the new training package in `tiatool
 
 Shows how to train a semantic segmentation model directly from whole-slide images and paired TIAToolbox annotation stores using `SlideAnnotationPatchDataset`. The notebook demonstrates building baseline-coordinate tissue annotations from `WSIReader.tissue_mask()`, training at 2 mpp, running WSI inference with `SemanticSegmentor`, and comparing predicted vs. reference tissue masks side-by-side.
 
+### 15. Training KongNet from Scratch on CoNIC ([15-training-kongnet-conic](./15-training-kongnet-conic.ipynb))
+
+Shows how to train a KongNet model from scratch on the CoNIC patch dataset using the new structured dense training path in `tiatoolbox.models.training`. The notebook loads PNG patches paired with TIAToolbox annotation stores, builds one Gaussian heatmap target per CoNIC cell class, derives a `StructuredDenseTask` via `build_kongnet_training_task()`, trains for a short demo run, and then performs patch-level inference and post-processing with the newly trained model.
+
 ## B) Examples of High-Level Analysis (Pipelines) Using TIAToolbox
 
 List of Jupyter notebooks demonstrating how to use TIAToolbox for high-level analysis in computational pathology.
