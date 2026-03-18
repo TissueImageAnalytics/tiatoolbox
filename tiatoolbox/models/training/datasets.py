@@ -110,6 +110,8 @@ def _ensure_tensor_target(
     if isinstance(target, np.ndarray):
         if target.ndim == 0:
             return torch.tensor(target.item())
+        if target.ndim == 3:
+            target = np.transpose(target, (2, 0, 1))
         return torch.from_numpy(np.ascontiguousarray(target))
     return torch.tensor(target)
 

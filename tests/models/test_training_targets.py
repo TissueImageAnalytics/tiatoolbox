@@ -13,6 +13,7 @@ from shapely.geometry import Point, Polygon
 from tiatoolbox.annotation import Annotation, SQLiteStore
 from tiatoolbox.models.training import (
     BinaryDiskTargetBuilder,
+    BoundaryTargetBuilder,
     ClassBalancedIndexSampler,
     CompositeTargetBuilder,
     CoverageClassTargetBuilder,
@@ -22,6 +23,7 @@ from tiatoolbox.models.training import (
     PatchAnnotationDataset,
     PresenceTargetBuilder,
     SlideAnnotationPatchDataset,
+    StackedTargetBuilder,
     generate_slide_patch_coordinates,
 )
 
@@ -184,6 +186,59 @@ def test_dense_point_target_builders(track_tmp_path: Path) -> None:
     assert heatmap_target[0, 9] == pytest.approx(0.0)
 
 
+def test_boundary_target_builder(track_tmp_path: Path) -> None:
+    """Boundary target builder should rasterize contours without filling interiors."""
+    store = _create_test_store(track_tmp_path / "boundary_targets.db")
+
+    target = BoundaryTargetBuilder(
+        where='props["class"] == "tumor"',
+        line_width=1,
+    ).create_target(
+        store=store,
+        patch_bounds=(0, 0, 10, 10),
+        output_shape=(10, 10),
+    )
+
+    assert target.shape == (10, 10)
+    assert target.dtype == np.float32
+    assert target[0, 0] == pytest.approx(1.0)
+    assert target[4, 4] == pytest.approx(0.0)
+    assert target[9, 9] == pytest.approx(0.0)
+
+
+def test_stacked_target_builder(track_tmp_path: Path) -> None:
+    """Stacked target builders should combine dense targets into HxWxC maps."""
+    store = _create_test_store(track_tmp_path / "stacked_targets.db")
+
+    builder = StackedTargetBuilder(
+        {
+            "mask": MaskTargetBuilder(
+                where='props["class"] == "tumor"',
+                class_mapping=None,
+            ),
+            "boundary": BoundaryTargetBuilder(
+                where='props["class"] == "tumor"',
+            ),
+            "heatmap": GaussianHeatmapTargetBuilder(
+                where='props["class"] == "tumor"',
+                sigma=1.0,
+            ),
+        }
+    )
+
+    target = builder.create_target(
+        store=store,
+        patch_bounds=(0, 0, 10, 10),
+        output_shape=(10, 10),
+    )
+
+    assert target.shape == (10, 10, 3)
+    assert target.dtype == np.float32
+    assert target[2, 2, 0] == pytest.approx(1.0)
+    assert target[4, 4, 1] == pytest.approx(0.0)
+    assert 0.8 < float(target[..., 2].max()) <= 1.0
+
+
 def test_composite_target_builder(track_tmp_path: Path) -> None:
     """Composite builders should return structured nested target dictionaries."""
     store = _create_test_store(track_tmp_path / "composite_targets.db")
@@ -259,6 +314,15 @@ def test_target_builders_validate_other_constructor_arguments() -> None:
 
     with pytest.raises(ValueError, match="`builders` must contain at least one"):
         _ = CompositeTargetBuilder({})
+
+    with pytest.raises(ValueError, match="`line_width` must be a positive integer"):
+        _ = BoundaryTargetBuilder(line_width=0)
+
+    with pytest.raises(ValueError, match="`point_radius` must be a positive integer"):
+        _ = BoundaryTargetBuilder(point_radius=0)
+
+    with pytest.raises(ValueError, match="`builders` must contain at least one"):
+        _ = StackedTargetBuilder({})
 
 
 def test_patch_annotation_dataset_with_bounds_and_where(track_tmp_path: Path) -> None:
@@ -437,6 +501,46 @@ def test_patch_annotation_dataset_supports_structured_targets(
     assert isinstance(sample["target"]["signals"], dict)
     assert sample["target"]["signals"]["presence"].shape == ()
     assert sample["target"]["signals"]["heatmap"].shape == (10, 10)
+
+
+def test_patch_annotation_dataset_channel_first_stacked_targets(
+    track_tmp_path: Path,
+) -> None:
+    """Stacked dense targets should be tensorized to channel-first layout."""
+    store_path = track_tmp_path / "stacked_patch_store.db"
+    _create_test_store(store_path)
+
+    builder = CompositeTargetBuilder(
+        {
+            "tumor": StackedTargetBuilder(
+                {
+                    "mask": MaskTargetBuilder(
+                        where='props["class"] == "tumor"',
+                        class_mapping=None,
+                    ),
+                    "boundary": BoundaryTargetBuilder(
+                        where='props["class"] == "tumor"',
+                    ),
+                    "heatmap": GaussianHeatmapTargetBuilder(
+                        where='props["class"] == "tumor"',
+                        sigma=1.0,
+                    ),
+                }
+            )
+        }
+    )
+
+    dataset = PatchAnnotationDataset(
+        patch_inputs=[np.zeros((10, 10, 3), dtype=np.uint8)],
+        annotation_stores=store_path,
+        target_builder=builder,
+    )
+
+    sample = dataset[0]
+
+    assert sample["target"]["tumor"].shape == (3, 10, 10)
+    assert sample["target"]["tumor"].dtype == torch.float32
+    assert sample["target"]["tumor"][0, 2, 2].item() == pytest.approx(1.0)
 
 
 def test_generate_slide_patch_coordinates_with_mask(track_tmp_path: Path) -> None:
@@ -692,6 +796,60 @@ def test_slide_annotation_patch_dataset_supports_structured_targets(
     assert isinstance(sample["target"], dict)
     assert sample["target"]["presence"].shape == ()
     assert sample["target"]["disk"].shape == (16, 16)
+
+
+def test_slide_annotation_patch_dataset_channel_first_stacked_targets(
+    track_tmp_path: Path,
+) -> None:
+    """Slide annotation datasets should tensorize stacked targets to CxHxW."""
+    slide = np.zeros((16, 16, 3), dtype=np.uint8)
+    slide_path = track_tmp_path / "slide_stacked.npy"
+    np.save(slide_path, slide)
+
+    store_path = track_tmp_path / "store_stacked.db"
+    store = SQLiteStore(store_path)
+    store.append(
+        Annotation(
+            Polygon([(0, 0), (8, 0), (8, 8), (0, 8)]),
+            properties={"class": "tumor"},
+        ),
+        key="tumor",
+    )
+
+    builder = CompositeTargetBuilder(
+        {
+            "tumor": StackedTargetBuilder(
+                {
+                    "mask": MaskTargetBuilder(
+                        where='props["class"] == "tumor"',
+                        class_mapping=None,
+                    ),
+                    "boundary": BoundaryTargetBuilder(
+                        where='props["class"] == "tumor"',
+                    ),
+                    "heatmap": GaussianHeatmapTargetBuilder(
+                        where='props["class"] == "tumor"',
+                        sigma=1.0,
+                    ),
+                }
+            )
+        }
+    )
+
+    dataset = SlideAnnotationPatchDataset(
+        slide_inputs=[slide_path],
+        annotation_stores=store_path,
+        target_builder=builder,
+        patch_size=(16, 16),
+        stride=(16, 16),
+        resolution=1.0,
+        units="baseline",
+    )
+
+    sample = dataset[0]
+
+    assert sample["target"]["tumor"].shape == (3, 16, 16)
+    assert sample["target"]["tumor"].dtype == torch.float32
 
 
 def test_slide_annotation_patch_dataset_validation_errors(

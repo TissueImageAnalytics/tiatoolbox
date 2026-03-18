@@ -155,9 +155,9 @@ def _coords_to_int(coords: np.ndarray, width: int, height: int) -> np.ndarray:
 def _rasterize_geometry(
     mask: np.ndarray,
     geometry: Any,
-    label: int,
+    label: int | float,
     *,
-    background_label: int,
+    background_label: int | float,
     line_width: int,
     point_radius: int,
 ) -> None:
@@ -167,14 +167,14 @@ def _rasterize_geometry(
 
     if geom_type == "Polygon":
         exterior = _coords_to_int(np.asarray(geometry.exterior.coords), width, height)
-        cv2.fillPoly(mask, [exterior], int(label))
+        cv2.fillPoly(mask, [exterior], label)
         for interior in geometry.interiors:
             interior_coords = _coords_to_int(
                 np.asarray(interior.coords),
                 width,
                 height,
             )
-            cv2.fillPoly(mask, [interior_coords], int(background_label))
+            cv2.fillPoly(mask, [interior_coords], background_label)
         return
 
     if geom_type == "MultiPolygon":
@@ -195,7 +195,7 @@ def _rasterize_geometry(
             mask,
             [points],
             isClosed=False,
-            color=int(label),
+            color=label,
             thickness=line_width,
         )
         return
@@ -214,7 +214,7 @@ def _rasterize_geometry(
 
     if geom_type == "Point":
         point_coords = _coords_to_int(np.asarray(geometry.coords), width, height)[0]
-        cv2.circle(mask, tuple(point_coords), point_radius, int(label), thickness=-1)
+        cv2.circle(mask, tuple(point_coords), point_radius, label, thickness=-1)
         return
 
     if geom_type == "MultiPoint":
@@ -342,6 +342,80 @@ class CompositeTargetBuilder(TargetBuilderABC):
         }
 
 
+class StackedTargetBuilder(TargetBuilderABC):
+    """Stack multiple spatial target maps into a single multi-channel array."""
+
+    def __init__(
+        self: StackedTargetBuilder,
+        builders: dict[str, TargetBuilderABC],
+        *,
+        dtype: np.dtype = np.float32,
+    ) -> None:
+        """Initialize :class:`StackedTargetBuilder`."""
+        super().__init__()
+        if not builders:
+            msg = "`builders` must contain at least one target builder."
+            raise ValueError(msg)
+        self.builders = builders
+        self.dtype = np.dtype(dtype)
+
+    @property
+    def spatial_target_spec(self: StackedTargetBuilder) -> Literal["mask", "image"]:
+        """Describe the interpolation mode for the stacked spatial map."""
+        child_specs: list[Literal["mask", "image"]] = []
+        for name, builder in self.builders.items():
+            child_spec = builder.spatial_target_spec
+            if child_spec not in {"mask", "image"}:
+                msg = (
+                    "StackedTargetBuilder only supports child builders with "
+                    f"leaf spatial specs, but `{name}` returned `{child_spec}`."
+                )
+                raise ValueError(msg)
+            child_specs.append(child_spec)
+        if "image" in child_specs:
+            return "image"
+        return "mask"
+
+    def create_target(
+        self: StackedTargetBuilder,
+        *,
+        store: AnnotationStore,
+        patch_bounds: tuple[float, ...] | list[float] | np.ndarray,
+        output_shape: tuple[int, int] | list[int] | np.ndarray,
+    ) -> np.ndarray:
+        """Build and stack all child targets for one patch."""
+        normalized_bounds = _as_bounds(patch_bounds)
+        normalized_shape = _normalize_output_shape(output_shape)
+        annotations = self.query_annotations(store, normalized_bounds)
+        return self.build_target(annotations, normalized_bounds, normalized_shape)
+
+    def build_target(
+        self: StackedTargetBuilder,
+        annotations: dict[str, Annotation],
+        patch_bounds: Bounds,
+        output_shape: tuple[int, int],
+    ) -> np.ndarray:
+        """Build a dense stacked target with channels on the last axis."""
+        channel_targets: list[np.ndarray] = []
+        for name, builder in self.builders.items():
+            child_target = builder.build_target(annotations, patch_bounds, output_shape)
+            if not isinstance(child_target, np.ndarray) or child_target.ndim != 2:
+                msg = (
+                    "StackedTargetBuilder expects each child builder to return a "
+                    f"2D NumPy array, but `{name}` returned `{type(child_target).__name__}`."
+                )
+                raise ValueError(msg)
+            if child_target.shape != output_shape:
+                msg = (
+                    f"Stacked target `{name}` returned shape `{child_target.shape}`, "
+                    f"expected `{output_shape}`."
+                )
+                raise ValueError(msg)
+            channel_targets.append(child_target.astype(self.dtype, copy=False))
+
+        return np.stack(channel_targets, axis=-1)
+
+
 class MaskTargetBuilder(TargetBuilderABC):
     """Build integer semantic masks from annotations.
 
@@ -425,6 +499,72 @@ class MaskTargetBuilder(TargetBuilderABC):
             )
 
         return mask.astype(np.int64)
+
+
+class BoundaryTargetBuilder(TargetBuilderABC):
+    """Build a binary boundary map by rasterizing annotation contours."""
+
+    def __init__(
+        self: BoundaryTargetBuilder,
+        *,
+        positive_value: float = 1.0,
+        background_value: float = 0.0,
+        where: Predicate | None = None,
+        geometry_predicate: str = "intersects",
+        line_width: int = 1,
+        point_radius: int = 1,
+    ) -> None:
+        """Initialize :class:`BoundaryTargetBuilder`."""
+        super().__init__(where=where, geometry_predicate=geometry_predicate)
+        self.positive_value = float(positive_value)
+        self.background_value = float(background_value)
+        self.line_width = int(line_width)
+        self.point_radius = int(point_radius)
+        if self.line_width <= 0:
+            msg = "`line_width` must be a positive integer."
+            raise ValueError(msg)
+        if self.point_radius <= 0:
+            msg = "`point_radius` must be a positive integer."
+            raise ValueError(msg)
+
+    @property
+    def spatial_target_spec(self: BoundaryTargetBuilder) -> Literal["mask"]:
+        """Binary boundary maps should use mask interpolation."""
+        return "mask"
+
+    def build_target(
+        self: BoundaryTargetBuilder,
+        annotations: dict[str, Annotation],
+        patch_bounds: Bounds,
+        output_shape: tuple[int, int],
+    ) -> np.ndarray:
+        """Build a dense float32 boundary target map."""
+        height, width = output_shape
+        target = np.full((height, width), self.background_value, dtype=np.float32)
+
+        for annotation in annotations.values():
+            geometry = _clip_and_rescale_geometry(
+                annotation.geometry,
+                patch_bounds,
+                output_shape,
+            )
+            if geometry is None:
+                continue
+
+            boundary = geometry.boundary
+            if boundary.is_empty:
+                continue
+
+            _rasterize_geometry(
+                target,
+                boundary,
+                self.positive_value,
+                background_label=self.background_value,
+                line_width=self.line_width,
+                point_radius=self.point_radius,
+            )
+
+        return target
 
 
 class PresenceTargetBuilder(TargetBuilderABC):

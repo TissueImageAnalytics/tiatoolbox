@@ -33,12 +33,14 @@ from tiatoolbox.models.training.samplers import (
 )
 from tiatoolbox.models.training.targets import (
     BinaryDiskTargetBuilder,
+    BoundaryTargetBuilder,
     CompositeTargetBuilder,
     CoverageClassTargetBuilder,
     GaussianHeatmapTargetBuilder,
     MaskTargetBuilder,
     MultiLabelTargetBuilder,
     PresenceTargetBuilder,
+    StackedTargetBuilder,
     TargetBuilderABC,
 )
 from tiatoolbox.models.training.tasks import (
@@ -59,6 +61,7 @@ from tiatoolbox.models.training.utils import (
 __all__ = [
     "TrainingAugmentationPreset",
     "BinaryDiskTargetBuilder",
+    "BoundaryTargetBuilder",
     "CheckpointConfig",
     "ClassificationTask",
     "CompositeTargetBuilder",
@@ -73,6 +76,7 @@ __all__ = [
     "SlideAnnotationPatchDataset",
     "ClassBalancedIndexSampler",
     "PresenceTargetBuilder",
+    "StackedTargetBuilder",
     "SegmentationTask",
     "StructuredDenseTask",
     "TargetBuilderABC",
