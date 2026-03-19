@@ -3101,8 +3101,9 @@ def test_explicit_none_postproc(sample_svs: Path) -> None:
 def test_fsspec_json_wsi_reader_instantiation() -> None:
     """Test if FsspecJsonWSIReader is instantiated.
 
-    In case json is passed to  WSIReader.open, FsspecJsonWSIReader
+    In case JSON is passed to  WSIReader.open, FsspecJsonWSIReader
     should be instantiated.
+
     """
     input_path = "mock_path.json"
     mpp = None
@@ -3146,7 +3147,7 @@ def test_generate_fsspec_json_file_and_validate(
 def test_fsspec_wsireader_info_read(sample_svs: Path, track_tmp_path: Path) -> None:
     """Test info read of the FsspecJsonWSIReader.
 
-    Generate fsspec json file and load image from:
+    Generate fsspec JSON file and load image from:
 
     https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/sample_wsis/CMU-1-Small-Region.svs
 
