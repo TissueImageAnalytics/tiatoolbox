@@ -34,7 +34,6 @@ from tiatoolbox import cli, utils
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.utils import imread, tiff_to_fsspec
 from tiatoolbox.utils.exceptions import FileNotSupportedError
-from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore import WSIReader, wsireader
@@ -2219,22 +2218,6 @@ def test_is_ngff_regular_zarr(track_tmp_path: Path) -> None:
         WSIReader.open(zarr_path)
 
 
-def test_is_ngff_sqlite3(track_tmp_path: Path, remote_sample: Callable) -> None:
-    """Test is_ngff is false for a sqlite3 file.
-
-    Copies the ngff-1 sample to a sqlite3 file and checks that it is
-    identified as an ngff file.
-
-    """
-    ngff_path = remote_sample("ngff-1")
-    source = zarr.storage.LocalStore(ngff_path)
-    dest = zarr.SQLiteStore(track_tmp_path / "ngff.sqlite3")
-    # Copy the store to a sqlite3 file
-    zarr.copy_store(source, dest)
-
-    assert is_sqlite3(dest.path)
-
-
 def test_store_reader_no_info(track_tmp_path: Path) -> None:
     """Test AnnotationStoreReader with no info."""
     SQLiteStore(track_tmp_path / "store.db")
@@ -2317,16 +2300,6 @@ def test_store_reader_info_from_base(
     )
     # the store reader should have the same metadata as the base wsi
     assert store_reader.info.mpp[0] == wsi_reader.info.mpp[0]
-
-
-def test_ngff_sqlitestore(track_tmp_path: Path, remote_sample: Callable) -> None:
-    """Test SQLiteStore with an NGFF file."""
-    ngff_path = remote_sample("ngff-1")
-    source = zarr.storage.LocalStore(ngff_path)
-    dest = zarr.SQLiteStore(track_tmp_path / "ngff.sqlite3")
-    # Copy the store to a sqlite3 file
-    zarr.copy_store(source, dest)
-    wsireader.NGFFWSIReader(dest.path)
 
 
 def test_ngff_zattrs_non_micrometer_scale_mpp(

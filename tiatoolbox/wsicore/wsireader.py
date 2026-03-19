@@ -151,13 +151,15 @@ def is_ngff(  # noqa: PLR0911
         return False
     if not isinstance(zarr_group, zarr.Group):
         return False
-    group_attrs = zarr_group.attrs.asdict()["ome"]
+    group_attrs = zarr_group.attrs.asdict()
     try:
         multiscales: Multiscales = group_attrs["multiscales"]
-        omero = group_attrs["ome"]
+        omero = group_attrs["omero"]
+        _ARRAY_DIMENSIONS = group_attrs["_ARRAY_DIMENSIONS"]  # noqa: N806
         if not all(
             [
                 isinstance(multiscales, list),
+                isinstance(_ARRAY_DIMENSIONS, list),
                 isinstance(omero, dict),
                 all(isinstance(m, dict) for m in multiscales),
             ],
@@ -5851,7 +5853,7 @@ class NGFFWSIReader(WSIReader):
             return None
 
         # Currently simply using the first scale transform
-        transforms = multiscales["datasets"][0]["coordinateTransformations"]
+        transforms = multiscales.datasets[0].coordinateTransformations
         for t in transforms:
             if "scale" in t and t.get("type") == "scale":
                 x_index = multiscales.axes.index(x)
