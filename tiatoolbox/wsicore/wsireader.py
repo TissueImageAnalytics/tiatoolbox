@@ -12,7 +12,7 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from numbers import Number
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Unpack
 
 import cv2
 import fsspec
@@ -31,7 +31,7 @@ from packaging.version import Version
 from PIL import Image
 from tifffile import TiffPages
 from zarr.experimental.cache_store import CacheStore
-from zarr.storage import MemoryStore
+from zarr.storage import FsspecStore, MemoryStore
 
 from tiatoolbox import logger, utils
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
@@ -54,6 +54,7 @@ if TYPE_CHECKING:  # pragma: no cover
         Resolution,
         Units,
     )
+    from tiatoolbox.wsicore import WSIReaderParams
     from tiatoolbox.wsicore.metadata.ngff import Multiscales
 
 pixman_warning()
@@ -345,7 +346,7 @@ class WSIReader:
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
         post_proc: str | callable | None = "auto",
-        **kwargs: dict,
+        **kwargs: Unpack[WSIReaderParams],
     ) -> WSIReader:
         """Return an appropriate :class:`.WSIReader` object.
 
@@ -480,7 +481,7 @@ class WSIReader:
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
         post_proc: str | callable | None = "auto",
-        **kwargs: dict,
+        **kwargs: Unpack[WSIReaderParams],
     ) -> WSIReader | None:
         """Handle special cases for selecting the appropriate WSIReader.
 
@@ -5742,7 +5743,9 @@ class NGFFWSIReader(WSIReader):
 
     """
 
-    def __init__(self: NGFFWSIReader, path: str | Path, **kwargs: dict) -> None:
+    def __init__(
+        self: NGFFWSIReader, path: str | Path, **kwargs: Unpack[WSIReaderParams]
+    ) -> None:
         """Initialize :class:`NGFFWSIReader`."""
         super().__init__(path, **kwargs)
         from imagecodecs import numcodecs  # noqa: PLC0415
@@ -5750,7 +5753,9 @@ class NGFFWSIReader(WSIReader):
         from tiatoolbox.wsicore.metadata import ngff  # noqa: PLC0415
 
         numcodecs.register_codecs()
-        self._zarr_group: zarr.Group = zarr.open(path, mode="r")
+        storage_options = kwargs.get("storage_options", {})
+        store = FsspecStore.from_url(path, storage_options=storage_options)
+        self._zarr_group: zarr.Group = zarr.open(store, mode="r")
         attrs = self._zarr_group.attrs
         multiscales = attrs["multiscales"][0]
         axes = multiscales["axes"]
@@ -6316,7 +6321,7 @@ class AnnotationStoreReader(WSIReader):
         renderer: AnnotationRenderer | None = None,
         base_wsi: WSIReader | str | None = None,
         alpha: float = 1.0,
-        **kwargs: dict,
+        **kwargs: Unpack[WSIReaderParams],
     ) -> None:
         """Initialize :class:`AnnotationStoreReader`."""
         super().__init__(store, **kwargs)
