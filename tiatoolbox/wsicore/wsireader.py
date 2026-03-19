@@ -12,7 +12,7 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from numbers import Number
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Unpack
 
 import cv2
 import fsspec
@@ -31,14 +31,13 @@ from packaging.version import Version
 from PIL import Image
 from tifffile import TiffPages
 from zarr.experimental.cache_store import CacheStore
-from zarr.storage import MemoryStore
+from zarr.storage import FsspecStore, MemoryStore
 
 from tiatoolbox import logger, utils
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
 from tiatoolbox.utils import postproc_defs
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupportedError
-from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
@@ -55,6 +54,7 @@ if TYPE_CHECKING:  # pragma: no cover
         Resolution,
         Units,
     )
+    from tiatoolbox.wsicore import WSIReaderParams
     from tiatoolbox.wsicore.metadata.ngff import Multiscales
 
 pixman_warning()
@@ -146,9 +146,8 @@ def is_ngff(  # noqa: PLR0911
 
     """
     path = Path(path)
-    store = zarr.SQLiteStore(str(path)) if path.is_file() and is_sqlite3(path) else path
     try:
-        zarr_group = zarr.open(store, mode="r")
+        zarr_group = zarr.open(path, mode="r")
     except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
     if not isinstance(zarr_group, zarr.Group):
@@ -347,7 +346,7 @@ class WSIReader:
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
         post_proc: str | callable | None = "auto",
-        **kwargs: dict,
+        **kwargs: Unpack[WSIReaderParams],
     ) -> WSIReader:
         """Return an appropriate :class:`.WSIReader` object.
 
@@ -482,7 +481,7 @@ class WSIReader:
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
         post_proc: str | callable | None = "auto",
-        **kwargs: dict,
+        **kwargs: Unpack[WSIReaderParams],
     ) -> WSIReader | None:
         """Handle special cases for selecting the appropriate WSIReader.
 
@@ -5744,7 +5743,9 @@ class NGFFWSIReader(WSIReader):
 
     """
 
-    def __init__(self: NGFFWSIReader, path: str | Path, **kwargs: dict) -> None:
+    def __init__(
+        self: NGFFWSIReader, path: str | Path, **kwargs: Unpack[WSIReaderParams]
+    ) -> None:
         """Initialize :class:`NGFFWSIReader`."""
         super().__init__(path, **kwargs)
         from imagecodecs import numcodecs  # noqa: PLC0415
@@ -5752,7 +5753,8 @@ class NGFFWSIReader(WSIReader):
         from tiatoolbox.wsicore.metadata import ngff  # noqa: PLC0415
 
         numcodecs.register_codecs()
-        store = zarr.SQLiteStore(path) if is_sqlite3(path) else path
+        storage_options = kwargs.get("storage_options", {})
+        store = FsspecStore.from_url(path, storage_options=storage_options)
         self._zarr_group: zarr.Group = zarr.open(store, mode="r")
         attrs = self._zarr_group.attrs
         multiscales = attrs["multiscales"][0]
@@ -5815,7 +5817,7 @@ class NGFFWSIReader(WSIReader):
                 array.shape[:2][::-1]
                 for _, array in sorted(self._zarr_group.arrays(), key=lambda x: x[0])
             ],
-            slide_dimensions=self._zarr_group[0].shape[:2][::-1],
+            slide_dimensions=self._zarr_group["0"].shape[:2][::-1],
             vendor=self.zattrs._creator.name,  # skipcq: PYL-W0212  # noqa: SLF001
             raw=self._zarr_group.attrs,
             mpp=mpp,
@@ -6319,7 +6321,7 @@ class AnnotationStoreReader(WSIReader):
         renderer: AnnotationRenderer | None = None,
         base_wsi: WSIReader | str | None = None,
         alpha: float = 1.0,
-        **kwargs: dict,
+        **kwargs: Unpack[WSIReaderParams],
     ) -> None:
         """Initialize :class:`AnnotationStoreReader`."""
         super().__init__(store, **kwargs)
