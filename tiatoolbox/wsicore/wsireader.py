@@ -4411,17 +4411,12 @@ class FsspecJsonWSIReader(WSIReader):
     ) -> None:
         """Initialize :class:`FsspecJsonWSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power)
-        jpeg_codec = Jpeg()
-        register_codec(jpeg_codec, "imagecodecs_jpeg")
 
-        jpeg2k_codec = Jpeg2k()
-        register_codec(jpeg2k_codec, "imagecodecs_jpeg2k")
-
-        lzw_codec = Lzw()
-        register_codec(lzw_codec, "imagecodecs_lzw")
-
-        delta_codec = Delta()
-        register_codec(delta_codec, "imagecodecs_delta")
+        # ------- Register codecs --------
+        register_codec(Jpeg(), "imagecodecs_jpeg")
+        register_codec(Jpeg2k(), "imagecodecs_jpeg2k")
+        register_codec(Lzw(), "imagecodecs_lzw")
+        register_codec(Delta(), "imagecodecs_delta")
 
         mapper = fsspec.get_mapper(
             "reference://", fo=str(input_img), target_protocol="file"
@@ -4435,8 +4430,8 @@ class FsspecJsonWSIReader(WSIReader):
 
         self._zarr_lru_cache = zarr.LRUStoreCache(self._zarr_store, max_size=cache_size)
         self._zarr_group = zarr.open(self._zarr_lru_cache)
-        if not isinstance(self._zarr_group, zarr.hierarchy.Group):  # pragma: no cover
-            group = zarr.hierarchy.group()
+        if not isinstance(self._zarr_group, zarr.Group):  # pragma: no cover
+            group = zarr.group()
             group[0] = self._zarr_group
             self._zarr_group = group
         self.level_arrays = {
@@ -4459,7 +4454,7 @@ class FsspecJsonWSIReader(WSIReader):
         self.tiff_reader_delegate = TIFFWSIReaderDelegate(self, self.level_arrays)
 
     def __set_axes(self) -> None:  # pragma: no cover
-        """Loads axes from the json file.
+        """Loads axes from the JSON file.
 
         In case zarr array has a group 0 at root,
         loads axes from the layer 0.
@@ -4468,7 +4463,7 @@ class FsspecJsonWSIReader(WSIReader):
         root, loads axes from attrs at root.
 
         """
-        if isinstance(self._zarr_array, zarr.hierarchy.Group):
+        if isinstance(self._zarr_array, zarr.Group):
             if "0" in self._zarr_array:
                 zattrs = self._zarr_array["0"].attrs
                 if "_ARRAY_DIMENSIONS" in zattrs:
