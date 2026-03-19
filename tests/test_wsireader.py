@@ -2218,6 +2218,21 @@ def test_is_ngff_regular_zarr(track_tmp_path: Path) -> None:
         WSIReader.open(zarr_path)
 
 
+def test_ngff_s3() -> None:
+    """Test read from s3 bucket."""
+    # This sample image only tests if NGFFWSIReader can read image from s3.
+    # read_rect is not compatible for these kind of multiplex images.
+    # This feature needs to be added in future release of TIAToolbox.
+    url = "s3://idr/zarr/v0.4/idr0062A/6001247.zarr"
+    storage_options = {
+        "anon": True,
+        "client_kwargs": {"endpoint_url": "https://uk1s3.embassy.ebi.ac.uk"},
+    }
+    wsi = WSIReader.open(url, storage_options=storage_options)
+
+    assert np.all(wsi.slide_dimensions(resolution=1, units="baseline") == (253, 210))
+
+
 def test_store_reader_no_info(track_tmp_path: Path) -> None:
     """Test AnnotationStoreReader with no info."""
     SQLiteStore(track_tmp_path / "store.db")
