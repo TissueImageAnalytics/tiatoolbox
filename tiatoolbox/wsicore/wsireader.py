@@ -38,7 +38,6 @@ from tiatoolbox.annotation import AnnotationStore, SQLiteStore
 from tiatoolbox.utils import postproc_defs
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupportedError
-from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
@@ -146,22 +145,19 @@ def is_ngff(  # noqa: PLR0911
 
     """
     path = Path(path)
-    store = zarr.SQLiteStore(str(path)) if path.is_file() and is_sqlite3(path) else path
     try:
-        zarr_group = zarr.open(store, mode="r")
+        zarr_group = zarr.open(path, mode="r")
     except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
     if not isinstance(zarr_group, zarr.Group):
         return False
-    group_attrs = zarr_group.attrs.asdict()
+    group_attrs = zarr_group.attrs.asdict()["ome"]
     try:
         multiscales: Multiscales = group_attrs["multiscales"]
-        omero = group_attrs["omero"]
-        _ARRAY_DIMENSIONS = group_attrs["_ARRAY_DIMENSIONS"]  # noqa: N806
+        omero = group_attrs["ome"]
         if not all(
             [
                 isinstance(multiscales, list),
-                isinstance(_ARRAY_DIMENSIONS, list),
                 isinstance(omero, dict),
                 all(isinstance(m, dict) for m in multiscales),
             ],
@@ -5752,8 +5748,7 @@ class NGFFWSIReader(WSIReader):
         from tiatoolbox.wsicore.metadata import ngff  # noqa: PLC0415
 
         numcodecs.register_codecs()
-        store = zarr.SQLiteStore(path) if is_sqlite3(path) else path
-        self._zarr_group: zarr.Group = zarr.open(store, mode="r")
+        self._zarr_group: zarr.Group = zarr.open(path, mode="r")
         attrs = self._zarr_group.attrs
         multiscales = attrs["multiscales"][0]
         axes = multiscales["axes"]
@@ -5815,7 +5810,7 @@ class NGFFWSIReader(WSIReader):
                 array.shape[:2][::-1]
                 for _, array in sorted(self._zarr_group.arrays(), key=lambda x: x[0])
             ],
-            slide_dimensions=self._zarr_group[0].shape[:2][::-1],
+            slide_dimensions=self._zarr_group["0"].shape[:2][::-1],
             vendor=self.zattrs._creator.name,  # skipcq: PYL-W0212  # noqa: SLF001
             raw=self._zarr_group.attrs,
             mpp=mpp,
@@ -5856,7 +5851,7 @@ class NGFFWSIReader(WSIReader):
             return None
 
         # Currently simply using the first scale transform
-        transforms = multiscales.datasets[0].coordinateTransformations
+        transforms = multiscales["datasets"][0]["coordinateTransformations"]
         for t in transforms:
             if "scale" in t and t.get("type") == "scale":
                 x_index = multiscales.axes.index(x)
