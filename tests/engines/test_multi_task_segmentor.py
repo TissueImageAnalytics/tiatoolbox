@@ -820,11 +820,15 @@ def test_clear_zarr() -> None:
     This test only covers scenarios which are not feasible to run on GitHub Actions.
 
     """
-    store = zarr.MemoryStore()
+    store = zarr.storage.MemoryStore()
     root = zarr.group(store=store)
 
     # Create a dummy zarr array for probabilities_zarr
-    probabilities_zarr = root.create_dataset("probabilities", data=np.zeros((5, 3, 3)))
+    probabilities_zarr = root.create_dataset(
+        "probabilities",
+        data=np.zeros((5, 3, 3)),
+        shape=(5, 3, 3),
+    )
 
     idx = 2
     chunk_shape = (1,)

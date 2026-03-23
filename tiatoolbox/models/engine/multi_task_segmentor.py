@@ -2687,9 +2687,9 @@ def _clear_zarr(
     """Helper function to clear all zarr contents and return dask array."""
     if probabilities_zarr is not None:
         if zarr_group is not None and "canvas" in zarr_group:
-            del zarr_group["canvas"][idx]
+            del zarr_group["canvas"][str(idx)]
         if zarr_group is not None and "count" in zarr_group:
-            del zarr_group["count"][idx]
+            del zarr_group["count"][str(idx)]
         return da.from_zarr(
             probabilities_zarr, chunks=(chunk_shape[0], *probabilities_shape)
         )
@@ -2723,7 +2723,7 @@ def _calculate_probabilities(
             canvas[idx] = da.from_zarr(canvas_zarr_, chunks=canvas_zarr_.chunks)
             count[idx] = da.from_zarr(count_zarr[idx], chunks=count_zarr[idx].chunks)
 
-        zarr_group = zarr.open(canvas_zarr[0].store.path, mode="a")
+        zarr_group = zarr.open(canvas_zarr[0].store.root, mode="a")
 
     # Final vertical merge
     return merge_multitask_vertical_chunkwise(
@@ -3804,7 +3804,7 @@ def apply_coordinate_offset(
         return data_array
 
     # 1. Create the 'container' first to define the structure
-    result = np.empty(len(data_array), dtype=object)
+    result = np.empty(len(data_array), dtype=data_array.dtype)
 
     # 2. Iterate and fill slots manually to prevent NumPy from collapsing rows
     for i, item in enumerate(
