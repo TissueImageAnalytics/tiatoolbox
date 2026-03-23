@@ -298,7 +298,7 @@ The input output configuration is as follows:
 
 .. collapse:: Model names
 
-    - micronet_hovernet-consep
+    - micronet-consep
 
 
 Kumar Dataset
