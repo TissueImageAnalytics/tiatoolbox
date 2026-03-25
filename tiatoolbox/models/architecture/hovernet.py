@@ -711,8 +711,8 @@ class HoVerNet(ModelABC):
                 "box": inst_box,
                 "centroid": inst_centroid,
                 "contours": inst_contour,
-                "prob": None,
-                "type": None,
+                "prob": 0,  # Use 0 to avoid object dtype
+                "type": 0,
             }
 
         if pred_type is not None:
