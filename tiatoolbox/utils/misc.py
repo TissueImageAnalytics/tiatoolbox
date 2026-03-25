@@ -2000,15 +2000,19 @@ def create_smart_array(
 
     # Allocate Zarr array on disk
     # Default chunking: try to chunk along spatial dims
-    chunks = shape if chunks is None else chunks
+    # Ensure shape and chunks are tuples of standard Python ints for Zarr v3
+    shape_tuple = tuple(int(s) for s in shape)
 
-    zarr_group = zarr.open(zarr_path, mode="a")
+    if chunks is None or chunks == "auto":
+        chunks_tuple = shape_tuple
+    else:
+        # Handle case where chunks might be a list/array of numpy ints
+        chunks_tuple = tuple(int(c) for c in chunks)
 
-    return zarr_group.create_dataset(
-        name=name,
-        shape=shape,
-        chunks=chunks,
-        dtype=dtype,
+    zarr_group = zarr.open_group(zarr_path, mode="a")
+
+    return zarr_group.create_array(
+        name=name, shape=shape_tuple, chunks=chunks_tuple, dtype=dtype
     )
 
 
@@ -2048,3 +2052,34 @@ def tqdm_dask_progress_bar(
             return compute(*write_tasks, scheduler=scheduler, num_workers=num_workers)
 
     return compute(*write_tasks, scheduler=scheduler, num_workers=num_workers)
+
+
+def pad_contours(
+    contours: list[np.ndarray], pad_value: np.integer | None = None
+) -> np.ndarray:
+    """Helper function to convert inhomogenous contours to rectangular array.
+
+    Zarr v3 does not support "object" dtype which was used as to wrap
+    inhomogenous arrays while saving using Zarr v2. This function creates
+    "rectangular" arrays for saving to Zarr.
+
+    Args:
+        contours (list(np.ndarray)):
+            List of numpy arrays of inconsistent lengths.
+        pad_value (int | None):
+            Values to pad to create rectangular array.
+
+    """
+    if pad_value is None:
+        pad_value = np.iinfo(contours[0].dtype).min
+
+    # Compute max length across all contours
+    max_len = max(c.shape[0] for c in contours)
+
+    # Create padded array
+    return np.stack(
+        [
+            np.vstack([c, np.full((max_len - c.shape[0], 2), pad_value, dtype=c.dtype)])
+            for c in contours
+        ]
+    )

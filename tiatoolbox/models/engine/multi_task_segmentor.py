@@ -145,6 +145,7 @@ from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.misc import (
     create_smart_array,
     make_valid_poly,
+    pad_contours,
     save_qupath_json,
     tqdm_dask_progress_bar,
     update_tqdm_desc,
@@ -1313,8 +1314,14 @@ class MultiTaskSegmentor(SemanticSegmentor):
             dict_info_wsi = {}
             offset = np.array(self.mask_padding[:2])
             for key, col in info_df.items():
+                col_list = col.to_numpy().tolist()
+                # inhomogenous arrays.
+                if len({np.asarray(arr).shape for arr in col_list}) > 1:
+                    col_np = pad_contours(col_list)
+                else:
+                    col_np = np.asarray(col_list)
                 col_np = apply_coordinate_offset(
-                    data_array=col.to_numpy(),
+                    data_array=col_np,
                     offset=offset,
                     key=key,
                     keys_to_shift=keys_to_shift,
@@ -1322,7 +1329,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 )
                 dict_info_wsi[key] = da.from_array(
                     col_np,
-                    chunks=(len(col),),
+                    chunks="auto",
                 )
             wsi_info_dict[idx]["info_dict"] = dict_info_wsi
 
@@ -3819,7 +3826,12 @@ def apply_coordinate_offset(
         return data_array
 
     # 1. Create the 'container' first to define the structure
-    result = np.empty(len(data_array), dtype=data_array.dtype)
+    result = np.empty(data_array.shape, dtype=data_array.dtype)
+    mask_value = (
+        np.iinfo(data_array.dtype).min
+        if np.issubdtype(data_array.dtype, np.integer)
+        else np.nan
+    )
 
     # 2. Iterate and fill slots manually to prevent NumPy from collapsing rows
     for i, item in enumerate(
@@ -3836,6 +3848,8 @@ def apply_coordinate_offset(
             shift_vector = np.array([dx, dy])
 
         # Perform addition and place the resulting array object into the slot
-        result[i] = (item + shift_vector).astype(item.dtype)
+        mask = (item == mask_value).all(axis=-1)
+        result[i][~mask] = (item[~mask] + shift_vector).astype(item.dtype)
+        result[i][mask] = item[mask]
 
     return result

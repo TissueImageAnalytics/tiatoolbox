@@ -599,12 +599,12 @@ def test_wsi_mtsegmentor_zarr(
     predictions_full = output_full_["layer_segmentation"]["predictions"][:]
     overlap_pct = np.mean(predictions_full == predictions_tile) * 100
     assert overlap_pct > 99
-    assert len(output_full_["layer_segmentation"]["contours"]) == len(
-        output_tile_["layer_segmentation"]["contours"]
+    assert len(output_full_["layer_segmentation"]["contours"][:]) == len(
+        output_tile_["layer_segmentation"]["contours"][:]
     )
     assert (
-        len(output_tile_["nuclei_segmentation"]["contours"])
-        / len(output_full_["nuclei_segmentation"]["contours"])
+        len(output_tile_["nuclei_segmentation"]["contours"][:])
+        / len(output_full_["nuclei_segmentation"]["contours"][:])
         > 0.9
     )
 
