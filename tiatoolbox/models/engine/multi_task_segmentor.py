@@ -1787,13 +1787,18 @@ class MultiTaskSegmentor(SemanticSegmentor):
         )
         if self.patch_mode:
             for idx, curr_image in enumerate(self.images):
-                values = [processed_predictions[key][idx] for key in keys_to_compute]
+                idx_ = (
+                    str(idx)  # Zarr v3 Array or Group
+                    if isinstance(processed_predictions, (zarr.Array, zarr.Group))
+                    else idx
+                )
+                values = [processed_predictions[key][idx_] for key in keys_to_compute]
                 predictions = dict(zip(keys_to_compute, values, strict=False))
                 output_path = _save_annotation_json_store(
                     curr_image=curr_image,
                     predictions=predictions,
                     task_name=task_name,
-                    idx=idx,
+                    idx=idx_,
                     save_path=save_path,
                     output_type=output_type,
                     class_dict=class_dict,
@@ -1995,7 +2000,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             processed_predictions = zarr.open(str(processed_predictions), mode="r+")
 
         # For single tasks there should be no overlap
-        if self.tasks & processed_predictions.keys():
+        if self.tasks & set(processed_predictions.keys()):
             for task_name in self.tasks:
                 dict_for_store = processed_predictions[task_name]
                 kwargs["class_dict"] = class_dict[task_name]
@@ -3373,10 +3378,17 @@ def dict_to_json_store(
     """
     # Assumes annotationstore is computed for properties which can fit in memory.
     processed_predictions = {
-        key: np.asarray(arr) if isinstance(arr, zarr.Array) and len(arr) > 0 else arr
+        key: np.asarray(arr) if isinstance(arr, zarr.Array) else arr
         for key, arr in processed_predictions.items()
     }
     contours = processed_predictions.pop("contours")
+    pad_value = np.iinfo(contours.dtype).min
+
+    # Reproduce inhomogeneous array for saving to JSON.
+    contours = np.array(
+        [row[~(np.asarray(row) == pad_value).all(axis=1)] for row in contours],
+        dtype=object,
+    )
     delayed_tasks = DaskDelayedJSONStore(
         contours=contours,
         processed_predictions=processed_predictions,

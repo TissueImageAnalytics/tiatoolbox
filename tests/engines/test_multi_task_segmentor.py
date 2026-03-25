@@ -243,8 +243,8 @@ def test_mtsegmentor_tiles_no_metadata(track_tmp_path: Path) -> None:
     assert (field in output_zarr["layer_segmentation"] for field in fields_layer)
     fields_nuclei = ["box", "centroid", "contours", "prob", "type"]
     assert (field in output_zarr["nuclei_segmentation"] for field in fields_nuclei)
-    assert len(output_zarr["layer_segmentation"]["contours"]) == 12
-    assert len(output_zarr["nuclei_segmentation"]["contours"]) == 1299
+    assert len(output_zarr["layer_segmentation"]["contours"][:]) == 12
+    assert len(output_zarr["nuclei_segmentation"]["contours"][:]) == 1299
 
 
 def test_single_task_mtsegmentor(
@@ -1209,7 +1209,10 @@ def assert_output_lengths(
     """Assert lengths of output dict fields against expected counts."""
     for field in fields:
         for i, expected in enumerate(expected_counts):
-            assert len(output[field][i]) == expected, f"{field}[{i}] mismatch"
+            idx = str(i) if isinstance(output[field], (zarr.Array, zarr.Group)) else i
+            assert len(np.asarray(output[field][idx], dtype=object)) == expected, (
+                f"{field}[{idx}] mismatch"
+            )
 
 
 def assert_predictions_and_boxes(
@@ -1267,11 +1270,21 @@ def assert_output_equal(
     """Assert equality of arrays across outputs for given fields/indices."""
     for field in fields:
         for i_a, i_b in zip(indices_a, indices_b, strict=False):
-            left = output_a[field][i_a]
-            right = output_b[field][i_b]
+            i_a_ = (
+                str(i_a)
+                if isinstance(output_a[field], (zarr.Array, zarr.Group))
+                else i_a
+            )
+            i_b_ = (
+                str(i_b)
+                if isinstance(output_b[field], (zarr.Array, zarr.Group))
+                else i_b
+            )
+            left = np.asarray(output_a[field][i_a_])
+            right = np.asarray(output_b[field][i_b_])
             assert all(
                 np.array_equal(a, b) for a, b in zip(left, right, strict=False)
-            ), f"{field}[{i_a}] vs {field}[{i_b}] mismatch"
+            ), f"{field}[{i_a_}] vs {field}[{i_b_}] mismatch"
 
 
 def assert_annotation_store_patch_output(
@@ -1345,11 +1358,15 @@ def assert_annotation_store_patch_output(
             )
 
             # Contour check (discard last point)
+            contours = output_dict["contours"][patch_idx]
+            pad_value = np.iinfo(contours.dtype).min
+            contours = np.array(
+                [row[~(np.asarray(row) == pad_value).all(axis=1)] for row in contours],
+                dtype=object,
+            )
             matches = [
                 np.array_equal(np.array(a[:-1], dtype=int), np.array(b, dtype=int))
-                for a, b in zip(
-                    result["contours"], output_dict["contours"][patch_idx], strict=False
-                )
+                for a, b in zip(result["contours"], contours, strict=False)
             ]
             # Due to make valid poly there might be translation in a few points
             # in AnnotationStore
@@ -1445,11 +1462,17 @@ def assert_qupath_json_patch_output(  # skipcq: PY-R1000
         )
 
         # --- 7. Contour comparison ---
+        contours = output_dict["contours"][patch_idx]
+        pad_value = np.iinfo(contours.dtype).min
+        contours = np.array(
+            [row[~(np.asarray(row) == pad_value).all(axis=1)] for row in contours],
+            dtype=object,
+        )
         if "contours" in fields:
             matches = []
             for a, b in zip(
                 result["contours"],
-                output_dict["contours"][patch_idx],
+                contours,
                 strict=False,
             ):
                 # Discard last point (closed polygon)
