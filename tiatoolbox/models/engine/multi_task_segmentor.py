@@ -1765,7 +1765,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
         logger.info("Saving predictions as AnnotationStore.")
 
         for key in ("canvas", "count"):
-            processed_predictions.pop(key, None)
+            if key in processed_predictions:
+                del processed_predictions[key]  # noqa: RUF051
 
         return_predictions = (
             next(iter(self.return_predictions_dict.values()))
