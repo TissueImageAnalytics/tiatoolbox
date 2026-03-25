@@ -1779,7 +1779,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             keys_to_compute.remove("probabilities")
         if "predictions" in keys_to_compute:
             if not return_predictions:
-                processed_predictions.pop("predictions")
+                del processed_predictions["predictions"]
             keys_to_compute.remove("predictions")
         num_workers = (
             kwargs.get("num_workers", multiprocessing.cpu_count())
@@ -1788,18 +1788,18 @@ class MultiTaskSegmentor(SemanticSegmentor):
         )
         if self.patch_mode:
             for idx, curr_image in enumerate(self.images):
-                idx_ = (
-                    str(idx)  # Zarr v3 Array or Group
-                    if isinstance(processed_predictions, (zarr.Array, zarr.Group))
-                    else idx
-                )
-                values = [processed_predictions[key][idx_] for key in keys_to_compute]
+                values = [
+                    processed_predictions[key][str(idx)]  # Zarr v3 Group
+                    if isinstance(processed_predictions[key], zarr.Group)
+                    else processed_predictions[key][idx]
+                    for key in keys_to_compute
+                ]
                 predictions = dict(zip(keys_to_compute, values, strict=False))
                 output_path = _save_annotation_json_store(
                     curr_image=curr_image,
                     predictions=predictions,
                     task_name=task_name,
-                    idx=idx_,
+                    idx=idx,
                     save_path=save_path,
                     output_type=output_type,
                     class_dict=class_dict,
