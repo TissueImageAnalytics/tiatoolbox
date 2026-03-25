@@ -1679,6 +1679,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
                     # Add new keys safely
                     for subkey in first:
+                        if subkey.startswith("_"):
+                            continue
                         raw_predictions[task][subkey] = [d[subkey] for d in values]
 
                     del raw_predictions[task][key]

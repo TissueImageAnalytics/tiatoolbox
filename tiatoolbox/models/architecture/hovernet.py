@@ -920,12 +920,49 @@ def _inst_dict_for_dask_processing(
     inst_info_df = pd.DataFrame(inst_info_dict).transpose()
     for key, col in inst_info_df.items():
         col_np = col.to_numpy()
-        inst_info_dict_[key] = (
-            da.from_array(
-                col_np,
-                chunks=(len(col),),
-            )
-            if is_dask
-            else col_np
+        if not is_dask:
+            inst_info_dict_[key] = col_np
+            continue
+
+        col_np = col_np.tolist()
+        if key == "contours":
+            col_np = _pad_contours(col_np)
+            inst_info_dict_[f"_{key}_max_len"] = col_np.shape[1]
+
+        inst_info_dict_[key] = da.from_array(
+            col_np,
+            chunks="auto",
         )
+
     return inst_info_dict_
+
+
+def _pad_contours(
+    contours: list[np.ndarray], pad_value: np.integer | None = None
+) -> np.ndarray:
+    """Helper function to convert inhomogenous contours to rectangular array.
+
+    Zarr v3 does not support "object" dtype which was used as to wrap
+    inhomogenous arrays while saving using Zarr v2. This function creates
+    "rectangular" arrays for saving to Zarr.
+
+    Args:
+        contours (list(np.ndarray)):
+            List of numpy arrays of inconsistent lengths.
+        pad_value (int | None):
+            Values to pad to create rectangular array.
+
+    """
+    if pad_value is None:
+        pad_value = np.iinfo(contours[0].dtype).min
+
+    # Compute max length across all contours
+    max_len = max(c.shape[0] for c in contours)
+
+    # Create padded array
+    return np.stack(
+        [
+            np.vstack([c, np.full((max_len - c.shape[0], 2), pad_value, dtype=c.dtype)])
+            for c in contours
+        ]
+    )
