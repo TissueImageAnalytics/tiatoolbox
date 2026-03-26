@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-from flask import Flask, Response, jsonify, make_response, request, send_file
+from flask import Flask, Response, abort, jsonify, make_response, request, send_file
 from flask.templating import render_template
 from matplotlib import colormaps
 from PIL import Image
@@ -340,6 +340,17 @@ class TileServer(Flask):
         """Decode a URL-safe name."""
         return Path(urllib.parse.unquote(name).replace("\\", os.sep))
 
+    @staticmethod
+    def _get_annotation_base_dir() -> Path:
+        """Return the base directory from which annotation overlays may be loaded.
+
+        This is used to restrict user-supplied overlay paths to a trusted subtree
+        on the filesystem.
+        """
+        # For now, restrict to the current working directory. This can be updated
+        # to use a configurable annotations directory if desired.
+        return Path.cwd()
+
     def get_ann_layer(
         self: TileServer,
         session_id: str,
@@ -525,6 +536,16 @@ class TileServer(Flask):
         overlay_path = request.form["overlay_path"]
         overlay_path = self.decode_safe_name(overlay_path)
 
+        # Restrict overlay paths to a trusted base directory.
+        base_dir = self._get_annotation_base_dir().resolve()
+        try:
+            resolved_overlay = (base_dir / overlay_path).resolve()
+        except OSError:
+            abort(400, description="Invalid overlay path.")
+        if not str(resolved_overlay).startswith(str(base_dir) + os.sep):
+            abort(400, description="Overlay path is not allowed.")
+        overlay_path = resolved_overlay
+
         # Get other session id
         session_ids = list(self.layers.keys())
         session_ids.remove(session_id)
@@ -619,6 +640,8 @@ class TileServer(Flask):
         return json.dumps(layer)
 
     def _add_annotation_overlay(self, session_id: str, overlay_path: Path) -> str:
+        # `overlay_path` is expected to have been validated in `change_overlay`
+        # to ensure it lies within a trusted base directory.
         if overlay_path.suffix == ".geojson":
 
             def unpack_qupath(ann: Annotation) -> Annotation:
