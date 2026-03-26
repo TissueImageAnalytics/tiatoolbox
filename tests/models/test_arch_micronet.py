@@ -98,7 +98,7 @@ def test_micronet_output(remote_sample: Callable, track_tmp_path: Path) -> None:
     output_on_server = np.load(str(micronet_output))
     output_on_server = np.round(output_on_server, decimals=3)
     new_output = np.round(
-        output["probabilities"][0][1000:2000:2, 2000:3000:2, :], decimals=3
+        output["probabilities"]["0"][1000:2000:2, 2000:3000:2, :], decimals=3
     )
     diff = new_output - output_on_server
     assert diff.mean() < 1e-5
