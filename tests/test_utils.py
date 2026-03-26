@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
@@ -42,6 +43,7 @@ from tiatoolbox.utils.misc import (
     cast_to_min_dtype,
     create_smart_array,
     dict_to_store_patch_predictions,
+    imread,
 )
 from tiatoolbox.utils.transforms import locsize2bounds
 
@@ -1877,6 +1879,12 @@ def test_torch_compile_disable() -> None:
     assert model == compiled_model
 
 
+def test_torch_compile_none() -> None:
+    """Test torch_compile with a non-model input."""
+    with pytest.raises(ValueError, match=re.escape("`model` must not be None.")):
+        compile_model(model=None)
+
+
 def test_torch_compile_compatibility(caplog: pytest.LogCaptureFixture) -> None:
     """Test if torch-compile compatibility is checked correctly."""
     is_torch_compile_compatible()
@@ -2457,3 +2465,12 @@ def test_dict_to_store_patch_predictions_returns_qupath_json() -> None:
         assert feature["class_value"] in class_dict
         assert feature["properties"]["classification"]["name"] in class_dict.values()
         assert feature["properties"]["classification"]["color"] is not None
+
+
+def test_imread_invalid_path() -> None:
+    """Test imread with an invalid file path."""
+    invalid_path = "non_existent_image.jpg"
+    with pytest.raises(
+        FileNotFoundError, match=re.escape(f"Cannot read image: {invalid_path}")
+    ):
+        imread(invalid_path)
