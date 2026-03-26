@@ -201,6 +201,9 @@ def imread(image_path: PathLike, *, as_uint8: bool | None = None) -> np.ndarray:
         image = np.load(str(image_path))
     else:
         image = cv2.imread(str(image_path))
+        if image is None:
+            msg = f"Cannot read image: {image_path}"
+            raise FileNotFoundError(msg)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     if as_uint8:
         return image.astype(np.uint8)
@@ -1470,13 +1473,14 @@ def dict_to_store_semantic_segmentor(
     # Get the number of unique predictions
     layer_list = da.unique(preds).compute()
     layer_list = np.delete(layer_list, np.where(layer_list == ignore_index))
+    layer_list_list = layer_list.tolist()
 
     if class_dict is None:
-        class_dict = {int(i): int(i) for i in layer_list.tolist()}
+        class_dict = {int(i): int(i) for i in layer_list_list}
 
     if output_type.lower() == "qupath":
         return _semantic_segmentations_as_qupath_json(
-            layer_list=layer_list,
+            layer_list=layer_list_list,
             preds=preds,
             scale_factor=scale_factor,
             class_dict=class_dict,
@@ -1485,7 +1489,7 @@ def dict_to_store_semantic_segmentor(
         )
 
     return _semantic_segmentations_as_annotations(
-        layer_list=layer_list,
+        layer_list=layer_list_list,
         preds=preds,
         scale_factor=scale_factor,
         class_dict=class_dict,
@@ -1939,9 +1943,14 @@ def cast_to_min_dtype(array: np.ndarray | da.Array) -> np.ndarray | da.Array:
     if max_value == 1:
         return array.astype(bool)
 
-    dtypes = [np.uint8, np.uint16, np.uint32, np.uint64]
-    for dtype in dtypes:
-        if max_value <= np.iinfo(dtype).max:
+    dtype_candidates = (
+        (np.iinfo(np.uint8).max, np.uint8),
+        (np.iinfo(np.uint16).max, np.uint16),
+        (np.iinfo(np.uint32).max, np.uint32),
+        (np.iinfo(np.uint64).max, np.uint64),
+    )
+    for max_allowed, dtype in dtype_candidates:
+        if max_value <= max_allowed:
             return array.astype(dtype)
 
     return array
