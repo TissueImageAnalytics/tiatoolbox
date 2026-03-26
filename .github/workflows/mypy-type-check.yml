@@ -38,6 +38,12 @@ jobs:
         pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
         pip install -r requirements/requirements_dev.txt
 
+    - name: Debug typing environment
+      run: |
+        python --version
+        mypy --version
+        pip freeze | grep -E '^(mypy|numpy|types-)'
+
     - name: Perform type checking
       run: |
         mypy --install-types --non-interactive --follow-imports=skip \
