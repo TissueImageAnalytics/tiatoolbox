@@ -197,13 +197,17 @@ def imread(image_path: PathLike, *, as_uint8: bool | None = None) -> np.ndarray:
     if isinstance(image_path, str):
         image_path = Path(image_path)
 
+    if not image_path.exists():
+        msg = f"Image path does not exist: {image_path}"
+        raise FileNotFoundError(msg)
+
     if image_path.suffix == ".npy":
         image = np.load(str(image_path))
     else:
         image = cv2.imread(str(image_path))
         if image is None:
             msg = f"Cannot read image: {image_path}"
-            raise FileNotFoundError(msg)
+            raise OSError(msg)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     if as_uint8:
         return image.astype(np.uint8)

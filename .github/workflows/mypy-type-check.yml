@@ -42,7 +42,7 @@ jobs:
       run: |
         python --version
         mypy --version
-        pip freeze | grep -E '^(mypy|numpy|types-)'
+        pip freeze | grep -E '^(mypy|types-)'
 
     - name: Perform type checking
       run: |

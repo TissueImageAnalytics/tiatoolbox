@@ -2471,6 +2471,23 @@ def test_imread_invalid_path() -> None:
     """Test imread with an invalid file path."""
     invalid_path = "non_existent_image.jpg"
     with pytest.raises(
-        FileNotFoundError, match=re.escape(f"Cannot read image: {invalid_path}")
+        FileNotFoundError, match=re.escape(f"Image path does not exist: {invalid_path}")
     ):
         imread(invalid_path)
+
+
+def test_imread_cv2_fails(track_tmp_path: Path) -> None:
+    """Test imread when cv2 fails to read an existing image file."""
+    # Create a temporary file that exists but contains invalid image data
+    tmp_image_path = track_tmp_path / "invalid_image.jpg"
+    with tmp_image_path.open("wb") as tmp:
+        tmp.write(b"invalid image data")
+
+    try:
+        with pytest.raises(
+            OSError, match=re.escape(f"Cannot read image: {tmp_image_path}")
+        ):
+            utils.misc.imread(tmp_image_path)
+    finally:
+        # Clean up the temporary file
+        tmp_image_path.unlink()
