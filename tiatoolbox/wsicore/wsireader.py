@@ -9,7 +9,7 @@ import math
 import os
 import re
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from numbers import Number
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -4681,14 +4681,14 @@ class TIFFWSIReaderDelegate:
                 """Return datetime parsed according to US date format (UTC-aware)."""
                 # and we immediately attach UTC.
                 dt = datetime.strptime(string, r"%m/%d/%y")  # noqa: DTZ007
-                return dt.replace(tzinfo=timezone.utc)
+                return dt.replace(tzinfo=UTC)
 
             def time(string: str) -> datetime:
                 """Return datetime parsed according to HMS format (UTC-aware)."""
                 # parse to time first; although .time() is tz-agnostic
                 # DTZ007 is triggered by strptime
                 t = datetime.strptime(string, r"%H:%M:%S").time()  # noqa: DTZ007
-                today_utc = datetime.now(timezone.utc)
+                today_utc = datetime.now(UTC)
                 return today_utc.replace(
                     hour=t.hour, minute=t.minute, second=t.second, microsecond=0
                 )
@@ -4698,7 +4698,7 @@ class TIFFWSIReaderDelegate:
             for cast in casting_precedence:
                 try:
                     value = cast(value_string)
-                except ValueError:  # noqa: PERF203
+                except ValueError:
                     continue
                 else:
                     return key, value
