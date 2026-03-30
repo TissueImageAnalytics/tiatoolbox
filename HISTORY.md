@@ -1,5 +1,16 @@
 # History
 
+## TIAToolbox v2.0.1 (2026-03-16)
+
+### Bug Fixes and Other Changes
+
+- Fixes filtering of tiles for post-processing within masked region (#1037).
+- Fixes Calculation of `max_inst_value` for Instances where overlap is empty (#1038)
+
+**Full Changelog:** https://github.com/TissueImageAnalytics/tiatoolbox/compare/v2.0.0...v2.0.1
+
+______________________________________________________________________
+
 ## TIAToolbox v2.0.0 (2026-03-11)
 
 ### ✨ Major Updates and Feature Improvements
@@ -58,6 +69,10 @@ TIAViz now integrates Meta’s Segment Anything Model (SAM), enabling:
 
 Simplified SAM usage (#968) streamlines its integration into analysis pipelines.
 
+### Multichannel Image (mIF) Support in WSIReader
+
+- **Multichannel image support** (PR #825) for immunofluorescence and non-RGB modalities
+
 ### 🖼️ WSI Registration Visualization in TIAViz
 
 TIAViz now supports **interactive WSI registration visualisation**, allowing users to compare aligned slides in two modes:
@@ -72,7 +87,6 @@ This feature enables intuitive, high‑resolution exploration of slide registrat
 Major improvements include:
 
 - More robust cross-vendor **metadata extraction** (#1001)
-- **Multichannel image support** (PR #825) for immunofluorescence and non-RGB modalities
 - Simplified Windows installation using `openslide-bin` (no manual DLL steps)
 - macOS Tileserver fix (#976)
 - Improved DICOM reading (#934)

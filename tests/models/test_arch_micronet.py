@@ -72,7 +72,7 @@ def test_micronet_output(remote_sample: Callable, track_tmp_path: Path) -> None:
     svs_1_small = Path(remote_sample("svs-1-small"))
     micronet_output = Path(remote_sample("micronet-output"))
     model = "micronet-consep"
-    batch_size = 64
+    batch_size = 16
     num_workers = 0
 
     ninst_seg = NucleusInstanceSegmentor(
