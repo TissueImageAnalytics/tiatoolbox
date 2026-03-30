@@ -470,7 +470,6 @@ class TileServer(Flask):
         if val in ["None", "null"]:
             val = None
         self.renderers[session_id].__setattr__(prop, val)
-        self.renderers[session_id].__setattr__(prop, val)
         if prop == "blur_radius":
             self.overlaps[session_id] = int(1.5 * val)
             self.get_ann_layer(session_id).overlap = self.overlaps[session_id]
@@ -619,6 +618,7 @@ class TileServer(Flask):
         return json.dumps(layer)
 
     def _add_annotation_overlay(self, session_id: str, overlay_path: Path) -> str:
+        sq: AnnotationStore | None = None
         if overlay_path.suffix == ".geojson":
 
             def unpack_qupath(ann: Annotation) -> Annotation:
@@ -635,7 +635,7 @@ class TileServer(Flask):
             sq = SQLiteStore.from_geojson(overlay_path, transform=unpack_qupath)
         elif overlay_path.suffix == ".dat":
             sq = store_from_dat(overlay_path)
-        if overlay_path.suffix == ".db":
+        elif overlay_path.suffix == ".db":
             sq = SQLiteStore(overlay_path, auto_commit=False)
         else:
             # make a temporary db for the new annotations

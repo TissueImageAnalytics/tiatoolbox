@@ -19,7 +19,7 @@ __email__ = "TIA@warwick.ac.uk"
 __version__ = "2.0.1"
 
 # This will set the tiatoolbox external data
-# default to be the user home folder, should work on both Window and Unix/Linux
+# default to be the user home folder, should work on both Windows and Unix/Linux
 # C:\Users\USER\.tiatoolbox
 # /home/USER/.tiatoolbox
 
@@ -113,7 +113,10 @@ rcParam: _RcParam = {  # noqa: N816
 def _lazy_import(name: str, module_location: Path) -> ModuleType:
     spec = importlib.util.spec_from_file_location(name, module_location)
     if spec is None or spec.loader is None:
-        raise ModuleNotFoundError(name=name, path=str(module_location))
+        msg = f"Cannot find module {name!r} at path {module_location}"
+        raise ModuleNotFoundError(
+            msg,
+        )
     loader = importlib.util.LazyLoader(spec.loader)
     spec.loader = loader
     module = importlib.util.module_from_spec(spec)

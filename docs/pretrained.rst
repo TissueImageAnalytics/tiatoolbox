@@ -173,8 +173,8 @@ The input output configuration is as follows:
                 {'units': 'mpp', 'resolution': 0.25},
                 {'units': 'mpp', 'resolution': 0.25}
             ],
-            margin=128
-            tile_shape=[1024, 1024]
+            margin=128,
+            tile_shape=[1024, 1024],
             patch_input_shape=(256, 256),
             patch_output_shape=(164, 164),
             stride_shape=(164, 164),
@@ -256,8 +256,8 @@ The input output configuration is as follows:
                 {'units': 'mpp', 'resolution': 0.25},
                 {'units': 'mpp', 'resolution': 0.25}
             ],
-            margin=128
-            tile_shape=[1024, 1024]
+            margin=128,
+            tile_shape=[1024, 1024],
             patch_input_shape=(270, 270),
             patch_output_shape=(80, 80),
             stride_shape=(80, 80),
@@ -289,7 +289,7 @@ The input output configuration is as follows:
             output_resolutions=[
                 {'units': 'mpp', 'resolution': 0.25}
             ],
-            tile_shape=[2048, 2048]
+            tile_shape=[2048, 2048],
             patch_input_shape=(252, 252),
             patch_output_shape=(252, 252),
             stride_shape=(150, 150),
@@ -323,8 +323,8 @@ The input output configuration is as follows:
                 {'units': 'mpp', 'resolution': 0.25},
                 {'units': 'mpp', 'resolution': 0.25}
             ],
-            margin=128
-            tile_shape=[1024, 1024]
+            margin=128,
+            tile_shape=[1024, 1024],
             patch_input_shape=(270, 270),
             patch_output_shape=(80, 80),
             stride_shape=(80, 80),

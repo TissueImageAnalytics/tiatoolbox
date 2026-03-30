@@ -532,7 +532,7 @@ class EngineABC(ABC):  # noqa: B024
 
         """
         keys = ["probabilities"]
-        probabilities, labels, coordinates = [], [], []
+        probabilities, coordinates = [], []
 
         if self.return_labels:
             keys.append("labels")
@@ -1208,7 +1208,6 @@ class EngineABC(ABC):  # noqa: B024
             raise ValueError(
                 msg,
             )
-        return
 
     def _update_run_params(
         self: EngineABC,
