@@ -2487,7 +2487,7 @@ def test_imread_cv2_fails(track_tmp_path: Path) -> None:
         with pytest.raises(
             OSError, match=re.escape(f"Cannot read image: {tmp_image_path}")
         ):
-            utils.misc.imread(tmp_image_path)
+            imread(tmp_image_path)
     finally:
         # Clean up the temporary file
         tmp_image_path.unlink()

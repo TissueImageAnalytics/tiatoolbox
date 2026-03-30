@@ -1475,16 +1475,17 @@ def dict_to_store_semantic_segmentor(
 
     ignore_index = -1 if ignore_index is None else ignore_index
     # Get the number of unique predictions
-    layer_list = da.unique(preds).compute()
-    layer_list = np.delete(layer_list, np.where(layer_list == ignore_index))
-    layer_list_list = layer_list.tolist()
+    layer_list_np = da.unique(preds).compute()
+    layer_list = (
+        np.delete(layer_list_np, np.where(layer_list_np == ignore_index))
+    ).tolist()
 
     if class_dict is None:
-        class_dict = {int(i): int(i) for i in layer_list_list}
+        class_dict = {int(i): int(i) for i in layer_list}
 
     if output_type.lower() == "qupath":
         return _semantic_segmentations_as_qupath_json(
-            layer_list=layer_list_list,
+            layer_list=layer_list,
             preds=preds,
             scale_factor=scale_factor,
             class_dict=class_dict,
@@ -1493,7 +1494,7 @@ def dict_to_store_semantic_segmentor(
         )
 
     return _semantic_segmentations_as_annotations(
-        layer_list=layer_list_list,
+        layer_list=layer_list,
         preds=preds,
         scale_factor=scale_factor,
         class_dict=class_dict,
