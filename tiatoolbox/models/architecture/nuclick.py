@@ -619,7 +619,7 @@ class NuClick(ModelABC):
 
         """
         masks = preds > thresh
-        masks = remove_small_objects(masks, min_size=min_size)
+        masks = remove_small_objects(masks, max_size=min_size - 1)
         masks = remove_small_holes(masks, area_threshold=min_hole_size)
         if do_reconstruction:
             for i in range(len(masks)):
