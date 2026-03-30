@@ -532,11 +532,10 @@ class EngineABC(ABC):  # noqa: B024
 
         """
         keys = ["probabilities"]
-        probabilities, coordinates = [], []
+        probabilities, labels, coordinates = [], [], []
 
         if self.return_labels:
             keys.append("labels")
-            labels = []
 
         if return_coordinates:
             keys.append("coordinates")
