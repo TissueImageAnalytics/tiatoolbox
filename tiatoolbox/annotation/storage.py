@@ -1939,7 +1939,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
 
     def add_from_geojson(
         self: AnnotationStore,
-        fp: IO | str,
+        fp: IO | str | Path,
         scale_factor: tuple[float, float] = (1, 1),
         origin: tuple[float, float] = (0, 0),
         transform: Callable[[Annotation], Annotation] = lambda x: x,
