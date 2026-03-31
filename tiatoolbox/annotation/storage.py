@@ -1877,7 +1877,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
     @classmethod
     def from_geojson(
         cls: type[AnnotationStore],
-        fp: IO | str,
+        fp: IO | str | Path,
         scale_factor: tuple[float, float] = (1, 1),
         origin: tuple[float, float] = (0, 0),
         transform: Callable[[Annotation], Annotation] | None = None,
