@@ -230,7 +230,7 @@ class Annotation:
         return copy.copy(self.wkb)
 
     def to_wkt(self: Annotation) -> str:
-        """Returns the geometry as Well-Know Text (WKT).
+        """Returns the geometry as Well-Known Text (WKT).
 
         Returns:
             Annotation:
@@ -1897,7 +1897,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
                 A function to apply to each annotation after loading. Should take an
                 annotation as input and return an annotation. Defaults to None.
                 Intended to facilitate modifying the way annotations are loaded to
-                accomodate the specifics of different annotation formats.
+                accommodate the specifics of different annotation formats.
 
         Returns:
             AnnotationStore:
