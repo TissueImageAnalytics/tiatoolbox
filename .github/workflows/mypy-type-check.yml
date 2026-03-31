@@ -38,9 +38,15 @@ jobs:
         pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
         pip install -r requirements/requirements_dev.txt
 
+    - name: Debug typing environment
+      run: |
+        python --version
+        mypy --version
+        pip freeze | grep -E '^(mypy|types-)'
+
     - name: Perform type checking
       run: |
-        mypy --install-types --non-interactive --follow-imports=skip \
+        mypy --install-types --non-interactive --follow-imports=silent \
           tiatoolbox/__init__.py \
           tiatoolbox/__main__.py \
           tiatoolbox/type_hints.py \

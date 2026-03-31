@@ -98,7 +98,7 @@ Before you submit a pull request, check that it meets these guidelines:
 
 1. The pull request should include tests.
 2. If the pull request adds functionality, the docs should be updated. Put your new functionality into a function with a docstring, and add the feature to the pull request description.
-3. The pull request should work for Python 3.11, 3.12, 3.13 and 3.14 and for PyPy. Check https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/python-package.yml and make sure that the tests pass for all supported Python versions.
+3. The pull request should work for all Python versions supported by the project (including CPython and PyPy). Check https://github.com/TissueImageAnalytics/tiatoolbox/actions/workflows/python-package.yml and make sure that the tests pass for all supported Python versions.
 
 Tips
 ----
