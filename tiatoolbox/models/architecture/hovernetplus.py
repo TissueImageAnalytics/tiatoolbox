@@ -158,7 +158,7 @@ class HoVerNetPlus(HoVerNet):
         epith_all = epith_all > 0
         epith_mask = morphology.remove_small_objects(
             epith_all,
-            min_size=min_size,
+            max_size=min_size - 1,  # scikit-image >0.26.0
         ).astype("uint8")
         epith_edited = epith_mask * ls_map
         epith_edited = epith_edited.astype("uint8")

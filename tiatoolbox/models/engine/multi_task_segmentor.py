@@ -211,7 +211,7 @@ class MultiTaskSegmentorRunParams(SemanticSegmentorRunParams, total=False):
             Shape of output patches (height, width).
         return_labels (bool):
             Whether to return labels with predictions.
-        return_predictions (tuple(bool, ...):
+        return_predictions (tuple[bool, ...]):
             Whether to return array predictions for individual tasks.
         return_probabilities (bool):
             Whether to return per-class probabilities.
@@ -534,7 +534,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         Shape of output patches (height, width).
                     return_labels (bool):
                         Whether to return labels with predictions.
-                    return_predictions (tuple(bool, ...):
+                    return_predictions (tuple[bool, ...]):
                         Whether to return array predictions for individual tasks.
                     return_probabilities (bool):
                         Whether to return per-class probabilities.
@@ -784,7 +784,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         Shape of output patches (height, width).
                     return_labels (bool):
                         Whether to return labels with predictions.
-                    return_predictions (tuple(bool, ...):
+                    return_predictions (tuple[bool, ...]):
                         Whether to return array predictions for individual tasks.
                     return_probabilities (bool):
                         Whether to return per-class probabilities.
@@ -894,7 +894,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         Shape of output patches (height, width).
                     return_labels (bool):
                         Whether to return labels with predictions.
-                    return_predictions (tuple(bool, ...):
+                    return_predictions (tuple[bool, ...]):
                         Whether to return array predictions for individual tasks.
                     return_probabilities (bool):
                         Whether to return per-class probabilities.

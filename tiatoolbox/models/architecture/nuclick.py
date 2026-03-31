@@ -108,7 +108,7 @@ class ConvBnRelu(nn.Module):
         out_channels: int,
         kernel_size: int | tuple[int, int],
         strides: IntPair,
-        dilation_rate: int or IntPair,
+        dilation_rate: int | IntPair,
         activation: str,
         *,
         do_batchnorm: bool,
@@ -306,7 +306,7 @@ class ResidualConv(nn.Module):
             num_output_channels,
             kernel_size=kernel_size,
             strides=strides,
-            activation="None",
+            activation=None,
             use_bias=use_bias,
             dilation_rate=dilation_rate,
             do_batchnorm=True,
@@ -316,7 +316,7 @@ class ResidualConv(nn.Module):
             num_output_channels,
             kernel_size=kernel_size,
             strides=strides,
-            activation="None",
+            activation=None,
             use_bias=use_bias,
             dilation_rate=dilation_rate,
             do_batchnorm=True,
@@ -599,27 +599,39 @@ class NuClick(ModelABC):
         """Post-processing.
 
         Args:
-            preds (ndarray): list of prediction output of each patch and
+            preds (ndarray):
+                List of prediction output of each patch and
                 assumed to be in the order of (no.patch, h, w) (match with the output
                 of `infer_batch`).
-            thresh (float): Threshold value. If a pixel has a predicted value larger
+            thresh (float):
+                Threshold value. If a pixel has a predicted value larger
                 than the threshold, it will be classified as nuclei.
-            min_size (int): The smallest allowable object size.
-            min_hole_size (int):  The maximum area, in pixels, of a contiguous hole
+            min_size (int):
+                The smallest allowable object size (objects with
+                fewer pixels than this will be removed).
+            min_hole_size (int):
+                The maximum area, in pixels, of a contiguous hole
                 that will be filled.
-            do_reconstruction (bool): Whether to perform a morphological reconstruction
+            do_reconstruction (bool):
+                Whether to perform a morphological reconstruction
                 of an image.
-            nuc_points (ndarray): In the order of (no.patch, h, w).
+            nuc_points (ndarray):
+                In the order of (no.patch, h, w).
                 In each patch, The pixel that has been 'clicked' is set to 1 and the
                 rest pixels are set to 0.
 
         Returns:
-            masks (ndarray): pixel-wise nuclei instance segmentation
-                prediction, shape:(no.patch, h, w).
+            masks (ndarray):
+                Pixel-wise nuclei instance segmentation prediction,
+                shape:(no.patch, h, w).
 
         """
         masks = preds > thresh
-        masks = remove_small_objects(masks, min_size=min_size)
+        # For scikit-image >=0.26.0, `remove_small_objects` uses `max_size` to
+        # specify the largest object size to be removed. To keep objects with
+        # at least `min_size` pixels, we remove objects with size <= min_size - 1.
+        max_size = max(min_size - 1, 0)
+        masks = remove_small_objects(masks, max_size=max_size)
         masks = remove_small_holes(masks, area_threshold=min_hole_size)
         if do_reconstruction:
             for i in range(len(masks)):

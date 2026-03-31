@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, TypedDict, overload
+from typing import TYPE_CHECKING, TypedDict, cast, overload
 
 import numpy as np
 from typing_extensions import Unpack
@@ -432,7 +432,10 @@ class PatchExtractor(PatchExtractorABC):
             0,
             tissue_mask.shape[0],
         )
-        scaled_coords_list = list((scaled_coords).astype(np.int32))
+        scaled_coords_list = cast(
+            "list[list[int]]",
+            scaled_coords.astype(np.int32).tolist(),
+        )
 
         def default_sel_func(
             tissue_mask: np.ndarray,

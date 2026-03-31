@@ -535,7 +535,6 @@ class EngineABC(ABC):  # noqa: B024
 
         if self.return_labels:
             keys.append("labels")
-            labels = []
 
         if return_coordinates:
             keys.append("coordinates")
@@ -1202,7 +1201,6 @@ class EngineABC(ABC):  # noqa: B024
             raise ValueError(
                 msg,
             )
-        return
 
     def _update_run_params(
         self: EngineABC,
