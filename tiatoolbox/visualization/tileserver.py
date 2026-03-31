@@ -618,7 +618,6 @@ class TileServer(Flask):
         return json.dumps(layer)
 
     def _add_annotation_overlay(self, session_id: str, overlay_path: Path) -> str:
-        sq: AnnotationStore | None = None
         if overlay_path.suffix == ".geojson":
 
             def unpack_qupath(ann: Annotation) -> Annotation:
@@ -633,9 +632,11 @@ class TileServer(Flask):
                 return ann
 
             sq = SQLiteStore.from_geojson(overlay_path, transform=unpack_qupath)
-        elif overlay_path.suffix == ".dat":
+
+        if overlay_path.suffix == ".dat":
             sq = store_from_dat(overlay_path)
-        elif overlay_path.suffix == ".db":
+
+        if overlay_path.suffix == ".db":
             sq = SQLiteStore(overlay_path, auto_commit=False)
         else:
             # make a temporary db for the new annotations
