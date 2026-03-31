@@ -25,6 +25,7 @@ import SimpleITK as sitk  # noqa: N813
 import tifffile
 import zarr
 from defusedxml import ElementTree
+from fsspec.implementations.reference import ReferenceFileSystem
 from imagecodecs.numcodecs import Delta, Jpeg, Jpeg2k, Lzw
 from numcodecs import register_codec
 from numpy.linalg import inv
@@ -4437,26 +4438,36 @@ class FsspecJsonWSIReader(WSIReader):
         register_codec(Lzw(), "imagecodecs_lzw")
         register_codec(Delta(), "imagecodecs_delta")
 
-        mapper = fsspec.get_mapper(
-            "reference://", fo=str(input_img), target_protocol="file"
+        # Create an async ReferenceFileSystem directly to avoid the
+        # asynchronous mismatch when zarr v3 calls FsspecStore.from_mapper()
+        # (see https://github.com/zarr-developers/zarr-python/issues/3323).
+        # Passing remote_options={"asynchronous": True} ensures that any
+        # remote filesystem (e.g. HTTPFileSystem) is also created as async,
+        # satisfying the invariant checked inside ReferenceFileSystem.__init__.
+        ref_fs = ReferenceFileSystem(
+            fo=str(input_img),
+            target_protocol="file",
+            remote_options={"asynchronous": True},
+            asynchronous=True,
         )
+        self._zarr_store = FsspecStore(fs=ref_fs, read_only=True, path="/")
 
-        self._zarr_array = zarr.open(mapper, mode="r")
+        self._zarr_array = zarr.open(self._zarr_store, mode="r")
 
         self.__set_axes()
 
-        self._zarr_store = self._zarr_array.store
-
-        self._zarr_lru_cache = zarr.LRUStoreCache(self._zarr_store, max_size=cache_size)
+        cache_backend = MemoryStore()
+        self._zarr_lru_cache = CacheStore(
+            store=self._zarr_store, cache_store=cache_backend, max_size=cache_size
+        )
         self._zarr_group = zarr.open(self._zarr_lru_cache)
-        if not isinstance(self._zarr_group, zarr.Group):  # pragma: no cover
-            group = zarr.group()
-            group[0] = self._zarr_group
-            self._zarr_group = group
-        self.level_arrays = {
-            int(key): ArrayView(array, axes=self._axes)
-            for key, array in self._zarr_group.items()
-        }
+        if isinstance(self._zarr_group, zarr.Group):
+            self.level_arrays = {
+                int(key): ArrayView(array, axes=self._axes)
+                for key, array in self._zarr_group.items()
+            }
+        else:  # pragma: no cover
+            self.level_arrays = {0: ArrayView(self._zarr_group, axes=self._axes)}
         # ensure level arrays are sorted by descending area
         self.level_arrays = dict(
             sorted(

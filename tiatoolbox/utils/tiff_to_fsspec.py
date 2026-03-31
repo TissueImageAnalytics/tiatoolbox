@@ -70,7 +70,7 @@ def main(svs_file_path: str, json_file_path: str, final_url: str) -> None:
     tiff_file_pages = tiff.pages
 
     # Generate fsspec JSON
-    tiff2fsspec(svs_file_path, url=URL_PLACEHOLDER, out=json_file_path)
+    tiff2fsspec(svs_file_path, url=URL_PLACEHOLDER, out=json_file_path, version=3)
 
     if tiff.is_svs:
         metadata = TIFFWSIReaderDelegate.parse_svs_metadata(tiff_file_pages)
