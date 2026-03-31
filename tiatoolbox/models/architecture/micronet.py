@@ -603,7 +603,7 @@ class MicroNet(ModelABC):
         pred_map = raw_maps[0].compute() if is_dask else raw_maps[0]
         pred_bin = np.argmax(pred_map, axis=2)
         pred_inst = ndimage.label(pred_bin)[0]
-        pred_inst = morphology.remove_small_objects(pred_inst, min_size=50)
+        pred_inst = morphology.remove_small_objects(pred_inst, max_size=49)
         canvas = np.zeros(pred_inst.shape[:2], dtype=np.int32)
         # if margin is zero, there could be arrays of size zero.
         max_value = 0 if not np.any(pred_inst) else np.max(pred_inst)

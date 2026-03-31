@@ -541,7 +541,7 @@ class HoVerNet(ModelABC):
         blb = np.array(blb_raw >= 0.5, dtype=np.int32)  # noqa: PLR2004
 
         blb = ndimage.label(blb)[0]
-        blb = remove_small_objects(blb, min_size=10)
+        blb = remove_small_objects(blb, max_size=9)
         blb[blb > 0] = 1  # background is 0 already
 
         h_dir = cv2.normalize(
@@ -610,7 +610,8 @@ class HoVerNet(ModelABC):
                 "ignore",
                 message="Only one label was provided to `remove_small_objects`",
             )
-            marker = remove_small_objects(marker, min_size=obj_size)
+            # scikit-image changed API in 0.26.0 from min_size to max_size.
+            marker = remove_small_objects(marker, max_size=obj_size - 1)
 
         return watershed(dist, markers=marker, mask=blb)
 
