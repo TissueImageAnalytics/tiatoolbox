@@ -234,7 +234,7 @@ def load_stain_matrix(stain_matrix_input: np.ndarray | PathLike) -> np.ndarray:
 
     """
     if isinstance(stain_matrix_input, (str, Path)):
-        _, __, suffixes = split_path_name_ext(stain_matrix_input)
+        _dir, _file, suffixes = split_path_name_ext(stain_matrix_input)
         if suffixes[-1] not in [".csv", ".npy"]:
             msg = (
                 "If supplying a path to a stain matrix, use either a npy or a csv file"
@@ -914,12 +914,12 @@ def get_bounding_box(img: np.ndarray) -> np.ndarray:
     rows = np.any(img, axis=1)
     cols = np.any(img, axis=0)
     r_min, r_max = np.where(rows)[0][[0, -1]]
-    c_min, cmax = np.where(cols)[0][[0, -1]]
+    c_min, c_max = np.where(cols)[0][[0, -1]]
     # due to python indexing, need to add 1 to max
     # else accessing will be 1px in the box, not out
     r_max += 1
-    cmax += 1
-    return np.array([c_min, r_min, cmax, r_max])
+    c_max += 1
+    return np.array([c_min, r_min, c_max, r_max])
 
 
 def string_to_tuple(in_str: str) -> tuple[str, ...]:

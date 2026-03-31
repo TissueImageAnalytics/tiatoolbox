@@ -59,7 +59,7 @@ MacPorts
 Installing Stable Release
 =========================
 
-Please note that TIAToolbox is tested for Python versions 3.11, 3.12, and 3.13.
+Please note that TIAToolbox is currently tested with Python versions 3.11, 3.12, and 3.13. For the full range of supported Python versions, please refer to the package metadata (for example, the ``python_requires`` setting in ``setup.py`` or ``pyproject.toml``)
 
 Recommended
 -----------
