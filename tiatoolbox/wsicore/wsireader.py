@@ -4464,7 +4464,7 @@ class FsspecJsonWSIReader(WSIReader):
         if isinstance(self._zarr_group, zarr.Group):
             self.level_arrays = {
                 int(key): ArrayView(array, axes=self._axes)
-                for key, array in self._zarr_group.items()
+                for key, array in self._zarr_group.members()
             }
         else:  # pragma: no cover
             self.level_arrays = {0: ArrayView(self._zarr_group, axes=self._axes)}
