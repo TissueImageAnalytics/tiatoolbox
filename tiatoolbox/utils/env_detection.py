@@ -251,11 +251,11 @@ def check_pixman_using_anaconda(versions: list) -> tuple[list, str]:
     using = "conda"
     try:
         conda_list = subprocess.Popen(
-            ("conda", "list"),
+            ("conda", "list"),  # noqa: S607
             stdout=subprocess.PIPE,
         )
         conda_pixman = subprocess.check_output(
-            ("grep", "pixman"),
+            ("grep", "pixman"),  # noqa: S607
             stdin=conda_list.stdout,
         )
         conda_list.wait()
@@ -297,11 +297,11 @@ def check_pixman_using_brew(versions: list) -> tuple[list, str]:
     using = "brew"
     try:
         brew_list = subprocess.Popen(
-            ("brew", "list", "--versions"),
+            ("brew", "list", "--versions"),  # noqa: S607
             stdout=subprocess.PIPE,
         )
         brew_pixman = subprocess.check_output(
-            ("grep", "pixman"),
+            ("grep", "pixman"),  # noqa: S607
             stdin=brew_list.stdout,
         )
         brew_list.wait()
@@ -327,11 +327,11 @@ def check_pixman_using_macports(versions: list) -> tuple[list, str]:
     """
     using = "port"
     port_list = subprocess.Popen(
-        ("port", "installed"),
+        ("port", "installed"),  # noqa: S607
         stdout=subprocess.PIPE,
     )
     port_pixman = subprocess.check_output(
-        ("grep", "pixman"),
+        ("grep", "pixman"),  # noqa: S607
         stdin=port_list.stdout,
     )
     port_list.wait()
