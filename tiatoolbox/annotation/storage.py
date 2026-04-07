@@ -1481,7 +1481,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             )
         # Are we scanning through all annotations?
         is_scan = not any((geometry, where))
-        items = self.items() if is_scan else self.query(geometry, where).items()
+        items = self.items() if is_scan else self.query(geometry, where).items()  # type: ignore[arg-type]
 
         def select_values(
             select: Select,
