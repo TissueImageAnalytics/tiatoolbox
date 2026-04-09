@@ -35,8 +35,8 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install ruff==0.15.9 pytest pytest-cov pytest-runner
         pip install uv
-        uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-        uv pip install -r requirements/requirements.txt
+        uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
+        uv pip install --system -r requirements/requirements.txt
     - name: Cache tiatoolbox static assets
       uses: actions/cache@v4
       with:
@@ -113,9 +113,9 @@ jobs:
         sudo apt-get install -y libopenslide-dev libopenjp2-7
         python -m pip install --upgrade pip
         pip install uv
-        uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-        uv pip install -r requirements/requirements.txt
-        uv pip install build
+        uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
+        uv pip install --system -r requirements/requirements.txt
+        uv pip install --system build
     - name: Build package
       run: python -m build
 
