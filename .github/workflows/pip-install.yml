@@ -42,6 +42,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+            fetch-depth: 0
 
       - name: Install Miniconda
         uses: conda-incubator/setup-miniconda@v3
@@ -122,14 +124,16 @@ jobs:
         run: |
           source $CONDA/etc/profile.d/conda.sh
           conda activate test-env
-          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install uv
+          uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
       - name: Install CPU-only PyTorch (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           conda activate test-env
-          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install uv
+          uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
       # -------------------------------
       # (Windows only) make console UTF-8 (extra safety)
@@ -151,14 +155,22 @@ jobs:
         run: |
           source $CONDA/etc/profile.d/conda.sh
           conda activate test-env
-          pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@${GITHUB_SHA}
+          pip install uv
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            REF="${{ github.event.pull_request.head.sha }}"
+          else
+            REF="${GITHUB_SHA}"
+          fi
+          echo "Installing tiatoolbox at ref: $REF"
+          uv pip install --system git+https://github.com/TissueImageAnalytics/tiatoolbox@$REF
 
       - name: Install tiatoolbox (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           conda activate test-env
-          pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@$env:GITHUB_SHA
+          pip install uv
+          uv pip install --system git+https://github.com/TissueImageAnalytics/tiatoolbox@$env:GITHUB_SHA
 
       # -------------------------------
       # Test Imports
