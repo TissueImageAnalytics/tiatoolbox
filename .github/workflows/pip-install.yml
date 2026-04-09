@@ -156,7 +156,13 @@ jobs:
           source $CONDA/etc/profile.d/conda.sh
           conda activate test-env
           pip install uv
-          uv pip install --system git+https://github.com/TissueImageAnalytics/tiatoolbox@${GITHUB_SHA}
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            REF="${{ github.event.pull_request.head.sha }}"
+          else
+            REF="${GITHUB_SHA}"
+          fi
+          echo "Installing tiatoolbox at ref: $REF"
+          uv pip install --system git+https://github.com/TissueImageAnalytics/tiatoolbox@$REF
 
       - name: Install tiatoolbox (Windows)
         if: runner.os == 'Windows'
