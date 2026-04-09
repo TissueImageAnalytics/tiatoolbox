@@ -91,15 +91,15 @@ def main(files: list[Path], from_ref: str, to_ref: str) -> bool:
     replacements = [
         PatternReplacement(
             pattern=(
-                r"(^\s*[!%]\s*)pip install "
-                r"(git\+https://github\.com/TissueImageAnalytics/"
-                r"tiatoolbox\.git@[\S]*|tiatoolbox)"
+                r"^\s*([!%]?\s*)"  # optional ! or %
+                r"((?:uv\s+)?pip\s+install\s+)"  # pip install OR uv pip install
+                r"(git\+https://github\.com/"
+                r"TissueImageAnalytics/tiatoolbox\.git@)"
+                r"(\S+)"  # branch name
+                r"(\s*\|\s*tail\s+-n\s+1)"  # | tail -n 1
             ),
-            replacement=(
-                r"\1pip install "
-                f"git+https://github.com/TissueImageAnalytics/tiatoolbox.git@{to_ref}"
-            ),
-            main_replacement=r"\1pip install tiatoolbox",
+            replacement=(r"\1\2\3" + f"{to_ref}" + r"\5"),
+            main_replacement=(r"\1\2tiatoolbox\5"),
         ),
         PatternReplacement(
             pattern=(
