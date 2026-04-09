@@ -122,14 +122,16 @@ jobs:
         run: |
           source $CONDA/etc/profile.d/conda.sh
           conda activate test-env
-          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install uv
+          uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
       - name: Install CPU-only PyTorch (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           conda activate test-env
-          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install uv
+          uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
       # -------------------------------
       # (Windows only) make console UTF-8 (extra safety)
@@ -151,14 +153,16 @@ jobs:
         run: |
           source $CONDA/etc/profile.d/conda.sh
           conda activate test-env
-          pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@${GITHUB_SHA}
+          pip install uv
+          uv pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@${GITHUB_SHA}
 
       - name: Install tiatoolbox (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           conda activate test-env
-          pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@$env:GITHUB_SHA
+          pip install uv
+          uv pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@$env:GITHUB_SHA
 
       # -------------------------------
       # Test Imports
