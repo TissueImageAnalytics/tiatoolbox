@@ -24,7 +24,7 @@
   universal = true
 
 [tool.poetry]
-name = "TIA Centre"
+name = "TIA-Centre"  # uv does not accept space in name
 version = "2.0.1"
 description = "test"
 authors = ["TIA Centre <TIA@warwick.ac.uk>"]
