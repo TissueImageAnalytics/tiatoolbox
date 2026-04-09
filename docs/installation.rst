@@ -115,6 +115,16 @@ or
 
 An alternate way to install using conda on Windows could be to install it in `WSL2 with CUDA support <https://learn.microsoft.com/en-us/windows/ai/directml/gpu-cuda-in-wsl>`_. Depending on your hardware and workload, WSL2 may offer improved performance for some Python workflows, and therefore we **recommend** this option.
 
+Using uv
+--------
+
+To install using `uv <https://docs.astral.sh/uv/>`_, a fast Python package and project manager, written in Rust.
+
+.. code-block:: console
+
+    $ pip install uv
+    $ uv pip install tiatoolbox
+
 From Sources
 ------------
 

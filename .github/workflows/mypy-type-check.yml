@@ -35,8 +35,9 @@ jobs:
         sudo apt update
         sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-        pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-        pip install -r requirements/requirements_dev.txt
+        pip install uv
+        uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
+        uv pip install --system -r requirements/requirements_dev.txt
 
     - name: Debug typing environment
       run: |
