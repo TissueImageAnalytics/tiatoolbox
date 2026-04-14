@@ -13,6 +13,7 @@ from tiatoolbox.models.architecture.kongnet import (
     CenterBlock,
     DecoderBlock,
     KongNet,
+    KongNetInstancePostProcResult,
     KongNetDecoder,
     SubPixelUpsample,
     TimmEncoderFixed,
@@ -318,6 +319,79 @@ def test_kongnet_postproc() -> None:
 
     # Output should contain detected peaks
     assert output.max() > 0
+
+
+def _disk_mask(
+    shape: tuple[int, int],
+    center: tuple[int, int],
+    radius: int,
+) -> np.ndarray:
+    """Create a filled disk mask for synthetic KongNet tests."""
+    rows, cols = np.ogrid[: shape[0], : shape[1]]
+    return ((rows - center[0]) ** 2 + (cols - center[1]) ** 2) <= radius**2
+
+
+def test_kongnet_extract_component_maps_requires_full_head_output() -> None:
+    """KongNet instance post-processing should reject centroid-only outputs."""
+    model = KongNet(
+        num_heads=2,
+        num_channels_per_head=[3, 3],
+        target_channels=[2, 5],
+        min_distance=5,
+        threshold_abs=0.35,
+    )
+
+    centroid_only_output = np.zeros((32, 32, 2), dtype=np.float32)
+    with pytest.raises(ValueError, match="full-head channels"):
+        model.extract_component_maps(centroid_only_output, from_logits=False)
+
+
+def test_kongnet_postproc_instance_class_maps() -> None:
+    """KongNet should build deterministic CoNIC-style maps from full-head output."""
+    model = KongNet(
+        num_heads=2,
+        num_channels_per_head=[3, 3],
+        target_channels=[2, 5],
+        min_distance=4,
+        threshold_abs=0.35,
+        class_dict={1: "Tumour", 2: "Lymphocyte"},
+    )
+
+    logits = np.full((6, 64, 64), -8.0, dtype=np.float32)
+    left_nucleus = _disk_mask((64, 64), (20, 18), 7)
+    left_boundary = left_nucleus & ~_disk_mask((64, 64), (20, 18), 5)
+    right_nucleus = _disk_mask((64, 64), (20, 46), 7)
+    right_boundary = right_nucleus & ~_disk_mask((64, 64), (20, 46), 5)
+
+    logits[0][left_nucleus] = 8.0
+    logits[1][left_boundary] = 8.0
+    logits[2, 20, 18] = 10.0
+
+    logits[3][right_nucleus] = 8.0
+    logits[4][right_boundary] = 8.0
+    logits[5, 20, 46] = 10.0
+
+    result = model.postproc_instance_class_maps(
+        logits,
+        from_logits=True,
+        mask_threshold=0.5,
+        boundary_weight=1.0,
+        min_instance_size=10,
+    )
+
+    assert isinstance(result, KongNetInstancePostProcResult)
+    assert result.instance_map.shape == (64, 64)
+    assert result.class_map.shape == (64, 64)
+    assert result.conic_map.shape == (64, 64, 2)
+    assert set(np.unique(result.instance_map)) == {0, 1, 2}
+    assert result.class_map[20, 18] == 1
+    assert result.class_map[20, 46] == 2
+    assert result.instance_map[20, 18] != 0
+    assert result.instance_map[20, 46] != 0
+    assert result.marker_map[20, 18] != 0
+    assert result.marker_map[20, 46] != 0
+    assert np.count_nonzero(result.peak_map) == 2
+    assert result.instance_classes == {1: 1, 2: 2}
 
 
 def test_kongnet_load_state_dict() -> None:

@@ -82,9 +82,11 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
+from scipy import ndimage
+from skimage.segmentation import watershed
 import timm
 import torch
 from torch import nn
@@ -99,7 +101,7 @@ from tiatoolbox.models.architecture.utils import (
 from tiatoolbox.models.models_abc import ModelABC
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Sequence
 
     from tiatoolbox.type_hints import IntPair
 
@@ -120,6 +122,347 @@ class KongNetOutputHeadSpec:
     def has_target_channels(self) -> bool:
         """Return whether this head contributes inference target channels."""
         return bool(self.target_channels)
+
+
+@dataclass(frozen=True)
+class KongNetComponentMaps:
+    """Grouped per-class KongNet supervision maps for one patch.
+
+    Each component is stored as a ``(H, W, C)`` NumPy array where ``C`` is the
+    number of KongNet heads/classes.
+
+    """
+
+    mask: np.ndarray
+    boundary: np.ndarray
+    centroid: np.ndarray
+
+    def __post_init__(self) -> None:
+        """Validate component map shapes."""
+        expected_shape = self.mask.shape
+        if self.mask.ndim != 3:
+            msg = "KongNet component maps must be 3D arrays of shape `(H, W, C)`."
+            raise ValueError(msg)
+        if self.boundary.shape != expected_shape or self.centroid.shape != expected_shape:
+            msg = "Mask, boundary, and centroid maps must share the same shape."
+            raise ValueError(msg)
+
+    @property
+    def shape(self) -> tuple[int, int, int]:
+        """Return the common ``(H, W, C)`` component shape."""
+        return self.mask.shape
+
+    @property
+    def num_classes(self) -> int:
+        """Return the number of KongNet heads/classes represented."""
+        return int(self.mask.shape[-1])
+
+
+@dataclass(frozen=True)
+class KongNetInstancePostProcResult:
+    """Deterministic KongNet patch post-processing output.
+
+    Attributes:
+        instance_map:
+            Integer instance-id map with ``0`` reserved for background.
+        class_map:
+            Integer per-pixel class-id map aligned with ``instance_map``.
+        peak_map:
+            Sparse ``(H, W, C)`` centroid peak map after NMS, storing peak
+            probabilities at retained seed locations.
+        marker_map:
+            Integer seed marker map used to initialize watershed.
+        foreground_mask:
+            Binary foreground support derived from KongNet mask channels.
+        score_map:
+            Dense watershed score map derived from mask and boundary channels.
+        instance_classes:
+            Mapping from instance id to final class id.
+
+    """
+
+    instance_map: np.ndarray
+    class_map: np.ndarray
+    peak_map: np.ndarray
+    marker_map: np.ndarray
+    foreground_mask: np.ndarray
+    score_map: np.ndarray
+    instance_classes: dict[int, int]
+
+    @property
+    def conic_map(self) -> np.ndarray:
+        """Return the CoNIC-style ``(instance_id, class_id)`` stack."""
+        return np.stack((self.instance_map, self.class_map), axis=-1)
+
+
+def _as_numpy_array(array: np.ndarray | torch.Tensor) -> np.ndarray:
+    """Convert a Torch or NumPy array into a detached NumPy array."""
+    if isinstance(array, torch.Tensor):
+        return array.detach().cpu().numpy()
+    return np.asarray(array)
+
+
+def _normalize_single_patch_output(
+    output: np.ndarray | torch.Tensor,
+    *,
+    expected_channels: int,
+) -> np.ndarray:
+    """Normalize one KongNet patch output into ``(H, W, C)`` format."""
+    array = _as_numpy_array(output)
+    if array.ndim != 3:
+        msg = (
+            "KongNet post-processing expects a single patch output with shape "
+            "`(C, H, W)` or `(H, W, C)`."
+        )
+        raise ValueError(msg)
+
+    if array.shape[0] == expected_channels:
+        return np.moveaxis(array, 0, -1)
+    if array.shape[-1] == expected_channels:
+        return array
+
+    msg = (
+        "KongNet patch output does not match the expected number of full-head "
+        f"channels ({expected_channels})."
+    )
+    raise ValueError(msg)
+
+
+def _resolve_kongnet_class_ids(
+    *,
+    num_heads: int,
+    class_dict: dict | None,
+    class_ids: Sequence[int] | None,
+) -> tuple[int, ...]:
+    """Resolve output class ids for CoNIC-style dense label maps."""
+    if class_ids is not None:
+        resolved = tuple(int(class_id) for class_id in class_ids)
+    elif class_dict is not None:
+        ordered_keys = tuple(int(key) for key in sorted(class_dict))
+        resolved = (
+            ordered_keys
+            if len(ordered_keys) == num_heads and all(key > 0 for key in ordered_keys)
+            else tuple(range(1, num_heads + 1))
+        )
+    else:
+        resolved = tuple(range(1, num_heads + 1))
+
+    if len(resolved) != num_heads:
+        msg = "`class_ids` must provide one positive class id per KongNet head."
+        raise ValueError(msg)
+    if len(set(resolved)) != len(resolved) or any(class_id <= 0 for class_id in resolved):
+        msg = "KongNet dense class ids must be unique positive integers."
+        raise ValueError(msg)
+    return resolved
+
+
+def extract_kongnet_component_maps(
+    model: KongNet,
+    output: np.ndarray | torch.Tensor,
+    *,
+    from_logits: bool = True,
+) -> KongNetComponentMaps:
+    """Extract per-class mask/boundary/centroid maps from one full KongNet patch.
+
+    Args:
+        model:
+            The KongNet model instance describing the concatenated output layout.
+        output:
+            A single patch output in ``(C, H, W)`` or ``(H, W, C)`` format.
+            This must be the *full-head* output of ``KongNet.forward``. The
+            centroid-only output emitted by ``KongNet.infer_batch`` is not
+            sufficient for instance post-processing because it lacks mask and
+            boundary channels.
+        from_logits:
+            If ``True``, apply a sigmoid activation before unpacking channels.
+
+    Returns:
+        KongNetComponentMaps:
+            Grouped ``mask``, ``boundary``, and ``centroid`` maps with shape
+            ``(H, W, num_heads)``.
+
+    """
+    expected_channels = int(sum(model.num_channels_per_head))
+    output_hwc = _normalize_single_patch_output(
+        output,
+        expected_channels=expected_channels,
+    )
+
+    if any(int(num_channels) < 3 for num_channels in model.num_channels_per_head):
+        msg = (
+            "KongNet instance post-processing expects every selected head to expose "
+            "at least three channels ordered as `(mask, boundary, centroid)`."
+        )
+        raise ValueError(msg)
+
+    output_hwc = output_hwc.astype(np.float32, copy=False)
+    if from_logits:
+        output_hwc = 1.0 / (1.0 + np.exp(-output_hwc))
+
+    mask_maps = []
+    boundary_maps = []
+    centroid_maps = []
+    for head_spec in model.training_output_spec:
+        head_output = output_hwc[..., head_spec.channel_slice]
+        mask_maps.append(head_output[..., 0])
+        boundary_maps.append(head_output[..., 1])
+        centroid_maps.append(head_output[..., 2])
+
+    return KongNetComponentMaps(
+        mask=np.stack(mask_maps, axis=-1),
+        boundary=np.stack(boundary_maps, axis=-1),
+        centroid=np.stack(centroid_maps, axis=-1),
+    )
+
+
+def kongnet_instance_postproc(
+    component_maps: KongNetComponentMaps,
+    *,
+    class_ids: Sequence[int] | None = None,
+    min_distance: int,
+    threshold_abs: float,
+    threshold_rel: float | None = None,
+    mask_threshold: float = 0.5,
+    boundary_weight: float = 1.0,
+    class_assignment: Literal["seed", "mean_mask"] = "mean_mask",
+    min_instance_size: int = 0,
+) -> KongNetInstancePostProcResult:
+    """Convert KongNet component maps into CoNIC-style instance/class outputs.
+
+    This performs deterministic seeded watershed-style post-processing using:
+
+    - centroid peaks as instance seeds,
+    - mask probabilities as the foreground prior, and
+    - boundary probabilities as the separation prior.
+
+    Args:
+        component_maps:
+            One patch worth of KongNet ``mask``, ``boundary``, and ``centroid`` maps.
+        class_ids:
+            Dense class ids associated with the class/channel dimension. Defaults to
+            ``1..C`` when omitted.
+        min_distance:
+            Minimum allowed distance separating centroid peaks.
+        threshold_abs:
+            Absolute centroid peak threshold.
+        threshold_rel:
+            Optional relative centroid peak threshold.
+        mask_threshold:
+            Foreground threshold applied to the maximum mask probability.
+        boundary_weight:
+            Weight applied to boundary probabilities when constructing the
+            watershed score map.
+        class_assignment:
+            ``"seed"`` preserves the seed class for each instance.
+            ``"mean_mask"`` assigns the class whose mask channel has the highest
+            mean support inside the final instance region.
+        min_instance_size:
+            Remove predicted instances smaller than this number of pixels.
+
+    Returns:
+        KongNetInstancePostProcResult:
+            Instance ids, dense class ids, and intermediate maps useful for QC.
+
+    """
+    if mask_threshold <= 0 or mask_threshold > 1:
+        msg = "`mask_threshold` must be in the interval `(0, 1]`."
+        raise ValueError(msg)
+    if min_distance < 1:
+        msg = "`min_distance` must be a positive integer."
+        raise ValueError(msg)
+    if min_instance_size < 0:
+        msg = "`min_instance_size` must be greater than or equal to zero."
+        raise ValueError(msg)
+
+    num_classes = component_maps.num_classes
+    resolved_class_ids = _resolve_kongnet_class_ids(
+        num_heads=num_classes,
+        class_dict=None,
+        class_ids=class_ids,
+    )
+
+    peak_map = peak_detection_map_overlap(
+        component_maps.centroid,
+        min_distance=min_distance,
+        threshold_abs=threshold_abs,
+        threshold_rel=threshold_rel,
+        return_probability=True,
+    )
+    peak_map = nms_on_detection_maps(peak_map, min_distance=min_distance)
+
+    seed_binary = np.max(peak_map, axis=-1) > 0
+    marker_map, marker_count = ndimage.label(seed_binary.astype(np.uint8))
+    foreground_mask = np.max(component_maps.mask, axis=-1) >= mask_threshold
+    foreground_mask = ndimage.binary_fill_holes(foreground_mask)
+    foreground_mask = np.asarray(foreground_mask, dtype=bool)
+    foreground_mask[seed_binary] = True
+
+    score_map = np.max(
+        component_maps.mask - (boundary_weight * component_maps.boundary),
+        axis=-1,
+    ).astype(np.float32)
+
+    if marker_count == 0:
+        empty_map = np.zeros(component_maps.shape[:2], dtype=np.int32)
+        return KongNetInstancePostProcResult(
+            instance_map=empty_map,
+            class_map=empty_map.copy(),
+            peak_map=peak_map.astype(np.float32, copy=False),
+            marker_map=empty_map.copy(),
+            foreground_mask=foreground_mask,
+            score_map=score_map,
+            instance_classes={},
+        )
+
+    seed_class_by_marker: dict[int, int] = {}
+    for marker_id in range(1, marker_count + 1):
+        marker_pixels = np.argwhere(marker_map == marker_id)
+        pixel_scores = peak_map[marker_pixels[:, 0], marker_pixels[:, 1], :]
+        pixel_index = int(np.argmax(np.max(pixel_scores, axis=1)))
+        marker_row, marker_col = marker_pixels[pixel_index]
+        class_index = int(np.argmax(peak_map[marker_row, marker_col, :]))
+        seed_class_by_marker[marker_id] = resolved_class_ids[class_index]
+
+    watershed_labels = watershed(
+        -score_map,
+        markers=marker_map,
+        mask=foreground_mask,
+    ).astype(np.int32, copy=False)
+
+    instance_map = np.zeros_like(watershed_labels, dtype=np.int32)
+    class_map = np.zeros_like(watershed_labels, dtype=np.int32)
+    remapped_marker_map = np.zeros_like(marker_map, dtype=np.int32)
+    instance_classes: dict[int, int] = {}
+
+    next_instance_id = 1
+    for marker_id in range(1, marker_count + 1):
+        instance_mask = watershed_labels == marker_id
+        if not np.any(instance_mask):
+            continue
+        if min_instance_size and int(np.count_nonzero(instance_mask)) < min_instance_size:
+            continue
+
+        if class_assignment == "mean_mask":
+            mean_mask_scores = component_maps.mask[instance_mask].mean(axis=0)
+            class_id = resolved_class_ids[int(np.argmax(mean_mask_scores))]
+        else:
+            class_id = seed_class_by_marker[marker_id]
+
+        instance_map[instance_mask] = next_instance_id
+        class_map[instance_mask] = int(class_id)
+        remapped_marker_map[marker_map == marker_id] = next_instance_id
+        instance_classes[next_instance_id] = int(class_id)
+        next_instance_id += 1
+
+    return KongNetInstancePostProcResult(
+        instance_map=instance_map,
+        class_map=class_map,
+        peak_map=peak_map.astype(np.float32, copy=False),
+        marker_map=remapped_marker_map,
+        foreground_mask=foreground_mask,
+        score_map=score_map,
+        instance_classes=instance_classes,
+    )
 
 
 def _normalize_kongnet_head_name(name: str, fallback: str) -> str:
@@ -963,6 +1306,65 @@ class KongNet(ModelABC):
     def training_output_spec(self) -> tuple[KongNetOutputHeadSpec, ...]:
         """Return named metadata for KongNet's concatenated output heads."""
         return self._training_output_spec
+
+    def resolve_instance_class_ids(
+        self: KongNet,
+        *,
+        class_ids: Sequence[int] | None = None,
+    ) -> tuple[int, ...]:
+        """Resolve dense positive class ids for CoNIC-style output maps."""
+        return _resolve_kongnet_class_ids(
+            num_heads=len(self.training_output_spec),
+            class_dict=self.class_dict,
+            class_ids=class_ids,
+        )
+
+    def extract_component_maps(
+        self: KongNet,
+        output: np.ndarray | torch.Tensor,
+        *,
+        from_logits: bool = True,
+    ) -> KongNetComponentMaps:
+        """Extract per-class mask, boundary, and centroid maps from one patch."""
+        return extract_kongnet_component_maps(
+            self,
+            output,
+            from_logits=from_logits,
+        )
+
+    def postproc_instance_class_maps(
+        self: KongNet,
+        output: np.ndarray | torch.Tensor,
+        *,
+        from_logits: bool = True,
+        class_ids: Sequence[int] | None = None,
+        min_distance: int | None = None,
+        threshold_abs: float | None = None,
+        threshold_rel: float | None = None,
+        mask_threshold: float = 0.5,
+        boundary_weight: float = 1.0,
+        class_assignment: Literal["seed", "mean_mask"] = "mean_mask",
+        min_instance_size: int = 0,
+    ) -> KongNetInstancePostProcResult:
+        """Build CoNIC-style instance/class maps from one full KongNet patch output.
+
+        The input must be the full per-head output of ``KongNet.forward``.
+        ``KongNet.infer_batch`` only emits centroid channels and therefore cannot
+        drive instance segmentation on its own.
+
+        """
+        component_maps = self.extract_component_maps(output, from_logits=from_logits)
+        return kongnet_instance_postproc(
+            component_maps,
+            class_ids=self.resolve_instance_class_ids(class_ids=class_ids),
+            min_distance=self.min_distance if min_distance is None else min_distance,
+            threshold_abs=self.threshold_abs if threshold_abs is None else threshold_abs,
+            threshold_rel=threshold_rel,
+            mask_threshold=mask_threshold,
+            boundary_weight=boundary_weight,
+            class_assignment=class_assignment,
+            min_instance_size=min_instance_size,
+        )
 
     @staticmethod
     def infer_batch(
