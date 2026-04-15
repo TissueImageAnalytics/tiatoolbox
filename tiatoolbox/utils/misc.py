@@ -1311,9 +1311,9 @@ def patch_predictions_as_qupath_json(
 def get_zarr_array(zarr_array: zarr.Array | np.ndarray | list) -> np.ndarray:
     """Converts a zarr array into a numpy array."""
     if isinstance(zarr_array, zarr.Array):
-        return zarr_array[:]
+        return np.asarray(zarr_array[:])
 
-    return np.array(zarr_array).astype(float)
+    return np.asarray(zarr_array).astype(float)
 
 
 def process_contours(
@@ -1662,7 +1662,7 @@ def save_qupath_json(save_path: Path, qupath_json: dict) -> Path:
 
 
 def dict_to_store_patch_predictions(
-    patch_output: dict | zarr.group,
+    patch_output: dict | zarr.Group,
     scale_factor: tuple[float, float],
     class_dict: dict | None = None,
     save_path: Path | None = None,
@@ -1704,16 +1704,25 @@ def dict_to_store_patch_predictions(
         msg = "Patch output must contain coordinates."
         raise ValueError(msg)
 
+    # Convert zarr.Group to dict-like access
+    def get_value_for_key(
+        store: dict | zarr.Group,
+        key: str,
+        default: list,
+    ) -> zarr.Array | list | np.ndarray:
+        """Get key from dict or zarr.Group with default value."""
+        return cast("zarr.Array | list | np.ndarray", store.get(key, default))
+
     # get relevant keys
-    class_probs = get_zarr_array(patch_output.get("probabilities", []))
-    preds = get_zarr_array(patch_output.get("predictions", []))
-    patch_coords = np.array(patch_output.get("coordinates", []))
+    class_probs = get_zarr_array(get_value_for_key(patch_output, "probabilities", []))
+    preds = get_zarr_array(get_value_for_key(patch_output, "predictions", []))
+    patch_coords = np.array(get_value_for_key(patch_output, "coordinates", []))
 
     # Scale coordinates
     if not np.all(np.array(scale_factor) == 1):
         patch_coords = patch_coords * (np.tile(scale_factor, 2))  # to baseline mpp
 
-    labels = patch_output.get("labels", [])
+    labels = get_zarr_array(get_value_for_key(patch_output, "labels", [])).tolist()
 
     # Determine classes
     if len(class_probs) == 0:
@@ -1753,7 +1762,7 @@ def dict_to_store_patch_predictions(
         class_probs.astype(float),
         patch_coords.astype(float),
         classes_predicted,
-        labels,
+        cast("list", labels),
         verbose=verbose,
     )
 
@@ -1771,7 +1780,7 @@ def dict_to_store_patch_predictions(
 
 
 def _tiles(
-    in_img: np.ndarray | zarr.core.Array,
+    in_img: np.ndarray | zarr.Array,
     tile_size: tuple[int, int],
     colormap: int = cv2.COLORMAP_JET,
     level: int = 0,
@@ -1783,7 +1792,7 @@ def _tiles(
     and applies a colormap to each tile before yielding it.
 
     Parameters:
-        in_img (np.ndarray | zarr.core.Array):
+        in_img (np.ndarray | zarr.Array):
             Input image or Zarr array to be tiled.
         tile_size (tuple[int, int]):
             Height and width of each tile.
@@ -1802,12 +1811,12 @@ def _tiles(
             in_img_ = in_img[
                 y : y + tile_size[0] : 2**level, x : x + tile_size[1] : 2**level
             ]
-            yield cv2.applyColorMap(in_img_, colormap)
+            yield cv2.applyColorMap(np.asarray(in_img_), colormap)
 
 
 def write_probability_heatmap_as_ome_tiff(
     image_path: Path,
-    probability: np.ndarray | zarr.core.Array,
+    probability: np.ndarray | zarr.Array,
     tile_size: tuple[int, int] = (64, 64),
     levels: int = 2,
     mpp: tuple[float, float] = (0.25, 0.25),
@@ -1821,7 +1830,7 @@ def write_probability_heatmap_as_ome_tiff(
     Args:
         image_path (Path):
             File path (including extension) to save image to.
-        probability (np.ndarray or zarr.core.Array):
+        probability (np.ndarray or zarr.Array):
             The input image data in YXC (Height, Width, Channels) format.
         tile_size (tuple):
             Tile/Chunk size (YX/HW) for writing the tiff file.
@@ -2085,7 +2094,7 @@ def pad_contours(
 
     """
     if pad_value is None:
-        pad_value = np.iinfo(contours[0].dtype).min
+        pad_value = cast("np.integer", np.iinfo(contours[0].dtype).min)
 
     # Compute max length across all contours
     max_len = max(c.shape[0] for c in contours)
