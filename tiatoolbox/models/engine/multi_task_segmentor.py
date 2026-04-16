@@ -3068,14 +3068,19 @@ def _move_tile_space_to_wsi_space(
             inst_info["box"] += np.concatenate([tile_tl] * 2)
             if "centroid" in inst_info:
                 inst_info["centroid"] += tile_tl
-            inst_info["contours"] += tile_tl
+            if not np.all(tile_tl == [0, 0]):
+                contours = inst_info["contours"]
+                pad_value = np.iinfo(contours.dtype).min
+                row_mask = np.any(contours != pad_value, axis=1)
+                contours[row_mask] += tile_tl
+                inst_info["contours"] = contours
             inst_uuid = uuid.uuid4().hex
             new_inst_dict[inst_uuid] = inst_info
     return new_inst_dict
 
 
 def _get_inst_info_dicts(post_process_output: tuple[dict]) -> list:
-    """Helper to convert post processing output to dictionary list.
+    """Helper to convert post-processing output to dictionary list.
 
     This function makes the info_dict compatible with tile based processing of
     info_dictionaries from HoVerNet.
