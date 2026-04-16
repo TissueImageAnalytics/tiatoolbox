@@ -639,6 +639,8 @@ def sub_pixel_read(  # skipcq: PY-R1000  # noqa: C901, PLR0912, PLR0913, PLR0915
 
     read_bounds = pad_bounds(read_bounds, interpolation_padding + baseline_padding)
     # 0 Expand to integers and find residuals
+    start: np.ndarray
+    end: np.ndarray
     start, end = np.reshape(read_bounds, (2, -1))
     int_read_bounds = np.concatenate(
         [

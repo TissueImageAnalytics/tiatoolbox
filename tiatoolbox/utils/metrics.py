@@ -73,8 +73,8 @@ def pair_coordinates(
     paired_b = paired_indices_b[pair_cost <= radius]
 
     pairing = np.concatenate([paired_a[:, None], paired_b[:, None]], axis=-1)
-    unpaired_a = np.delete(np.arange(set_a.shape[0]), paired_a)
-    unpaired_b = np.delete(np.arange(set_b.shape[0]), paired_b)
+    unpaired_a: np.ndarray = np.delete(np.arange(set_a.shape[0]), paired_a)
+    unpaired_b: np.ndarray = np.delete(np.arange(set_b.shape[0]), paired_b)
     return pairing, unpaired_a, unpaired_b
 
 

@@ -33,7 +33,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.annotation import AnnotationStore
     from tiatoolbox.wsicore.wsireader import WSIMeta, WSIReader
 
-defusedxml.defuse_stdlib()
+defusedxml.defuse_stdlib()  # type: ignore[attr-defined]
 
 
 class TilePyramidGenerator:

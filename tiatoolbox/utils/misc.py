@@ -39,7 +39,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterable, Iterator
     from os import PathLike
 
-    from shapely import geometry
+    from shapely.geometry.base import BaseGeometry
 
     from tiatoolbox.type_hints import JSON
 
@@ -1032,9 +1032,9 @@ def store_from_dat(
 
 
 def make_valid_poly(
-    poly: geometry,
+    poly: BaseGeometry,
     origin: tuple[float, float] | None = None,
-) -> geometry:
+) -> BaseGeometry:
     """Helper function to make a valid polygon.
 
     Args:
@@ -1476,7 +1476,7 @@ def dict_to_store_semantic_segmentor(
     ignore_index = -1 if ignore_index is None else ignore_index
     # Get the number of unique predictions
     layer_list_np = da.unique(preds).compute()
-    layer_list = (
+    layer_list: list = (
         np.delete(layer_list_np, np.where(layer_list_np == ignore_index))
     ).tolist()
 

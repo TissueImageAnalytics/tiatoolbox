@@ -573,11 +573,6 @@ class PatchExtractor(PatchExtractorABC):
             msg = f"`stride_shape` value {stride_shape_arr} must > 1."
             raise ValueError(msg)
 
-        def flat_mesh_grid_coord(x: np.ndarray, y: np.ndarray) -> np.ndarray:
-            """Helper function to obtain coordinate grid."""
-            xv, yv = np.meshgrid(x, y)
-            return np.stack([xv.flatten(), yv.flatten()], axis=-1)
-
         output_x_end = (
             np.ceil(image_shape_arr[0] / stride_shape_arr[0]) * stride_shape_arr[0]
         )
@@ -586,7 +581,9 @@ class PatchExtractor(PatchExtractorABC):
             np.ceil(image_shape_arr[1] / stride_shape_arr[1]) * stride_shape_arr[1]
         )
         output_y_list = np.arange(0, int(output_y_end), stride_shape_arr[1])
-        output_tl_list = flat_mesh_grid_coord(output_x_list, output_y_list)
+        output_tl_list = PatchExtractor.flat_mesh_grid_coord(
+            output_x_list, output_y_list
+        )
         output_br_list = output_tl_list + patch_output_shape_arr[None]
 
         io_diff = patch_input_shape_arr - patch_output_shape_arr
@@ -611,6 +608,14 @@ class PatchExtractor(PatchExtractorABC):
         if return_output_bound:
             return input_bound_list, output_bound_list
         return input_bound_list
+
+    @staticmethod
+    def flat_mesh_grid_coord(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        """Helper function to obtain coordinate grid."""
+        xv: np.ndarray
+        yv: np.ndarray
+        xv, yv = np.meshgrid(x, y)
+        return np.stack([xv.flatten(), yv.flatten()], axis=-1)
 
 
 class SlidingWindowPatchExtractor(PatchExtractor):

@@ -371,6 +371,8 @@ def bounds2slices(
     if np.size(stride) == 1:
         stride_array = np.tile(stride, 4)
 
+    start: np.ndarray
+    stop: np.ndarray
     start, stop = np.reshape(bounds, (2, -1)).astype(int)
     slice_array = np.stack([start[::-1], stop[::-1]], axis=1)
 
