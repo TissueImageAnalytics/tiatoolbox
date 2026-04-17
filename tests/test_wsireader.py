@@ -2218,6 +2218,11 @@ def test_is_ngff_regular_zarr(track_tmp_path: Path) -> None:
         WSIReader.open(zarr_path)
 
 
+@pytest.mark.xfail(reason="Depends on external source which may not be accessible.")
+# The data available on s3 bucket from OMERO may not always be accessible
+# and therefore the test is expected to fail.
+# Locally, a different image can be tested from this catalogue
+# https://idr.github.io/ome-ngff-samples/
 def test_ngff_s3() -> None:
     """Test read from s3 bucket."""
     # This sample image only tests if NGFFWSIReader can read image from s3.
