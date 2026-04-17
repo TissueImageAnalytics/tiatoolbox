@@ -1371,7 +1371,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         self: MultiTaskSegmentor,
         image_shape: list[int, int] | tuple[int, int] | np.ndarray,
         wsi_proc_shape: tuple[int, int] | np.ndarray,
-    ) -> list[list, ...]:
+    ) -> list[list]:
         """Generating tile information.
 
         To avoid out of memory problem when processing WSI-scale in
@@ -1834,18 +1834,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 )
             ]
 
-        for key in keys_to_compute:
-            del processed_predictions[key]
-
-        return_probabilities = kwargs.get("return_probabilities", False)
-        if return_probabilities:
-            msg = (
-                f"Probability maps cannot be saved as AnnotationStore or JSON. "
-                f"To visualise heatmaps in TIAToolbox Visualization tool,"
-                f"convert heatmaps in {save_path} to ome.tiff using"
-                f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
-            )
-            logger.info(msg)
+        _post_save_json_store(
+            keys_to_compute=keys_to_compute,
+            processed_predictions=processed_predictions,
+            save_path=save_path,
+            **kwargs,
+        )
 
         return save_paths
 
@@ -3858,3 +3852,23 @@ def apply_coordinate_offset(
         result[i][mask] = item[mask]
 
     return result
+
+
+def _post_save_json_store(
+    keys_to_compute: list[str],
+    processed_predictions: dict,
+    save_path: Path | None,
+    **kwargs: Unpack[MultiTaskSegmentorRunParams],
+) -> None:
+    for key in keys_to_compute:
+        del processed_predictions[key]
+
+    return_probabilities = kwargs.get("return_probabilities", False)
+    if return_probabilities:
+        msg = (
+            f"Probability maps cannot be saved as AnnotationStore or JSON. "
+            f"To visualise heatmaps in TIAToolbox Visualization tool,"
+            f"convert heatmaps in {save_path} to ome.tiff using"
+            f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
+        )
+        logger.info(msg)

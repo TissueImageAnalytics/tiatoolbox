@@ -1299,18 +1299,11 @@ def assert_annotation_store_patch_output(
 ) -> None:
     """Helper function to test AnnotationStore output."""
     for patch_idx, db_path in enumerate(output_ann):
-        if isinstance(inputs[patch_idx], Path):
-            store_file_name = (
-                f"{inputs[patch_idx].stem}.db"
-                if task_name is None
-                else f"{inputs[patch_idx].stem}_{task_name}.db"
-            )
-        else:
-            store_file_name = (
-                f"{patch_idx}.db"
-                if task_name is None
-                else f"{patch_idx}_{task_name}.db"
-            )
+        store_file_name = _get_store_file_name(
+            inputs=inputs,
+            task_name=task_name,
+            patch_idx=patch_idx,
+        )
 
         assert (
             db_path == track_tmp_path / "patch_output_annotationstore" / store_file_name
@@ -1374,6 +1367,22 @@ def assert_annotation_store_patch_output(
         else:
             assert annotations_geometry_type == []
             assert annotations_list == []
+
+
+def _get_store_file_name(
+    inputs: list | np.ndarray,
+    task_name: str | None,
+    patch_idx: int,
+) -> str:
+    """Helper function to get store filename."""
+    if isinstance(inputs[patch_idx], Path):
+        return (
+            f"{inputs[patch_idx].stem}.db"
+            if task_name is None
+            else f"{inputs[patch_idx].stem}_{task_name}.db"
+        )
+
+    return f"{patch_idx}.db" if task_name is None else f"{patch_idx}_{task_name}.db"
 
 
 def assert_qupath_json_patch_output(  # skipcq: PY-R1000
