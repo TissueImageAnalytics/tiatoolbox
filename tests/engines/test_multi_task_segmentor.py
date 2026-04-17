@@ -1209,7 +1209,7 @@ def assert_output_lengths(
     """Assert lengths of output dict fields against expected counts."""
     for field in fields:
         for i, expected in enumerate(expected_counts):
-            idx = str(i) if isinstance(output[field], (zarr.Array, zarr.Group)) else i
+            idx = str(i) if isinstance(output[field], zarr.Group) else i
             assert len(np.asarray(output[field][idx], dtype=object)) == expected, (
                 f"{field}[{idx}] mismatch"
             )
@@ -1270,16 +1270,8 @@ def assert_output_equal(
     """Assert equality of arrays across outputs for given fields/indices."""
     for field in fields:
         for i_a, i_b in zip(indices_a, indices_b, strict=False):
-            i_a_ = (
-                str(i_a)
-                if isinstance(output_a[field], (zarr.Array, zarr.Group))
-                else i_a
-            )
-            i_b_ = (
-                str(i_b)
-                if isinstance(output_b[field], (zarr.Array, zarr.Group))
-                else i_b
-            )
+            i_a_ = str(i_a) if isinstance(output_a[field], zarr.Group) else i_a
+            i_b_ = str(i_b) if isinstance(output_b[field], zarr.Group) else i_b
             left = np.asarray(output_a[field][i_a_])
             right = np.asarray(output_b[field][i_b_])
             assert all(
