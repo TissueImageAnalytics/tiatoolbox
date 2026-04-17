@@ -5836,8 +5836,10 @@ class NGFFWSIReader(WSIReader):
         )
         # Get indices by matching the axis name
         if multiscales.axes:
-            x_index = next(i for i, a in enumerate(multiscales.axes) if a.name == "x")
-            y_index = next(i for i, a in enumerate(multiscales.axes) if a.name == "y")
+            indices = [i for i, a in enumerate(multiscales.axes) if a.name == "x"]
+            x_index = indices[0] if indices else None
+            indices = [i for i, a in enumerate(multiscales.axes) if a.name == "y"]
+            y_index = indices[0] if indices else None
         else:
             # Default to (y, x)
             x_index = 1
