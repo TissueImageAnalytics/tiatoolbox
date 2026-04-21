@@ -2078,7 +2078,7 @@ def tqdm_dask_progress_bar(
 
 
 def pad_contours(
-    contours: list[np.ndarray], pad_value: np.integer | None = None
+    contours: list[np.ndarray], pad_value: np.integer | int | None = None
 ) -> np.ndarray:
     """Helper function to convert inhomogenous contours to rectangular array.
 
