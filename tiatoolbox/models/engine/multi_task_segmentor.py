@@ -3856,7 +3856,7 @@ def apply_coordinate_offset(
 
 def _post_save_json_store(
     keys_to_compute: list[str],
-    processed_predictions: dict,
+    processed_predictions: dict | zarr.Group,
     save_path: Path | None,
     **kwargs: Unpack[MultiTaskSegmentorRunParams],
 ) -> None:

@@ -18,6 +18,7 @@ import zarr
 from click.testing import CliRunner
 from shapely import Point, STRtree
 from tqdm.auto import tqdm
+from zarr.storage import LocalStore
 
 from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
@@ -28,6 +29,7 @@ from tiatoolbox.models.engine.multi_task_segmentor import (
     MultiTaskSegmentor,
     _clear_zarr,
     _get_sel_indices_margin_lines,
+    _post_save_json_store,
     _process_instance_predictions,
     _save_multitask_vertical_to_cache,
     merge_multitask_vertical_chunkwise,
@@ -37,7 +39,7 @@ from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Iterable, Sequence
 
 OutputType = dict[str, Any] | Any
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
@@ -1594,3 +1596,61 @@ def test_rearrange_raw_predictions_skips_private_subkeys() -> None:
 
     # The original key should be deleted
     assert "some_key" not in out["taskA"]
+
+
+def test_post_save_json_store_deletes_empty_store(
+    track_tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test zarr store deletion post save JSON."""
+    # Create an empty Zarr v3 store
+    store_root = track_tmp_path / "empty_store.zarr"
+    store = LocalStore(str(store_root))
+    root = zarr.open(store, mode="w")  # empty zarr.Group
+
+    assert list(root.keys()) == []
+
+    # ---- Proxy object that LOOKS like a zarr.Group ----
+    class GroupProxy:
+        def __init__(self: GroupProxy, group: zarr.Group, path: Path | str) -> None:
+            self._group = group
+            self.path = path
+            self.store = group.store
+
+        # Make isinstance(proxy, zarr.Group) return True
+        @property
+        def __class__(self: GroupProxy) -> type[zarr.Group]:
+            return zarr.Group
+
+        # Delegate attribute access
+        def __getattr__(
+            self: GroupProxy, item: str
+        ) -> zarr.Group | zarr.Array | str | int | float | Iterable[str]:
+            return getattr(self._group, item)
+
+        # Delegate mapping behavior
+        def keys(self: GroupProxy) -> Iterable[str]:
+            return self._group.keys()
+
+        def __getitem__(self: GroupProxy, item: str) -> zarr.Group | zarr.Array:
+            return self._group[item]
+
+    processed_predictions = GroupProxy(root, "dummy")
+
+    # Patch shutil.rmtree so we can detect the call
+    called = {"flag": False}
+
+    def fake_rmtree(path: Path | str, *, ignore_errors: bool) -> None:  # noqa: ARG001
+        called["flag"] = True
+
+    monkeypatch.setattr(shutil, "rmtree", fake_rmtree)
+
+    # Call the function
+    _post_save_json_store(
+        keys_to_compute=[],
+        processed_predictions=processed_predictions,
+        save_path=None,
+    )
+
+    # Assert deletion branch executed
+    assert called["flag"] is True
