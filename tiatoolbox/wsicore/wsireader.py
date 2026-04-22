@@ -3830,21 +3830,14 @@ class TIFFWSIReader(WSIReader):
         )
         self._zarr_group = zarr.open(self._zarr_cache)
 
-        if not isinstance(self._zarr_group, zarr.Group):
-            # 1. Create a new in-memory group
-            group = zarr.open_group()
+        if isinstance(self._zarr_group, zarr.Group):  # pragma: no cover
+            self.level_arrays = {
+                int(key): ArrayView(array, axes=self._axes)
+                for key, array in self._zarr_group.members()
+            }
+        else:  # pragma: no cover
+            self.level_arrays = {0: ArrayView(self._zarr_group, axes=self._axes)}
 
-            # 2. Assign the data directly.
-            # [:] extracts the data from the TiffStore and saves it into group["0"]
-            group["0"] = self._zarr_group[:]
-
-            # 3. Update the reference so self._zarr_group is now a Group
-            self._zarr_group = group
-
-        self.level_arrays = {
-            int(key): ArrayView(array, axes=self._axes)
-            for key, array in self._zarr_group.members()
-        }
         # ensure level arrays are sorted by descending area
         self.level_arrays = dict(
             sorted(
