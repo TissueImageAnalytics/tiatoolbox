@@ -3863,6 +3863,21 @@ def _post_save_json_store(
     for key in keys_to_compute:
         del processed_predictions[key]
 
+    store_root = processed_predictions.store.root
+    store_path = processed_predictions.path
+
+    # Zarr v3 retains metadata and the file which needs to be manually deleted
+    if (
+        isinstance(processed_predictions, zarr.Group)
+        and len(list(processed_predictions.keys())) == 0
+    ):
+        shutil.rmtree(Path(store_root) / Path(store_path), ignore_errors=True)
+
+    if store_path != "":
+        store_ = zarr.open(store_root, mode="r")
+        if len(list(store_.keys())) == 0:
+            shutil.rmtree(store_root, ignore_errors=True)
+
     return_probabilities = kwargs.get("return_probabilities", False)
     if return_probabilities:
         msg = (

@@ -1562,3 +1562,35 @@ def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) ->
     assert "nuclei_segmentation" not in zarr_group
     assert "layer_segmentation" in zarr_group
     assert "predictions" in zarr_group["layer_segmentation"]
+
+
+def test_rearrange_raw_predictions_skips_private_subkeys() -> None:
+    """Tests private keys not in output dict."""
+    # Create a fake task name
+    tasks = {"taskA"}
+
+    # Create raw_predictions structured so that:
+    # - values is a list of dicts
+    # - each dict contains a subkey starting with "_"
+    raw_predictions = {
+        "taskA": {
+            "some_key": [
+                {"_private": 1, "public": 10},
+                {"_private": 2, "public": 20},
+            ]
+        }
+    }
+
+    # Call the staticmethod
+    out = MultiTaskSegmentor._rearrange_raw_predictions_to_per_task_dict(
+        tasks, raw_predictions
+    )
+
+    # The "_private" key should be skipped entirely
+    assert "_private" not in out["taskA"]
+
+    # The "public" key should be added
+    assert out["taskA"]["public"] == [10, 20]
+
+    # The original key should be deleted
+    assert "some_key" not in out["taskA"]
