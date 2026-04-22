@@ -148,7 +148,7 @@ def is_ngff(  # noqa: PLR0911
 
     """
     try:
-        zarr_group = zarr.open(path, **kwargs, mode="r")
+        zarr_group = zarr.open(path, mode="r")
     except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
     if not isinstance(zarr_group, zarr.Group):

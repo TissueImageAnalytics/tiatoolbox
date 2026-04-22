@@ -32,6 +32,7 @@ from skimage.registration import phase_cross_correlation
 
 from tiatoolbox import cli, utils
 from tiatoolbox.annotation import SQLiteStore
+from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils import imread, tiff_to_fsspec
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.transforms import imresize, locsize2bounds
@@ -2219,7 +2220,10 @@ def test_is_ngff_regular_zarr(track_tmp_path: Path) -> None:
         WSIReader.open(zarr_path)
 
 
-@pytest.mark.xfail(reason="Depends on external source which may not be accessible.")
+@pytest.mark.skipif(
+    toolbox_env.running_on_ci(),
+    reason="Depends on external source which may not be accessible.",
+)
 # The data available on s3 bucket from OMERO may not always be accessible
 # and therefore the test is expected to fail.
 # Locally, a different image can be tested from this catalogue
