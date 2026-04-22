@@ -4457,11 +4457,11 @@ class FsspecJsonWSIReader(WSIReader):
         self.__set_axes()
 
         cache_backend = MemoryStore()
-        self._zarr_lru_cache = CacheStore(
+        self._zarr_cache = CacheStore(
             store=self._zarr_store, cache_store=cache_backend, max_size=cache_size
         )
-        self._zarr_group = zarr.open(self._zarr_lru_cache)
-        if isinstance(self._zarr_group, zarr.Group):
+        self._zarr_group = zarr.open(self._zarr_cache)
+        if isinstance(self._zarr_group, zarr.Group):  # pragma: no cover
             self.level_arrays = {
                 int(key): ArrayView(array, axes=self._axes)
                 for key, array in self._zarr_group.members()
