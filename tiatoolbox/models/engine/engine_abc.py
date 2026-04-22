@@ -775,9 +775,7 @@ class EngineABC(ABC):  # noqa: B024
     ) -> list:
         """Helper function to get dask tasks for saving zarr output."""
         if isinstance(dask_output, da.Array):
-            dask_output_dtype = dask_output.dtype
-            if dask_output_dtype != "object":
-                dask_output = dask_output.rechunk("auto")
+            dask_output = dask_output.rechunk("auto")
             component = key if task_name is None else f"{task_name}/{key}"
             task = dask_output.to_zarr(
                 url=save_path,
