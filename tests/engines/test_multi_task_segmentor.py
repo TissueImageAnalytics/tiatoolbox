@@ -1654,3 +1654,158 @@ def test_post_save_json_store_deletes_empty_store(
 
     # Assert deletion branch executed
     assert called["flag"] is True
+
+
+class DummyStoreSingle:
+    """Minimal mock of DaskDelayedJSONStore for testing a single feature build."""
+
+    _contours: list[np.ndarray]
+    _processed_predictions: dict[str, list[Any]]
+
+    def __init__(self) -> None:
+        """Initialize DummyStoreSingle."""
+        self._contours = [
+            np.array([[0, 0], [10, 0], [10, 10]], dtype=float),
+        ]
+        self._processed_predictions = {
+            "type": [None],
+            "area": [None],
+        }
+
+    def _build_single_qupath_feature(
+        self,
+        i: int,
+        class_dict: dict[int, str] | None,
+        origin: tuple[float, float],
+        scale_factor: tuple[float, float],
+        class_colors: dict[int, Any],
+    ) -> dict[str, Any]:
+        """Call the real method using this dummy instance."""
+        return DaskDelayedJSONStore._build_single_qupath_feature(
+            self, i, class_dict, origin, scale_factor, class_colors
+        )
+
+
+def test_build_single_qupath_feature_type_none() -> None:
+    """Test that None class values are handled correctly."""
+    store = DummyStoreSingle()
+
+    class_dict = {0: "background"}
+    origin = (5.0, 5.0)
+    scale_factor = (1.0, 1.0)
+    class_colors = {0: "#FFFFFF"}
+
+    result = store._build_single_qupath_feature(
+        i=0,
+        class_dict=class_dict,
+        origin=origin,
+        scale_factor=scale_factor,
+        class_colors=class_colors,
+    )
+
+    props = result["properties"]
+
+    assert props["type"] == "background"
+    assert props["classification"]["name"] == "background"
+    assert props["classification"]["color"] == "#FFFFFF"
+    assert props["class_value"] == 0
+    assert result["geometry"]["type"] == "Polygon"
+    assert result["name"] == "background"
+
+
+# ----------------------------------------------------------------------
+# Monkeypatch fixture for compute_qupath_json
+# ----------------------------------------------------------------------
+@pytest.fixture
+def patch_save_qupath_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Patch save_qupath_json so compute_qupath_json returns JSON directly."""
+
+    def fake_save_qupath_json(
+        save_path: Path | None,  # noqa: ARG001
+        qupath_json: dict[str, Any],
+    ) -> dict[str, Any]:
+        return qupath_json
+
+    import tiatoolbox.models.engine.multi_task_segmentor as mts  # noqa: PLC0415
+
+    monkeypatch.setattr(mts, "save_qupath_json", fake_save_qupath_json)
+
+
+# ----------------------------------------------------------------------
+# Dummy store for compute_qupath_json
+# ----------------------------------------------------------------------
+class DummyStoreCompute:
+    """Minimal mock of DaskDelayedJSONStore for testing compute_qupath_json."""
+
+    _contours: list[np.ndarray]
+    _processed_predictions: dict[str, list[Any]]
+
+    def __init__(self) -> None:
+        """Initialize DummyStoreCompute."""
+        self._contours = [
+            np.array([[0, 0], [10, 0], [10, 10]], dtype=float),
+            np.array([[5, 5], [15, 5], [15, 15]], dtype=float),
+        ]
+        self._processed_predictions = {
+            "type": [None, None],
+        }
+
+    # --- REQUIRED: compute_qupath_json calls this internally ---
+    def _build_single_qupath_feature(
+        self,
+        i: int,
+        class_dict: dict[int, str] | None,
+        origin: tuple[float, float],
+        scale_factor: tuple[float, float],
+        class_colors: dict[int, Any],
+    ) -> dict[str, Any]:
+        return DaskDelayedJSONStore._build_single_qupath_feature(
+            self, i, class_dict, origin, scale_factor, class_colors
+        )
+
+    def compute_qupath_json(
+        self,
+        class_dict: dict[int, str] | None,
+        origin: tuple[float, float],
+        scale_factor: tuple[float, float],
+        save_path: Path | None,
+        batch_size: int = 100,
+        num_workers: int = 0,
+        *,
+        verbose: bool,
+    ) -> dict[str, Any]:
+        """Call the real compute_qupath_json using this dummy instance."""
+        return DaskDelayedJSONStore.compute_qupath_json(
+            self,
+            class_dict=class_dict,
+            origin=origin,
+            scale_factor=scale_factor,
+            save_path=save_path,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            verbose=verbose,
+        )
+
+
+def test_compute_qupath_json_valid_ids_empty(
+    patch_save_qupath_json: None,  # noqa: ARG001
+) -> None:
+    """Test fallback class_dict={0:0} when all type predictions are None."""
+    store = DummyStoreCompute()
+
+    result = store.compute_qupath_json(
+        class_dict=None,
+        origin=(0, 0),
+        scale_factor=(1, 1),
+        save_path=None,
+        verbose=False,
+    )
+
+    assert result["type"] == "FeatureCollection"
+    assert len(result["features"]) == 2
+
+    for feature in result["features"]:
+        props = feature["properties"]
+        assert props["type"] == 0
+        assert props["classification"]["name"] == 0
+        assert props["class_value"] == 0
