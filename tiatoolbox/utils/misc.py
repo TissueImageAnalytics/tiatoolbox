@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import multiprocessing
 import shutil
 import tempfile
@@ -25,8 +26,9 @@ import zarr
 from dask import compute
 from filelock import FileLock
 from shapely.affinity import translate
-from shapely.geometry import Polygon, mapping
+from shapely.geometry import MultiPolygon, Polygon, mapping
 from shapely.geometry import shape as feature2geometry
+from shapely.ops import unary_union
 from skimage import exposure
 from tqdm.auto import tqdm, trange
 from tqdm.dask import TqdmCallback
@@ -2062,3 +2064,94 @@ def tqdm_dask_progress_bar(
             return compute(*write_tasks, scheduler=scheduler, num_workers=num_workers)
 
     return compute(*write_tasks, scheduler=scheduler, num_workers=num_workers)
+
+
+def clean_coords(coords: Iterable[tuple[float, float]]) -> list[tuple[float, float]]:
+    """Remove invalid coordinate pairs from a sequence of (x, y) points.
+
+    This function filters out coordinate pairs containing:
+    - None values
+    - NaN values
+    - Infinite values
+
+    All remaining coordinates are cast to floats.
+
+    Args:
+        coords: Iterable of (x, y) coordinate pairs, typically from a Shapely ring.
+
+    Returns:
+        A list of valid (x, y) coordinate pairs with invalid points removed.
+
+    """
+    cleaned: list[tuple[float, float]] = []
+
+    for x, y in coords:
+        if (
+            x is None
+            or y is None
+            or (isinstance(x, float) and math.isnan(x))
+            or (isinstance(y, float) and math.isnan(y))
+            or math.isinf(x)
+            or math.isinf(y)
+        ):
+            continue
+
+        cleaned.append((float(x), float(y)))
+
+    return cleaned
+
+
+def fix_polygon_strict(poly: Polygon | None) -> Polygon | None:
+    """Apply strict geometry cleaning to produce a QuPath-safe polygon.
+
+    This function performs multiple repair steps to ensure compatibility with
+    QuPath's JTS-based geometry parser, which is stricter than Shapely. It
+    removes invalid coordinates, eliminates duplicate points, simplifies tiny
+    spikes, resolves self-intersections, and merges MultiPolygons into a single
+    largest component.
+
+    Args:
+        poly: Input Shapely Polygon. If None, the function returns None.
+
+    Returns:
+        A cleaned, valid Shapely Polygon suitable for QuPath import, or None if
+        the geometry cannot be repaired.
+
+    """
+    if poly is None:
+        return None
+
+    # 1. Clean exterior ring
+    ext = clean_coords(list(poly.exterior.coords))
+    if len(ext) < 4:  # noqa: PLR2004
+        return None
+
+    # 2. Clean interior rings
+    interiors: list[list[tuple[float, float]]] = []
+    for ring in poly.interiors:
+        cleaned = clean_coords(list(ring.coords))
+        if len(cleaned) >= 4:  # noqa: PLR2004
+            interiors.append(cleaned)
+
+    poly = Polygon(ext, interiors)
+
+    # 3. Remove duplicate consecutive points
+    poly = poly.simplify(0, preserve_topology=True)
+
+    # 4. Remove tiny spikes and slivers
+    poly = poly.simplify(0.5, preserve_topology=True)
+
+    # 5. Standard self-intersection fix
+    poly = poly.buffer(0)
+
+    # 6. Merge MultiPolygons (JTS rejects them during precision reduction)
+    if isinstance(poly, MultiPolygon):
+        poly = unary_union(poly)
+        if isinstance(poly, MultiPolygon):
+            poly = max(poly.geoms, key=lambda g: g.area)
+
+    # 7. Final validity check
+    if not poly.is_valid:
+        return None
+
+    return poly
