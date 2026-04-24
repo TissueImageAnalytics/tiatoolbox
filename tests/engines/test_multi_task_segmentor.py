@@ -1726,9 +1726,10 @@ def patch_save_qupath_json(monkeypatch: pytest.MonkeyPatch) -> None:
     ) -> dict[str, Any]:
         return qupath_json
 
-    import tiatoolbox.models.engine.multi_task_segmentor as mts  # noqa: PLC0415
-
-    monkeypatch.setattr(mts, "save_qupath_json", fake_save_qupath_json)
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.multi_task_segmentor.save_qupath_json",
+        fake_save_qupath_json,
+    )
 
 
 # ----------------------------------------------------------------------
