@@ -144,7 +144,6 @@ from tiatoolbox.annotation.storage import Annotation
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.misc import (
     create_smart_array,
-    fix_polygon_strict,
     make_valid_poly,
     save_qupath_json,
     tqdm_dask_progress_bar,
@@ -3448,7 +3447,7 @@ class DaskDelayedJSONStore:
         class_dict: dict[int, str] | None,
         origin: tuple[float, float],
         scale_factor: tuple[float, float],
-    ) -> Annotation | None:
+    ) -> Annotation:
         """Build a single annotation for index ``i``.
 
         This method performs:
@@ -3472,12 +3471,11 @@ class DaskDelayedJSONStore:
                 Scaling factors ``(sx, sy)`` applied to contour coordinates.
 
         Returns:
-            Annotation | None:
+            Annotation:
                 A fully constructed TIAToolbox `Annotation` instance.
-                None if geometry is invalid.
 
         """
-        raw_geom = make_valid_poly(
+        geom = make_valid_poly(
             feature2geometry(
                 {
                     "type": self._processed_predictions.get("geom_type", "Polygon"),
@@ -3486,9 +3484,6 @@ class DaskDelayedJSONStore:
             ),
             tuple(origin),
         )
-        geom = fix_polygon_strict(raw_geom)
-        if geom is None:
-            return None
 
         properties = {
             prop: (
@@ -3545,11 +3540,6 @@ class DaskDelayedJSONStore:
         contour[:, 1] = contour[:, 1] * scale_factor[1] + origin[1]
 
         poly = Polygon(contour)
-        poly = fix_polygon_strict(poly)
-
-        if poly is None:
-            return None  # skip this feature
-
         poly_geo = mapping(poly)
 
         props = {}
@@ -3670,19 +3660,14 @@ class DaskDelayedJSONStore:
                 )
             ]
 
-            results = tqdm_dask_progress_bar(
-                write_tasks=delayed_tasks,
-                desc="Saving annotations",
-                verbose=verbose,
-                num_workers=num_workers,
+            store.append_many(
+                tqdm_dask_progress_bar(
+                    write_tasks=delayed_tasks,
+                    desc="Saving annotations",
+                    verbose=verbose,
+                    num_workers=num_workers,
+                )
             )
-
-            # Filter out None results
-            valid_results = [r for r in results if r is not None]
-
-            if len(valid_results) > 0:
-                store.append_many(valid_results)
-
         return store
 
     def compute_qupath_json(
@@ -3762,7 +3747,7 @@ class DaskDelayedJSONStore:
                 verbose=verbose,
                 num_workers=num_workers,
             )
-            features.extend([f for f in batch_features if f is not None])
+            features.extend(batch_features)
 
         qupath_json = {"type": "FeatureCollection", "features": features}
 
