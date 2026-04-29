@@ -144,6 +144,7 @@ from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.misc import (
     create_smart_array,
     make_valid_poly,
+    pad_contours,
     save_qupath_json,
     tqdm_dask_progress_bar,
     update_tqdm_desc,
@@ -1312,8 +1313,14 @@ class MultiTaskSegmentor(SemanticSegmentor):
             dict_info_wsi = {}
             offset = np.array(self.mask_padding[:2])
             for key, col in info_df.items():
+                col_list = col.to_numpy().tolist()
+                # inhomogenous arrays.
+                if len({np.asarray(arr).shape for arr in col_list}) > 1:
+                    col_np = pad_contours(col_list)
+                else:
+                    col_np = np.asarray(col_list)
                 col_np = apply_coordinate_offset(
-                    data_array=col.to_numpy(),
+                    data_array=col_np,
                     offset=offset,
                     key=key,
                     keys_to_shift=keys_to_shift,
@@ -1321,7 +1328,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 )
                 dict_info_wsi[key] = da.from_array(
                     col_np,
-                    chunks=(len(col),),
+                    chunks="auto",
                 )
             wsi_info_dict[idx]["info_dict"] = dict_info_wsi
 
@@ -1363,7 +1370,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         self: MultiTaskSegmentor,
         image_shape: list[int, int] | tuple[int, int] | np.ndarray,
         wsi_proc_shape: tuple[int, int] | np.ndarray,
-    ) -> list[list, ...]:
+    ) -> list[list]:
         """Generating tile information.
 
         To avoid out of memory problem when processing WSI-scale in
@@ -1678,6 +1685,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
                     # Add new keys safely
                     for subkey in first:
+                        if subkey.startswith("_"):
+                            continue
                         raw_predictions[task][subkey] = [d[subkey] for d in values]
 
                     del raw_predictions[task][key]
@@ -1762,7 +1771,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
         logger.info("Saving predictions as AnnotationStore.")
 
         for key in ("canvas", "count"):
-            processed_predictions.pop(key, None)
+            if key in processed_predictions:
+                del processed_predictions[key]  # noqa: RUF051
 
         return_predictions = (
             next(iter(self.return_predictions_dict.values()))
@@ -1775,7 +1785,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             keys_to_compute.remove("probabilities")
         if "predictions" in keys_to_compute:
             if not return_predictions:
-                processed_predictions.pop("predictions")
+                del processed_predictions["predictions"]
             keys_to_compute.remove("predictions")
         num_workers = (
             kwargs.get("num_workers", multiprocessing.cpu_count())
@@ -1784,7 +1794,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
         )
         if self.patch_mode:
             for idx, curr_image in enumerate(self.images):
-                values = [processed_predictions[key][idx] for key in keys_to_compute]
+                values = [
+                    processed_predictions[key][str(idx)]  # Zarr v3 Group
+                    if isinstance(processed_predictions[key], zarr.Group)
+                    else processed_predictions[key][idx]
+                    for key in keys_to_compute
+                ]
                 predictions = dict(zip(keys_to_compute, values, strict=False))
                 output_path = _save_annotation_json_store(
                     curr_image=curr_image,
@@ -1818,18 +1833,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 )
             ]
 
-        for key in keys_to_compute:
-            del processed_predictions[key]
-
-        return_probabilities = kwargs.get("return_probabilities", False)
-        if return_probabilities:
-            msg = (
-                f"Probability maps cannot be saved as AnnotationStore or JSON. "
-                f"To visualise heatmaps in TIAToolbox Visualization tool,"
-                f"convert heatmaps in {save_path} to ome.tiff using"
-                f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
-            )
-            logger.info(msg)
+        _post_save_json_store(
+            keys_to_compute=keys_to_compute,
+            processed_predictions=processed_predictions,
+            save_path=save_path,
+            **kwargs,
+        )
 
         return save_paths
 
@@ -1992,7 +2001,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             processed_predictions = zarr.open(str(processed_predictions), mode="r+")
 
         # For single tasks there should be no overlap
-        if self.tasks & processed_predictions.keys():
+        if self.tasks & set(processed_predictions.keys()):
             for task_name in self.tasks:
                 dict_for_store = processed_predictions[task_name]
                 kwargs["class_dict"] = class_dict[task_name]
@@ -2686,9 +2695,9 @@ def _clear_zarr(
     """Helper function to clear all zarr contents and return dask array."""
     if probabilities_zarr is not None:
         if zarr_group is not None and "canvas" in zarr_group:
-            del zarr_group["canvas"][idx]
+            del zarr_group["canvas"][str(idx)]
         if zarr_group is not None and "count" in zarr_group:
-            del zarr_group["count"][idx]
+            del zarr_group["count"][str(idx)]
         return da.from_zarr(
             probabilities_zarr, chunks=(chunk_shape[0], *probabilities_shape)
         )
@@ -2722,7 +2731,7 @@ def _calculate_probabilities(
             canvas[idx] = da.from_zarr(canvas_zarr_, chunks=canvas_zarr_.chunks)
             count[idx] = da.from_zarr(count_zarr[idx], chunks=count_zarr[idx].chunks)
 
-        zarr_group = zarr.open(canvas_zarr[0].store.path, mode="a")
+        zarr_group = zarr.open(canvas_zarr[0].store.root, mode="a")
 
     # Final vertical merge
     return merge_multitask_vertical_chunkwise(
@@ -3052,14 +3061,19 @@ def _move_tile_space_to_wsi_space(
             inst_info["box"] += np.concatenate([tile_tl] * 2)
             if "centroid" in inst_info:
                 inst_info["centroid"] += tile_tl
-            inst_info["contours"] += tile_tl
+            if not np.all(tile_tl == [0, 0]):
+                contours = inst_info["contours"]
+                pad_value = np.iinfo(contours.dtype).min
+                row_mask = np.any(contours != pad_value, axis=1)
+                contours[row_mask] += tile_tl
+                inst_info["contours"] = contours
             inst_uuid = uuid.uuid4().hex
             new_inst_dict[inst_uuid] = inst_info
     return new_inst_dict
 
 
 def _get_inst_info_dicts(post_process_output: tuple[dict]) -> list:
-    """Helper to convert post processing output to dictionary list.
+    """Helper to convert post-processing output to dictionary list.
 
     This function makes the info_dict compatible with tile based processing of
     info_dictionaries from HoVerNet.
@@ -3370,10 +3384,17 @@ def dict_to_json_store(
     """
     # Assumes annotationstore is computed for properties which can fit in memory.
     processed_predictions = {
-        key: np.asarray(arr) if isinstance(arr, zarr.Array) and len(arr) > 0 else arr
+        key: np.asarray(arr) if isinstance(arr, zarr.Array) else arr
         for key, arr in processed_predictions.items()
     }
     contours = processed_predictions.pop("contours")
+    pad_value = np.iinfo(contours.dtype).min
+
+    # Reproduce inhomogeneous array for saving to JSON.
+    contours = np.array(
+        [row[~(np.asarray(row) == pad_value).all(axis=1)] for row in contours],
+        dtype=object,
+    )
     delayed_tasks = DaskDelayedJSONStore(
         contours=contours,
         processed_predictions=processed_predictions,
@@ -3807,7 +3828,12 @@ def apply_coordinate_offset(
         return data_array
 
     # 1. Create the 'container' first to define the structure
-    result = np.empty(len(data_array), dtype=object)
+    result = np.empty(data_array.shape, dtype=data_array.dtype)
+    mask_value = (
+        np.iinfo(data_array.dtype).min
+        if np.issubdtype(data_array.dtype, np.integer)
+        else np.nan
+    )
 
     # 2. Iterate and fill slots manually to prevent NumPy from collapsing rows
     for i, item in enumerate(
@@ -3824,6 +3850,43 @@ def apply_coordinate_offset(
             shift_vector = np.array([dx, dy])
 
         # Perform addition and place the resulting array object into the slot
-        result[i] = (item + shift_vector).astype(item.dtype)
+        mask = (item == mask_value).all(axis=-1)
+        result[i][~mask] = (item[~mask] + shift_vector).astype(item.dtype)
+        result[i][mask] = item[mask]
 
     return result
+
+
+def _post_save_json_store(
+    keys_to_compute: list[str],
+    processed_predictions: dict | zarr.Group,
+    save_path: Path | None,
+    **kwargs: Unpack[MultiTaskSegmentorRunParams],
+) -> None:
+    for key in keys_to_compute:
+        del processed_predictions[key]
+
+    store_root = getattr(getattr(processed_predictions, "store", {}), "root", "")
+    store_path = getattr(processed_predictions, "path", "")
+
+    # Zarr v3 retains metadata and the file which needs to be manually deleted
+    if (
+        isinstance(processed_predictions, zarr.Group)
+        and len(list(processed_predictions.keys())) == 0
+    ):
+        shutil.rmtree(Path(store_root) / Path(store_path), ignore_errors=True)
+
+    if store_path != "" and isinstance(processed_predictions, zarr.Group):
+        zarr_store = zarr.open(store_root, mode="r")
+        if len(list(zarr_store.keys())) == 0:
+            shutil.rmtree(store_root, ignore_errors=True)
+
+    return_probabilities = kwargs.get("return_probabilities", False)
+    if return_probabilities:
+        msg = (
+            f"Probability maps cannot be saved as AnnotationStore or JSON. "
+            f"To visualise heatmaps in TIAToolbox Visualization tool,"
+            f"convert heatmaps in {save_path} to ome.tiff using"
+            f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
+        )
+        logger.info(msg)

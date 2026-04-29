@@ -12,7 +12,8 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from numbers import Number
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Unpack
+from urllib.parse import urlparse
 
 import cv2
 import fsspec
@@ -24,19 +25,21 @@ import SimpleITK as sitk  # noqa: N813
 import tifffile
 import zarr
 from defusedxml import ElementTree
+from fsspec.implementations.reference import ReferenceFileSystem
 from imagecodecs.numcodecs import Delta, Jpeg, Jpeg2k, Lzw
 from numcodecs import register_codec
 from numpy.linalg import inv
 from packaging.version import Version
 from PIL import Image
 from tifffile import TiffPages
+from zarr.experimental.cache_store import CacheStore
+from zarr.storage import FsspecStore, MemoryStore
 
 from tiatoolbox import logger, utils
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
 from tiatoolbox.utils import postproc_defs
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupportedError
-from tiatoolbox.utils.magic import is_sqlite3
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
@@ -53,6 +56,7 @@ if TYPE_CHECKING:  # pragma: no cover
         Resolution,
         Units,
     )
+    from tiatoolbox.wsicore import WSIReaderParams
     from tiatoolbox.wsicore.metadata.ngff import Multiscales
 
 pixman_warning()
@@ -99,7 +103,7 @@ def is_tiled_tiff(path: Path) -> bool:
     return tif.pages[0].is_tiled
 
 
-def is_zarr(path: Path) -> bool:
+def is_zarr(path: Path, **kwargs: Unpack[WSIReaderParams]) -> bool:
     """Check if the input is a Zarr file.
 
     Args:
@@ -111,9 +115,8 @@ def is_zarr(path: Path) -> bool:
             True if the file is a Zarr file.
 
     """
-    path = Path(path)
     try:
-        _ = zarr.open(str(path), mode="r")
+        _ = zarr.open(path, **kwargs, mode="r")
     except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
 
@@ -121,9 +124,10 @@ def is_zarr(path: Path) -> bool:
 
 
 def is_ngff(  # noqa: PLR0911
-    path: Path,
+    path: str | Path,
     min_version: Version = MIN_NGFF_VERSION,
     max_version: Version = MAX_NGFF_VERSION,
+    **kwargs: Unpack[WSIReaderParams],
 ) -> bool:
     """Check if the input is an NGFF file.
 
@@ -143,30 +147,26 @@ def is_ngff(  # noqa: PLR0911
             True if the file is an NGFF file.
 
     """
-    path = Path(path)
-    store = zarr.SQLiteStore(str(path)) if path.is_file() and is_sqlite3(path) else path
     try:
-        zarr_group = zarr.open(store, mode="r")
-    except (zarr.errors.FSPathExistNotDir, zarr.errors.PathNotFoundError):
+        zarr_group = zarr.open(path, mode="r")
+    except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
-    if not isinstance(zarr_group, zarr.hierarchy.Group):
+    if not isinstance(zarr_group, zarr.Group):
         return False
     group_attrs = zarr_group.attrs.asdict()
     try:
-        multiscales: Multiscales = group_attrs["multiscales"]
-        omero = group_attrs["omero"]
-        _ARRAY_DIMENSIONS = group_attrs["_ARRAY_DIMENSIONS"]  # noqa: N806
+        multiscales: Multiscales = group_attrs.get("multiscales", [None])
+        omero = group_attrs.get("omero")
         if not all(
             [
                 isinstance(multiscales, list),
-                isinstance(_ARRAY_DIMENSIONS, list),
                 isinstance(omero, dict),
                 all(isinstance(m, dict) for m in multiscales),
             ],
         ):
             logger.warning(
                 "The NGFF file is not valid. "
-                "The multiscales, _ARRAY_DIMENSIONS and omero attributes "
+                "The multiscales and omero attributes "
                 "must be present and of the correct type.",
             )
             return False
@@ -219,7 +219,7 @@ def is_ngff(  # noqa: PLR0911
         )
         return True
 
-    return is_zarr(path)
+    return is_zarr(path, **kwargs)
 
 
 def _handle_virtual_wsi(
@@ -313,6 +313,12 @@ def _handle_tiff_wsi(
     return None
 
 
+def fix_mangled_url_by_pathlib(input_path: str | Path) -> str:
+    """Fix URl mangled by Path."""
+    # Fix Mangled URL
+    return re.sub(r"^(s3|http|https|ftp|file):/(?!/)", r"\1://", str(input_path))
+
+
 class WSIReader:
     """Base whole slide image (WSI) reader class.
 
@@ -345,7 +351,7 @@ class WSIReader:
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
         post_proc: str | callable | None = "auto",
-        **kwargs: dict,
+        **kwargs: Unpack[WSIReaderParams],
     ) -> WSIReader:
         """Return an appropriate :class:`.WSIReader` object.
 
@@ -406,7 +412,7 @@ class WSIReader:
 
         # Input is a string or Path, normalise to Path
         input_path = Path(input_img)
-        WSIReader.verify_supported_wsi(input_path)
+        WSIReader.verify_supported_wsi(input_path, **kwargs)
 
         # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)
         special_reader = WSIReader._handle_special_cases(
@@ -435,7 +441,9 @@ class WSIReader:
             raise TypeError(msg)
 
     @staticmethod
-    def verify_supported_wsi(input_path: Path) -> None:
+    def verify_supported_wsi(
+        input_path: Path, **kwargs: Unpack[WSIReaderParams]
+    ) -> None:
         """Verify that an input image is supported.
 
         Args:
@@ -447,7 +455,9 @@ class WSIReader:
                 If the input image is not supported.
 
         """
-        if is_ngff(input_path) or is_dicom(input_path):
+        if is_ngff(fix_mangled_url_by_pathlib(input_path), **kwargs) or is_dicom(
+            input_path
+        ):
             return
 
         _, _, suffixes = utils.misc.split_path_name_ext(input_path)
@@ -480,7 +490,7 @@ class WSIReader:
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
         post_proc: str | callable | None = "auto",
-        **kwargs: dict,
+        **kwargs: Unpack[WSIReaderParams],
     ) -> WSIReader | None:
         """Handle special cases for selecting the appropriate WSIReader.
 
@@ -510,7 +520,13 @@ class WSIReader:
             or WSIReader.try_annotation_store(
                 input_path, last_suffix, post_proc, kwargs
             )
-            or WSIReader.try_ngff(input_path, last_suffix, mpp, power)
+            or WSIReader.try_ngff(
+                fix_mangled_url_by_pathlib(input_path),
+                last_suffix,
+                mpp,
+                power,
+                **kwargs,
+            )
             or WSIReader.try_ome_tiff(
                 input_path, suffixes, last_suffix, mpp, power, post_proc
             )
@@ -579,17 +595,18 @@ class WSIReader:
 
     @staticmethod
     def try_ngff(
-        input_path: Path,
+        input_path: str | Path,
         last_suffix: str,
         mpp: tuple[Number, Number] | None,
         power: Number | None,
+        **kwargs: Unpack[WSIReaderParams],
     ) -> NGFFWSIReader | None:
         """Try to create an NGFFWSIReader if the file is a valid NGFF Zarr."""
         if last_suffix == ".zarr":
-            if not is_ngff(input_path):
+            if not is_ngff(input_path, **kwargs):
                 msg = f"File {input_path} does not appear to be a v0.4 NGFF zarr."
                 raise FileNotSupportedError(msg)
-            return NGFFWSIReader(input_path, mpp=mpp, power=power)
+            return NGFFWSIReader(input_path, mpp=mpp, power=power, **kwargs)
         return None
 
     @staticmethod
@@ -637,19 +654,23 @@ class WSIReader:
     def __init__(
         self: WSIReader,
         input_img: str | Path | np.ndarray | AnnotationStore,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
         post_proc: callable | None = None,
+        **kwargs: Unpack[WSIReaderParams],
     ) -> None:
         """Initialize :class:`WSIReader`."""
         if isinstance(input_img, (np.ndarray, AnnotationStore)):
             self.input_path = None
+        elif bool(urlparse(str(input_img)).scheme):
+            self.input_path = str(input_img)
         else:
             self.input_path = Path(input_img)
             if not self.input_path.exists():
                 msg = f"Input path does not exist: {self.input_path}"
                 raise FileNotFoundError(msg)
         self._m_info = None
+
+        mpp = kwargs.get("mpp")
+        power = kwargs.get("power")
 
         # Set a manual mpp value
         if mpp is not None and isinstance(mpp, Number):
@@ -3751,7 +3772,7 @@ class TIFFWSIReader(WSIReader):
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
         series: str = "auto",
-        cache_size: int = 2**28,  # noqa: ARG002
+        cache_size: int = 2**28,
         post_proc: str | callable | None = "auto",
     ) -> None:
         """Initialize :class:`TIFFWSIReader`."""
@@ -3802,16 +3823,21 @@ class TIFFWSIReader(WSIReader):
             series=self.series_n,
             aszarr=True,
         )
-        # remove LRU cache for now as seems to cause issues on windows
-        self._zarr_group = zarr.open(self._zarr_store)
-        if not isinstance(self._zarr_group, zarr.hierarchy.Group):  # pragma: no cover
-            group = zarr.hierarchy.group()
-            group[0] = self._zarr_group
-            self._zarr_group = group
-        self.level_arrays = {
-            int(key): ArrayView(array, axes=self._axes)
-            for key, array in self._zarr_group.items()
-        }
+        # Updated Zarr 3 logic for TIFFWSIReader
+        cache_backend = MemoryStore()
+        self._zarr_cache = CacheStore(
+            store=self._zarr_store, cache_store=cache_backend, max_size=cache_size
+        )
+        self._zarr_group = zarr.open(self._zarr_cache)
+
+        if isinstance(self._zarr_group, zarr.Group):  # pragma: no cover
+            self.level_arrays = {
+                int(key): ArrayView(array, axes=self._axes)
+                for key, array in self._zarr_group.members()
+            }
+        else:  # pragma: no cover
+            self.level_arrays = {0: ArrayView(self._zarr_group, axes=self._axes)}
+
         # ensure level arrays are sorted by descending area
         self.level_arrays = dict(
             sorted(
@@ -4377,9 +4403,9 @@ class TIFFWSIReader(WSIReader):
 
 
 class FsspecJsonWSIReader(WSIReader):
-    """Reader for fsspec zarr json generated by: tiatoolbox/utils/tiff_to_fsspec.py.
+    """Reader for fsspec zarr JSON generated by: tiatoolbox/utils/tiff_to_fsspec.py.
 
-    The fsspec zarr json file represents a SVS or TIFF file
+    The fsspec zarr JSON file represents a SVS or TIFF file
     that be accessed using byte range HTTP API.
 
     All the information on the chunk locations in the SVS or TIFF file
@@ -4398,38 +4424,43 @@ class FsspecJsonWSIReader(WSIReader):
     ) -> None:
         """Initialize :class:`FsspecJsonWSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power)
-        jpeg_codec = Jpeg()
-        register_codec(jpeg_codec, "imagecodecs_jpeg")
 
-        jpeg2k_codec = Jpeg2k()
-        register_codec(jpeg2k_codec, "imagecodecs_jpeg2k")
+        # ------- Register codecs --------
+        register_codec(Jpeg(), "imagecodecs_jpeg")
+        register_codec(Jpeg2k(), "imagecodecs_jpeg2k")
+        register_codec(Lzw(), "imagecodecs_lzw")
+        register_codec(Delta(), "imagecodecs_delta")
 
-        lzw_codec = Lzw()
-        register_codec(lzw_codec, "imagecodecs_lzw")
-
-        delta_codec = Delta()
-        register_codec(delta_codec, "imagecodecs_delta")
-
-        mapper = fsspec.get_mapper(
-            "reference://", fo=str(input_img), target_protocol="file"
+        # Create an async ReferenceFileSystem directly to avoid the
+        # asynchronous mismatch when zarr v3 calls FsspecStore.from_mapper()
+        # (see https://github.com/zarr-developers/zarr-python/issues/3323).
+        # Passing remote_options={"asynchronous": True} ensures that any
+        # remote filesystem (e.g. HTTPFileSystem) is also created as async,
+        # satisfying the invariant checked inside ReferenceFileSystem.__init__.
+        ref_fs = ReferenceFileSystem(
+            fo=str(input_img),
+            target_protocol="file",
+            remote_options={"asynchronous": True},
+            asynchronous=True,
         )
+        self._zarr_store = FsspecStore(fs=ref_fs, read_only=True, path="/")
 
-        self._zarr_array = zarr.open(mapper, mode="r")
+        self._zarr_array = zarr.open(self._zarr_store, mode="r")
 
         self.__set_axes()
 
-        self._zarr_store = self._zarr_array.store
-
-        self._zarr_lru_cache = zarr.LRUStoreCache(self._zarr_store, max_size=cache_size)
-        self._zarr_group = zarr.open(self._zarr_lru_cache)
-        if not isinstance(self._zarr_group, zarr.hierarchy.Group):  # pragma: no cover
-            group = zarr.hierarchy.group()
-            group[0] = self._zarr_group
-            self._zarr_group = group
-        self.level_arrays = {
-            int(key): ArrayView(array, axes=self._axes)
-            for key, array in self._zarr_group.items()
-        }
+        cache_backend = MemoryStore()
+        self._zarr_cache = CacheStore(
+            store=self._zarr_store, cache_store=cache_backend, max_size=cache_size
+        )
+        self._zarr_group = zarr.open(self._zarr_cache)
+        if isinstance(self._zarr_group, zarr.Group):  # pragma: no cover
+            self.level_arrays = {
+                int(key): ArrayView(array, axes=self._axes)
+                for key, array in self._zarr_group.members()
+            }
+        else:  # pragma: no cover
+            self.level_arrays = {0: ArrayView(self._zarr_group, axes=self._axes)}
         # ensure level arrays are sorted by descending area
         self.level_arrays = dict(
             sorted(
@@ -4446,7 +4477,7 @@ class FsspecJsonWSIReader(WSIReader):
         self.tiff_reader_delegate = TIFFWSIReaderDelegate(self, self.level_arrays)
 
     def __set_axes(self) -> None:  # pragma: no cover
-        """Loads axes from the json file.
+        """Loads axes from the JSON file.
 
         In case zarr array has a group 0 at root,
         loads axes from the layer 0.
@@ -4455,7 +4486,7 @@ class FsspecJsonWSIReader(WSIReader):
         root, loads axes from attrs at root.
 
         """
-        if isinstance(self._zarr_array, zarr.hierarchy.Group):
+        if isinstance(self._zarr_array, zarr.Group):
             if "0" in self._zarr_array:
                 zattrs = self._zarr_array["0"].attrs
                 if "_ARRAY_DIMENSIONS" in zattrs:
@@ -5196,14 +5227,13 @@ class DICOMWSIReader(WSIReader):
     def __init__(
         self: DICOMWSIReader,
         input_img: str | Path | np.ndarray,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
         post_proc: str | callable | None = "auto",
+        **kwargs: Unpack[WSIReaderParams],
     ) -> None:
         """Initialize :class:`DICOMWSIReader`."""
         from wsidicom import WsiDicom  # noqa: PLC0415
 
-        super().__init__(input_img, mpp, power, post_proc)
+        super().__init__(input_img=input_img, post_proc=post_proc, **kwargs)
         self.wsi = WsiDicom.open(input_img)
 
     def _info(self: DICOMWSIReader) -> WSIMeta:
@@ -5730,7 +5760,9 @@ class NGFFWSIReader(WSIReader):
 
     """
 
-    def __init__(self: NGFFWSIReader, path: str | Path, **kwargs: dict) -> None:
+    def __init__(
+        self: NGFFWSIReader, path: str | Path, **kwargs: Unpack[WSIReaderParams]
+    ) -> None:
         """Initialize :class:`NGFFWSIReader`."""
         super().__init__(path, **kwargs)
         from imagecodecs import numcodecs  # noqa: PLC0415
@@ -5738,13 +5770,14 @@ class NGFFWSIReader(WSIReader):
         from tiatoolbox.wsicore.metadata import ngff  # noqa: PLC0415
 
         numcodecs.register_codecs()
-        store = zarr.SQLiteStore(path) if is_sqlite3(path) else path
-        self._zarr_group: zarr.hierarchy.Group = zarr.open(store, mode="r")
+        storage_options = kwargs.get("storage_options", {})
+        store = FsspecStore.from_url(path, storage_options=storage_options)
+        self._zarr_group: zarr.Group = zarr.open(store, mode="r", zarr_format=2)
         attrs = self._zarr_group.attrs
-        multiscales = attrs["multiscales"][0]
-        axes = multiscales["axes"]
-        datasets = multiscales["datasets"]
-        omero = attrs["omero"]
+        multiscales = attrs.get("multiscales")[0]
+        axes = multiscales.get("axes")
+        datasets = multiscales.get("datasets")
+        omero = attrs.get("omero")
         self.zattrs = ngff.Zattrs(
             _creator=ngff.Creator(
                 name=attrs.get("name"),
@@ -5770,7 +5803,6 @@ class NGFFWSIReader(WSIReader):
                 rdefs=ngff.RDefs(**omero["rdefs"]),
                 version=omero.get("version"),
             ),
-            _ARRAY_DIMENSIONS=attrs["_ARRAY_DIMENSIONS"],
         )
         self.level_arrays = {
             int(key): ArrayView(array, axes=self.info.axes)
@@ -5795,13 +5827,27 @@ class NGFFWSIReader(WSIReader):
             objective_power=objective_power,
             mpp=mpp,
         )
+        # Get indices by matching the axis name
+        if multiscales.axes:
+            indices = [i for i, a in enumerate(multiscales.axes) if a.name == "x"]
+            x_index = indices[0] if indices else None
+            indices = [i for i, a in enumerate(multiscales.axes) if a.name == "y"]
+            y_index = indices[0] if indices else None
+        else:
+            # Default to (y, x)
+            x_index = 1
+            y_index = 0
+
         return WSIMeta(
             axes="".join(axis.name.upper() for axis in multiscales.axes),
             level_dimensions=[
-                array.shape[:2][::-1]
+                (array.shape[x_index], array.shape[y_index])
                 for _, array in sorted(self._zarr_group.arrays(), key=lambda x: x[0])
             ],
-            slide_dimensions=self._zarr_group[0].shape[:2][::-1],
+            slide_dimensions=(
+                self._zarr_group["0"].shape[x_index],
+                self._zarr_group["0"].shape[y_index],
+            ),
             vendor=self.zattrs._creator.name,  # skipcq: PYL-W0212  # noqa: SLF001
             raw=self._zarr_group.attrs,
             mpp=mpp,
@@ -6305,7 +6351,7 @@ class AnnotationStoreReader(WSIReader):
         renderer: AnnotationRenderer | None = None,
         base_wsi: WSIReader | str | None = None,
         alpha: float = 1.0,
-        **kwargs: dict,
+        **kwargs: Unpack[WSIReaderParams],
     ) -> None:
         """Initialize :class:`AnnotationStoreReader`."""
         super().__init__(store, **kwargs)

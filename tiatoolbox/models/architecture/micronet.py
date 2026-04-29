@@ -633,13 +633,17 @@ class MicroNet(ModelABC):
         nuc_inst_info_dict_ = {}
         if not nuc_inst_info_dict:
             # inst_id should start at 1; use NumPy or Dask empty arrays
-            empty_array = da.empty(shape=0) if is_dask else np.empty(shape=0)
+            empty_array = (
+                da.empty(shape=0, dtype=np.int8)
+                if is_dask
+                else np.empty(shape=0, dtype=np.int8)
+            )
             nuc_inst_info_dict_ = {
-                "box": empty_array,
-                "centroid": empty_array,
-                "contours": empty_array,
-                "prob": empty_array,
-                "type": empty_array,
+                "box": empty_array.copy(),
+                "centroid": empty_array.copy(),
+                "contours": empty_array.copy(),
+                "prob": empty_array.copy(),
+                "type": empty_array.copy(),
             }
         else:
             nuc_inst_info_dict_ = _inst_dict_for_dask_processing(

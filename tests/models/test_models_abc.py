@@ -73,8 +73,8 @@ class Proto(ModelABC):
 
 
 @pytest.mark.skipif(
-    toolbox_env.running_on_ci() or not toolbox_env.has_gpu(),
-    reason="Local test on machine with GPU.",
+    True,  # noqa: FBT003
+    reason="Run Manually, no need to download all models",
 )
 def test_get_pretrained_model() -> None:
     """Test for downloading and creating pretrained models."""

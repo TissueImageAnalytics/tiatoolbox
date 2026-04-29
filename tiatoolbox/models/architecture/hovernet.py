@@ -24,7 +24,7 @@ from tiatoolbox.models.architecture.utils import (
     centre_crop_to_shape,
 )
 from tiatoolbox.models.models_abc import ModelABC
-from tiatoolbox.utils.misc import get_bounding_box
+from tiatoolbox.utils.misc import get_bounding_box, pad_contours
 
 
 class TFSamepaddingLayer(nn.Module):
@@ -712,8 +712,8 @@ class HoVerNet(ModelABC):
                 "box": inst_box,
                 "centroid": inst_centroid,
                 "contours": inst_contour,
-                "prob": None,
-                "type": None,
+                "prob": 0,  # Use 0 to avoid object dtype
+                "type": 0,
             }
 
         if pred_type is not None:
@@ -833,13 +833,17 @@ class HoVerNet(ModelABC):
         nuc_inst_info_dict_ = {}
         if not nuc_inst_info_dict:
             # inst_id should start at 1; use NumPy or Dask empty arrays
-            empty_array = da.empty(shape=0) if is_dask else np.empty(shape=0)
+            empty_array = (
+                da.empty(shape=0, dtype=np.int8)
+                if is_dask
+                else np.empty(shape=0, dtype=np.int8)
+            )
             nuc_inst_info_dict_ = {
-                "box": empty_array,
-                "centroid": empty_array,
-                "contours": empty_array,
-                "prob": empty_array,
-                "type": empty_array,
+                "box": empty_array.copy(),
+                "centroid": empty_array.copy(),
+                "contours": empty_array.copy(),
+                "prob": empty_array.copy(),
+                "type": empty_array.copy(),
             }
         else:
             nuc_inst_info_dict_ = _inst_dict_for_dask_processing(
@@ -920,13 +924,15 @@ def _inst_dict_for_dask_processing(
     # dask dataframe does not support transpose
     inst_info_df = pd.DataFrame(inst_info_dict).transpose()
     for key, col in inst_info_df.items():
-        col_np = col.to_numpy()
+        col_list = col.to_numpy().tolist()
+
+        if len({np.asarray(arr).shape for arr in col_list}) > 1:
+            col_np = pad_contours(col_list)
+        else:
+            col_np = np.asarray(col_list)
+
         inst_info_dict_[key] = (
-            da.from_array(
-                col_np,
-                chunks=(len(col),),
-            )
-            if is_dask
-            else col_np
+            da.from_array(col_np, chunks="auto") if is_dask else col_np
         )
+
     return inst_info_dict_

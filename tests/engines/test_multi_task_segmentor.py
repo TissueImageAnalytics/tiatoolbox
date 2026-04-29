@@ -18,6 +18,7 @@ import zarr
 from click.testing import CliRunner
 from shapely import Point, STRtree
 from tqdm.auto import tqdm
+from zarr.storage import LocalStore
 
 from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
@@ -28,6 +29,7 @@ from tiatoolbox.models.engine.multi_task_segmentor import (
     MultiTaskSegmentor,
     _clear_zarr,
     _get_sel_indices_margin_lines,
+    _post_save_json_store,
     _process_instance_predictions,
     _save_multitask_vertical_to_cache,
     merge_multitask_vertical_chunkwise,
@@ -37,7 +39,7 @@ from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Iterable, Sequence
 
 OutputType = dict[str, Any] | Any
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
@@ -243,8 +245,8 @@ def test_mtsegmentor_tiles_no_metadata(track_tmp_path: Path) -> None:
     assert (field in output_zarr["layer_segmentation"] for field in fields_layer)
     fields_nuclei = ["box", "centroid", "contours", "prob", "type"]
     assert (field in output_zarr["nuclei_segmentation"] for field in fields_nuclei)
-    assert len(output_zarr["layer_segmentation"]["contours"]) == 12
-    assert len(output_zarr["nuclei_segmentation"]["contours"]) == 1299
+    assert len(output_zarr["layer_segmentation"]["contours"][:]) == 12
+    assert len(output_zarr["nuclei_segmentation"]["contours"][:]) == 1299
 
 
 def test_single_task_mtsegmentor(
@@ -599,12 +601,12 @@ def test_wsi_mtsegmentor_zarr(
     predictions_full = output_full_["layer_segmentation"]["predictions"][:]
     overlap_pct = np.mean(predictions_full == predictions_tile) * 100
     assert overlap_pct > 99
-    assert len(output_full_["layer_segmentation"]["contours"]) == len(
-        output_tile_["layer_segmentation"]["contours"]
+    assert len(output_full_["layer_segmentation"]["contours"][:]) == len(
+        output_tile_["layer_segmentation"]["contours"][:]
     )
     assert (
-        len(output_tile_["nuclei_segmentation"]["contours"])
-        / len(output_full_["nuclei_segmentation"]["contours"])
+        len(output_tile_["nuclei_segmentation"]["contours"][:])
+        / len(output_full_["nuclei_segmentation"]["contours"][:])
         > 0.9
     )
 
@@ -820,11 +822,15 @@ def test_clear_zarr() -> None:
     This test only covers scenarios which are not feasible to run on GitHub Actions.
 
     """
-    store = zarr.MemoryStore()
+    store = zarr.storage.MemoryStore()
     root = zarr.group(store=store)
 
     # Create a dummy zarr array for probabilities_zarr
-    probabilities_zarr = root.create_dataset("probabilities", data=np.zeros((5, 3, 3)))
+    probabilities_zarr = root.create_dataset(
+        "probabilities",
+        data=np.zeros((5, 3, 3)),
+        shape=(5, 3, 3),
+    )
 
     idx = 2
     chunk_shape = (1,)
@@ -1205,7 +1211,10 @@ def assert_output_lengths(
     """Assert lengths of output dict fields against expected counts."""
     for field in fields:
         for i, expected in enumerate(expected_counts):
-            assert len(output[field][i]) == expected, f"{field}[{i}] mismatch"
+            idx = str(i) if isinstance(output[field], zarr.Group) else i
+            assert len(np.asarray(output[field][idx], dtype=object)) == expected, (
+                f"{field}[{idx}] mismatch"
+            )
 
 
 def assert_predictions_and_boxes(
@@ -1263,11 +1272,13 @@ def assert_output_equal(
     """Assert equality of arrays across outputs for given fields/indices."""
     for field in fields:
         for i_a, i_b in zip(indices_a, indices_b, strict=False):
-            left = output_a[field][i_a]
-            right = output_b[field][i_b]
+            i_a_ = str(i_a) if isinstance(output_a[field], zarr.Group) else i_a
+            i_b_ = str(i_b) if isinstance(output_b[field], zarr.Group) else i_b
+            left = np.asarray(output_a[field][i_a_])
+            right = np.asarray(output_b[field][i_b_])
             assert all(
                 np.array_equal(a, b) for a, b in zip(left, right, strict=False)
-            ), f"{field}[{i_a}] vs {field}[{i_b}] mismatch"
+            ), f"{field}[{i_a_}] vs {field}[{i_b_}] mismatch"
 
 
 def assert_annotation_store_patch_output(
@@ -1282,18 +1293,11 @@ def assert_annotation_store_patch_output(
 ) -> None:
     """Helper function to test AnnotationStore output."""
     for patch_idx, db_path in enumerate(output_ann):
-        if isinstance(inputs[patch_idx], Path):
-            store_file_name = (
-                f"{inputs[patch_idx].stem}.db"
-                if task_name is None
-                else f"{inputs[patch_idx].stem}_{task_name}.db"
-            )
-        else:
-            store_file_name = (
-                f"{patch_idx}.db"
-                if task_name is None
-                else f"{patch_idx}_{task_name}.db"
-            )
+        store_file_name = _get_store_file_name(
+            inputs=inputs,
+            task_name=task_name,
+            patch_idx=patch_idx,
+        )
 
         assert (
             db_path == track_tmp_path / "patch_output_annotationstore" / store_file_name
@@ -1341,11 +1345,15 @@ def assert_annotation_store_patch_output(
             )
 
             # Contour check (discard last point)
+            contours = output_dict["contours"][patch_idx]
+            pad_value = np.iinfo(contours.dtype).min
+            contours = np.array(
+                [row[~(np.asarray(row) == pad_value).all(axis=1)] for row in contours],
+                dtype=object,
+            )
             matches = [
                 np.array_equal(np.array(a[:-1], dtype=int), np.array(b, dtype=int))
-                for a, b in zip(
-                    result["contours"], output_dict["contours"][patch_idx], strict=False
-                )
+                for a, b in zip(result["contours"], contours, strict=False)
             ]
             # Due to make valid poly there might be translation in a few points
             # in AnnotationStore
@@ -1353,6 +1361,22 @@ def assert_annotation_store_patch_output(
         else:
             assert annotations_geometry_type == []
             assert annotations_list == []
+
+
+def _get_store_file_name(
+    inputs: list | np.ndarray,
+    task_name: str | None,
+    patch_idx: int,
+) -> str:
+    """Helper function to get store filename."""
+    if isinstance(inputs[patch_idx], Path):
+        return (
+            f"{inputs[patch_idx].stem}.db"
+            if task_name is None
+            else f"{inputs[patch_idx].stem}_{task_name}.db"
+        )
+
+    return f"{patch_idx}.db" if task_name is None else f"{patch_idx}_{task_name}.db"
 
 
 def assert_qupath_json_patch_output(  # skipcq: PY-R1000
@@ -1441,11 +1465,17 @@ def assert_qupath_json_patch_output(  # skipcq: PY-R1000
         )
 
         # --- 7. Contour comparison ---
+        contours = output_dict["contours"][patch_idx]
+        pad_value = np.iinfo(contours.dtype).min
+        contours = np.array(
+            [row[~(np.asarray(row) == pad_value).all(axis=1)] for row in contours],
+            dtype=object,
+        )
         if "contours" in fields:
             matches = []
             for a, b in zip(
                 result["contours"],
-                output_dict["contours"][patch_idx],
+                contours,
                 strict=False,
             ):
                 # Discard last point (closed polygon)
@@ -1534,3 +1564,249 @@ def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) ->
     assert "nuclei_segmentation" not in zarr_group
     assert "layer_segmentation" in zarr_group
     assert "predictions" in zarr_group["layer_segmentation"]
+
+
+def test_rearrange_raw_predictions_skips_private_subkeys() -> None:
+    """Tests private keys not in output dict."""
+    # Create a fake task name
+    tasks = {"taskA"}
+
+    # Create raw_predictions structured so that:
+    # - values is a list of dicts
+    # - each dict contains a subkey starting with "_"
+    raw_predictions = {
+        "taskA": {
+            "some_key": [
+                {"_private": 1, "public": 10},
+                {"_private": 2, "public": 20},
+            ]
+        }
+    }
+
+    # Call the staticmethod
+    out = MultiTaskSegmentor._rearrange_raw_predictions_to_per_task_dict(
+        tasks, raw_predictions
+    )
+
+    # The "_private" key should be skipped entirely
+    assert "_private" not in out["taskA"]
+
+    # The "public" key should be added
+    assert out["taskA"]["public"] == [10, 20]
+
+    # The original key should be deleted
+    assert "some_key" not in out["taskA"]
+
+
+def test_post_save_json_store_deletes_empty_store(
+    track_tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test zarr store deletion post save JSON."""
+    # Create an empty Zarr v3 store
+    store_root = track_tmp_path / "empty_store.zarr"
+    store = LocalStore(str(store_root))
+    root = zarr.open(store, mode="w")  # empty zarr.Group
+
+    assert list(root.keys()) == []
+
+    # ---- Proxy object that LOOKS like a zarr.Group ----
+    class GroupProxy:
+        def __init__(self: GroupProxy, group: zarr.Group, path: Path | str) -> None:
+            self._group = group
+            self.path = path
+            self.store = group.store
+
+        # Make isinstance(proxy, zarr.Group) return True
+        @property
+        def __class__(self: GroupProxy) -> type[zarr.Group]:
+            return zarr.Group
+
+        # Delegate attribute access
+        def __getattr__(
+            self: GroupProxy, item: str
+        ) -> zarr.Group | zarr.Array | str | int | float | Iterable[str]:
+            return getattr(self._group, item)
+
+        # Delegate mapping behavior
+        def keys(self: GroupProxy) -> Iterable[str]:
+            return self._group.keys()
+
+        def __getitem__(self: GroupProxy, item: str) -> zarr.Group | zarr.Array:
+            return self._group[item]
+
+    processed_predictions = GroupProxy(root, "dummy")
+
+    # Patch shutil.rmtree so we can detect the call
+    called = {"flag": False}
+
+    def fake_rmtree(path: Path | str, *, ignore_errors: bool) -> None:  # noqa: ARG001
+        called["flag"] = True
+
+    monkeypatch.setattr(shutil, "rmtree", fake_rmtree)
+
+    # Call the function
+    _post_save_json_store(
+        keys_to_compute=[],
+        processed_predictions=processed_predictions,
+        save_path=None,
+    )
+
+    # Assert deletion branch executed
+    assert called["flag"] is True
+
+
+class DummyStoreSingle:
+    """Minimal mock of DaskDelayedJSONStore for testing a single feature build."""
+
+    _contours: list[np.ndarray]
+    _processed_predictions: dict[str, list[Any]]
+
+    def __init__(self) -> None:
+        """Initialize DummyStoreSingle."""
+        self._contours = [
+            np.array([[0, 0], [10, 0], [10, 10]], dtype=float),
+        ]
+        self._processed_predictions = {
+            "type": [None],
+            "area": [None],
+        }
+
+    def _build_single_qupath_feature(
+        self,
+        i: int,
+        class_dict: dict[int, str] | None,
+        origin: tuple[float, float],
+        scale_factor: tuple[float, float],
+        class_colors: dict[int, Any],
+    ) -> dict[str, Any]:
+        """Call the real method using this dummy instance."""
+        return DaskDelayedJSONStore._build_single_qupath_feature(
+            self, i, class_dict, origin, scale_factor, class_colors
+        )
+
+
+def test_build_single_qupath_feature_type_none() -> None:
+    """Test that None class values are handled correctly."""
+    store = DummyStoreSingle()
+
+    class_dict = {0: "background"}
+    origin = (5.0, 5.0)
+    scale_factor = (1.0, 1.0)
+    class_colors = {0: "#FFFFFF"}
+
+    result = store._build_single_qupath_feature(
+        i=0,
+        class_dict=class_dict,
+        origin=origin,
+        scale_factor=scale_factor,
+        class_colors=class_colors,
+    )
+
+    props = result["properties"]
+
+    assert props["type"] == "background"
+    assert props["classification"]["name"] == "background"
+    assert props["classification"]["color"] == "#FFFFFF"
+    assert props["class_value"] == 0
+    assert result["geometry"]["type"] == "Polygon"
+    assert result["name"] == "background"
+
+
+# ----------------------------------------------------------------------
+# Monkeypatch fixture for compute_qupath_json
+# ----------------------------------------------------------------------
+@pytest.fixture
+def patch_save_qupath_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Patch save_qupath_json so compute_qupath_json returns JSON directly."""
+
+    def fake_save_qupath_json(
+        save_path: Path | None,  # noqa: ARG001
+        qupath_json: dict[str, Any],
+    ) -> dict[str, Any]:
+        return qupath_json
+
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.multi_task_segmentor.save_qupath_json",
+        fake_save_qupath_json,
+    )
+
+
+# ----------------------------------------------------------------------
+# Dummy store for compute_qupath_json
+# ----------------------------------------------------------------------
+class DummyStoreCompute:
+    """Minimal mock of DaskDelayedJSONStore for testing compute_qupath_json."""
+
+    _contours: list[np.ndarray]
+    _processed_predictions: dict[str, list[Any]]
+
+    def __init__(self) -> None:
+        """Initialize DummyStoreCompute."""
+        self._contours = [
+            np.array([[0, 0], [10, 0], [10, 10]], dtype=float),
+            np.array([[5, 5], [15, 5], [15, 15]], dtype=float),
+        ]
+        self._processed_predictions = {
+            "type": [None, None],
+        }
+
+    # --- REQUIRED: compute_qupath_json calls this internally ---
+    def _build_single_qupath_feature(
+        self,
+        i: int,
+        class_dict: dict[int, str] | None,
+        origin: tuple[float, float],
+        scale_factor: tuple[float, float],
+        class_colors: dict[int, Any],
+    ) -> dict[str, Any]:
+        return DaskDelayedJSONStore._build_single_qupath_feature(
+            self, i, class_dict, origin, scale_factor, class_colors
+        )
+
+    def compute_qupath_json(
+        self,
+        class_dict: dict[int, str] | None,
+        origin: tuple[float, float],
+        scale_factor: tuple[float, float],
+        save_path: Path | None,
+        batch_size: int = 100,
+        num_workers: int = 0,
+        *,
+        verbose: bool,
+    ) -> dict[str, Any]:
+        """Call the real compute_qupath_json using this dummy instance."""
+        return DaskDelayedJSONStore.compute_qupath_json(
+            self,
+            class_dict=class_dict,
+            origin=origin,
+            scale_factor=scale_factor,
+            save_path=save_path,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            verbose=verbose,
+        )
+
+
+def test_compute_qupath_json_valid_ids_empty(
+    patch_save_qupath_json: None,  # noqa: ARG001
+) -> None:
+    """Test fallback class_dict={0:0} when all type predictions are None."""
+    store = DummyStoreCompute()
+
+    result = store.compute_qupath_json(
+        class_dict=None,
+        origin=(0, 0),
+        scale_factor=(1, 1),
+        save_path=None,
+        verbose=False,
+    )
+
+    assert result["type"] == "FeatureCollection"
+    assert len(result["features"]) == 2
+
+    for feature in result["features"]:
+        props = feature["properties"]
+        assert props["type"] == 0
+        assert props["classification"]["name"] == 0
+        assert props["class_value"] == 0

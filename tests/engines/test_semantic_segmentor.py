@@ -116,7 +116,7 @@ def test_semantic_segmentor_patches(
     assert "predictions" in output_
 
     processed_predictions = {
-        k: da.from_zarr(v) for k, v in output_.items() if k != "labels"
+        k: da.from_zarr(v) for k, v in output_.members() if k != "labels"
     }
 
     # Test for saving output as annotation store.

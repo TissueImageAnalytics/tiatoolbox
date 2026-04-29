@@ -60,7 +60,7 @@ jobs:
         shell: bash
         run: |
           source $CONDA/etc/profile.d/conda.sh
-          conda create -y -n test-env python=${{ matrix.python-version }}
+          conda create -y -n test-env python=${{ matrix.python-version }} pip
           conda activate test-env
           conda install -y openjpeg sqlite
           python -m pip install --upgrade pip setuptools wheel
@@ -72,7 +72,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          conda create -y -n test-env python=${{ matrix.python-version }}
+          conda create -y -n test-env python=${{ matrix.python-version }} pip
           conda activate test-env
           conda install -y openjpeg sqlite
           python -m pip install --upgrade pip setuptools wheel
