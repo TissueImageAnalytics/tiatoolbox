@@ -131,7 +131,6 @@ import torch
 import zarr
 from dask import delayed
 from matplotlib import pyplot as plt
-from shapely import Polygon
 from shapely.geometry import mapping
 from shapely.geometry import shape as feature2geometry
 from shapely.strtree import STRtree
@@ -3556,12 +3555,16 @@ class DaskDelayedJSONStore:
                 to QuPath JSON.
 
         """
-        contour = np.array(self._contours[i], dtype=float)
-        contour[:, 0] = contour[:, 0] * scale_factor[0] + origin[0]
-        contour[:, 1] = contour[:, 1] * scale_factor[1] + origin[1]
-
-        poly = Polygon(contour)
-        poly_geo = mapping(poly)
+        geom = make_valid_poly(
+            feature2geometry(
+                {
+                    "type": self._processed_predictions.get("geom_type", "Polygon"),
+                    "coordinates": scale_factor * np.array([self._contours[i]]),
+                }
+            ),
+            tuple(origin),
+        )
+        geo_map = mapping(geom)
 
         props = {}
         class_value = None
@@ -3605,7 +3608,7 @@ class DaskDelayedJSONStore:
         return {
             "type": "Feature",
             "id": f"object_{i}",
-            "geometry": poly_geo,
+            "geometry": geo_map,
             "properties": props,
             "objectType": "annotation",
             "name": class_name if class_name is not None else "object",
