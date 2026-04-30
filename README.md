@@ -105,7 +105,7 @@ Prepare a computer as a convenient platform for further development of the Pytho
 
 5. Create a virtual environment and install dependencies.
 
-   **Using [uv](https://docs.astral.sh/uv/) (recommended):**
+   **Using [uv](https://docs.astral.sh/uv/):**
 
 ```sh
     $ uv sync --extra dev
