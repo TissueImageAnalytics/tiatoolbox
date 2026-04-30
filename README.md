@@ -103,25 +103,42 @@ Prepare a computer as a convenient platform for further development of the Pytho
     $ cd tiatoolbox
 ```
 
-5. Create virtual environment for TIAToolbox using
+5. Create a virtual environment and install dependencies.
+
+   **Using [uv](https://docs.astral.sh/uv/) (recommended):**
 
 ```sh
-    $ conda create -n tiatoolbox-dev python=3.11 # select version of your choice
+    $ uv sync --extra dev
+    $ source .venv/bin/activate   # Linux/macOS
+    $ .venv\Scripts\activate      # Windows
+```
+
+   For CPU-only machines (no CUDA GPU):
+
+```sh
+    $ uv sync --extra dev --index pytorch-cpu=https://download.pytorch.org/whl/cpu
+```
+
+   **Using conda:**
+
+```sh
+    $ conda create -n tiatoolbox-dev python=3.11
     $ conda activate tiatoolbox-dev
     $ pip install -r requirements/requirements_dev.txt
 ```
 
-or
+   or (Linux/macOS only):
 
 ```sh
-    $ conda env create -f requirements/requirements.dev.conda.yml # for linux/mac only.
+    $ conda env create -f requirements/requirements.dev.conda.yml
     $ conda activate tiatoolbox-dev
 ```
 
-6. To use the packages installed in the environment, run the command:
+6. To re-enter the environment in a new terminal:
 
 ```sh
-    $ conda activate tiatoolbox-dev
+    $ source .venv/bin/activate   # uv (Linux/macOS)
+    $ conda activate tiatoolbox-dev  # conda
 ```
 
 ### License
