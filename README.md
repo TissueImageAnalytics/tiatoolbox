@@ -113,13 +113,13 @@ Prepare a computer as a convenient platform for further development of the Pytho
     $ .venv\Scripts\activate      # Windows
 ```
 
-   For CPU-only machines (no CUDA GPU):
+For CPU-only machines (no CUDA GPU):
 
 ```sh
     $ uv sync --extra dev --index pytorch-cpu=https://download.pytorch.org/whl/cpu
 ```
 
-   **Using conda:**
+**Using conda:**
 
 ```sh
     $ conda create -n tiatoolbox-dev python=3.11
@@ -127,7 +127,7 @@ Prepare a computer as a convenient platform for further development of the Pytho
     $ pip install -r requirements/requirements_dev.txt
 ```
 
-   or (Linux/macOS only):
+or (Linux/macOS only):
 
 ```sh
     $ conda env create -f requirements/requirements.dev.conda.yml

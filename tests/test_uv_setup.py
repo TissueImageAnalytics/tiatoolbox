@@ -38,7 +38,7 @@ def _parse_req_line(line: str) -> tuple[str, str] | None:
 
     Returns None for blank lines, comments, and -r/-i includes.
     """
-    line = line.split("#")[0].strip()
+    line = line.split("#", maxsplit=1)[0].strip()
     if not line or line.startswith("-"):
         return None
     # Match name (with optional extras) then version specifier
@@ -224,7 +224,9 @@ class TestVersionConsistency:
 def test_python_version_file_exists() -> None:
     """.python-version must exist and declare Python 3.x."""
     pv_file = REPO_ROOT / ".python-version"
-    assert pv_file.exists(), ".python-version not found — run `echo '3.11' > .python-version`"
+    assert pv_file.exists(), (
+        ".python-version not found — run `echo '3.11' > .python-version`"
+    )
     content = pv_file.read_text().strip()
     assert re.match(r"^3\.\d+", content), (
         f".python-version contains {content!r}, expected e.g. '3.11'"
@@ -243,7 +245,9 @@ def test_pyproject_has_project_table() -> None:
     data = tomllib.loads(PYPROJECT.read_text())
     assert "project" in data, "[project] table missing from pyproject.toml"
     for field in ("name", "version", "dependencies", "requires-python"):
-        assert field in data["project"], f"[project].{field} missing from pyproject.toml"
+        assert field in data["project"], (
+            f"[project].{field} missing from pyproject.toml"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -272,7 +276,7 @@ CRITICAL_IMPORTS = [
 def test_critical_module_importable(module: str) -> None:
     """Each critical module must be importable in the active environment."""
     result = subprocess.run(  # noqa: S603
-        [sys.executable, "-c", f"import {module}"],  # noqa: S603
+        [sys.executable, "-c", f"import {module}"],
         capture_output=True,
         text=True,
     )
@@ -285,8 +289,8 @@ def test_critical_module_importable(module: str) -> None:
 
 def test_cli_entry_point() -> None:
     """The `tiatoolbox` CLI entry point must respond to --help."""
-    result = subprocess.run(  # noqa: S603
-        [sys.executable, "-m", "tiatoolbox", "--help"],  # noqa: S603
+    result = subprocess.run(
+        [sys.executable, "-m", "tiatoolbox", "--help"],
         capture_output=True,
         text=True,
     )
