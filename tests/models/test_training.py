@@ -41,8 +41,12 @@ from tiatoolbox.models.training import (
     get_segmentation_augmentation,
     ioconfig_from_dict,
     ioconfig_to_dict,
+    make_dataloaders,
+    resolve_trainer_amp,
+    resolve_trainer_device,
     save_checkpoint,
     save_model_weights,
+    split_dataset,
     stratified_split_indices,
 )
 from tiatoolbox.models.training.tasks import TrainingTaskABC
@@ -266,6 +270,71 @@ def test_stratified_split_indices_preserves_class_balance() -> None:
     assert len(val_indices) == 6
     assert np.bincount(train_targets).tolist() == [8, 8, 8]
     assert np.bincount(val_targets).tolist() == [2, 2, 2]
+
+
+def test_split_dataset_supports_stratified_dataset_targets(
+    track_tmp_path: Path,
+) -> None:
+    """Dataset splitting helper should return balanced train/val subsets."""
+    dataset_root = _build_classification_dataset(track_tmp_path / "class_dataset")
+    dataset = PatchFolderClassificationDataset(dataset_root)
+
+    train_dataset, val_dataset = split_dataset(
+        dataset,
+        val_fraction=0.25,
+        stratify=True,
+        seed=7,
+    )
+
+    train_targets = [dataset.samples[index][1] for index in train_dataset.indices]
+    val_targets = [dataset.samples[index][1] for index in val_dataset.indices]
+
+    assert len(train_dataset) == 9
+    assert len(val_dataset) == 3
+    assert sorted(np.bincount(train_targets).tolist()) == [4, 5]
+    assert sorted(np.bincount(val_targets).tolist()) == [1, 2]
+
+
+def test_split_dataset_accepts_explicit_stratification_targets() -> None:
+    """Dataset splitting helper should accept explicit stratification targets."""
+    dataset = torch.utils.data.TensorDataset(torch.arange(12))
+    targets = [0, 1] * 6
+
+    train_dataset, val_dataset = split_dataset(
+        dataset,
+        val_fraction=0.5,
+        stratify=targets,
+        seed=7,
+    )
+
+    train_targets = [targets[index] for index in train_dataset.indices]
+    val_targets = [targets[index] for index in val_dataset.indices]
+
+    assert len(train_dataset) == 6
+    assert len(val_dataset) == 6
+    assert np.bincount(train_targets).tolist() == [3, 3]
+    assert np.bincount(val_targets).tolist() == [3, 3]
+
+
+def test_make_dataloaders_builds_train_and_validation_loaders() -> None:
+    """Dataloader helper should keep loader setup concise but explicit."""
+    dataset = torch.utils.data.TensorDataset(torch.arange(10))
+    train_dataset, val_dataset = split_dataset(dataset, val_fraction=0.2, seed=7)
+
+    train_loader, val_loader = make_dataloaders(
+        train_dataset,
+        val_dataset,
+        batch_size=4,
+        num_workers=0,
+        drop_last=True,
+    )
+
+    assert train_loader.batch_size == 4
+    assert train_loader.drop_last is True
+    assert val_loader is not None
+    assert val_loader.batch_size == 4
+    assert val_loader.drop_last is True
+    assert len(next(iter(train_loader))[0]) == 4
 
 
 def test_patch_mask_pair_dataset(track_tmp_path: Path) -> None:
@@ -1113,6 +1182,54 @@ def test_build_kongnet_training_task_uses_model_output_metadata() -> None:
     assert metrics["lymphocyte_dice"] == pytest.approx(1.0)
 
 
+def test_build_kongnet_training_task_defaults_to_head_target_keys() -> None:
+    """KongNet helper should use matching head names as target keys by default."""
+    model = KongNet(
+        num_heads=2,
+        num_channels_per_head=[3, 3],
+        target_channels=[2, 5],
+        min_distance=5,
+        threshold_abs=0.5,
+        class_dict={0: "Tumour Cell", 1: "Lymphocyte"},
+    )
+
+    task = build_kongnet_training_task(
+        model,
+        target_selection="inference_channels",
+        include_head_loss_metrics=False,
+    )
+
+    assert [head.name for head in task.heads] == ["tumour_cell", "lymphocyte"]
+    assert [head.target_key for head in task.heads] == ["tumour_cell", "lymphocyte"]
+
+    output = torch.zeros((1, 6, 2, 2), dtype=torch.float32)
+    output[:, 2:3, :, :] = torch.tensor(
+        [[[[6.0, -6.0], [6.0, -6.0]]]],
+        dtype=torch.float32,
+    )
+    output[:, 5:6, :, :] = torch.tensor(
+        [[[[-6.0, 6.0], [-6.0, 6.0]]]],
+        dtype=torch.float32,
+    )
+    targets = {
+        "tumour_cell": torch.tensor(
+            [[[[1.0, 0.0], [1.0, 0.0]]]],
+            dtype=torch.float32,
+        ),
+        "lymphocyte": torch.tensor(
+            [[[[0.0, 1.0], [0.0, 1.0]]]],
+            dtype=torch.float32,
+        ),
+    }
+
+    loss = task.compute_loss(output, targets)
+    metrics = task.compute_metrics(output, targets)
+
+    assert torch.isfinite(loss)
+    assert metrics["tumour_cell_dice"] == pytest.approx(1.0)
+    assert metrics["lymphocyte_dice"] == pytest.approx(1.0)
+
+
 def test_trainer_supports_structured_targets_and_epoch_hooks(
     track_tmp_path: Path,
 ) -> None:
@@ -1187,6 +1304,45 @@ def test_trainer_supports_structured_targets_and_epoch_hooks(
     assert history[-1]["train_epoch_accuracy"] == pytest.approx(1.0)
     assert history[-1]["val_epoch_accuracy"] == pytest.approx(1.0)
     assert task.reset_calls == [True, False]
+
+
+def test_trainer_config_auto_device_and_amp_resolution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Trainer config helpers should resolve auto device and AMP consistently."""
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+    assert resolve_trainer_device("auto") == torch.device("cpu")
+    assert resolve_trainer_amp(amp="auto", device="auto") is False
+    assert resolve_trainer_amp(amp=True, device="cpu") is False
+    assert resolve_trainer_amp(amp=False, device="cuda") is False
+
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    assert resolve_trainer_device("auto") == torch.device("cuda")
+    assert resolve_trainer_amp(amp="auto", device="auto") is True
+    assert resolve_trainer_amp(amp=True, device="cuda") is True
+
+
+def test_trainer_uses_auto_device_and_amp_defaults(track_tmp_path: Path) -> None:
+    """TrainerConfig defaults should create a CPU trainer on CPU-only systems."""
+    model = nn.Sequential(nn.Flatten(), nn.Linear(3 * 4 * 4, 2))
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+    loader = _build_dummy_loader()
+
+    trainer = Trainer(
+        model=model,
+        task=ClassificationTask(),
+        optimizer=optimizer,
+        train_loader=loader,
+        val_loader=loader,
+        config=TrainerConfig(
+            max_epochs=1,
+            output_dir=track_tmp_path / "auto_config",
+        ),
+        checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
+    )
+
+    assert trainer.device.type in {"cpu", "cuda"}
+    assert trainer.use_amp is (trainer.device.type == "cuda")
 
 
 def test_trainer_requires_validation_loader_for_val_monitor(

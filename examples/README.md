@@ -108,7 +108,7 @@ Demonstrates the use of the TIAToolbox implementation of the [KongNet model](htt
 [![image](../docs/images/nucleus_detection_classification.png)](./12-nucleus-detection.ipynb)
 ### 13. Training Patch Classifiers from Per-Class Patch Folders ([13-training-patch-folder-classification](./13-training-patch-folder-classification.ipynb))
 
-Shows how to train a patch classifier using the new training package in `tiatoolbox.models.training` for the folder-based classification setup, where each class corresponds to a subfolder of patches. The notebook covers dataset construction, direct PyTorch `DataLoader`/optimizer/scheduler setup, trainer configuration, checkpointing, and resuming training from `last.ckpt`.
+Shows how to train a patch classifier using the new training package in `tiatoolbox.models.training` for the folder-based classification setup, where each class corresponds to a subfolder of patches. The notebook covers dataset construction, TIAToolbox split/dataloader helpers, explicit optimizer/scheduler setup, trainer configuration, checkpointing, and resuming training from `last.ckpt`.
 
 ### 14. Training Tissue Segmentation from Slide + Annotation Store Pairs ([14-training-slide-annotation-segmentation](./14-training-slide-annotation-segmentation.ipynb))
 

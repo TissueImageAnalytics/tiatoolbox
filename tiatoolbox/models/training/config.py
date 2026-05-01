@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+import torch
+
 
 @dataclass
 class CheckpointConfig:
@@ -19,13 +21,35 @@ class CheckpointConfig:
     artifact_filename: str = "training_artifact.json"
 
 
+def resolve_trainer_device(device: str | torch.device = "auto") -> torch.device:
+    """Resolve a trainer device specification to a concrete torch device."""
+    if isinstance(device, str) and device == "auto":
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    return torch.device(device)
+
+
+def resolve_trainer_amp(
+    *,
+    amp: bool | Literal["auto"] = "auto",
+    device: str | torch.device = "auto",
+) -> bool:
+    """Resolve an AMP setting for a concrete or automatic trainer device."""
+    resolved_device = resolve_trainer_device(device)
+    if amp == "auto":
+        return resolved_device.type == "cuda"
+    if isinstance(amp, bool):
+        return amp and resolved_device.type == "cuda"
+    msg = "`amp` must be a boolean or 'auto'."
+    raise TypeError(msg)
+
+
 @dataclass
 class TrainerConfig:
     """Configuration for training loop behavior."""
 
     max_epochs: int = 1
-    device: str = "cpu"
-    amp: bool = True
+    device: str | torch.device = "auto"
+    amp: bool | Literal["auto"] = "auto"
     grad_accum_steps: int = 1
     grad_clip_norm: float | None = None
     val_interval: int = 1
@@ -34,7 +58,7 @@ class TrainerConfig:
     monitor: str = "val_loss"
     monitor_mode: Literal["min", "max"] = "min"
     early_stopping_patience: int | None = None
-    output_dir: Path | str = Path(".")
+    output_dir: Path | str = Path()
     log_every_n_steps: int = 20
 
     def __post_init__(self: TrainerConfig) -> None:
@@ -57,4 +81,7 @@ class TrainerConfig:
         if self.grad_clip_norm is not None and self.grad_clip_norm <= 0:
             msg = "`grad_clip_norm` must be positive when provided."
             raise ValueError(msg)
+        if not isinstance(self.amp, bool) and self.amp != "auto":
+            msg = "`amp` must be a boolean or 'auto'."
+            raise TypeError(msg)
         self.output_dir = Path(self.output_dir)

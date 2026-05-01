@@ -9,13 +9,14 @@ from typing import Any
 
 import numpy as np
 import torch
-from torch.amp import GradScaler, autocast
 from torch import nn
+from torch.amp import GradScaler, autocast
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from torch.utils.data import DataLoader
 
 from tiatoolbox import logger
+from tiatoolbox.models.training.artifact import TrainingArtifactManifest
 from tiatoolbox.models.training.checkpoint import (
     extract_model_state_dict,
     load_checkpoint,
@@ -23,10 +24,11 @@ from tiatoolbox.models.training.checkpoint import (
     save_checkpoint,
     save_model_weights,
 )
-from tiatoolbox.models.training.artifact import TrainingArtifactManifest
 from tiatoolbox.models.training.config import (
     CheckpointConfig,
     TrainerConfig,
+    resolve_trainer_amp,
+    resolve_trainer_device,
 )
 from tiatoolbox.models.training.tasks import TrainingTaskABC
 
@@ -70,7 +72,7 @@ class Trainer:
         self.output_dir = Path(self.config.output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        self.device = torch.device(self.config.device)
+        self.device = resolve_trainer_device(self.config.device)
         self.model = model.to(self.device)
 
         self.task = task
@@ -80,7 +82,7 @@ class Trainer:
         self.train_loader = train_loader
         self.val_loader = val_loader
 
-        self.use_amp = self.config.amp and self.device.type == "cuda"
+        self.use_amp = resolve_trainer_amp(amp=self.config.amp, device=self.device)
         self.grad_scaler = GradScaler(self.device.type, enabled=self.use_amp)
 
         self._validate_monitor_configuration()
@@ -290,6 +292,7 @@ class Trainer:
     def _build_checkpoint_state(self: Trainer, epoch: int) -> dict[str, Any]:
         """Build serializable training state."""
         trainer_config = asdict(self.config)
+        trainer_config["device"] = str(trainer_config["device"])
         trainer_config["output_dir"] = str(trainer_config["output_dir"])
         return {
             "epoch": epoch,

@@ -23,6 +23,8 @@ from tiatoolbox.models.training.checkpoint import (
 from tiatoolbox.models.training.config import (
     CheckpointConfig,
     TrainerConfig,
+    resolve_trainer_amp,
+    resolve_trainer_device,
 )
 from tiatoolbox.models.training.datasets import (
     PatchAnnotationDataset,
@@ -70,6 +72,8 @@ from tiatoolbox.models.training.trainer import (
     set_seed,
 )
 from tiatoolbox.models.training.utils import (
+    make_dataloaders,
+    split_dataset,
     stratified_split_indices,
 )
 
@@ -120,8 +124,12 @@ __all__ = [
     "load_checkpoint",
     "load_model_state_dict",
     "load_training_artifact",
+    "make_dataloaders",
+    "resolve_trainer_amp",
+    "resolve_trainer_device",
     "save_checkpoint",
     "save_model_weights",
     "set_seed",
+    "split_dataset",
     "stratified_split_indices",
 ]
