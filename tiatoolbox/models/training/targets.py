@@ -21,6 +21,8 @@ if TYPE_CHECKING:  # pragma: no cover
 Bounds = tuple[float, float, float, float]
 TargetType = np.ndarray | int | float | dict[str, "TargetType"]
 SpatialTargetKind = Literal["mask", "image"]
+DEFAULT_GEOMETRY_PREDICATE = "intersects"
+DEFAULT_DISTANCE = 0.0
 
 
 @dataclass(frozen=True)
@@ -335,6 +337,16 @@ class TargetBuilderABC(ABC):
         """Build target array/scalar from queried annotations."""
 
 
+def _has_query_settings(builder: TargetBuilderABC) -> bool:
+    """Return whether a builder has non-default annotation query settings."""
+    return (
+        builder.where is not None
+        or builder.geometry_predicate != DEFAULT_GEOMETRY_PREDICATE
+        or builder.min_area is not None
+        or builder.distance != DEFAULT_DISTANCE
+    )
+
+
 class CompositeTargetBuilder(TargetBuilderABC):
     """Combine multiple target builders into a nested target dictionary."""
 
@@ -403,9 +415,18 @@ class StackedTargetBuilder(TargetBuilderABC):
         builders: dict[str, TargetBuilderABC],
         *,
         dtype: np.dtype = np.float32,
+        where: Predicate | None = None,
+        geometry_predicate: str = DEFAULT_GEOMETRY_PREDICATE,
+        min_area: float | None = None,
+        distance: float = DEFAULT_DISTANCE,
     ) -> None:
         """Initialize :class:`StackedTargetBuilder`."""
-        super().__init__()
+        super().__init__(
+            where=where,
+            geometry_predicate=geometry_predicate,
+            min_area=min_area,
+            distance=distance,
+        )
         if not builders:
             msg = "`builders` must contain at least one target builder."
             raise ValueError(msg)
@@ -436,12 +457,34 @@ class StackedTargetBuilder(TargetBuilderABC):
     ) -> np.ndarray:
         """Build and stack all child targets for one patch.
 
-        Each child builder owns its annotation query configuration. Querying via
-        the children keeps per-channel filters such as ``where`` and
-        ``geometry_predicate`` intact when multiple target builders are composed.
+        A parent-level query is shared by all children when the stack owns query
+        settings. Otherwise, each child builder owns its annotation query
+        configuration so per-channel filters such as ``where`` and
+        ``geometry_predicate`` remain intact.
         """
         normalized_bounds = _as_bounds(patch_bounds)
         normalized_shape = _normalize_output_shape(output_shape)
+
+        parent_has_query_settings = _has_query_settings(self)
+        child_query_names = [
+            name
+            for name, builder in self.builders.items()
+            if _has_query_settings(builder)
+        ]
+
+        if parent_has_query_settings and child_query_names:
+            msg = (
+                "StackedTargetBuilder cannot combine parent query settings with "
+                "child query settings. Move the query settings to either the "
+                f"parent stack or the child builders. Conflicting children: "
+                f"{', '.join(child_query_names)}."
+            )
+            raise ValueError(msg)
+
+        if parent_has_query_settings:
+            annotations = self.query_annotations(store, normalized_bounds)
+            return self.build_target(annotations, normalized_bounds, normalized_shape)
+
         channel_targets = {
             name: builder.create_target(
                 store=store,

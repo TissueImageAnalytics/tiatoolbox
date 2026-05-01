@@ -242,22 +242,71 @@ def test_boundary_target_builder(track_tmp_path: Path) -> None:
     assert target[9, 9] == pytest.approx(0.0)
 
 
-def test_stacked_target_builder(track_tmp_path: Path) -> None:
-    """Stacked target builders should combine dense targets into HxWxC maps."""
+def test_stacked_target_builder_shared_parent_where_queries_once(
+    track_tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Stacked parent queries should be shared by all child target channels."""
     store = _create_test_store(track_tmp_path / "stacked_targets.db")
+    where = 'props["class"] == "tumor"'
+    query_calls: list[dict[str, object]] = []
+    original_query = store.query
+
+    def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
+        query_calls.append(dict(kwargs))
+        return original_query(*args, **kwargs)
+
+    monkeypatch.setattr(store, "query", counting_query)
 
     builder = StackedTargetBuilder(
         {
-            "mask": MaskTargetBuilder(
+            "mask": MaskTargetBuilder(class_mapping=None),
+            "boundary": BoundaryTargetBuilder(),
+            "heatmap": GaussianHeatmapTargetBuilder(sigma=1.0),
+        },
+        where=where,
+    )
+
+    target = builder.create_target(
+        store=store,
+        patch_bounds=(0, 0, 10, 10),
+        output_shape=(10, 10),
+    )
+
+    assert len(query_calls) == 1
+    assert query_calls[0]["where"] == where
+    assert target.shape == (10, 10, 3)
+    assert target.dtype == np.float32
+    assert target[2, 2, 0] == pytest.approx(1.0)
+    assert target[2, 7, 0] == pytest.approx(0.0)
+    assert target[4, 4, 1] == pytest.approx(0.0)
+    assert 0.8 < float(target[..., 2].max()) <= 1.0
+
+
+def test_stacked_target_builder_delegates_child_specific_filters(
+    track_tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Stacked child query settings should still delegate to child builders."""
+    store = _create_test_store(track_tmp_path / "stacked_child_filters.db")
+    query_calls: list[dict[str, object]] = []
+    original_query = store.query
+
+    def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
+        query_calls.append(dict(kwargs))
+        return original_query(*args, **kwargs)
+
+    monkeypatch.setattr(store, "query", counting_query)
+
+    builder = StackedTargetBuilder(
+        {
+            "tumor": MaskTargetBuilder(
                 where='props["class"] == "tumor"',
                 class_mapping=None,
             ),
-            "boundary": BoundaryTargetBuilder(
-                where='props["class"] == "tumor"',
-            ),
-            "heatmap": GaussianHeatmapTargetBuilder(
-                where='props["class"] == "tumor"',
-                sigma=1.0,
+            "stroma": MaskTargetBuilder(
+                where='props["class"] == "stroma"',
+                class_mapping=None,
             ),
         }
     )
@@ -268,12 +317,104 @@ def test_stacked_target_builder(track_tmp_path: Path) -> None:
         output_shape=(10, 10),
     )
 
-    assert target.shape == (10, 10, 3)
-    assert target.dtype == np.float32
+    assert len(query_calls) == 2
+    assert [call["where"] for call in query_calls] == [
+        'props["class"] == "tumor"',
+        'props["class"] == "stroma"',
+    ]
     assert target[2, 2, 0] == pytest.approx(1.0)
     assert target[2, 7, 0] == pytest.approx(0.0)
-    assert target[4, 4, 1] == pytest.approx(0.0)
-    assert 0.8 < float(target[..., 2].max()) <= 1.0
+    assert target[2, 2, 1] == pytest.approx(0.0)
+    assert target[2, 7, 1] == pytest.approx(1.0)
+
+
+def test_stacked_target_builder_rejects_parent_and_child_query_settings() -> None:
+    """Stacked builders should not silently combine parent and child queries."""
+    builder = StackedTargetBuilder(
+        {
+            "mask": MaskTargetBuilder(
+                where='props["class"] == "tumor"',
+                class_mapping=None,
+            ),
+        },
+        where='props["class"] == "stroma"',
+    )
+
+    with pytest.raises(ValueError, match="cannot combine parent query settings.*mask"):
+        builder.create_target(
+            store=SQLiteStore(":memory:"),
+            patch_bounds=(0, 0, 10, 10),
+            output_shape=(10, 10),
+        )
+
+
+def test_stacked_target_builder_forwards_parent_query_options(
+    track_tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Parent stacked query options should be forwarded to the store."""
+    store = _create_test_store(track_tmp_path / "stacked_parent_query_options.db")
+    query_calls: list[dict[str, object]] = []
+    original_query = store.query
+
+    def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
+        query_calls.append(dict(kwargs))
+        return original_query(*args, **kwargs)
+
+    monkeypatch.setattr(store, "query", counting_query)
+
+    area_filtered = StackedTargetBuilder(
+        {
+            "mask": MaskTargetBuilder(
+                class_mapping={"tumor": 1, "stroma": 2},
+                class_property="class",
+            ),
+            "boundary": BoundaryTargetBuilder(),
+        },
+        min_area=30,
+    ).create_target(
+        store=store,
+        patch_bounds=(0, 0, 10, 10),
+        output_shape=(10, 10),
+    )
+
+    assert len(query_calls) == 1
+    assert query_calls[0]["min_area"] == pytest.approx(30.0)
+    assert query_calls[0]["geometry_predicate"] == "intersects"
+    assert query_calls[0]["distance"] == pytest.approx(0.0)
+    assert area_filtered[2, 2, 0] == pytest.approx(1.0)
+    assert area_filtered[2, 7, 0] == pytest.approx(0.0)
+
+    point_store = SQLiteStore(track_tmp_path / "stacked_parent_distance_options.db")
+    point_store.append(Annotation(Point(5, 5), properties={}), key="near")
+    point_store.append(Annotation(Point(9, 9), properties={}), key="far")
+    distance_query_calls: list[dict[str, object]] = []
+    original_distance_query = point_store.query
+
+    def counting_distance_query(
+        *args: object,
+        **kwargs: object,
+    ) -> dict[str, Annotation]:
+        distance_query_calls.append(dict(kwargs))
+        return original_distance_query(*args, **kwargs)
+
+    monkeypatch.setattr(point_store, "query", counting_distance_query)
+
+    distance_filtered = StackedTargetBuilder(
+        {"disk": BinaryDiskTargetBuilder(radius=0)},
+        geometry_predicate="centers_within_k",
+        distance=2.0,
+    ).create_target(
+        store=point_store,
+        patch_bounds=(0, 0, 10, 10),
+        output_shape=(10, 10),
+    )
+
+    assert len(distance_query_calls) == 1
+    assert distance_query_calls[0]["geometry_predicate"] == "centers_within_k"
+    assert distance_query_calls[0]["distance"] == pytest.approx(2.0)
+    assert distance_filtered[5, 5, 0] == pytest.approx(1.0)
+    assert distance_filtered[9, 9, 0] == pytest.approx(0.0)
 
 
 def test_stacked_target_builder_reports_per_channel_spatial_specs() -> None:

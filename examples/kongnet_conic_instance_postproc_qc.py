@@ -222,19 +222,13 @@ def _build_target_builder() -> CompositeTargetBuilder:
             label.lower(): StackedTargetBuilder(
                 {
                     "mask": MaskTargetBuilder(
-                        where=f'props["class"] == "{label}"',
                         class_mapping=None,
                         default_label=0,
                     ),
-                    "boundary": BoundaryTargetBuilder(
-                        where=f'props["class"] == "{label}"',
-                        line_width=1,
-                    ),
-                    "centroid": GaussianHeatmapTargetBuilder(
-                        where=f'props["class"] == "{label}"',
-                        sigma=2.0,
-                    ),
-                }
+                    "boundary": BoundaryTargetBuilder(line_width=1),
+                    "centroid": GaussianHeatmapTargetBuilder(sigma=2.0),
+                },
+                where=f'props["class"] == "{label}"',
             )
             for label in CONIC_CLASS_DICT.values()
         }
