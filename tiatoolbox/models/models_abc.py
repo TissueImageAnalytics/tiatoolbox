@@ -238,21 +238,23 @@ class ModelABC(ABC, torch.nn.Module):
 
         return model
 
-    def load_weights_from_file(self: ModelABC, weights: str | Path) -> torch.nn.Module:
-        """Helper function to load a torch model.
+    def load_weights_from_file(self: ModelABC, weights: str | Path) -> Any:
+        """Load model weights from a file on CPU.
 
         Args:
             self (ModelABC):
                 A torch model as :class:`ModelABC`.
             weights (str or Path):
-                Path to pretrained weights.
+                Path to pretrained weights or a trainer checkpoint payload.
 
         Returns:
-            torch.nn.Module:
-                Torch model with pretrained weights loaded on CPU.
+            Any:
+                Result returned by :meth:`torch.nn.Module.load_state_dict`.
 
         """
         # ! assume to be saved in single GPU mode
         # always load on to the CPU
+        from tiatoolbox.models.training.checkpoint import load_model_state_dict
+
         saved_state_dict = torch.load(weights, map_location="cpu")
-        return super().load_state_dict(saved_state_dict, strict=True)
+        return load_model_state_dict(self, saved_state_dict, strict=True)

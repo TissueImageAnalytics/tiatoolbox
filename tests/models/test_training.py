@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 import tiatoolbox.models.training.augmentations as training_augmentations
 from tiatoolbox.models.architecture.kongnet import KongNet
 from tiatoolbox.models.engine.io_config import IOPatchPredictorConfig, IOSegmentorConfig
-from tiatoolbox.models.models_abc import load_torch_model
+from tiatoolbox.models.models_abc import ModelABC, load_torch_model
 from tiatoolbox.models.training import (
     BinaryDiskTargetBuilder,
     CheckpointConfig,
@@ -128,6 +128,34 @@ class DictOutputClassifier(nn.Module):
     def forward(self, inputs: torch.Tensor) -> dict[str, torch.Tensor]:
         """Run a forward pass and wrap the logits in a dict."""
         return {"logits": self.linear(self.flatten(inputs))}
+
+
+class MinimalModelABC(ModelABC):
+    """Small ModelABC subclass for direct weight-loading tests."""
+
+    def __init__(self) -> None:
+        """Initialize the minimal model."""
+        super().__init__()
+        self.flatten = nn.Flatten()
+        self.linear = nn.Linear(3 * 4 * 4, 2)
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        """Run a forward pass."""
+        return self.linear(self.flatten(inputs))
+
+    @staticmethod
+    def infer_batch(
+        model: nn.Module,
+        batch_data: np.ndarray | torch.Tensor,
+        *,
+        device: str,
+    ) -> np.ndarray:
+        """Run a minimal inference batch for abstract interface completeness."""
+        del device
+        with torch.no_grad():
+            if isinstance(batch_data, np.ndarray):
+                batch_data = torch.from_numpy(batch_data)
+            return model(batch_data.float()).detach().cpu().numpy()
 
 
 class StructuredClassificationTask(TrainingTaskABC):
@@ -1292,6 +1320,28 @@ def test_save_model_weights_supports_wrapped_load_state_dict_models(
 
     reloaded_model = WrappedStateDictModel()
     load_torch_model(reloaded_model, weights_path)
+
+    assert torch.allclose(reloaded_model.linear.weight, model.linear.weight)
+    assert torch.allclose(reloaded_model.linear.bias, model.linear.bias)
+
+
+def test_modelabc_load_weights_from_file_accepts_trainer_checkpoints(
+    track_tmp_path: Path,
+) -> None:
+    """Direct ModelABC loading should accept trainer checkpoint payloads."""
+    model = MinimalModelABC()
+    with torch.no_grad():
+        model.linear.weight.fill_(1.25)
+        model.linear.bias.fill_(0.75)
+
+    checkpoint_path = track_tmp_path / "modelabc_trainer_payload.ckpt"
+    save_checkpoint(
+        {"model_state_dict": model.state_dict(), "epoch": 1},
+        checkpoint_path,
+    )
+
+    reloaded_model = MinimalModelABC()
+    reloaded_model.load_weights_from_file(checkpoint_path)
 
     assert torch.allclose(reloaded_model.linear.weight, model.linear.weight)
     assert torch.allclose(reloaded_model.linear.bias, model.linear.bias)
