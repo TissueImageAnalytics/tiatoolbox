@@ -23,6 +23,7 @@ from tiatoolbox.models.training import (
     PatchAnnotationDataset,
     PresenceTargetBuilder,
     SlideAnnotationPatchDataset,
+    StackedSpatialTargetSpec,
     StackedTargetBuilder,
     generate_slide_patch_coordinates,
 )
@@ -238,6 +239,25 @@ def test_stacked_target_builder(track_tmp_path: Path) -> None:
     assert target[2, 7, 0] == pytest.approx(0.0)
     assert target[4, 4, 1] == pytest.approx(0.0)
     assert 0.8 < float(target[..., 2].max()) <= 1.0
+
+
+def test_stacked_target_builder_reports_per_channel_spatial_specs() -> None:
+    """Stacked target builders should preserve mixed interpolation metadata."""
+    builder = StackedTargetBuilder(
+        {
+            "mask": MaskTargetBuilder(class_mapping=None),
+            "boundary": BoundaryTargetBuilder(),
+            "heatmap": GaussianHeatmapTargetBuilder(sigma=1.0),
+        }
+    )
+
+    assert builder.spatial_target_spec == StackedSpatialTargetSpec(
+        (
+            ("mask", "mask"),
+            ("boundary", "mask"),
+            ("heatmap", "image"),
+        )
+    )
 
 
 def test_stacked_target_builder_honours_child_geometry_predicates(

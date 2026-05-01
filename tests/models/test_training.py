@@ -6,6 +6,7 @@ import warnings
 from pathlib import Path
 
 import albumentations as A
+import cv2
 import numpy as np
 import pytest
 import torch
@@ -28,6 +29,7 @@ from tiatoolbox.models.training import (
     PatchMaskPairDataset,
     PresenceTargetBuilder,
     SegmentationTask,
+    StackedTargetBuilder,
     StructuredDenseTask,
     Trainer,
     build_kongnet_training_task,
@@ -447,6 +449,60 @@ def test_annotation_augmentation_preset_supports_structured_spatial_targets(
         transformed_target["signals"]["heatmap"],
         np.fliplr(target["signals"]["heatmap"]),
     )
+    assert transformed_target["presence"] == 1
+
+
+def test_annotation_augmentation_preset_splits_mixed_stacked_targets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Mixed stacked masks and heatmaps should use per-channel interpolation."""
+    monkeypatch.setattr(
+        training_augmentations,
+        "_geometric_ops",
+        lambda _level: [
+            A.Affine(
+                rotate=(15, 15),
+                interpolation=cv2.INTER_LINEAR,
+                mask_interpolation=cv2.INTER_NEAREST,
+                border_mode=cv2.BORDER_CONSTANT,
+                fill=0,
+                fill_mask=0,
+                p=1.0,
+            )
+        ],
+    )
+
+    target_builder = CompositeTargetBuilder(
+        {
+            "tumor": StackedTargetBuilder(
+                {
+                    "mask": MaskTargetBuilder(class_mapping=None),
+                    "centroid": GaussianHeatmapTargetBuilder(sigma=1.0),
+                }
+            ),
+            "presence": PresenceTargetBuilder(),
+        }
+    )
+    preset = get_annotation_augmentation("medium", target_builder=target_builder)
+
+    image = np.zeros((32, 32, 3), dtype=np.uint8)
+    square = np.zeros((32, 32), dtype=np.float32)
+    square[8:24, 8:24] = 1.0
+    target = {
+        "tumor": np.stack([square, square], axis=-1),
+        "presence": 1,
+    }
+
+    transformed_image, transformed_target = preset.pair_transform(image, target)
+    transformed_stack = transformed_target["tumor"]
+    mask_channel = transformed_stack[..., 0]
+    heatmap_channel = transformed_stack[..., 1]
+
+    assert preset.pair_transform is not None
+    assert transformed_image.shape == image.shape
+    assert transformed_stack.shape == target["tumor"].shape
+    assert set(np.unique(mask_channel)).issubset({0.0, 1.0})
+    assert np.any((heatmap_channel > 0.0) & (heatmap_channel < 1.0))
     assert transformed_target["presence"] == 1
 
 

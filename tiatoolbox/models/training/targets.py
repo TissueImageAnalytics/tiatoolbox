@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
 import cv2
@@ -19,7 +20,43 @@ if TYPE_CHECKING:  # pragma: no cover
 
 Bounds = tuple[float, float, float, float]
 TargetType = np.ndarray | int | float | dict[str, "TargetType"]
-SpatialTargetSpec = Literal["mask", "image"] | dict[str, "SpatialTargetSpec"]
+SpatialTargetKind = Literal["mask", "image"]
+
+
+@dataclass(frozen=True)
+class StackedSpatialTargetSpec:
+    """Describe per-channel interpolation for a stacked spatial target."""
+
+    channels: tuple[tuple[str, SpatialTargetKind], ...]
+
+    def __post_init__(self: StackedSpatialTargetSpec) -> None:
+        """Validate stacked channel specs."""
+        if not self.channels:
+            msg = "Stacked spatial target specs must contain at least one channel."
+            raise ValueError(msg)
+
+        names = [name for name, _kind in self.channels]
+        if len(names) != len(set(names)):
+            msg = "Stacked spatial target channel names must be unique."
+            raise ValueError(msg)
+
+        for name, kind in self.channels:
+            if not isinstance(name, str):
+                msg = "Stacked spatial target channel names must be strings."
+                raise ValueError(msg)
+            if kind not in {"mask", "image"}:
+                msg = (
+                    f"Unsupported stacked spatial target kind `{kind}` for "
+                    f"channel `{name}`. Choose from `mask` or `image`."
+                )
+                raise ValueError(msg)
+
+
+SpatialTargetSpec = (
+    SpatialTargetKind
+    | StackedSpatialTargetSpec
+    | dict[str, "SpatialTargetSpec"]
+)
 
 
 def _as_bounds(bounds: tuple[float, ...] | list[float] | np.ndarray) -> Bounds:
@@ -360,21 +397,19 @@ class StackedTargetBuilder(TargetBuilderABC):
         self.dtype = np.dtype(dtype)
 
     @property
-    def spatial_target_spec(self: StackedTargetBuilder) -> Literal["mask", "image"]:
-        """Describe the interpolation mode for the stacked spatial map."""
-        child_specs: list[Literal["mask", "image"]] = []
+    def spatial_target_spec(self: StackedTargetBuilder) -> StackedSpatialTargetSpec:
+        """Describe per-channel interpolation for the stacked spatial map."""
+        child_specs: list[tuple[str, SpatialTargetKind]] = []
         for name, builder in self.builders.items():
             child_spec = builder.spatial_target_spec
-            if child_spec not in {"mask", "image"}:
+            if not isinstance(child_spec, str) or child_spec not in {"mask", "image"}:
                 msg = (
                     "StackedTargetBuilder only supports child builders with "
                     f"leaf spatial specs, but `{name}` returned `{child_spec}`."
                 )
                 raise ValueError(msg)
-            child_specs.append(child_spec)
-        if "image" in child_specs:
-            return "image"
-        return "mask"
+            child_specs.append((name, child_spec))
+        return StackedSpatialTargetSpec(tuple(child_specs))
 
     def create_target(
         self: StackedTargetBuilder,

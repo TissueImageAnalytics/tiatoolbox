@@ -10,7 +10,9 @@ import cv2
 import numpy as np
 
 from tiatoolbox.models.training.targets import (
+    SpatialTargetKind,
     SpatialTargetSpec,
+    StackedSpatialTargetSpec,
     TargetBuilderABC,
 )
 from tiatoolbox.tools.stainaugment import StainAugmentor
@@ -19,8 +21,16 @@ if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable
 
 AugmentationLevel = Literal["light", "medium", "heavy"]
-SpatialTargetKind = Literal["mask", "image"]
 _TargetPath = tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _SpatialTargetLeaf:
+    """Resolved spatial target leaf, optionally selecting one stack channel."""
+
+    path: _TargetPath
+    channel_index: int | None = None
+    channel_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -59,12 +69,22 @@ def _flatten_spatial_target_spec(
     spec: SpatialTargetSpec,
     *,
     path: _TargetPath = (),
-) -> dict[_TargetPath, SpatialTargetKind]:
-    """Flatten a nested spatial target spec into leaf paths."""
+) -> dict[_SpatialTargetLeaf, SpatialTargetKind]:
+    """Flatten a nested spatial target spec into transformable leaves."""
     if isinstance(spec, str):
-        return {path: _normalize_spatial_target_kind(spec)}
+        return {_SpatialTargetLeaf(path=path): _normalize_spatial_target_kind(spec)}
 
-    flat_spec: dict[_TargetPath, SpatialTargetKind] = {}
+    if isinstance(spec, StackedSpatialTargetSpec):
+        return {
+            _SpatialTargetLeaf(
+                path=path,
+                channel_index=index,
+                channel_name=channel_name,
+            ): _normalize_spatial_target_kind(kind)
+            for index, (channel_name, kind) in enumerate(spec.channels)
+        }
+
+    flat_spec: dict[_SpatialTargetLeaf, SpatialTargetKind] = {}
     for key, child_spec in spec.items():
         if not isinstance(key, str):
             msg = "Structured spatial target spec keys must be strings."
@@ -75,8 +95,29 @@ def _flatten_spatial_target_spec(
     return flat_spec
 
 
-def _select_spatial_target(target: object, path: _TargetPath) -> np.ndarray:
-    """Select one spatial target leaf from a possibly nested target object."""
+def _spatial_leaf_sort_key(
+    leaf: _SpatialTargetLeaf,
+) -> tuple[_TargetPath, int, str]:
+    """Return a stable ordering key for spatial target leaves."""
+    channel_index = -1 if leaf.channel_index is None else leaf.channel_index
+    return (leaf.path, channel_index, leaf.channel_name or "")
+
+
+def _format_spatial_leaf_path(leaf: _SpatialTargetLeaf) -> str:
+    """Format a spatial target leaf path for user-facing errors."""
+    path = (
+        (*leaf.path, leaf.channel_name)
+        if leaf.channel_name is not None
+        else leaf.path
+    )
+    return ".".join(path) or "<root>"
+
+
+def _select_structured_target_path(
+    target: object,
+    path: _TargetPath,
+) -> object:
+    """Select a possibly non-array target value from a nested target object."""
     value = target
     for key in path:
         if not isinstance(value, dict) or key not in value:
@@ -84,44 +125,98 @@ def _select_spatial_target(target: object, path: _TargetPath) -> np.ndarray:
             msg = f"Structured target is missing spatial key `{joined_path}`."
             raise ValueError(msg)
         value = value[key]
+    return value
+
+
+def _select_spatial_target(
+    target: object,
+    leaf: _SpatialTargetLeaf,
+) -> np.ndarray:
+    """Select one spatial target leaf from a possibly nested target object."""
+    value = _select_structured_target_path(target, leaf.path)
+    joined_path = _format_spatial_leaf_path(leaf)
 
     if not isinstance(value, np.ndarray):
-        joined_path = ".".join(path) or "<root>"
         msg = (
             f"Spatial target `{joined_path}` must be a NumPy array before "
             "dataset tensor conversion."
         )
         raise ValueError(msg)
-    return value
+
+    if leaf.channel_index is None:
+        return value
+
+    if value.ndim != 3:
+        msg = f"Stacked spatial target `{joined_path}` must have shape HxWxC."
+        raise ValueError(msg)
+    if leaf.channel_index >= value.shape[-1]:
+        msg = (
+            f"Stacked spatial target `{joined_path}` requested channel index "
+            f"{leaf.channel_index}, but target has {value.shape[-1]} channels."
+        )
+        raise ValueError(msg)
+    return value[..., leaf.channel_index]
+
+
+def _replace_stacked_channel(
+    target: object,
+    leaf: _SpatialTargetLeaf,
+    replacement: np.ndarray,
+) -> np.ndarray:
+    """Return a stacked target array with one channel replaced."""
+    joined_path = _format_spatial_leaf_path(leaf)
+    if not isinstance(target, np.ndarray) or target.ndim != 3:
+        msg = f"Stacked spatial target `{joined_path}` must have shape HxWxC."
+        raise ValueError(msg)
+    if leaf.channel_index is None:  # pragma: no cover - guarded by caller
+        msg = f"Spatial target `{joined_path}` is not a stacked channel."
+        raise ValueError(msg)
+    if replacement.shape != target.shape[:2]:
+        msg = (
+            f"Transformed stacked spatial target `{joined_path}` returned shape "
+            f"`{replacement.shape}`, expected `{target.shape[:2]}`."
+        )
+        raise ValueError(msg)
+
+    updated_target = target.copy()
+    updated_target[..., leaf.channel_index] = replacement
+    return updated_target
 
 
 def _replace_spatial_target(
     target: object,
-    path: _TargetPath,
+    leaf: _SpatialTargetLeaf,
     replacement: np.ndarray,
 ) -> object:
     """Return a target object with one spatial leaf replaced."""
-    if not path:
-        return replacement
+    if not leaf.path:
+        if leaf.channel_index is None:
+            return replacement
+        return _replace_stacked_channel(target, leaf, replacement)
 
     if not isinstance(target, dict):
-        joined_path = ".".join(path)
+        joined_path = ".".join(leaf.path)
         msg = (
             f"Structured target path `{joined_path}` could not be updated because "
             "an intermediate value is not a dictionary."
         )
         raise ValueError(msg)
 
-    key = path[0]
+    key = leaf.path[0]
     if key not in target:
-        joined_path = ".".join(path)
+        joined_path = ".".join(leaf.path)
         msg = f"Structured target is missing spatial key `{joined_path}`."
         raise ValueError(msg)
 
+    updated_leaf = _SpatialTargetLeaf(
+        path=leaf.path[1:],
+        channel_index=leaf.channel_index,
+        channel_name=leaf.channel_name,
+    )
     updated_target = dict(target)
     updated_target[key] = _replace_spatial_target(
         target[key],
-        path[1:],
+        updated_leaf,
         replacement,
     )
     return updated_target
@@ -140,15 +235,17 @@ class _AlbumentationsSpatialPairTransform:
             msg = "Structured spatial target specs must contain at least one leaf."
             raise ValueError(msg)
 
-        self.path_to_name = {
-            path: f"target_{index}"
-            for index, path in enumerate(sorted(flat_target_spec))
+        self.leaf_to_name = {
+            leaf: f"target_{index}"
+            for index, leaf in enumerate(
+                sorted(flat_target_spec, key=_spatial_leaf_sort_key),
+            )
         }
         self.transform = A.Compose(
             ops,
             additional_targets={
-                name: flat_target_spec[path]
-                for path, name in self.path_to_name.items()
+                name: flat_target_spec[leaf]
+                for leaf, name in self.leaf_to_name.items()
             },
         )
 
@@ -159,15 +256,15 @@ class _AlbumentationsSpatialPairTransform:
     ) -> tuple[np.ndarray, object]:
         """Apply paired geometric transforms to an image and spatial targets."""
         payload = {"image": image}
-        for path, name in self.path_to_name.items():
-            payload[name] = _select_spatial_target(target, path)
+        for leaf, name in self.leaf_to_name.items():
+            payload[name] = _select_spatial_target(target, leaf)
 
         transformed = self.transform(**payload)
         updated_target = target
-        for path, name in self.path_to_name.items():
+        for leaf, name in self.leaf_to_name.items():
             updated_target = _replace_spatial_target(
                 updated_target,
-                path,
+                leaf,
                 transformed[name],
             )
 

@@ -40,6 +40,8 @@ from tiatoolbox.models.training.targets import (
     MaskTargetBuilder,
     MultiLabelTargetBuilder,
     PresenceTargetBuilder,
+    SpatialTargetKind,
+    StackedSpatialTargetSpec,
     StackedTargetBuilder,
     TargetBuilderABC,
 )
@@ -76,6 +78,8 @@ __all__ = [
     "SlideAnnotationPatchDataset",
     "ClassBalancedIndexSampler",
     "PresenceTargetBuilder",
+    "SpatialTargetKind",
+    "StackedSpatialTargetSpec",
     "StackedTargetBuilder",
     "SegmentationTask",
     "StructuredDenseTask",
