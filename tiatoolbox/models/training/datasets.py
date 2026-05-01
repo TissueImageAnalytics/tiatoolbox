@@ -441,7 +441,10 @@ class PatchAnnotationDataset(Dataset):
     """Dataset for patch images paired with TIAToolbox annotation stores.
 
     This dataset supports training targets built dynamically from annotations
-    stored in :class:`tiatoolbox.annotation.SQLiteStore`.
+    stored in :class:`tiatoolbox.annotation.SQLiteStore`. Annotation geometries
+    and optional ``patch_bounds`` are interpreted in the same slide/baseline
+    coordinate space. The generated target arrays are in patch pixel
+    coordinates matching the loaded image shape.
     """
 
     def __init__(
@@ -612,7 +615,13 @@ class PatchAnnotationDataset(Dataset):
 
 
 class SlideAnnotationPatchDataset(Dataset):
-    """Dataset reading patches on-the-fly from slides with paired annotation stores."""
+    """Dataset reading patches on-the-fly from slides with annotation stores.
+
+    Patch images may be read at any supported resolution, but annotation queries
+    are issued in baseline slide coordinates. Target builders then rescale
+    annotation-derived dense outputs into patch pixel coordinates matching the
+    returned image.
+    """
 
     def __init__(  # noqa: PLR0913
         self: SlideAnnotationPatchDataset,
@@ -826,6 +835,9 @@ class SlideAnnotationPatchDataset(Dataset):
         )
         height, width = image.shape[:2]
 
+        # Annotation stores use baseline slide coordinates. Convert the patch
+        # bounds from the image-read resolution before querying target builders;
+        # target arrays are still emitted at the patch image pixel shape above.
         bounds_at_baseline = tuple(
             float(value)
             for value in reader.bounds_at_resolution_to_baseline(

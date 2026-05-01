@@ -287,6 +287,27 @@ class StructuredDenseTask(TrainingTaskABC):
             return ("mae", "mse")
         return ("dice", "iou")
 
+    def _validate_dense_batch_and_spatial_shapes(
+        self: StructuredDenseTask,
+        logits: torch.Tensor,
+        targets: torch.Tensor,
+        *,
+        mode: str,
+    ) -> None:
+        """Validate common dense prediction batch and spatial dimensions."""
+        if targets.shape[0] != logits.shape[0]:
+            msg = (
+                f"Dense {mode} targets batch size `{targets.shape[0]}` must "
+                f"match logits batch size `{logits.shape[0]}`."
+            )
+            raise ValueError(msg)
+        if tuple(targets.shape[-2:]) != tuple(logits.shape[-2:]):
+            msg = (
+                f"Dense {mode} target spatial shape `{tuple(targets.shape[-2:])}` "
+                f"must match logits spatial shape `{tuple(logits.shape[-2:])}`."
+            )
+            raise ValueError(msg)
+
     def _prepare_multiclass_dense_tensors(
         self: StructuredDenseTask,
         logits: torch.Tensor,
@@ -307,8 +328,24 @@ class StructuredDenseTask(TrainingTaskABC):
                 "or `(N, 1, H, W)`."
             )
             raise ValueError(msg)
+        self._validate_dense_batch_and_spatial_shapes(
+            logits,
+            targets,
+            mode="multiclass",
+        )
+        targets = targets.long()
         valid_mask = targets != self.ignore_index
-        return logits, targets.long(), valid_mask
+        valid_targets = targets[valid_mask]
+        if valid_targets.numel() > 0 and (
+            torch.any(valid_targets < 0) or torch.any(valid_targets >= logits.shape[1])
+        ):
+            msg = (
+                "Dense multiclass targets contain class indices outside the "
+                f"valid range [0, {logits.shape[1] - 1}] and not equal to "
+                f"ignore_index `{self.ignore_index}`."
+            )
+            raise ValueError(msg)
+        return logits, targets, valid_mask
 
     def _prepare_binary_dense_tensors(
         self: StructuredDenseTask,
@@ -328,7 +365,15 @@ class StructuredDenseTask(TrainingTaskABC):
             )
             raise ValueError(msg)
         if targets.shape != logits.shape:
-            msg = "Dense binary targets must match the logits shape."
+            self._validate_dense_batch_and_spatial_shapes(
+                logits,
+                targets,
+                mode="binary",
+            )
+            msg = (
+                f"Dense binary target shape `{tuple(targets.shape)}` must match "
+                f"logits shape `{tuple(logits.shape)}`."
+            )
             raise ValueError(msg)
         valid_mask = targets != self.ignore_index
         safe_targets = torch.where(valid_mask, targets, torch.zeros_like(targets))
@@ -352,7 +397,15 @@ class StructuredDenseTask(TrainingTaskABC):
             )
             raise ValueError(msg)
         if targets.shape != logits.shape:
-            msg = "Dense regression targets must match the logits shape."
+            self._validate_dense_batch_and_spatial_shapes(
+                logits,
+                targets,
+                mode="regression",
+            )
+            msg = (
+                f"Dense regression target shape `{tuple(targets.shape)}` must match "
+                f"logits shape `{tuple(logits.shape)}`."
+            )
             raise ValueError(msg)
         valid_mask = targets != self.ignore_index
         safe_targets = torch.where(valid_mask, targets, torch.zeros_like(targets))
@@ -709,6 +762,33 @@ class ClassificationTask(TrainingTaskABC):
             raise ValueError(msg)
         return targets.long()
 
+    def _prepare_single_label_tensors(
+        self: ClassificationTask,
+        logits: torch.Tensor,
+        targets: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Validate paired single-label logits and targets."""
+        logits = self._prepare_single_label_logits(logits)
+        targets = self._prepare_single_label_targets(targets)
+        if targets.shape[0] != logits.shape[0]:
+            msg = (
+                f"Single-label classification targets batch size `{targets.shape[0]}` "
+                f"must match logits batch size `{logits.shape[0]}`."
+            )
+            raise ValueError(msg)
+
+        valid_targets = targets[targets != self.ignore_index]
+        if valid_targets.numel() > 0 and (
+            torch.any(valid_targets < 0) or torch.any(valid_targets >= logits.shape[1])
+        ):
+            msg = (
+                "Single-label classification targets contain class indices outside "
+                f"the valid range [0, {logits.shape[1] - 1}] and not equal to "
+                f"ignore_index `{self.ignore_index}`."
+            )
+            raise ValueError(msg)
+        return logits, targets
+
     def _prepare_binary_tensors(
         self: ClassificationTask,
         logits: torch.Tensor,
@@ -778,8 +858,7 @@ class ClassificationTask(TrainingTaskABC):
         target_mode = self._resolve_target_mode(logits, targets)
 
         if target_mode == "single_label":
-            logits = self._prepare_single_label_logits(logits)
-            targets = self._prepare_single_label_targets(targets)
+            logits, targets = self._prepare_single_label_tensors(logits, targets)
             return self.loss_fn(logits, targets)
 
         if target_mode == "binary":
@@ -804,8 +883,7 @@ class ClassificationTask(TrainingTaskABC):
         target_mode = self._resolve_target_mode(logits, targets)
 
         if target_mode == "single_label":
-            logits = self._prepare_single_label_logits(logits)
-            targets = self._prepare_single_label_targets(targets)
+            logits, targets = self._prepare_single_label_tensors(logits, targets)
             valid_mask = targets != self.ignore_index
             if not torch.any(valid_mask):
                 return {"accuracy": 0.0, "f1": 0.0}

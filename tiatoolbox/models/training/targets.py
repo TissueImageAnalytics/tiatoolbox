@@ -267,17 +267,26 @@ def _rasterize_geometry(
 
 
 class TargetBuilderABC(ABC):
-    """Base interface for building patch targets from annotation stores."""
+    """Base interface for building patch targets from annotation stores.
+
+    Annotation geometries and ``patch_bounds`` are expected to use the same
+    slide/baseline coordinate space. Dense targets returned by builders are in
+    patch pixel coordinates with shape ``output_shape``.
+    """
 
     def __init__(
         self: TargetBuilderABC,
         *,
         where: Predicate | None = None,
         geometry_predicate: str = "intersects",
+        min_area: float | None = None,
+        distance: float = 0,
     ) -> None:
         """Initialize :class:`TargetBuilderABC`."""
         self.where = where
         self.geometry_predicate = geometry_predicate
+        self.min_area = None if min_area is None else float(min_area)
+        self.distance = float(distance)
 
     def query_annotations(
         self: TargetBuilderABC,
@@ -289,6 +298,8 @@ class TargetBuilderABC(ABC):
             geometry=patch_bounds,
             where=self.where,
             geometry_predicate=self.geometry_predicate,
+            min_area=self.min_area,
+            distance=self.distance,
         )
 
     @property
@@ -303,7 +314,12 @@ class TargetBuilderABC(ABC):
         patch_bounds: tuple[float, ...] | list[float] | np.ndarray,
         output_shape: tuple[int, int] | list[int] | np.ndarray,
     ) -> TargetType:
-        """Query annotations and build a target for one patch."""
+        """Query annotations and build a target for one patch.
+
+        ``patch_bounds`` are interpreted in annotation slide/baseline
+        coordinates. Dense target arrays are rescaled to ``output_shape`` in
+        patch pixel coordinates.
+        """
         normalized_bounds = _as_bounds(patch_bounds)
         normalized_shape = _normalize_output_shape(output_shape)
         annotations = self.query_annotations(store, normalized_bounds)
@@ -493,11 +509,18 @@ class MaskTargetBuilder(TargetBuilderABC):
         default_label: int = 0,
         where: Predicate | None = None,
         geometry_predicate: str = "intersects",
+        min_area: float | None = None,
+        distance: float = 0,
         line_width: int = 1,
         point_radius: int = 1,
     ) -> None:
         """Initialize :class:`MaskTargetBuilder`."""
-        super().__init__(where=where, geometry_predicate=geometry_predicate)
+        super().__init__(
+            where=where,
+            geometry_predicate=geometry_predicate,
+            min_area=min_area,
+            distance=distance,
+        )
         self.class_mapping = class_mapping
         self.class_property = class_property
         self.default_label = int(default_label)
@@ -573,11 +596,18 @@ class BoundaryTargetBuilder(TargetBuilderABC):
         background_value: float = 0.0,
         where: Predicate | None = None,
         geometry_predicate: str = "intersects",
+        min_area: float | None = None,
+        distance: float = 0,
         line_width: int = 1,
         point_radius: int = 1,
     ) -> None:
         """Initialize :class:`BoundaryTargetBuilder`."""
-        super().__init__(where=where, geometry_predicate=geometry_predicate)
+        super().__init__(
+            where=where,
+            geometry_predicate=geometry_predicate,
+            min_area=min_area,
+            distance=distance,
+        )
         self.positive_value = float(positive_value)
         self.background_value = float(background_value)
         self.line_width = int(line_width)
@@ -640,10 +670,17 @@ class PresenceTargetBuilder(TargetBuilderABC):
         negative_label: int = 0,
         where: Predicate | None = None,
         geometry_predicate: str = "intersects",
+        min_area: float | None = None,
+        distance: float = 0,
         overlap_method: Literal["exact", "rasterized"] = "exact",
     ) -> None:
         """Initialize :class:`PresenceTargetBuilder`."""
-        super().__init__(where=where, geometry_predicate=geometry_predicate)
+        super().__init__(
+            where=where,
+            geometry_predicate=geometry_predicate,
+            min_area=min_area,
+            distance=distance,
+        )
         self.min_fraction = _normalize_min_fraction(min_fraction)
         self.positive_label = int(positive_label)
         self.negative_label = int(negative_label)
@@ -679,10 +716,17 @@ class CoverageClassTargetBuilder(TargetBuilderABC):
         default_label: int = 0,
         where: Predicate | None = None,
         geometry_predicate: str = "intersects",
+        min_area: float | None = None,
+        distance: float = 0,
         overlap_method: Literal["exact", "rasterized"] = "exact",
     ) -> None:
         """Initialize :class:`CoverageClassTargetBuilder`."""
-        super().__init__(where=where, geometry_predicate=geometry_predicate)
+        super().__init__(
+            where=where,
+            geometry_predicate=geometry_predicate,
+            min_area=min_area,
+            distance=distance,
+        )
         self.class_mapping = class_mapping
         self.class_property = class_property
         self.min_fraction = _normalize_min_fraction(min_fraction)
@@ -729,10 +773,17 @@ class MultiLabelTargetBuilder(TargetBuilderABC):
         min_fraction: float = 0.0,
         where: Predicate | None = None,
         geometry_predicate: str = "intersects",
+        min_area: float | None = None,
+        distance: float = 0,
         overlap_method: Literal["exact", "rasterized"] = "exact",
     ) -> None:
         """Initialize :class:`MultiLabelTargetBuilder`."""
-        super().__init__(where=where, geometry_predicate=geometry_predicate)
+        super().__init__(
+            where=where,
+            geometry_predicate=geometry_predicate,
+            min_area=min_area,
+            distance=distance,
+        )
         self.class_mapping = class_mapping
         self.class_property = class_property
         self.min_fraction = _normalize_min_fraction(min_fraction)
@@ -783,9 +834,16 @@ class BinaryDiskTargetBuilder(TargetBuilderABC):
         background_value: float = 0.0,
         where: Predicate | None = None,
         geometry_predicate: str = "intersects",
+        min_area: float | None = None,
+        distance: float = 0,
     ) -> None:
         """Initialize :class:`BinaryDiskTargetBuilder`."""
-        super().__init__(where=where, geometry_predicate=geometry_predicate)
+        super().__init__(
+            where=where,
+            geometry_predicate=geometry_predicate,
+            min_area=min_area,
+            distance=distance,
+        )
         self.radius = int(radius)
         self.positive_value = float(positive_value)
         self.background_value = float(background_value)
@@ -837,9 +895,16 @@ class GaussianHeatmapTargetBuilder(TargetBuilderABC):
         background_value: float = 0.0,
         where: Predicate | None = None,
         geometry_predicate: str = "intersects",
+        min_area: float | None = None,
+        distance: float = 0,
     ) -> None:
         """Initialize :class:`GaussianHeatmapTargetBuilder`."""
-        super().__init__(where=where, geometry_predicate=geometry_predicate)
+        super().__init__(
+            where=where,
+            geometry_predicate=geometry_predicate,
+            min_area=min_area,
+            distance=distance,
+        )
         self.sigma = float(sigma)
         self.peak_value = float(peak_value)
         self.truncate = float(truncate)

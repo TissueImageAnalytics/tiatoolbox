@@ -641,6 +641,18 @@ def test_classification_task_metrics_respect_ignore_index() -> None:
     assert multilabel_metrics["f1"] == pytest.approx(1.0)
 
 
+def test_classification_task_reports_common_shape_mismatches() -> None:
+    """Single-label classification should fail early with clear messages."""
+    task = ClassificationTask(loss="cross_entropy")
+    logits = torch.zeros((2, 3), dtype=torch.float32)
+
+    with pytest.raises(ValueError, match="targets batch size `3` must match"):
+        task.compute_loss(logits, torch.tensor([0, 1, 2], dtype=torch.long))
+
+    with pytest.raises(ValueError, match="outside the valid range"):
+        task.compute_loss(logits, torch.tensor([0, 3], dtype=torch.long))
+
+
 def test_classification_task_validation_for_target_modes() -> None:
     """Classification tasks should enforce compatible loss/target-mode pairs."""
     task = ClassificationTask(
@@ -1035,6 +1047,20 @@ def test_structured_dense_task_matches_single_head_segmentation_behavior() -> No
 
     assert structured_loss.item() == pytest.approx(segmentation_loss.item())
     assert structured_metrics == segmentation_metrics
+
+
+def test_structured_dense_task_reports_common_shape_mismatches() -> None:
+    """Dense tasks should report target/logit mismatches before loss kernels."""
+    task = StructuredDenseTask(
+        heads=[DenseHeadSpec(name="segmentation", loss="cross_entropy")],
+    )
+    logits = torch.zeros((1, 2, 4, 4), dtype=torch.float32)
+
+    with pytest.raises(ValueError, match=r"target spatial shape `\(3, 4\)`"):
+        task.compute_loss(logits, torch.zeros((1, 3, 4), dtype=torch.long))
+
+    with pytest.raises(ValueError, match="outside the valid range"):
+        task.compute_loss(logits, torch.full((1, 4, 4), 2, dtype=torch.long))
 
 
 def test_build_kongnet_training_task_uses_model_output_metadata() -> None:

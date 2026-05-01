@@ -82,6 +82,41 @@ def test_mask_target_builder(track_tmp_path: Path) -> None:
     assert target[7, 7] == 0
 
 
+def test_target_builders_pass_query_options(track_tmp_path: Path) -> None:
+    """Target builders should pass store query options through consistently."""
+    store = _create_test_store(track_tmp_path / "query_options.db")
+
+    area_filtered = MaskTargetBuilder(
+        class_mapping={"tumor": 1, "stroma": 2},
+        class_property="class",
+        min_area=30,
+    ).create_target(
+        store=store,
+        patch_bounds=(0, 0, 10, 10),
+        output_shape=(10, 10),
+    )
+
+    assert area_filtered[2, 2] == 1
+    assert area_filtered[2, 7] == 0
+
+    point_store = SQLiteStore(track_tmp_path / "distance_query_options.db")
+    point_store.append(Annotation(Point(5, 5), properties={}), key="near")
+    point_store.append(Annotation(Point(9, 9), properties={}), key="far")
+
+    distance_filtered = BinaryDiskTargetBuilder(
+        radius=0,
+        geometry_predicate="centers_within_k",
+        distance=2.0,
+    ).create_target(
+        store=point_store,
+        patch_bounds=(0, 0, 10, 10),
+        output_shape=(10, 10),
+    )
+
+    assert distance_filtered[5, 5] == pytest.approx(1.0)
+    assert distance_filtered[9, 9] == pytest.approx(0.0)
+
+
 def test_presence_coverage_and_multilabel_builders(track_tmp_path: Path) -> None:
     """Coverage-based builders should produce expected scalar/vector targets."""
     store = _create_test_store(track_tmp_path / "targets_coverage.db")
