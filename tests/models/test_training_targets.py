@@ -686,6 +686,137 @@ def test_patch_annotation_dataset_validation_errors(track_tmp_path: Path) -> Non
         _ = dataset[0]
 
 
+def test_patch_annotation_dataset_from_dirs_matches_nested_relative_paths(
+    track_tmp_path: Path,
+) -> None:
+    """Patch annotation datasets should pair nested files by relative stem."""
+    patch_dir = track_tmp_path / "patches"
+    store_dir = track_tmp_path / "stores"
+
+    for subset, image_value in (("case_a", 32), ("case_b", 224)):
+        (patch_dir / subset).mkdir(parents=True, exist_ok=True)
+        (store_dir / subset).mkdir(parents=True, exist_ok=True)
+        np.save(
+            patch_dir / subset / "sample.npy",
+            np.full((10, 10, 3), fill_value=image_value, dtype=np.uint8),
+        )
+        _create_test_store(store_dir / subset / "sample.db")
+
+    dataset = PatchAnnotationDataset.from_dirs(
+        patch_dir=patch_dir,
+        annotation_store_dir=store_dir,
+        target_builder=PresenceTargetBuilder(
+            where='props["class"] == "tumor"',
+            min_fraction=0.1,
+        ),
+    )
+
+    assert len(dataset) == 2
+    assert [Path(path).relative_to(patch_dir) for path in dataset.patch_inputs] == [
+        Path("case_a/sample.npy"),
+        Path("case_b/sample.npy"),
+    ]
+    assert dataset[0]["image"][0, 0, 0].item() == pytest.approx(32 / 255)
+    assert int(dataset[1]["target"].item()) == 1
+
+
+def test_patch_annotation_dataset_from_dirs_raises_when_no_pairs(
+    track_tmp_path: Path,
+) -> None:
+    """Directory pairing should fail if no patch/store stems match."""
+    patch_dir = track_tmp_path / "patches"
+    store_dir = track_tmp_path / "stores"
+    patch_dir.mkdir(parents=True, exist_ok=True)
+    store_dir.mkdir(parents=True, exist_ok=True)
+
+    np.save(patch_dir / "image_only.npy", np.zeros((8, 8, 3), dtype=np.uint8))
+    _create_test_store(store_dir / "store_only.db")
+
+    with pytest.raises(ValueError, match="No patch image/annotation store pairs"):
+        _ = PatchAnnotationDataset.from_dirs(
+            patch_dir=patch_dir,
+            annotation_store_dir=store_dir,
+            target_builder=PresenceTargetBuilder(),
+        )
+
+
+def test_patch_annotation_dataset_from_dirs_raises_on_unmatched_files(
+    track_tmp_path: Path,
+) -> None:
+    """Directory pairing should reject partial patch/store mismatches."""
+    patch_dir = track_tmp_path / "patches"
+    store_dir = track_tmp_path / "stores"
+    patch_dir.mkdir(parents=True, exist_ok=True)
+    store_dir.mkdir(parents=True, exist_ok=True)
+
+    np.save(patch_dir / "paired.npy", np.zeros((8, 8, 3), dtype=np.uint8))
+    _create_test_store(store_dir / "paired.db")
+    np.save(patch_dir / "image_only.npy", np.zeros((8, 8, 3), dtype=np.uint8))
+
+    with pytest.raises(
+        ValueError,
+        match="Unmatched patch image/annotation store files",
+    ):
+        _ = PatchAnnotationDataset.from_dirs(
+            patch_dir=patch_dir,
+            annotation_store_dir=store_dir,
+            target_builder=PresenceTargetBuilder(),
+        )
+
+
+def test_patch_annotation_dataset_from_dirs_raises_on_duplicate_relative_keys(
+    track_tmp_path: Path,
+) -> None:
+    """Directory pairing should reject duplicate patch or store keys."""
+    patch_dir = track_tmp_path / "patches"
+    store_dir = track_tmp_path / "stores"
+    patch_dir.mkdir(parents=True, exist_ok=True)
+    store_dir.mkdir(parents=True, exist_ok=True)
+
+    np.save(patch_dir / "sample.npy", np.zeros((8, 8, 3), dtype=np.uint8))
+    (patch_dir / "sample.png").write_bytes(b"")
+    _create_test_store(store_dir / "sample.db")
+
+    with pytest.raises(ValueError, match="Duplicate patch image files"):
+        _ = PatchAnnotationDataset.from_dirs(
+            patch_dir=patch_dir,
+            annotation_store_dir=store_dir,
+            target_builder=PresenceTargetBuilder(),
+        )
+
+    (patch_dir / "sample.png").unlink()
+    (store_dir / "sample.sqlite").write_bytes(b"")
+
+    with pytest.raises(ValueError, match="Duplicate annotation store files"):
+        _ = PatchAnnotationDataset.from_dirs(
+            patch_dir=patch_dir,
+            annotation_store_dir=store_dir,
+            target_builder=PresenceTargetBuilder(),
+        )
+
+
+def test_patch_annotation_dataset_from_dirs_validates_patch_bounds_shape(
+    track_tmp_path: Path,
+) -> None:
+    """Directory construction should keep standard per-sample validation."""
+    patch_dir = track_tmp_path / "patches"
+    store_dir = track_tmp_path / "stores"
+    patch_dir.mkdir(parents=True, exist_ok=True)
+    store_dir.mkdir(parents=True, exist_ok=True)
+
+    for name in ("a", "b"):
+        np.save(patch_dir / f"{name}.npy", np.zeros((8, 8, 3), dtype=np.uint8))
+        _create_test_store(store_dir / f"{name}.db")
+
+    with pytest.raises(ValueError, match="same length as `patch_inputs`"):
+        _ = PatchAnnotationDataset.from_dirs(
+            patch_dir=patch_dir,
+            annotation_store_dir=store_dir,
+            target_builder=PresenceTargetBuilder(),
+            patch_bounds=[(0, 0, 8, 8)],
+        )
+
+
 def test_patch_annotation_dataset_survives_pickle_roundtrip(
     track_tmp_path: Path,
 ) -> None:

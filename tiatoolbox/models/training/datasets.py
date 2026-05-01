@@ -33,6 +33,12 @@ DEFAULT_IMAGE_SUFFIXES = {
     ".tiff",
 }
 
+DEFAULT_ANNOTATION_STORE_SUFFIXES = {
+    ".db",
+    ".sqlite",
+    ".sqlite3",
+}
+
 
 def _load_image(path: str | Path) -> np.ndarray:
     """Load an image-like array from disk."""
@@ -195,6 +201,66 @@ def _build_relative_stem_map(
         raise ValueError(msg)
 
     return {key: grouped[0] for key, grouped in grouped_paths.items()}
+
+
+def _collect_strict_relative_stem_pairs(
+    left_dir: str | Path,
+    right_dir: str | Path,
+    *,
+    left_suffixes: set[str],
+    right_suffixes: set[str],
+    left_argument_name: str,
+    right_argument_name: str,
+    left_kind: str,
+    right_kind: str,
+    left_plural: str,
+    right_plural: str,
+) -> list[tuple[Path, Path]]:
+    """Collect two file sets by strict nested relative-stem matching."""
+    left_root = Path(left_dir)
+    right_root = Path(right_dir)
+    if not left_root.exists() or not left_root.is_dir():
+        msg = f"`{left_argument_name}` must be an existing directory."
+        raise ValueError(msg)
+    if not right_root.exists() or not right_root.is_dir():
+        msg = f"`{right_argument_name}` must be an existing directory."
+        raise ValueError(msg)
+
+    left_files = _discover_files(
+        left_root,
+        {suffix.lower() for suffix in left_suffixes},
+    )
+    right_files = _discover_files(
+        right_root,
+        {suffix.lower() for suffix in right_suffixes},
+    )
+    left_map = _build_relative_stem_map(left_files, left_root, kind=left_kind)
+    right_map = _build_relative_stem_map(right_files, right_root, kind=right_kind)
+
+    matched_keys = sorted(set(left_map).intersection(right_map))
+    unmatched_left_keys = set(left_map).difference(right_map)
+    unmatched_right_keys = set(right_map).difference(left_map)
+    pair_label = f"{left_kind}/{right_kind}"
+    if not matched_keys:
+        msg = f"No {pair_label} pairs were found using file stem matching."
+        raise ValueError(msg)
+
+    if unmatched_left_keys or unmatched_right_keys:
+        details = []
+        if unmatched_left_keys:
+            details.append(
+                f"missing {right_plural} for "
+                f"{_format_key_preview(unmatched_left_keys)}"
+            )
+        if unmatched_right_keys:
+            details.append(
+                f"missing {left_plural} for "
+                f"{_format_key_preview(unmatched_right_keys)}"
+            )
+        msg = f"Unmatched {pair_label} files were found: {'; '.join(details)}."
+        raise ValueError(msg)
+
+    return [(left_map[key], right_map[key]) for key in matched_keys]
 
 
 def _open_cached_store(
@@ -366,51 +432,18 @@ class PatchMaskPairDataset(Dataset):
             )
             raise ValueError(msg)
 
-        image_root = Path(image_dir)
-        mask_root = Path(mask_dir)
-        if not image_root.exists() or not image_root.is_dir():
-            msg = "`image_dir` must be an existing directory."
-            raise ValueError(msg)
-        if not mask_root.exists() or not mask_root.is_dir():
-            msg = "`mask_dir` must be an existing directory."
-            raise ValueError(msg)
-
-        image_files = _discover_files(image_root, self.image_extensions)
-        mask_files = _discover_files(mask_root, self.mask_extensions)
-        image_map = _build_relative_stem_map(
-            image_files,
-            image_root,
-            kind="image",
+        return _collect_strict_relative_stem_pairs(
+            image_dir,
+            mask_dir,
+            left_suffixes=self.image_extensions,
+            right_suffixes=self.mask_extensions,
+            left_argument_name="image_dir",
+            right_argument_name="mask_dir",
+            left_kind="image",
+            right_kind="mask",
+            left_plural="images",
+            right_plural="masks",
         )
-        mask_map = _build_relative_stem_map(
-            mask_files,
-            mask_root,
-            kind="mask",
-        )
-
-        matched_keys = sorted(set(image_map).intersection(mask_map))
-        unmatched_image_keys = set(image_map).difference(mask_map)
-        unmatched_mask_keys = set(mask_map).difference(image_map)
-        if not matched_keys:
-            msg = "No image/mask pairs were found using file stem matching."
-            raise ValueError(msg)
-
-        if unmatched_image_keys or unmatched_mask_keys:
-            details = []
-            if unmatched_image_keys:
-                details.append(
-                    "missing masks for "
-                    f"{_format_key_preview(unmatched_image_keys)}"
-                )
-            if unmatched_mask_keys:
-                details.append(
-                    "missing images for "
-                    f"{_format_key_preview(unmatched_mask_keys)}"
-                )
-            msg = f"Unmatched image/mask files were found: {'; '.join(details)}."
-            raise ValueError(msg)
-
-        return [(image_map[key], mask_map[key]) for key in matched_keys]
 
     def __len__(self: PatchMaskPairDataset) -> int:
         """Return number of available pairs."""
@@ -446,6 +479,56 @@ class PatchAnnotationDataset(Dataset):
     coordinate space. The generated target arrays are in patch pixel
     coordinates matching the loaded image shape.
     """
+
+    @classmethod
+    def from_dirs(
+        cls: type[PatchAnnotationDataset],
+        patch_dir: str | Path,
+        annotation_store_dir: str | Path,
+        target_builder: TargetBuilderABC,
+        patch_bounds: (
+            list[tuple[float, float, float, float]]
+            | np.ndarray
+            | None
+        ) = None,
+        pair_transform: Callable | None = None,
+        image_transform: Callable | None = None,
+        target_transform: Callable | None = None,
+        patch_extensions: set[str] | None = None,
+        annotation_store_extensions: set[str] | None = None,
+    ) -> PatchAnnotationDataset:
+        """Create a dataset from patch and annotation-store directories.
+
+        Patch files and store files are paired by strict relative stem. For
+        example, ``patch_dir/case_1/tile_0.png`` matches
+        ``annotation_store_dir/case_1/tile_0.db``. Extra files, missing files,
+        duplicate relative stems, and empty matches are rejected to avoid silent
+        training target misalignment.
+        """
+        pairs = _collect_strict_relative_stem_pairs(
+            patch_dir,
+            annotation_store_dir,
+            left_suffixes=patch_extensions or DEFAULT_IMAGE_SUFFIXES,
+            right_suffixes=(
+                annotation_store_extensions or DEFAULT_ANNOTATION_STORE_SUFFIXES
+            ),
+            left_argument_name="patch_dir",
+            right_argument_name="annotation_store_dir",
+            left_kind="patch image",
+            right_kind="annotation store",
+            left_plural="patch images",
+            right_plural="annotation stores",
+        )
+
+        return cls(
+            patch_inputs=[patch_path for patch_path, _ in pairs],
+            annotation_stores=[store_path for _, store_path in pairs],
+            target_builder=target_builder,
+            patch_bounds=patch_bounds,
+            pair_transform=pair_transform,
+            image_transform=image_transform,
+            target_transform=target_transform,
+        )
 
     def __init__(
         self: PatchAnnotationDataset,
