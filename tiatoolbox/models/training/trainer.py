@@ -23,6 +23,7 @@ from tiatoolbox.models.training.checkpoint import (
     save_checkpoint,
     save_model_weights,
 )
+from tiatoolbox.models.training.artifact import TrainingArtifactManifest
 from tiatoolbox.models.training.config import (
     CheckpointConfig,
     TrainerConfig,
@@ -56,10 +57,12 @@ class Trainer:
         scheduler: LRScheduler | None = None,
         config: TrainerConfig | None = None,
         checkpoint_config: CheckpointConfig | None = None,
+        artifact_manifest: TrainingArtifactManifest | None = None,
     ) -> None:
         """Initialize :class:`Trainer`."""
         self.config = config or TrainerConfig()
         self.checkpoint_config = checkpoint_config or CheckpointConfig()
+        self.artifact_manifest = artifact_manifest
 
         if self.config.seed is not None:
             set_seed(self.config.seed, deterministic=self.config.deterministic)
@@ -304,6 +307,24 @@ class Trainer:
             "trainer_config": trainer_config,
         }
 
+    def _save_artifact_manifest(self: Trainer) -> None:
+        """Persist lightweight training artifact metadata, when configured."""
+        if (
+            self.artifact_manifest is None
+            or not self.checkpoint_config.save_artifact
+        ):
+            return
+
+        self.artifact_manifest.record_training_state(
+            best_epoch=self.best_epoch,
+            best_monitor_value=self.best_monitor_value,
+            monitor=self.config.monitor,
+            monitor_mode=self.config.monitor_mode,
+            history=self.history,
+        )
+        artifact_path = self.output_dir / self.checkpoint_config.artifact_filename
+        self.artifact_manifest.save(artifact_path)
+
     def _resume_from_checkpoint(self: Trainer, checkpoint_path: str | Path) -> int:
         """Restore trainer state from a checkpoint and return start epoch."""
         checkpoint = load_checkpoint(checkpoint_path, map_location=str(self.device))
@@ -377,6 +398,12 @@ class Trainer:
                             / self.checkpoint_config.best_weights_filename
                         )
                         save_model_weights(self.model, best_path)
+                        if self.artifact_manifest is not None:
+                            self.artifact_manifest.record_weight(
+                                "best",
+                                best_path,
+                                relative_to=self.output_dir,
+                            )
                 else:
                     patience_counter += 1
 
@@ -389,6 +416,14 @@ class Trainer:
                     self._build_checkpoint_state(epoch_idx + 1),
                     checkpoint_path,
                 )
+                if self.artifact_manifest is not None:
+                    self.artifact_manifest.record_checkpoint(
+                        "last",
+                        checkpoint_path,
+                        relative_to=self.output_dir,
+                    )
+
+            self._save_artifact_manifest()
 
             if monitor_value is None:
                 logger.info(

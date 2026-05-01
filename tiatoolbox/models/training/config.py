@@ -9,12 +9,14 @@ from typing import Literal
 
 @dataclass
 class CheckpointConfig:
-    """Configuration for checkpoint file names and save behavior."""
+    """Configuration for checkpoint and artifact file names/save behavior."""
 
     save_last: bool = True
     save_best: bool = True
+    save_artifact: bool = True
     last_filename: str = "last.ckpt"
     best_weights_filename: str = "best_model_weights.pth"
+    artifact_filename: str = "training_artifact.json"
 
 
 @dataclass

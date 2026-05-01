@@ -14,9 +14,10 @@ import torch.nn.functional as F
 from torch import nn
 from torch.utils.data import DataLoader
 
-from tiatoolbox.models.models_abc import load_torch_model
 import tiatoolbox.models.training.augmentations as training_augmentations
 from tiatoolbox.models.architecture.kongnet import KongNet
+from tiatoolbox.models.engine.io_config import IOPatchPredictorConfig, IOSegmentorConfig
+from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.models.training import (
     BinaryDiskTargetBuilder,
     CheckpointConfig,
@@ -32,11 +33,14 @@ from tiatoolbox.models.training import (
     StackedTargetBuilder,
     StructuredDenseTask,
     Trainer,
+    TrainerConfig,
+    TrainingArtifactManifest,
     build_kongnet_training_task,
     get_annotation_augmentation,
     get_classification_augmentation,
     get_segmentation_augmentation,
-    TrainerConfig,
+    ioconfig_from_dict,
+    ioconfig_to_dict,
     save_checkpoint,
     save_model_weights,
     stratified_split_indices,
@@ -640,6 +644,126 @@ def test_classification_task_validation_for_target_modes() -> None:
             loss="bce_with_logits",
             target_mode="single_label",
         )
+
+
+def test_training_artifact_serializes_ioconfig_and_engine_kwargs(
+    track_tmp_path: Path,
+) -> None:
+    """Training artifacts should round-trip JSON and rebuild engine helpers."""
+    ioconfig = IOPatchPredictorConfig(
+        input_resolutions=[{"units": "mpp", "resolution": 0.5}],
+        output_resolutions=[{"units": "mpp", "resolution": 0.5}],
+        patch_input_shape=(224, 224),
+        stride_shape=(112, 112),
+    )
+    model = DictOutputClassifier()
+    model.class_dict = {0: "tumour", 1: "stroma"}
+
+    manifest = TrainingArtifactManifest.from_model(
+        model,
+        task_type="classification",
+        model_constructor={"num_classes": 2},
+        preprocessing={"name": "example-preproc"},
+        postprocessing={"name": "argmax"},
+        ioconfig=ioconfig,
+        engine="PatchPredictor",
+        run_kwargs={"return_probabilities": True},
+    )
+    manifest.record_weight(
+        "best",
+        track_tmp_path / "best_model_weights.pth",
+        relative_to=track_tmp_path,
+    )
+
+    manifest_path = manifest.save(track_tmp_path / "training_artifact.json")
+    loaded = TrainingArtifactManifest.load(manifest_path)
+    engine_kwargs = loaded.to_engine_kwargs(
+        "PatchPredictor",
+        manifest_path=manifest_path,
+    )
+
+    assert loaded.schema_version == 1
+    assert loaded.model["class_name"] == "DictOutputClassifier"
+    assert loaded.class_dict == {0: "tumour", 1: "stroma"}
+    assert engine_kwargs["weights"] == track_tmp_path / "best_model_weights.pth"
+    assert engine_kwargs["class_dict"] == {0: "tumour", 1: "stroma"}
+    assert engine_kwargs["return_probabilities"] is True
+    assert isinstance(engine_kwargs["ioconfig"], IOPatchPredictorConfig)
+    assert engine_kwargs["ioconfig"].patch_input_shape == [224, 224]
+
+
+def test_training_artifact_ioconfig_helpers_support_segmentor_configs() -> None:
+    """IO config helper functions should support segmentation engine configs."""
+    ioconfig = IOSegmentorConfig(
+        input_resolutions=[{"units": "mpp", "resolution": 1.0}],
+        output_resolutions=[{"units": "mpp", "resolution": 1.0}],
+        patch_input_shape=(256, 256),
+        patch_output_shape=(128, 128),
+        stride_shape=(64, 64),
+        save_resolution={"units": "mpp", "resolution": 2.0},
+    )
+
+    payload = ioconfig_to_dict(ioconfig)
+    restored = ioconfig_from_dict(payload)
+
+    assert payload["type"] == "IOSegmentorConfig"
+    assert isinstance(restored, IOSegmentorConfig)
+    assert restored.patch_output_shape == [128, 128]
+    assert restored.save_resolution == {"units": "mpp", "resolution": 2.0}
+
+
+def test_trainer_writes_training_artifact_manifest(track_tmp_path: Path) -> None:
+    """Trainer should persist the optional artifact manifest beside weights."""
+    dataset_root = _build_classification_dataset(track_tmp_path / "class_dataset")
+    dataset = PatchFolderClassificationDataset(dataset_root)
+
+    model = nn.Sequential(
+        nn.Conv2d(3, 4, kernel_size=1),
+        nn.ReLU(),
+        nn.AdaptiveAvgPool2d(1),
+        nn.Flatten(),
+        nn.Linear(4, 2),
+    )
+    ioconfig = IOPatchPredictorConfig(
+        input_resolutions=[{"units": "mpp", "resolution": 0.5}],
+        patch_input_shape=(16, 16),
+        stride_shape=(16, 16),
+    )
+    manifest = TrainingArtifactManifest.from_model(
+        model,
+        task_type="classification",
+        model_constructor={"layers": "tiny-test-sequential"},
+        class_dict={index: name for name, index in dataset.class_to_idx.items()},
+        ioconfig=ioconfig,
+        engine="PatchPredictor",
+    )
+
+    output_dir = track_tmp_path / "artifact_run"
+    trainer = Trainer(
+        model=model,
+        task=ClassificationTask(),
+        optimizer=torch.optim.AdamW(model.parameters(), lr=1e-2),
+        train_loader=DataLoader(dataset, batch_size=4, shuffle=True),
+        val_loader=DataLoader(dataset, batch_size=4, shuffle=False),
+        config=TrainerConfig(
+            max_epochs=1,
+            output_dir=output_dir,
+            amp=False,
+            seed=42,
+            log_every_n_steps=0,
+        ),
+        artifact_manifest=manifest,
+    )
+
+    trainer.fit()
+
+    manifest_path = output_dir / "training_artifact.json"
+    assert manifest_path.exists()
+    loaded = TrainingArtifactManifest.load(manifest_path)
+    assert loaded.weights == {"best": "best_model_weights.pth"}
+    assert loaded.checkpoints == {"last": "last.ckpt"}
+    assert loaded.training["best_epoch"] == 1
+    assert loaded.resolve_weight_path("best", manifest_path=manifest_path).exists()
 
 
 def test_classification_trainer_and_resume(track_tmp_path: Path) -> None:
