@@ -17,6 +17,7 @@ from tiatoolbox.models.engine.io_config import (
     IOSegmentorConfig,
     ModelIOConfigABC,
 )
+from tiatoolbox.models.training.checkpoint import load_checkpoint, load_model_state_dict
 
 MANIFEST_SCHEMA_VERSION = 1
 
@@ -169,6 +170,18 @@ class EngineConfigSpec:
 
 
 @dataclass
+class EngineSetup:
+    """Split inference-engine construction kwargs from run-time kwargs."""
+
+    constructor_kwargs: dict[str, Any] = field(default_factory=dict)
+    run_kwargs: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize the setup to a JSON-compatible mapping."""
+        return _json_safe(asdict(self))
+
+
+@dataclass
 class TrainingArtifactManifest:
     """JSON manifest describing a trained model handoff artifact.
 
@@ -195,6 +208,7 @@ class TrainingArtifactManifest:
     checkpoints: dict[str, str] = field(default_factory=dict)
     training: dict[str, Any] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
+    source_path: Path | None = field(default=None, repr=False, compare=False)
 
     @classmethod
     def from_model(
@@ -314,6 +328,28 @@ class TrainingArtifactManifest:
             )
         )
 
+    def _manifest_base_path(
+        self,
+        manifest_path: str | Path | None = None,
+    ) -> Path | None:
+        """Return a manifest path argument or path captured by ``load``."""
+        resolved_path = manifest_path or self.source_path
+        return None if resolved_path is None else Path(resolved_path)
+
+    def _resolve_recorded_path(
+        self,
+        path: str | Path,
+        *,
+        manifest_path: str | Path | None = None,
+    ) -> Path:
+        """Resolve a recorded path relative to a manifest path when available."""
+        resolved_path = Path(path)
+        base_path = self._manifest_base_path(manifest_path)
+        if resolved_path.is_absolute() or base_path is None:
+            return resolved_path
+        base_dir = base_path if base_path.is_dir() else base_path.parent
+        return base_dir / resolved_path
+
     def resolve_weight_path(
         self,
         name: str = "best",
@@ -322,15 +358,71 @@ class TrainingArtifactManifest:
     ) -> Path:
         """Resolve a named weight path, relative to a manifest path if provided."""
         try:
-            weights_path = Path(self.weights[name])
+            weights_path = self.weights[name]
         except KeyError as error:
             msg = f"No `{name}` weights path recorded in the training artifact."
             raise KeyError(msg) from error
-        if weights_path.is_absolute() or manifest_path is None:
-            return weights_path
-        manifest_path = Path(manifest_path)
-        base_dir = manifest_path if manifest_path.is_dir() else manifest_path.parent
-        return base_dir / weights_path
+        return self._resolve_recorded_path(
+            weights_path,
+            manifest_path=manifest_path,
+        )
+
+    def resolve_checkpoint_path(
+        self,
+        name: str = "last",
+        *,
+        manifest_path: str | Path | None = None,
+    ) -> Path:
+        """Resolve a named checkpoint path, relative to a manifest path if provided."""
+        try:
+            checkpoint_path = self.checkpoints[name]
+        except KeyError as error:
+            msg = f"No `{name}` checkpoint path recorded in the training artifact."
+            raise KeyError(msg) from error
+        return self._resolve_recorded_path(
+            checkpoint_path,
+            manifest_path=manifest_path,
+        )
+
+    def resolve_weights_or_checkpoint_path(
+        self,
+        name: str = "best",
+        *,
+        manifest_path: str | Path | None = None,
+    ) -> Path:
+        """Resolve a named weights/checkpoint artifact path for model loading."""
+        if name in self.weights:
+            return self.resolve_weight_path(name, manifest_path=manifest_path)
+        if name in self.checkpoints:
+            return self.resolve_checkpoint_path(name, manifest_path=manifest_path)
+        msg = (
+            f"No `{name}` weights or checkpoint path recorded in the training artifact."
+        )
+        raise KeyError(msg)
+
+    def load_weights(
+        self,
+        model: nn.Module,
+        name: str = "best",
+        *,
+        manifest_path: str | Path | None = None,
+        map_location: str = "cpu",
+        strict: bool = True,
+    ) -> Any:
+        """Load recorded weights into a user-supplied model.
+
+        The manifest only resolves a recorded weights/checkpoint path. The caller
+        remains responsible for constructing the model explicitly. Payload loading
+        is delegated to the training checkpoint helpers so bare state dicts and
+        full trainer checkpoints follow the same compatibility path as trainer
+        resume and :meth:`ModelABC.load_weights_from_file`.
+        """
+        weights_path = self.resolve_weights_or_checkpoint_path(
+            name,
+            manifest_path=manifest_path,
+        )
+        payload = load_checkpoint(weights_path, map_location=map_location)
+        return load_model_state_dict(model, payload, strict=strict)
 
     def get_engine_config(self, engine: str | None = None) -> EngineConfigSpec:
         """Return a recommended engine config spec.
@@ -350,6 +442,39 @@ class TrainingArtifactManifest:
             raise ValueError(msg)
         return next(iter(self.engine_configs.values()))
 
+    def to_engine_setup(
+        self,
+        engine: str | None = None,
+        *,
+        manifest_path: str | Path | None = None,
+        weights_key: str | None = "best",
+        include_weights: bool = True,
+    ) -> EngineSetup:
+        """Return split engine constructor and ``run`` kwargs from the manifest.
+
+        Constructor kwargs contain only engine construction parameters recorded in
+        the artifact, currently the selected ``weights`` path when requested.
+        Runtime kwargs contain the reconstructed IO config, class dictionary, and
+        stored engine run kwargs. The method does not instantiate or import a
+        model class.
+        """
+        constructor_kwargs: dict[str, Any] = {}
+        if include_weights and weights_key is not None and weights_key in self.weights:
+            constructor_kwargs["weights"] = self.resolve_weight_path(
+                weights_key,
+                manifest_path=manifest_path,
+            )
+
+        config = self.get_engine_config(engine)
+        run_kwargs = {"ioconfig": config.to_ioconfig()}
+        run_kwargs.update(config.run_kwargs)
+        if self.class_dict is not None:
+            run_kwargs["class_dict"] = self.class_dict
+        return EngineSetup(
+            constructor_kwargs=constructor_kwargs,
+            run_kwargs=run_kwargs,
+        )
+
     def to_engine_kwargs(
         self,
         engine: str | None = None,
@@ -359,28 +484,21 @@ class TrainingArtifactManifest:
     ) -> dict[str, Any]:
         """Return common inference kwargs from the manifest.
 
-        The returned mapping is intended to be merged into engine construction and
-        ``run`` calls by examples/users. It includes ``weights`` when recorded,
-        ``ioconfig`` when available, ``class_dict`` when available, plus any stored
-        run kwargs. It does not instantiate a model class.
+        This compatibility helper merges :meth:`to_engine_setup` into a single
+        mapping. Prefer :meth:`to_engine_setup` in new code when separating engine
+        construction from ``run`` arguments matters.
         """
-        kwargs: dict[str, Any] = {}
-        if weights_key in self.weights:
-            kwargs["weights"] = self.resolve_weight_path(
-                weights_key,
-                manifest_path=manifest_path,
-            )
-
-        config = self.get_engine_config(engine)
-        kwargs["ioconfig"] = config.to_ioconfig()
-        kwargs.update(config.run_kwargs)
-        if self.class_dict is not None:
-            kwargs["class_dict"] = self.class_dict
-        return kwargs
+        setup = self.to_engine_setup(
+            engine,
+            manifest_path=manifest_path,
+            weights_key=weights_key,
+        )
+        return {**setup.constructor_kwargs, **setup.run_kwargs}
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the manifest to a JSON-compatible mapping."""
         payload = asdict(self)
+        payload.pop("source_path", None)
         payload["engine_configs"] = {
             name: spec.to_dict() if isinstance(spec, EngineConfigSpec) else spec
             for name, spec in self.engine_configs.items()
@@ -426,7 +544,9 @@ class TrainingArtifactManifest:
     def load(cls, path: str | Path) -> TrainingArtifactManifest:
         """Load a training artifact manifest from JSON."""
         path = Path(path)
-        return cls.from_dict(json.loads(path.read_text()))
+        artifact = cls.from_dict(json.loads(path.read_text()))
+        artifact.source_path = path
+        return artifact
 
 
 def load_training_artifact(path: str | Path) -> TrainingArtifactManifest:

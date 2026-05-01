@@ -2,6 +2,7 @@
 
 from tiatoolbox.models.training.artifact import (
     EngineConfigSpec,
+    EngineSetup,
     TrainingArtifactManifest,
     ioconfig_from_dict,
     ioconfig_to_dict,
@@ -91,6 +92,7 @@ __all__ = [
     "DenseMetricName",
     "DenseTargetMode",
     "EngineConfigSpec",
+    "EngineSetup",
     "GaussianHeatmapTargetBuilder",
     "MaskTargetBuilder",
     "MultiLabelTargetBuilder",

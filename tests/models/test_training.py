@@ -800,6 +800,81 @@ def test_training_artifact_serializes_ioconfig_and_engine_kwargs(
     assert isinstance(engine_kwargs["ioconfig"], IOPatchPredictorConfig)
     assert engine_kwargs["ioconfig"].patch_input_shape == [224, 224]
 
+    engine_setup = loaded.to_engine_setup("PatchPredictor")
+    assert engine_setup.constructor_kwargs == {
+        "weights": track_tmp_path / "best_model_weights.pth",
+    }
+    assert engine_setup.run_kwargs["class_dict"] == {0: "tumour", 1: "stroma"}
+    assert engine_setup.run_kwargs["return_probabilities"] is True
+    assert isinstance(engine_setup.run_kwargs["ioconfig"], IOPatchPredictorConfig)
+
+    loaded_setup = loaded.to_engine_setup("PatchPredictor", include_weights=False)
+    assert loaded_setup.constructor_kwargs == {}
+    assert loaded_setup.run_kwargs == engine_setup.run_kwargs
+
+
+def test_training_artifact_load_weights_from_recorded_weight(
+    track_tmp_path: Path,
+) -> None:
+    """Training artifacts should load recorded weights into explicit models."""
+    source_model = DictOutputClassifier()
+    with torch.no_grad():
+        source_model.linear.weight.fill_(0.25)
+        source_model.linear.bias.fill_(0.5)
+
+    weights_path = track_tmp_path / "best_model_weights.pth"
+    save_model_weights(source_model, weights_path)
+
+    manifest = TrainingArtifactManifest.from_model(
+        source_model,
+        task_type="classification",
+        model_constructor={"num_classes": 2},
+    )
+    manifest.record_weight("best", weights_path, relative_to=track_tmp_path)
+    manifest_path = manifest.save(track_tmp_path / "training_artifact.json")
+
+    target_model = DictOutputClassifier()
+    loaded = TrainingArtifactManifest.load(manifest_path)
+    load_result = loaded.load_weights(target_model)
+
+    assert load_result.missing_keys == []
+    assert load_result.unexpected_keys == []
+    for key, tensor in source_model.state_dict().items():
+        assert torch.equal(target_model.state_dict()[key], tensor)
+
+
+def test_training_artifact_load_weights_from_recorded_checkpoint(
+    track_tmp_path: Path,
+) -> None:
+    """Artifact weight loading should reuse trainer-checkpoint payload handling."""
+    source_model = DictOutputClassifier()
+    with torch.no_grad():
+        source_model.linear.weight.fill_(0.75)
+        source_model.linear.bias.fill_(-0.25)
+
+    checkpoint_path = track_tmp_path / "last.ckpt"
+    save_checkpoint(
+        {"model_state_dict": source_model.state_dict(), "epoch": 3},
+        checkpoint_path,
+    )
+
+    manifest = TrainingArtifactManifest.from_model(
+        source_model,
+        task_type="classification",
+        model_constructor={"num_classes": 2},
+    )
+    manifest.record_checkpoint("last", checkpoint_path, relative_to=track_tmp_path)
+    manifest_path = manifest.save(track_tmp_path / "training_artifact.json")
+
+    target_model = DictOutputClassifier()
+    loaded = TrainingArtifactManifest.load(manifest_path)
+    load_result = loaded.load_weights(target_model, name="last")
+
+    assert load_result.missing_keys == []
+    assert load_result.unexpected_keys == []
+    for key, tensor in source_model.state_dict().items():
+        assert torch.equal(target_model.state_dict()[key], tensor)
+
 
 def test_training_artifact_ioconfig_helpers_support_segmentor_configs() -> None:
     """IO config helper functions should support segmentation engine configs."""
