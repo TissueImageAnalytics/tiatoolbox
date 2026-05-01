@@ -383,22 +383,32 @@ class StackedTargetBuilder(TargetBuilderABC):
         patch_bounds: tuple[float, ...] | list[float] | np.ndarray,
         output_shape: tuple[int, int] | list[int] | np.ndarray,
     ) -> np.ndarray:
-        """Build and stack all child targets for one patch."""
+        """Build and stack all child targets for one patch.
+
+        Each child builder owns its annotation query configuration. Querying via
+        the children keeps per-channel filters such as ``where`` and
+        ``geometry_predicate`` intact when multiple target builders are composed.
+        """
         normalized_bounds = _as_bounds(patch_bounds)
         normalized_shape = _normalize_output_shape(output_shape)
-        annotations = self.query_annotations(store, normalized_bounds)
-        return self.build_target(annotations, normalized_bounds, normalized_shape)
+        channel_targets = {
+            name: builder.create_target(
+                store=store,
+                patch_bounds=normalized_bounds,
+                output_shape=normalized_shape,
+            )
+            for name, builder in self.builders.items()
+        }
+        return self._stack_channel_targets(channel_targets, normalized_shape)
 
-    def build_target(
+    def _stack_channel_targets(
         self: StackedTargetBuilder,
-        annotations: dict[str, Annotation],
-        patch_bounds: Bounds,
+        channel_targets: dict[str, TargetType],
         output_shape: tuple[int, int],
     ) -> np.ndarray:
-        """Build a dense stacked target with channels on the last axis."""
-        channel_targets: list[np.ndarray] = []
-        for name, builder in self.builders.items():
-            child_target = builder.build_target(annotations, patch_bounds, output_shape)
+        """Validate and stack named 2D channel targets."""
+        stacked_targets: list[np.ndarray] = []
+        for name, child_target in channel_targets.items():
             if not isinstance(child_target, np.ndarray) or child_target.ndim != 2:
                 msg = (
                     "StackedTargetBuilder expects each child builder to return a "
@@ -411,9 +421,26 @@ class StackedTargetBuilder(TargetBuilderABC):
                     f"expected `{output_shape}`."
                 )
                 raise ValueError(msg)
-            channel_targets.append(child_target.astype(self.dtype, copy=False))
+            stacked_targets.append(child_target.astype(self.dtype, copy=False))
 
-        return np.stack(channel_targets, axis=-1)
+        return np.stack(stacked_targets, axis=-1)
+
+    def build_target(
+        self: StackedTargetBuilder,
+        annotations: dict[str, Annotation],
+        patch_bounds: Bounds,
+        output_shape: tuple[int, int],
+    ) -> np.ndarray:
+        """Build a dense stacked target with channels on the last axis.
+
+        This method consumes an already-queried annotation mapping. Use
+        :meth:`create_target` when child builders have distinct query settings.
+        """
+        channel_targets = {
+            name: builder.build_target(annotations, patch_bounds, output_shape)
+            for name, builder in self.builders.items()
+        }
+        return self._stack_channel_targets(channel_targets, output_shape)
 
 
 class MaskTargetBuilder(TargetBuilderABC):

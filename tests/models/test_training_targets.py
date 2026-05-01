@@ -235,8 +235,100 @@ def test_stacked_target_builder(track_tmp_path: Path) -> None:
     assert target.shape == (10, 10, 3)
     assert target.dtype == np.float32
     assert target[2, 2, 0] == pytest.approx(1.0)
+    assert target[2, 7, 0] == pytest.approx(0.0)
     assert target[4, 4, 1] == pytest.approx(0.0)
     assert 0.8 < float(target[..., 2].max()) <= 1.0
+
+
+def test_stacked_target_builder_honours_child_geometry_predicates(
+    track_tmp_path: Path,
+) -> None:
+    """Stacked child builders should use their own geometry predicates."""
+    store = SQLiteStore(track_tmp_path / "stacked_geometry_predicates.db")
+    store.append(
+        Annotation(
+            Polygon([(1, 1), (3, 1), (3, 3), (1, 3)]),
+            properties={"class": "inside"},
+        ),
+        key="inside",
+    )
+    store.append(
+        Annotation(
+            Polygon([(8, 1), (12, 1), (12, 3), (8, 3)]),
+            properties={"class": "partial"},
+        ),
+        key="partial",
+    )
+
+    builder = StackedTargetBuilder(
+        {
+            "contained": MaskTargetBuilder(
+                class_mapping=None,
+                geometry_predicate="contains",
+            ),
+            "intersecting": MaskTargetBuilder(
+                class_mapping=None,
+                geometry_predicate="intersects",
+            ),
+        }
+    )
+
+    target = builder.create_target(
+        store=store,
+        patch_bounds=(0, 0, 10, 10),
+        output_shape=(10, 10),
+    )
+
+    assert target[2, 2, 0] == pytest.approx(1.0)
+    assert target[2, 9, 0] == pytest.approx(0.0)
+    assert target[2, 2, 1] == pytest.approx(1.0)
+    assert target[2, 9, 1] == pytest.approx(1.0)
+
+
+def test_stacked_target_builder_honours_class_specific_child_filters(
+    track_tmp_path: Path,
+) -> None:
+    """Class-specific stacked builders should match the KongNet target pattern."""
+    store = _create_test_store(track_tmp_path / "stacked_class_filters.db")
+    builder = CompositeTargetBuilder(
+        {
+            label: StackedTargetBuilder(
+                {
+                    "mask": MaskTargetBuilder(
+                        where=f'props["class"] == "{label}"',
+                        class_mapping=None,
+                        default_label=0,
+                    ),
+                    "boundary": BoundaryTargetBuilder(
+                        where=f'props["class"] == "{label}"',
+                        line_width=1,
+                    ),
+                    "centroid": GaussianHeatmapTargetBuilder(
+                        where=f'props["class"] == "{label}"',
+                        sigma=1.0,
+                    ),
+                }
+            )
+            for label in ("tumor", "stroma")
+        }
+    )
+
+    target = builder.create_target(
+        store=store,
+        patch_bounds=(0, 0, 10, 10),
+        output_shape=(10, 10),
+    )
+
+    assert target["tumor"].shape == (10, 10, 3)
+    assert target["stroma"].shape == (10, 10, 3)
+    assert target["tumor"][2, 2, 0] == pytest.approx(1.0)
+    assert target["tumor"][2, 7, 0] == pytest.approx(0.0)
+    assert target["stroma"][2, 2, 0] == pytest.approx(0.0)
+    assert target["stroma"][2, 7, 0] == pytest.approx(1.0)
+    assert target["tumor"][0, 0, 1] == pytest.approx(1.0)
+    assert target["stroma"][0, 0, 1] == pytest.approx(0.0)
+    assert 0.8 < float(target["tumor"][..., 2].max()) <= 1.0
+    assert 0.7 < float(target["stroma"][..., 2].max()) <= 1.0
 
 
 def test_composite_target_builder(track_tmp_path: Path) -> None:
