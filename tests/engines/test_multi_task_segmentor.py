@@ -826,10 +826,9 @@ def test_clear_zarr() -> None:
     root = zarr.group(store=store)
 
     # Create a dummy zarr array for probabilities_zarr
-    probabilities_zarr = root.create_dataset(
+    probabilities_zarr = root.create_array(
         "probabilities",
         data=np.zeros((5, 3, 3)),
-        shape=(5, 3, 3),
     )
 
     idx = 2
