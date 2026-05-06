@@ -2670,7 +2670,7 @@ def _save_multitask_vertical_to_cache(
         )
         update_tqdm_desc(tqdm_loop=tqdm_loop, desc=msg)
         zarr_group = zarr.open(str(save_path), mode="a")
-        probabilities_zarr[idx] = zarr_group.create_dataset(
+        probabilities_zarr[idx] = zarr_group.create_array(
             name=f"probabilities/{idx}",
             shape=probabilities_da[idx].shape,
             chunks=(chunk_shape[0], *probabilities.shape[1:]),

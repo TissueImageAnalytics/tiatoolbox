@@ -1311,7 +1311,7 @@ def save_to_cache(
         first_canvas_block = canvas.blocks[0, 0, 0].compute()
         first_count_block = count.blocks[0, 0, 0].compute()
 
-        canvas_zarr = zarr_group.create_dataset(
+        canvas_zarr = zarr_group.create_array(
             name=zarr_dataset_name[0],
             # Append along axis 0 (height); keep width/channels fixed.
             shape=(0, *first_canvas_block.shape[1:]),
@@ -1320,7 +1320,7 @@ def save_to_cache(
             overwrite=True,
         )
 
-        count_zarr = zarr_group.create_dataset(
+        count_zarr = zarr_group.create_array(
             name=zarr_dataset_name[1],
             shape=(0, *first_count_block.shape[1:]),
             dtype=first_count_block.dtype,
@@ -1502,7 +1502,7 @@ def merge_vertical_chunkwise(
             )
             update_tqdm_desc(tqdm_loop=tqdm_loop, desc=msg)
             zarr_group = zarr.open(str(save_path), mode="a")
-            probabilities_zarr = zarr_group.create_dataset(
+            probabilities_zarr = zarr_group.create_array(
                 name="probabilities",
                 shape=probabilities_da.shape,
                 chunks=(chunk_shape[0], *probabilities.shape[1:]),
@@ -1606,7 +1606,7 @@ def store_probabilities(
     """
     if zarr_group is not None:
         if probabilities_zarr is None:
-            probabilities_zarr = zarr_group.create_dataset(
+            probabilities_zarr = zarr_group.create_array(
                 name=name,
                 shape=(0, *probabilities.shape[1:]),
                 chunks=(chunk_shape[0], *probabilities.shape[1:]),
