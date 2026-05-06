@@ -791,10 +791,13 @@ class EngineABC(ABC):  # noqa: B024
                 component = (
                     f"{key}/{i}" if task_name is None else f"{task_name}/{key}/{i}"
                 )
+                # zarr v3.2.0+ does not allow chunksize=0
+                safe_chunks = tuple(max(1, c) for c in dask_array.chunksize)
                 task = dask_array.to_zarr(
                     url=save_path,
                     component=component,
                     compute=False,
+                    chunks=safe_chunks,
                 )
                 write_tasks.append(task)
 
