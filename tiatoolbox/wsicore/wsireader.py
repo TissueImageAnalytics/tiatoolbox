@@ -147,9 +147,22 @@ def is_ngff(  # noqa: PLR0911
     store = zarr.SQLiteStore(str(path)) if path.is_file() and is_sqlite3(path) else path
     try:
         zarr_group = zarr.open(store, mode="r")
-    except (zarr.errors.FSPathExistNotDir, zarr.errors.PathNotFoundError):
+    except tuple(
+        error
+        for error in (
+            getattr(zarr.errors, "FSPathExistNotDir", None),
+            getattr(zarr.errors, "PathNotFoundError", None),
+            getattr(zarr.errors, "GroupNotFoundError", None),
+            FileNotFoundError,
+            NotADirectoryError,
+        )
+        if error is not None
+    ):
         return False
-    if not isinstance(zarr_group, zarr.hierarchy.Group):
+    zarr_group_cls = getattr(zarr, "Group", None) or getattr(
+        getattr(zarr, "hierarchy", None), "Group", None
+    )
+    if zarr_group_cls is None or not isinstance(zarr_group, zarr_group_cls):
         return False
     group_attrs = zarr_group.attrs.asdict()
     try:

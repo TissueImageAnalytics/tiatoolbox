@@ -671,6 +671,35 @@ hovernet_fast-pannuke:
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
             ignore_index: 0
 
+cerberus-resnet34:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    architecture:
+        class: cerberus.Cerberus
+        kwargs:
+            encoder_backbone_name: resnet34
+            backbone_imagenet_pretrained: false
+            fullnet_custom_pretrained: true
+            patch_output_shape: [144, 144]
+    ioconfig:
+        class: io_config.IOInstanceSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {"units": "mpp", "resolution": 0.50}
+            output_resolutions:
+                - {"units": "mpp", "resolution": 0.50}
+                - {"units": "mpp", "resolution": 0.50}
+                - {"units": "mpp", "resolution": 0.50}
+                - {"units": "mpp", "resolution": 0.50}
+                - {"units": "mpp", "resolution": 0.50}
+                - {"units": "mpp", "resolution": 0.50}
+            margin: 64
+            tile_shape: [4096, 4096]
+            patch_input_shape: [448, 448]
+            patch_output_shape: [144, 144]
+            stride_shape: [144, 144]
+            save_resolution: {'units': 'mpp', 'resolution': 0.50}
+            ignore_index: 0
+
 hovernet_fast-monusac:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     architecture:

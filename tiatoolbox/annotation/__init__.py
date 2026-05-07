@@ -7,5 +7,12 @@ from tiatoolbox.annotation.storage import (
     DictionaryStore,
     SQLiteStore,
 )
+from tiatoolbox.annotation.utils import combine_annotation_stores
 
-__all__ = ["Annotation", "AnnotationStore", "DictionaryStore", "SQLiteStore"]
+__all__ = [
+    "Annotation",
+    "AnnotationStore",
+    "DictionaryStore",
+    "SQLiteStore",
+    "combine_annotation_stores",
+]

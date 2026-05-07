@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from . import architecture, dataset, engine, models_abc
+from .architecture.cerberus import Cerberus
 from .architecture.hovernet import HoVerNet
 from .architecture.hovernetplus import HoVerNetPlus
 from .architecture.idars import IDaRS
@@ -29,6 +30,7 @@ from .engine.semantic_segmentor import SemanticSegmentor
 __all__ = [
     "SAM",
     "SCCNN",
+    "Cerberus",
     "DeepFeatureExtractor",
     "HoVerNet",
     "HoVerNetPlus",

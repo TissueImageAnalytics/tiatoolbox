@@ -40,6 +40,15 @@ def load_torch_model(model: nn.Module, weights: str | Path) -> nn.Module:
     # ! assume to be saved in single GPU mode
     # always load on to the CPU
     saved_state_dict = torch.load(weights, map_location="cpu")
+    saved_state_dict = (
+        saved_state_dict["desc"]
+        if isinstance(saved_state_dict, dict) and "desc" in saved_state_dict
+        else saved_state_dict
+    )
+    if all(k.split(".")[0] == "module" for k in saved_state_dict):
+        saved_state_dict = {
+            ".".join(k.split(".")[1:]): v for k, v in saved_state_dict.items()
+        }
     model.load_state_dict(saved_state_dict, strict=True)
     return model
 
