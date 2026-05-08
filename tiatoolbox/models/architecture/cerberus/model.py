@@ -245,7 +245,8 @@ def _inst_dict_for_dask_processing(inst_info_dict: dict, *, is_dask: bool) -> di
             col_np = np.asarray(col_np.tolist(), dtype=np.int32)
         elif key in {"centroid", "prob"}:
             col_np = np.asarray(col_np.tolist(), dtype=np.float32)
-        output[key] = da.from_array(col_np, chunks=(len(col),)) if is_dask else col_np
+        chunks = (len(col), *col_np.shape[1:])
+        output[key] = da.from_array(col_np, chunks=chunks) if is_dask else col_np
     return output
 
 
