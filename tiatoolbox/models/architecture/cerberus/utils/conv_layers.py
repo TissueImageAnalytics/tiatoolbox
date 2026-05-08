@@ -1,163 +1,100 @@
+"""Minimal convolution blocks required by the Cerberus ResNet-34 decoder."""
+
+from __future__ import annotations
+
 import torch
 from torch import nn
 
 
 class Conv2d(nn.Module):
-    def __init__(self, in_ch, out_ch, ksize, pad=True):
-        super().__init__()
+    """Convolution wrapper preserving checkpoint module names."""
 
+    def __init__(
+        self,
+        in_ch: int,
+        out_ch: int,
+        ksize: int,
+        *,
+        pad: bool = True,
+    ) -> None:
+        """Initialize the convolution layer."""
+        super().__init__()
         pad_size = int(ksize // 2) if pad else 0
         self.conv = nn.Conv2d(
-            in_ch, out_ch, ksize, stride=1, padding=pad_size, bias=True
+            in_ch,
+            out_ch,
+            ksize,
+            stride=1,
+            padding=pad_size,
+            bias=True,
         )
 
-    def forward(self, prev_feat, freeze=False):
-        if self.training:
-            with torch.set_grad_enabled(not freeze):
-                new_feat = self.conv(prev_feat)
-        else:
-            new_feat = self.conv(prev_feat)
-
-        return new_feat
+    def forward(self, prev_feat: torch.Tensor) -> torch.Tensor:
+        """Apply convolution."""
+        return self.conv(prev_feat)
 
 
 class _ConvLayer(nn.Module):
-    def __init__(self, in_ch, out_ch, ksize, pad=True, preact=True, dilation=1):
+    """Conv-BN-ReLU block used by the released Cerberus decoder."""
+
+    def __init__(
+        self,
+        in_ch: int,
+        out_ch: int,
+        ksize: int,
+        *,
+        pad: bool = True,
+    ) -> None:
+        """Initialize the convolution, batch normalization, and activation."""
         super().__init__()
-
         pad_size = int(ksize // 2) if pad else 0
-        self.preact = preact
-
-        if preact:
-            self.bn = nn.BatchNorm2d(in_ch, eps=1e-5)
-        else:
-            self.bn = nn.BatchNorm2d(out_ch, eps=1e-5)
+        self.preact = False
+        self.bn = nn.BatchNorm2d(out_ch, eps=1e-5)
         self.relu = nn.ReLU(inplace=True)
-        self.conv = nn.Conv2d(
-            in_ch, out_ch, ksize, padding=pad_size, bias=True, dilation=dilation
-        )
+        self.conv = nn.Conv2d(in_ch, out_ch, ksize, padding=pad_size, bias=True)
 
-    def forward(self, prev_feat, freeze=False):
-        feat = prev_feat
-        if self.training:
-            with torch.set_grad_enabled(not freeze):
-                if self.preact:
-                    feat = self.bn(feat)
-                    feat = self.relu(feat)
-                    feat = self.conv(feat)
-                else:
-                    feat = self.conv(feat)
-                    feat = self.bn(feat)
-                    feat = self.relu(feat)
-        elif self.preact:
-            feat = self.bn(feat)
-            feat = self.relu(feat)
-            feat = self.conv(feat)
-        else:
-            feat = self.conv(feat)
-            feat = self.bn(feat)
-            feat = self.relu(feat)
-
-        return feat
+    def forward(self, prev_feat: torch.Tensor) -> torch.Tensor:
+        """Apply convolution followed by batch norm and ReLU."""
+        feat = self.conv(prev_feat)
+        feat = self.bn(feat)
+        return self.relu(feat)
 
 
 class ConvBlock(nn.Module):
+    """A sequence of Cerberus convolution layers."""
+
     def __init__(
         self,
-        in_ch,
-        unit_ch,
-        ksize,
-        pad=True,
-        dilation=1,
-    ):
+        in_ch: int,
+        unit_ch: list[int],
+        ksize: int,
+        *,
+        pad: bool = True,
+    ) -> None:
+        """Initialize the convolution block."""
         super().__init__()
-
-        if not isinstance(unit_ch, list):
-            unit_ch = [unit_ch]
-
         self.nr_layers = len(unit_ch)
         self.block = nn.ModuleList()
-
         for idx in range(self.nr_layers):
-            self.block.append(
-                _ConvLayer(
-                    in_ch, unit_ch[idx], ksize, pad=pad, preact=False, dilation=dilation
-                )
-            )
+            self.block.append(_ConvLayer(in_ch, unit_ch[idx], ksize, pad=pad))
             in_ch = unit_ch[idx]
 
-    def forward(self, prev_feat, freeze=False):
+    def forward(self, prev_feat: torch.Tensor) -> torch.Tensor:
+        """Apply each convolution layer in order."""
         feat = prev_feat
-        if self.training:
-            with torch.set_grad_enabled(not freeze):
-                for idx in range(self.nr_layers):
-                    feat = self.block[idx](feat)
-        else:
-            for idx in range(self.nr_layers):
-                feat = self.block[idx](feat)
-
+        for idx in range(self.nr_layers):
+            feat = self.block[idx](feat)
         return feat
 
 
-class ConvBlock_PreAct(nn.Module):
-    def __init__(
-        self,
-        in_ch,
-        unit_ch,
-        ksize,
-        pad=True,
-        dilation=1,
-    ):
+class PytorchBase(nn.Module):
+    """Sequential wrapper preserving original checkpoint key prefix ``x``."""
+
+    def __init__(self, *args: nn.Module) -> None:
+        """Initialize the sequential wrapper."""
         super().__init__()
+        self.x = nn.Sequential(*args)
 
-        if not isinstance(unit_ch, list):
-            unit_ch = [unit_ch]
-
-        self.nr_layers = len(unit_ch)
-        self.block = nn.ModuleList()
-
-        for idx in range(self.nr_layers):
-            self.block.append(
-                _ConvLayer(
-                    in_ch,
-                    unit_ch[idx],
-                    ksize,
-                    pad=pad,
-                    preact=True,
-                    dilation=dilation,
-                )
-            )
-            in_ch = unit_ch[idx]
-
-    def forward(self, prev_feat, freeze=False):
-        feat = prev_feat
-        if self.training:
-            with torch.set_grad_enabled(not freeze):
-                for idx in range(self.nr_layers):
-                    feat = self.block[idx](feat)
-        else:
-            for idx in range(self.nr_layers):
-                feat = self.block[idx](feat)
-
-        return feat
-
-
-class DilatedBlock(nn.Module):
-    def __init__(self, in_ch, out_ch):
-        super().__init__()
-
-        self.conv1 = ConvBlock(in_ch, [out_ch], ksize=3, dilation=1)
-        self.conv2 = ConvBlock(in_ch, [out_ch], ksize=3, dilation=3)
-        self.conv3 = ConvBlock(in_ch, [out_ch], ksize=3, dilation=6)
-        self.conv4 = nn.Conv2d(out_ch * 3, out_ch, kernel_size=1)
-
-    def forward(self, x):
-        x1 = self.conv1(x)
-        x2 = self.conv2(x)
-        x3 = self.conv3(x)
-
-        x4 = torch.cat((x1, x2, x3), dims=1)
-        dropout = self.dropout(x4)
-        x5 = self.conv4(dropout)
-
-        return x5
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Apply wrapped modules."""
+        return self.x(x)

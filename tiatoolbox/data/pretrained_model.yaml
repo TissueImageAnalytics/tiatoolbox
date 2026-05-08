@@ -676,9 +676,6 @@ cerberus-resnet34:
     architecture:
         class: cerberus.Cerberus
         kwargs:
-            encoder_backbone_name: resnet34
-            backbone_imagenet_pretrained: false
-            fullnet_custom_pretrained: true
             patch_output_shape: [144, 144]
     ioconfig:
         class: io_config.IOInstanceSegmentorConfig

@@ -9,14 +9,16 @@ import dask.array as da
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn.functional as F
 from torch import nn
+from torch.nn import functional
 
 from tiatoolbox.models.architecture.hovernet import HoVerNet
 from tiatoolbox.models.models_abc import ModelABC
 
 from .net_desc import NetDesc
 from .postproc import PostProcInstErodedContourMap
+
+SPATIAL_NDIMS = 2
 
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
@@ -34,51 +36,19 @@ class Cerberus(ModelABC, NetDesc):
         "Patch-Class",
     )
 
-    default_decoder_kwargs = {
-        "Gland": {"INST": 3},
-        "Gland#TYPE": {"TYPE": 3},
-        "Lumen": {"INST": 3},
-        "Nuclei": {"INST": 3},
-        "Nuclei#TYPE": {"TYPE": 7},
-        "Patch-Class": {"OUT": 9},
-    }
-    default_considered_tasks = [
-        "Nuclei",
-        "Nuclei#TYPE",
-        "Gland",
-        "Gland#TYPE",
-        "Lumen",
-        "Patch-Class",
-    ]
-
     def __init__(
         self,
-        encoder_backbone_name: str = "resnet34",
-        backbone_imagenet_pretrained: bool = False,
-        fullnet_custom_pretrained: bool = True,
-        decoder_kwargs: dict | None = None,
-        considered_tasks: list[str] | None = None,
-        subtype_gland: bool = False,
-        subtype_nuclei: bool = False,
         patch_output_shape: tuple[int, int] = (144, 144),
         nuclei_type_dict: dict | None = None,
         gland_type_dict: dict | None = None,
         lumen_type_dict: dict | None = None,
     ) -> None:
+        """Initialize the fixed Cerberus ResNet-34 model."""
         nn.Module.__init__(self)
         self._postproc = self.postproc
         self._preproc = self.preproc
         self.class_dict = None
-        NetDesc.__init__(
-            self,
-            encoder_backbone_name=encoder_backbone_name,
-            backbone_imagenet_pretrained=backbone_imagenet_pretrained,
-            fullnet_custom_pretrained=fullnet_custom_pretrained,
-            decoder_kwargs=decoder_kwargs or self.default_decoder_kwargs,
-            considered_tasks=considered_tasks or self.default_considered_tasks,
-            subtype_gland=subtype_gland,
-            subtype_nuclei=subtype_nuclei,
-        )
+        NetDesc.__init__(self)
         self.patch_output_shape = tuple(patch_output_shape)
         self.tasks = ("nuclei", "gland", "lumen")
         self.class_dict = {
@@ -127,30 +97,30 @@ class Cerberus(ModelABC, NetDesc):
                 (k, v.permute(0, 2, 3, 1).contiguous()) for k, v in pred_dict.items()
             )
 
-            pred_dict["Nuclei-INST"] = F.softmax(pred_dict["Nuclei-INST"], dim=-1)[
-                ..., 1:
-            ]
-            pred_dict["Gland-INST"] = F.softmax(pred_dict["Gland-INST"], dim=-1)[
-                ..., 1:
-            ]
-            pred_dict["Lumen-INST"] = F.softmax(pred_dict["Lumen-INST"], dim=-1)[
-                ..., 1:
-            ]
+            pred_dict["Nuclei-INST"] = functional.softmax(
+                pred_dict["Nuclei-INST"], dim=-1
+            )[..., 1:]
+            pred_dict["Gland-INST"] = functional.softmax(
+                pred_dict["Gland-INST"], dim=-1
+            )[..., 1:]
+            pred_dict["Lumen-INST"] = functional.softmax(
+                pred_dict["Lumen-INST"], dim=-1
+            )[..., 1:]
 
             for key in ("Nuclei-TYPE", "Gland-TYPE"):
-                type_map = F.softmax(pred_dict[key], dim=-1)
+                type_map = functional.softmax(pred_dict[key], dim=-1)
                 pred_dict[key] = torch.argmax(type_map, dim=-1, keepdim=True).type(
                     torch.float32
                 )
 
-            patch_class = F.softmax(pred_dict["Patch-Class"], dim=-1)
+            patch_class = functional.softmax(pred_dict["Patch-Class"], dim=-1)
             patch_class = torch.argmax(patch_class, dim=-1, keepdim=True).type(
                 torch.float32
             )
             model_ = getattr(model, "module", model)
             output_shape = tuple(getattr(model_, "patch_output_shape", (144, 144)))
 
-            pred_dict["Patch-Class"] = F.interpolate(
+            pred_dict["Patch-Class"] = functional.interpolate(
                 patch_class.permute(0, 3, 1, 2),
                 size=output_shape,
                 mode="nearest",
@@ -242,7 +212,7 @@ def _build_tissue_raw_map(
         if head_name not in head_map:
             continue
         tissue_map = head_map[head_name]
-        if tissue_map.ndim == 2:
+        if tissue_map.ndim == SPATIAL_NDIMS:
             tissue_map = tissue_map[..., None]
         maps.append(tissue_map)
         stop = start + tissue_map.shape[-1]
@@ -254,18 +224,37 @@ def _build_tissue_raw_map(
 
 def _inst_dict_for_dask_processing(inst_info_dict: dict, *, is_dask: bool) -> dict:
     if not inst_info_dict:
-        empty_array = da.empty(shape=0) if is_dask else np.empty(shape=0)
-        return {
-            "box": empty_array,
-            "centroid": empty_array,
-            "contours": empty_array,
-            "prob": empty_array,
-            "type": empty_array,
+        output = {
+            "box": np.empty((0, 4), dtype=np.int32),
+            "centroid": np.empty((0, 2), dtype=np.float32),
+            "contours": np.empty((0, 0, 2), dtype=np.int32),
+            "prob": np.empty((0,), dtype=np.float32),
+            "type": np.empty((0,), dtype=np.int32),
         }
+        if is_dask:
+            return {key: da.from_array(value) for key, value in output.items()}
+        return output
 
     inst_info_df = pd.DataFrame(inst_info_dict).transpose()
     output = {}
     for key, col in inst_info_df.items():
         col_np = col.to_numpy()
+        if key == "contours":
+            col_np = _pad_contours(col_np)
+        elif key in {"box", "type"}:
+            col_np = np.asarray(col_np.tolist(), dtype=np.int32)
+        elif key in {"centroid", "prob"}:
+            col_np = np.asarray(col_np.tolist(), dtype=np.float32)
         output[key] = da.from_array(col_np, chunks=(len(col),)) if is_dask else col_np
     return output
+
+
+def _pad_contours(contours: np.ndarray) -> np.ndarray:
+    """Pad variable-length contours to a rectangular integer array."""
+    max_len = max(contour.shape[0] for contour in contours)
+    pad_value = np.iinfo(np.int32).min
+    padded = np.full((len(contours), max_len, 2), pad_value, dtype=np.int32)
+    for idx, contour in enumerate(contours):
+        contour_ = np.asarray(contour, dtype=np.int32)
+        padded[idx, : contour_.shape[0], :] = contour_
+    return padded
