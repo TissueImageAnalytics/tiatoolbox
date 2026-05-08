@@ -227,7 +227,7 @@ def doc(data_path: dict[str, object]) -> Generator[Document, object, None]:
     p.start()
     # wait until server is ready
     # Increase timeout for Python 3.14+ to account for stricter multiprocessing
-    timeout = 30 if sys.version_info >= (3, 14) else 10
+    timeout = 100 if sys.version_info >= (3, 14) else 10
     start = time.time()
     url = f"http://127.0.0.1:{main.port}/tileserver/session_id"
 
