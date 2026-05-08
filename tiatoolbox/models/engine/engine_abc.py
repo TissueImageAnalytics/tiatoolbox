@@ -47,7 +47,6 @@ import numpy as np
 import torch
 import zarr
 from dask import compute
-from numcodecs import Pickle
 from torch import nn
 from tqdm.auto import tqdm
 from typing_extensions import Unpack
@@ -776,17 +775,12 @@ class EngineABC(ABC):  # noqa: B024
     ) -> list:
         """Helper function to get dask tasks for saving zarr output."""
         if isinstance(dask_output, da.Array):
-            dask_output_dtype = dask_output.dtype
-            object_codec = Pickle()
-            if dask_output_dtype != "object":
-                dask_output = dask_output.rechunk("auto")
-                object_codec = None
+            dask_output = dask_output.rechunk("auto")
             component = key if task_name is None else f"{task_name}/{key}"
             task = dask_output.to_zarr(
                 url=save_path,
                 component=component,
                 compute=False,
-                object_codec=object_codec,  # zarr kwargs
             )
             write_tasks.append(task)
 
@@ -794,15 +788,16 @@ class EngineABC(ABC):  # noqa: B024
             isinstance(dask_array, da.Array) for dask_array in dask_output
         ):
             for i, dask_array in enumerate(dask_output):
-                object_codec = Pickle() if dask_array.dtype == "object" else None
                 component = (
                     f"{key}/{i}" if task_name is None else f"{task_name}/{key}/{i}"
                 )
+                # zarr v3.2.0+ does not allow chunksize=0
+                safe_chunks = tuple(max(1, c) for c in dask_array.chunksize)
                 task = dask_array.to_zarr(
                     url=save_path,
                     component=component,
                     compute=False,
-                    object_codec=object_codec,  # zarr kwargs
+                    chunks=safe_chunks,
                 )
                 write_tasks.append(task)
 
