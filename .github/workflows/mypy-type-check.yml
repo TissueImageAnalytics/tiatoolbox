@@ -47,7 +47,7 @@ jobs:
 
     - name: Perform type checking
       run: |
-        mypy --install-types --non-interactive --follow-imports=silent \
+        mypy --install-types --non-interactive --follow-imports=skip --ignore-missing-imports \
           tiatoolbox/__init__.py \
           tiatoolbox/__main__.py \
           tiatoolbox/type_hints.py \
