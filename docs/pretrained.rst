@@ -313,8 +313,8 @@ The input output configuration is as follows:
 
    .. code-block:: python
 
-        from tiatoolbox.models import IOSegmentorConfig
-        ioconfig = IOSegmentorConfig(
+        from tiatoolbox.models import IOInstanceSegmentorConfig
+        ioconfig = IOInstanceSegmentorConfig(
             input_resolutions=[
                 {'units': 'mpp', 'resolution': 0.25}
             ],
