@@ -9,6 +9,7 @@ import os
 import secrets
 import sys
 import tempfile
+import time
 import urllib
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -472,7 +473,20 @@ class TileServer(Flask):
         self.renderers[session_id].__setattr__(prop, val)
         if prop == "blur_radius":
             self.overlaps[session_id] = int(1.5 * val)
-            self.get_ann_layer(session_id).overlap = self.overlaps[session_id]
+            # Wait for the layer to exist (timeout after 1 second)
+            timeout = 1.0
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                try:
+                    self.get_ann_layer(session_id).overlap = self.overlaps[session_id]
+                except ValueError:
+                    time.sleep(0.1)  # Wait 100ms before retrying
+                else:
+                    return "done"  # Success!
+
+            msg = f"Annotation layer for session {session_id} did not appear."
+            raise RuntimeError(msg)
+
         return "done"
 
     def load_annotations(self: TileServer) -> str:
