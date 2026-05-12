@@ -49,9 +49,6 @@ FILLED = 0
 MICRON_FORMATTER = 1
 GRIDLINES = 2
 
-with contextlib.suppress(RuntimeError):
-    multiprocessing.set_start_method("fork", force=True)
-
 
 # Helper function
 def fetch_sample_to_dir(key: str, target_dir: Path) -> Path:
@@ -226,6 +223,8 @@ def run_app() -> None:
 def doc(data_path: dict[str, object]) -> Generator[Document, object, None]:
     """Create a test document for the visualization tool."""
     # start tile server
+    with contextlib.suppress(RuntimeError):
+        multiprocessing.set_start_method("fork", force=True)
     p = multiprocessing.Process(target=run_app, daemon=True)
     p.start()
     # wait until server is ready
