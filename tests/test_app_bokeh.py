@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import importlib
 import importlib.resources as importlib_resources
 import io
@@ -47,6 +48,9 @@ BOKEH_PATH = importlib_resources.files("tiatoolbox.visualization.bokeh_app")
 FILLED = 0
 MICRON_FORMATTER = 1
 GRIDLINES = 2
+
+with contextlib.suppress(RuntimeError):
+    multiprocessing.set_start_method("fork", force=True)
 
 
 # Helper function
@@ -234,7 +238,7 @@ def doc(data_path: dict[str, object]) -> Generator[Document, object, None]:
                 break
         except requests.RequestException:
             pass
-        if time.time() - start > 10:
+        if time.time() - start > 30:
             p.terminate()
             msg = f"Tileserver failed to start within 10s: {url}"
             raise RuntimeError(msg)
