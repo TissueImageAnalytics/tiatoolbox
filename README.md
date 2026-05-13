@@ -124,7 +124,7 @@ For CPU-only machines (no CUDA GPU):
 ```sh
     $ conda create -n tiatoolbox-dev python=3.11
     $ conda activate tiatoolbox-dev
-    $ pip install -r requirements/requirements_dev.txt
+    $ pip install -e ".[dev]"
 ```
 
 or (Linux/macOS only):
