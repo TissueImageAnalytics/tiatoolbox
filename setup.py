@@ -12,11 +12,11 @@ with Path("README.md").open() as readme_file:
 with Path("HISTORY.md").open() as history_file:
     history = history_file.read()
 
-install_requires = [
-    line
-    for line in Path("requirements/requirements.txt").read_text().splitlines()
-    if line and line[0] not in ("-", "#")
-]
+import tomllib
+
+with Path("pyproject.toml").open("rb") as _f:
+    _pyproject = tomllib.load(_f)
+install_requires = _pyproject["project"]["dependencies"]
 
 dependency_links = []
 
