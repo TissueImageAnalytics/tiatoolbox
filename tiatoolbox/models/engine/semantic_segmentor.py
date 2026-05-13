@@ -610,7 +610,7 @@ class SemanticSegmentor(PatchPredictor):
             # Wrap zarr in dask array
             canvas = da.from_zarr(canvas_zarr, chunks=canvas_zarr.chunks)
             count = da.from_zarr(count_zarr, chunks=count_zarr.chunks)
-            zarr_group = zarr.open(canvas_zarr.store.path, mode="a")
+            zarr_group = zarr.open(canvas_zarr.store.root, mode="a")
 
         # Final vertical merge
         raw_predictions["probabilities"] = merge_vertical_chunkwise(
@@ -1311,7 +1311,7 @@ def save_to_cache(
         first_canvas_block = canvas.blocks[0, 0, 0].compute()
         first_count_block = count.blocks[0, 0, 0].compute()
 
-        canvas_zarr = zarr_group.create_dataset(
+        canvas_zarr = zarr_group.create_array(
             name=zarr_dataset_name[0],
             # Append along axis 0 (height); keep width/channels fixed.
             shape=(0, *first_canvas_block.shape[1:]),
@@ -1320,7 +1320,7 @@ def save_to_cache(
             overwrite=True,
         )
 
-        count_zarr = zarr_group.create_dataset(
+        count_zarr = zarr_group.create_array(
             name=zarr_dataset_name[1],
             shape=(0, *first_count_block.shape[1:]),
             dtype=first_count_block.dtype,
@@ -1502,7 +1502,7 @@ def merge_vertical_chunkwise(
             )
             update_tqdm_desc(tqdm_loop=tqdm_loop, desc=msg)
             zarr_group = zarr.open(str(save_path), mode="a")
-            probabilities_zarr = zarr_group.create_dataset(
+            probabilities_zarr = zarr_group.create_array(
                 name="probabilities",
                 shape=probabilities_da.shape,
                 chunks=(chunk_shape[0], *probabilities.shape[1:]),
@@ -1606,7 +1606,7 @@ def store_probabilities(
     """
     if zarr_group is not None:
         if probabilities_zarr is None:
-            probabilities_zarr = zarr_group.create_dataset(
+            probabilities_zarr = zarr_group.create_array(
                 name=name,
                 shape=(0, *probabilities.shape[1:]),
                 chunks=(chunk_shape[0], *probabilities.shape[1:]),
@@ -1720,7 +1720,7 @@ def prepare_full_batch(
             tempfile.mkdtemp(prefix="full_batch_tmp_", dir=str(save_path_dir))
         )
 
-        store = zarr.DirectoryStore(str(temp_dir))
+        store = zarr.storage.LocalStore(str(temp_dir))
         full_batch_output = zarr.zeros(
             shape=(total_size, *sample_shape),
             chunks=(len(batch_output), *sample_shape),
@@ -1741,7 +1741,7 @@ def prepare_full_batch(
         pad_len = len(full_output_locs)
         if not use_numpy:
             # Resize zarr array to accommodate padding
-            full_batch_output.resize(total_size + pad_len, *sample_shape)
+            full_batch_output.resize((total_size + pad_len, *sample_shape))
         # For numpy, array is already pre-allocated to final_size
         full_batch_output[-pad_len:] = 0
 
