@@ -11,10 +11,8 @@ import yaml
 from pkg_resources import Requirement
 
 REQUIREMENTS_FILES = [
-    ("requirements/requirements.txt", "requirements/requirements_dev.txt"),
     ("requirements/requirements.conda.yml", "requirements/requirements.dev.conda.yml"),
     ("requirements/requirements.win64.conda.yml", None),
-    ("docs/requirements.txt", None),
     ("setup.py", None),
 ]
 
