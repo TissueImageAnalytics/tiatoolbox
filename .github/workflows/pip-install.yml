@@ -5,7 +5,6 @@ on:
     paths:
       - "requirements*.yml"
       - "conda-env-create.yml"
-      - "requirements/requirement*.txt"
       - "setup*py"
       - "setup*cfg"
       - "pyproject*toml"
@@ -15,7 +14,6 @@ on:
     paths:
       - "requirements*.yml"
       - "conda-env-create.yml"
-      - "requirements/requirement*.txt"
       - "setup*py"
       - "setup*cfg"
       - "pyproject*toml"

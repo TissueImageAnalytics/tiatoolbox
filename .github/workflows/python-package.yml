@@ -36,7 +36,7 @@ jobs:
         python -m pip install ruff==0.15.12 pytest pytest-cov pytest-runner
         pip install uv
         uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
-        uv pip install --system -r requirements/requirements.txt
+        uv pip install --system -e .
     - name: Cache tiatoolbox static assets
       uses: actions/cache@v4
       with:
@@ -114,7 +114,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install uv
         uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
-        uv pip install --system -r requirements/requirements.txt
+        uv pip install --system -e .
         uv pip install --system build
     - name: Build package
       run: python -m build
