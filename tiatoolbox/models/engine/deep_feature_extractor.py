@@ -702,7 +702,7 @@ def save_to_cache(
     if probabilities_zarr is None:
         zarr_group = zarr.open(str(save_path), mode="w")
 
-        probabilities_zarr = zarr_group.create_dataset(
+        probabilities_zarr = zarr_group.create_array(
             name="canvas",
             shape=(0, *probabilities_computed.shape[1:]),
             chunks=(chunk_shape[0], *probabilities_computed.shape[1:]),
@@ -710,7 +710,7 @@ def save_to_cache(
             overwrite=True,
         )
 
-        coordinates_zarr = zarr_group.create_dataset(
+        coordinates_zarr = zarr_group.create_array(
             name="count",
             shape=(0, *coordinates_computed.shape[1:]),
             dtype=coordinates_computed.dtype,

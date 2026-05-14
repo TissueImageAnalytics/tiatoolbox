@@ -337,9 +337,13 @@ class SlideGraphConstructor:
         # Build a kd-tree and rank neighbours according to the euclidean
         # distance (nearest -> farthest).
         kd_tree = cKDTree(points)
-        neighbour_distances_ckd, neighbour_indexes_ckd = kd_tree.query(
+        kd_tree_results = kd_tree.query(
             x=points,
             k=len(points),
+        )
+        neighbour_distances_ckd, neighbour_indexes_ckd = (
+            np.array(kd_tree_results[0]),
+            np.array(kd_tree_results[1]),
         )
 
         # Initialise an empty 1-D condensed distance matrix.
