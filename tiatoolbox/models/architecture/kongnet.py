@@ -84,11 +84,12 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
+import cv2
 import numpy as np
-from scipy import ndimage
-from skimage.segmentation import watershed
 import timm
 import torch
+from scipy import ndimage
+from skimage.segmentation import watershed
 from torch import nn
 from torchvision.ops import Conv2dNormActivation
 
@@ -463,6 +464,109 @@ def kongnet_instance_postproc(
         score_map=score_map,
         instance_classes=instance_classes,
     )
+
+
+def _empty_kongnet_info_dict() -> dict[str, np.ndarray]:
+    """Return an empty MultiTaskSegmentor-compatible instance info dictionary."""
+    return {
+        "box": np.empty((0, 4), dtype=np.int32),
+        "centroid": np.empty((0, 2), dtype=np.float32),
+        "contours": np.empty(0, dtype=object),
+        "prob": np.empty(0, dtype=np.float32),
+        "type": np.empty(0, dtype=np.int32),
+    }
+
+
+def _kongnet_instance_result_to_info_dict(
+    result: KongNetInstancePostProcResult,
+    *,
+    class_ids: Sequence[int],
+    offset: tuple[int, int] = (0, 0),
+) -> dict[str, np.ndarray]:
+    """Convert KongNet instance maps into the engine instance info schema."""
+    instance_ids = np.unique(result.instance_map)
+    instance_ids = instance_ids[instance_ids > 0]
+    if len(instance_ids) == 0:
+        return _empty_kongnet_info_dict()
+
+    offset_array = np.asarray(offset, dtype=np.int32)
+    boxes: list[np.ndarray] = []
+    centroids: list[np.ndarray] = []
+    contours: list[np.ndarray] = []
+    probabilities: list[float] = []
+    types: list[int] = []
+
+    class_index_by_id = {class_id: index for index, class_id in enumerate(class_ids)}
+    for instance_id in instance_ids:
+        instance_mask = result.instance_map == instance_id
+        rows, cols = np.where(instance_mask)
+        if len(rows) == 0:
+            continue
+
+        x_min = int(cols.min())
+        y_min = int(rows.min())
+        x_max = int(cols.max()) + 1
+        y_max = int(rows.max()) + 1
+        cropped_mask = instance_mask[y_min:y_max, x_min:x_max].astype(np.uint8)
+
+        contour_list, _ = cv2.findContours(
+            cropped_mask,
+            cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE,
+        )
+        if not contour_list:
+            continue
+        contour = max(contour_list, key=cv2.contourArea)[:, 0, :].astype(np.int32)
+        min_contour_points = 3
+        if contour.shape[0] < min_contour_points:  # pragma: no cover
+            continue
+
+        moments = cv2.moments(cropped_mask)
+        if moments["m00"] == 0:  # pragma: no cover
+            continue
+
+        class_id = int(result.instance_classes.get(int(instance_id), 0))
+        class_index = class_index_by_id.get(class_id)
+        if class_index is None:
+            prob = 0.0
+        else:
+            class_peak_map = result.peak_map[..., class_index]
+            prob = float(np.max(class_peak_map[instance_mask]))
+
+        contour += np.asarray([x_min, y_min], dtype=np.int32)
+        contour += offset_array[None]
+
+        centroid = np.asarray(
+            [
+                moments["m10"] / moments["m00"] + x_min,
+                moments["m01"] / moments["m00"] + y_min,
+            ],
+            dtype=np.float32,
+        )
+        centroid += offset_array
+
+        boxes.append(
+            np.asarray([x_min, y_min, x_max, y_max], dtype=np.int32)
+            + np.concatenate([offset_array, offset_array])
+        )
+        centroids.append(centroid)
+        contours.append(contour)
+        probabilities.append(prob)
+        types.append(class_id)
+
+    if not contours:
+        return _empty_kongnet_info_dict()
+
+    contour_array = np.empty(len(contours), dtype=object)
+    contour_array[:] = contours
+
+    return {
+        "box": np.stack(boxes).astype(np.int32, copy=False),
+        "centroid": np.stack(centroids).astype(np.float32, copy=False),
+        "contours": contour_array,
+        "prob": np.asarray(probabilities, dtype=np.float32),
+        "type": np.asarray(types, dtype=np.int32),
+    }
 
 
 def _normalize_kongnet_head_name(name: str, fallback: str) -> str:
@@ -1485,3 +1589,137 @@ class KongNet(ModelABC):
     ) -> nn.Module:
         """Load state dict with support for wrapped models."""
         return super().load_state_dict(state_dict["model"], strict, assign)
+
+
+class KongNetSegmentor(KongNet):
+    """KongNet variant exposing a ``MultiTaskSegmentor``-compatible contract.
+
+    ``KongNet`` keeps its historical centroid-only inference contract for
+    detection engines. This subclass emits full per-head probability maps and
+    converts mask/boundary/centroid outputs into instance segmentation metadata
+    that can be saved as an AnnotationStore by ``MultiTaskSegmentor``.
+    """
+
+    task_name = "nuclei_segmentation"
+
+    @staticmethod
+    def infer_batch(
+        model: KongNetSegmentor,
+        batch_data: torch.Tensor,
+        *,
+        device: str,
+    ) -> tuple[np.ndarray, ...]:
+        """Run full-head KongNet inference for segmentation engines.
+
+        Returns one ``(N, H, W, C_head)`` probability array per KongNet head.
+        """
+        model = model.to(device)
+        model.eval()
+
+        imgs = batch_data.to(device).type(torch.float32)
+        imgs = imgs.permute(0, 3, 1, 2).contiguous()
+
+        with torch.inference_mode():
+            logits = model(imgs)
+            probs = torch.nn.functional.sigmoid(logits)
+            probs = probs.permute(0, 2, 3, 1).contiguous()
+
+        probs_np = probs.cpu().numpy()
+        return tuple(
+            probs_np[..., head_spec.channel_slice]
+            for head_spec in model.training_output_spec
+        )
+
+    def postproc(
+        self: KongNetSegmentor,
+        raw_maps: list[np.ndarray],
+        offset: tuple[int, int] = (0, 0),
+        *,
+        min_distance: int | None = None,
+        threshold_abs: float | None = None,
+        threshold_rel: float | None = None,
+        mask_threshold: float = 0.5,
+        boundary_weight: float = 1.0,
+        class_assignment: Literal["seed", "mean_mask"] = "mean_mask",
+        min_instance_size: int = 0,
+    ) -> tuple[dict[str, Any], ...]:
+        """Convert full-head raw maps into instance segmentation output.
+
+        Args:
+            raw_maps:
+                One probability map per KongNet head, ordered like
+                ``KongNetSegmentor.infer_batch`` output.
+            offset:
+                ``(x, y)`` offset applied to contours, boxes, and centroids.
+            min_distance:
+                Minimum seed distance for peak detection. Uses the model default
+                when ``None``.
+            threshold_abs:
+                Absolute seed threshold. Uses the model default when ``None``.
+            threshold_rel:
+                Optional relative seed threshold.
+            mask_threshold:
+                Probability threshold for foreground masks.
+            boundary_weight:
+                Weight applied to boundary evidence before watershed.
+            class_assignment:
+                Strategy used to assign each instance to a class head.
+            min_instance_size:
+                Remove predicted instances smaller than this many pixels.
+
+        Returns:
+            Tuple containing a single task dictionary compatible with
+            ``MultiTaskSegmentor``.
+
+        """
+        if len(raw_maps) != len(self.training_output_spec):
+            msg = (
+                "KongNetSegmentor post-processing expects one raw map per "
+                f"KongNet head; got {len(raw_maps)} maps for "
+                f"{len(self.training_output_spec)} heads."
+            )
+            raise ValueError(msg)
+
+        head_maps = [
+            np.asarray(head_map.compute() if hasattr(head_map, "compute") else head_map)
+            for head_map in raw_maps
+        ]
+        output_shape = head_maps[0].shape[:2]
+        if any(
+            head_map.shape[0] == 0 or head_map.shape[1] == 0
+            for head_map in head_maps
+        ):
+            return (
+                {
+                    "task_type": self.task_name,
+                    "predictions": np.zeros(output_shape, dtype=np.int32),
+                    "info_dict": _empty_kongnet_info_dict(),
+                    "seg_type": "instance",
+                },
+            )
+
+        full_output = np.concatenate(head_maps, axis=-1)
+        result = self.postproc_instance_class_maps(
+            full_output,
+            from_logits=False,
+            min_distance=min_distance,
+            threshold_abs=threshold_abs,
+            threshold_rel=threshold_rel,
+            mask_threshold=mask_threshold,
+            boundary_weight=boundary_weight,
+            class_assignment=class_assignment,
+            min_instance_size=min_instance_size,
+        )
+        class_ids = self.resolve_instance_class_ids()
+        return (
+            {
+                "task_type": self.task_name,
+                "predictions": result.instance_map,
+                "info_dict": _kongnet_instance_result_to_info_dict(
+                    result,
+                    class_ids=class_ids,
+                    offset=offset,
+                ),
+                "seg_type": "instance",
+            },
+        )

@@ -13,8 +13,9 @@ from tiatoolbox.models.architecture.kongnet import (
     CenterBlock,
     DecoderBlock,
     KongNet,
-    KongNetInstancePostProcResult,
     KongNetDecoder,
+    KongNetInstancePostProcResult,
+    KongNetSegmentor,
     SubPixelUpsample,
     TimmEncoderFixed,
 )
@@ -394,6 +395,70 @@ def test_kongnet_postproc_instance_class_maps() -> None:
     assert result.instance_classes == {1: 1, 2: 2}
 
 
+def test_kongnet_segmentor_postproc_returns_engine_task_dict() -> None:
+    """KongNetSegmentor should emit MultiTaskSegmentor-compatible output."""
+    model = KongNetSegmentor(
+        num_heads=2,
+        num_channels_per_head=[3, 3],
+        target_channels=[2, 5],
+        min_distance=4,
+        threshold_abs=0.35,
+        class_dict={1: "Tumour", 2: "Lymphocyte"},
+    )
+
+    raw = np.zeros((64, 64, 6), dtype=np.float32)
+    left_nucleus = _disk_mask((64, 64), (20, 18), 7)
+    right_nucleus = _disk_mask((64, 64), (20, 46), 7)
+    raw[..., 0][left_nucleus] = 0.95
+    raw[..., 2][20, 18] = 0.99
+    raw[..., 3][right_nucleus] = 0.95
+    raw[..., 5][20, 46] = 0.99
+
+    output = model.postproc(
+        [raw[..., 0:3], raw[..., 3:6]],
+        offset=(10, 20),
+        mask_threshold=0.5,
+        min_instance_size=10,
+    )
+
+    assert len(output) == 1
+    task_output = output[0]
+    assert task_output["task_type"] == "nuclei_segmentation"
+    assert task_output["seg_type"] == "instance"
+    assert task_output["predictions"].shape == (64, 64)
+
+    info_dict = task_output["info_dict"]
+    assert set(info_dict) == {"box", "centroid", "contours", "prob", "type"}
+    assert len(info_dict["contours"]) == 2
+    assert set(info_dict["type"].tolist()) == {1, 2}
+    assert np.all(info_dict["box"][:, 0] >= 10)
+    assert np.all(info_dict["box"][:, 1] >= 20)
+
+
+def test_kongnet_segmentor_postproc_handles_empty_tile() -> None:
+    """KongNetSegmentor should tolerate zero-width WSI boundary tiles."""
+    model = KongNetSegmentor(
+        num_heads=2,
+        num_channels_per_head=[3, 3],
+        target_channels=[2, 5],
+        min_distance=4,
+        threshold_abs=0.35,
+        class_dict={1: "Tumour", 2: "Lymphocyte"},
+    )
+
+    output = model.postproc(
+        [
+            np.zeros((64, 0, 3), dtype=np.float32),
+            np.zeros((64, 0, 3), dtype=np.float32),
+        ],
+    )
+
+    assert len(output) == 1
+    assert output[0]["predictions"].shape == (64, 0)
+    assert output[0]["info_dict"]["box"].shape == (0, 4)
+    assert output[0]["info_dict"]["contours"].shape == (0,)
+
+
 def test_kongnet_load_state_dict() -> None:
     """Test KongNet load_state_dict method."""
     model = KongNet(
@@ -462,6 +527,24 @@ def test_kongnet_modeling() -> None:
         batch_tensor = torch.randn(1, 128, 128, 3).to(device)
         output = KongNet.infer_batch(model, batch_tensor, device=device)
         assert output.shape == (1, 128, 128, 3)
+
+    segmentor = KongNetSegmentor(
+        num_heads=3,
+        num_channels_per_head=[2, 2, 2],
+        target_channels=[1, 3, 5],
+        min_distance=5,
+        threshold_abs=0.5,
+        wide_decoder=False,
+        class_dict=None,
+        tile_shape=(512, 512),
+    ).to(device)
+    segmentor.eval()
+
+    with torch.no_grad():
+        batch_tensor = torch.randn(1, 128, 128, 3).to(device)
+        output = KongNetSegmentor.infer_batch(segmentor, batch_tensor, device=device)
+        assert len(output) == 3
+        assert all(head.shape == (1, 128, 128, 2) for head in output)
 
 
 def test_pretrained_model_creation() -> None:
