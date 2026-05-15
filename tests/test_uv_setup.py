@@ -32,7 +32,8 @@ class TestVersionConsistency:
         """Return the version declared in pyproject.toml [project]."""
         return tomllib.loads(PYPROJECT.read_text())["project"]["version"]
 
-    def test_pyproject_version_matches_package(self, pyproject_version: str) -> None:
+    @staticmethod
+    def test_pyproject_version_matches_package(pyproject_version: str) -> None:
         """Installed package version must match pyproject.toml [project].version."""
         installed = version("tiatoolbox")
         assert installed == pyproject_version, (
@@ -41,7 +42,8 @@ class TestVersionConsistency:
             f"Re-install with `uv sync` or `pip install -e .`."
         )
 
-    def test_pyproject_version_matches_init(self, pyproject_version: str) -> None:
+    @staticmethod
+    def test_pyproject_version_matches_init(pyproject_version: str) -> None:
         """tiatoolbox.__version__ must match pyproject.toml [project].version."""
         import tiatoolbox  # noqa: PLC0415
 
@@ -51,7 +53,8 @@ class TestVersionConsistency:
             f"Run `poetry version` to bump both simultaneously."
         )
 
-    def test_pyproject_version_matches_setup_py(self, pyproject_version: str) -> None:
+    @staticmethod
+    def test_pyproject_version_matches_setup_py(pyproject_version: str) -> None:
         """setup.py version= must match pyproject.toml [project].version."""
         setup_py = (REPO_ROOT / "setup.py").read_text()
         m = re.search(r'version\s*=\s*["\']([^"\']+)["\']', setup_py)
