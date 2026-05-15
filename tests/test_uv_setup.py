@@ -117,6 +117,7 @@ def test_critical_module_importable(module: str) -> None:
     result = subprocess.run(  # noqa: S603
         [sys.executable, "-c", f"import {module}"],
         capture_output=True,
+        check=False,
         text=True,
     )
     assert result.returncode == 0, (
@@ -131,6 +132,7 @@ def test_cli_entry_point() -> None:
     result = subprocess.run(
         [sys.executable, "-m", "tiatoolbox", "--help"],
         capture_output=True,
+        check=False,
         text=True,
     )
     assert result.returncode == 0, (
