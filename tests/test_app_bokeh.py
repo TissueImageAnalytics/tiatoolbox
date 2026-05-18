@@ -6,9 +6,9 @@ import importlib
 import importlib.resources as importlib_resources
 import io
 import json
-import multiprocessing
 import re
 import shutil
+import threading
 import time
 import types
 from pathlib import Path
@@ -222,8 +222,8 @@ def run_app() -> None:
 def doc(data_path: dict[str, object]) -> Generator[Document, object, None]:
     """Create a test document for the visualization tool."""
     # start tile server
-    p = multiprocessing.Process(target=run_app, daemon=True)
-    p.start()
+    t = threading.Thread(target=run_app, daemon=True)
+    t.start()
     # wait until server is ready
     start = time.time()
     url = f"http://127.0.0.1:{main.port}/tileserver/session_id"
@@ -235,7 +235,6 @@ def doc(data_path: dict[str, object]) -> Generator[Document, object, None]:
         except requests.RequestException:
             pass
         if time.time() - start > 10:
-            p.terminate()
             msg = f"Tileserver failed to start within 10s: {url}"
             raise RuntimeError(msg)
         time.sleep(0.2)
@@ -243,8 +242,7 @@ def doc(data_path: dict[str, object]) -> Generator[Document, object, None]:
     main.doc_config.set_sys_args(argv=["dummy_str", str(data_path["base_path"])])
     handler = FunctionHandler(main.doc_config.setup_doc)
     app = Application(handler)
-    yield app.create_document()
-    p.terminate()
+    return app.create_document()
 
 
 # test some utility functions
