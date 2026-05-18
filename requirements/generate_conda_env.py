@@ -64,18 +64,22 @@ def merge_versions(existing: str, new: str) -> str:
 
 
 def to_yaml(env: dict) -> str:
-    """Convert environment dict to YAML string (no external deps)."""
-    lines = []
-
-    lines.append(f"name: {env['name']}")
-    lines.append("channels:")
-    lines.extend(f"  - {ch}" for ch in env["channels"])
+    """Convert environment dict to YAML string."""
+    lines = [
+        f"name: {env['name']}",
+        "channels:",
+        *[f"  - {ch}" for ch in env["channels"]],
+    ]
 
     if "channel_priority" in env:
         lines.append(f"channel_priority: {env['channel_priority']}")
 
-    lines.append("dependencies:")
-    lines.extend(f"  - {dep}" for dep in env["dependencies"])
+    lines.extend(
+        [
+            "dependencies:",
+            *[f"  - {dep}" for dep in env["dependencies"]],
+        ]
+    )
 
     return "\n".join(lines) + "\n"
 
