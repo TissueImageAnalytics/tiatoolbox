@@ -1,11 +1,12 @@
 """Generate a conda environment YAML from requirements.txt.
 
-This script converts pip-style dependencies into conda-forge compatible
-dependencies and outputs a fully solvable conda environment file.
+Converts pip-style dependencies into conda-forge compatible dependencies.
 
-The Python version is controlled via the PYTHON_VERSION environment variable.
+Python version is controlled via the PYTHON_VERSION environment variable.
 
 """
+
+from __future__ import annotations
 
 import os
 import re
@@ -14,15 +15,14 @@ from pathlib import Path
 import yaml
 
 # ================================
-# Configuration
+# Config
 # ================================
 REQ_FILE = "requirements/requirements.txt"
 OUT_FILE = "requirements/requirements.conda.generated.yml"
 
-# Python version injected from CI (default = 3.14)
 PYTHON_VERSION = os.environ.get("PYTHON_VERSION", "3.14")
 
-# Mapping: pip package name → conda-forge name
+# pip → conda mapping
 PIP_TO_CONDA = {
     "opencv-python": "opencv",
     "opencv-python-headless": "opencv",
@@ -33,66 +33,70 @@ PIP_TO_CONDA = {
     "scikit-learn": "scikit-learn",
     "scikit-image": "scikit-image",
     "pyyaml": "pyyaml",
+    "openslide-bin": "openslide",
 }
 
 
 # ================================
 # Helpers
 # ================================
-def parse_requirement(line: str) -> tuple[str, str] | None:
-    """Parse a single requirements.txt line into (name, version_spec).
-
-    Removes inline comments and extras, and maps pip names to conda equivalents.
-    """
-    # Remove inline comments
+def parse_line(line: str) -> tuple[str, str] | None:
+    """Parse a requirements.txt line into (name, version)."""
     line = line.split("#", 1)[0].strip()
-
     if not line:
         return None
 
-    # Remove extras (e.g. package[extra])
+    # Remove extras
     line = re.split(r"\[", line)[0]
 
-    # Split version spec
     match = re.split(r"(>=|<=|==|~=|>|<)", line, maxsplit=1)
 
     name = match[0].strip().lower()
+    version = "".join(match[1:]) if len(match) > 1 else ""
 
-    # Map pip → conda name
-    name = PIP_TO_CONDA.get(name, name)
+    return name, version
 
-    if len(match) > 1:
-        version = "".join(match[1:])
-        return name, version
 
-    return name, ""
+def merge_versions(existing: str, new: str) -> str:
+    """Keep the most specific version constraint."""
+    if not existing:
+        return new
+    if not new:
+        return existing
+
+    # Prefer stricter constraint (simple heuristic)
+    return new if len(new) > len(existing) else existing
 
 
 # ================================
-# Main logic
+# Main
 # ================================
 def main() -> None:
-    """Generate a conda environment YAML from requirements.txt."""
+    """Generate conda environment YAML."""
     req_path = Path(REQ_FILE)
 
     if not req_path.exists():
         msg = f"{REQ_FILE} not found"
         raise FileNotFoundError(msg)
 
-    conda_deps: set[str] = set()
+    deps: dict[str, str] = {}
 
-    for line in req_path.read_text().splitlines():
-        parsed = parse_requirement(line)
+    for raw_line in req_path.read_text().splitlines():
+        parsed = parse_line(raw_line)
         if not parsed:
             continue
 
         name, version = parsed
-        dep = name + version
 
-        conda_deps.add(dep)
+        # ✅ Apply pip → conda mapping
+        mapped = PIP_TO_CONDA.get(name, name)
 
-    # Ensure deterministic ordering
-    sorted_deps = sorted(conda_deps)
+        # ✅ Merge versions if duplicate appears
+        previous = deps.get(mapped, "")
+        deps[mapped] = merge_versions(previous, version)
+
+    # ✅ Final deterministic ordering
+    sorted_deps = sorted(f"{pkg}{ver}" for pkg, ver in deps.items())
 
     env = {
         "name": "tiatoolbox",
@@ -100,7 +104,7 @@ def main() -> None:
         "channel_priority": "strict",
         "dependencies": [
             f"python={PYTHON_VERSION}",
-            "pip",  # installed but not used
+            "pip",
             *sorted_deps,
         ],
     }
@@ -111,7 +115,7 @@ def main() -> None:
 
 
 # ================================
-# Entry point
+# Entry
 # ================================
 if __name__ == "__main__":
     main()
