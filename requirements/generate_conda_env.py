@@ -12,8 +12,6 @@ import os
 import re
 from pathlib import Path
 
-import yaml
-
 # ================================
 # Config
 # ================================
@@ -46,7 +44,6 @@ def parse_line(line: str) -> tuple[str, str] | None:
     if not line:
         return None
 
-    # Remove extras
     line = re.split(r"\[", line)[0]
 
     match = re.split(r"(>=|<=|==|~=|>|<)", line, maxsplit=1)
@@ -63,9 +60,24 @@ def merge_versions(existing: str, new: str) -> str:
         return new
     if not new:
         return existing
-
-    # Prefer stricter constraint (simple heuristic)
     return new if len(new) > len(existing) else existing
+
+
+def to_yaml(env: dict) -> str:
+    """Convert environment dict to YAML string (no external deps)."""
+    lines = []
+
+    lines.append(f"name: {env['name']}")
+    lines.append("channels:")
+    lines.extend(f"  - {ch}" for ch in env["channels"])
+
+    if "channel_priority" in env:
+        lines.append(f"channel_priority: {env['channel_priority']}")
+
+    lines.append("dependencies:")
+    lines.extend(f"  - {dep}" for dep in env["dependencies"])
+
+    return "\n".join(lines) + "\n"
 
 
 # ================================
@@ -88,14 +100,17 @@ def main() -> None:
 
         name, version = parsed
 
-        # ✅ Apply pip → conda mapping
+        # ✅ special case: openslide-bin → openslide (ignore version)
+        # Due to different version numbering between conda-forge and pip
+        if name == "openslide-bin":
+            deps["openslide"] = ""
+            continue
+
         mapped = PIP_TO_CONDA.get(name, name)
 
-        # ✅ Merge versions if duplicate appears
         previous = deps.get(mapped, "")
         deps[mapped] = merge_versions(previous, version)
 
-    # ✅ Final deterministic ordering
     sorted_deps = sorted(f"{pkg}{ver}" for pkg, ver in deps.items())
 
     env = {
@@ -111,7 +126,7 @@ def main() -> None:
 
     out_path = Path(OUT_FILE)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(yaml.dump(env, sort_keys=False))
+    out_path.write_text(to_yaml(env))
 
 
 # ================================

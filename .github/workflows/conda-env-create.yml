@@ -1,5 +1,3 @@
-# This workflow will build a conda environment to check that it resolves in a reasonable time
-
 name: Solve Conda Environment
 
 permissions:
@@ -16,8 +14,6 @@ on:
       - "requirements/requirements*.txt"
       - "requirements/generate_conda_env.py"
       - ".github/workflows/conda-env-create.yml"
-  schedule:
-    - cron: "0 0 1 * *"
 
 jobs:
   conda_solve:
@@ -33,49 +29,45 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ✅ Generate environment from requirements.txt
+      # ✅ Generate environment
       - name: Generate conda environment
-        run: |
-          PYTHON_VERSION=${{ matrix.python-version }} \
-          python requirements/generate_conda_env.py
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+        run: python requirements/generate_conda_env.py
 
-      # ✅ Install with micromamba (pure conda solve)
+      # ✅ Install via micromamba
       - uses: mamba-org/setup-micromamba@v1
         with:
           environment-name: tiatoolbox
           environment-file: requirements/requirements.conda.generated.yml
-          install-only: true
 
       # ✅ Validate environment
       - name: Test environment
         shell: bash -l {0}
         run: |
-          micromamba info
           micromamba list
 
           python - <<EOF
           import sys
-          print("✅ Python:", sys.version)
+          print("Python:", sys.version)
 
-          import numpy
-          import pandas
-          print("✅ Core stack OK")
+          import numpy, pandas
+          print("Core OK")
 
-          # Optional imports (fail if missing)
           try:
               import torch
-              print("✅ Torch OK")
+              print("Torch OK")
           except Exception as e:
-              print("⚠️ Torch issue:", e)
+              print("Torch issue:", e)
 
           try:
               import cv2
-              print("✅ OpenCV OK")
+              print("OpenCV OK")
           except Exception as e:
-              print("⚠️ OpenCV issue:", e)
+              print("OpenCV issue:", e)
 
           try:
-              import SimpleITK
-              print("✅ SimpleITK OK")
+              import openslide
+              print("OpenSlide OK")
           except Exception as e:
-              print("⚠️ SimpleITK issue:", e)
+              print("OpenSlide issue:", e)
