@@ -22,6 +22,7 @@
 - Abishekraj Vinayagar Gnanasambandam \<@AbishekRajVG>
 - Wenqi Lu \<@wenqi006>
 - Saad Bashir \<@rajasaad>
+- Aakash Madhav Rao \<@mraoaakash>
 - Behnaz Elhaminia \<@behnazelhaminia>
 
 ## Contributors
