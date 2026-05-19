@@ -11,6 +11,7 @@ from .wsireader import Number, WSIReader
 __all__ = [
     "WSIMeta",
     "WSIReader",
+    "WSIReaderParams",
 ]
 
 
@@ -20,3 +21,4 @@ class WSIReaderParams(TypedDict, total=False):
     meta: WSIMeta | None
     mpp: tuple[Number, Number] | Number
     power: Number
+    storage_options: dict  # For FsspecStore

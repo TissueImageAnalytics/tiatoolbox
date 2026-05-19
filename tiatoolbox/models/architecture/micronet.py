@@ -603,7 +603,7 @@ class MicroNet(ModelABC):
         pred_map = raw_maps[0].compute() if is_dask else raw_maps[0]
         pred_bin = np.argmax(pred_map, axis=2)
         pred_inst = ndimage.label(pred_bin)[0]
-        pred_inst = morphology.remove_small_objects(pred_inst, min_size=50)
+        pred_inst = morphology.remove_small_objects(pred_inst, max_size=49)
         canvas = np.zeros(pred_inst.shape[:2], dtype=np.int32)
         # if margin is zero, there could be arrays of size zero.
         max_value = 0 if not np.any(pred_inst) else np.max(pred_inst)
@@ -633,13 +633,17 @@ class MicroNet(ModelABC):
         nuc_inst_info_dict_ = {}
         if not nuc_inst_info_dict:
             # inst_id should start at 1; use NumPy or Dask empty arrays
-            empty_array = da.empty(shape=0) if is_dask else np.empty(shape=0)
+            empty_array = (
+                da.empty(shape=0, dtype=np.int8)
+                if is_dask
+                else np.empty(shape=0, dtype=np.int8)
+            )
             nuc_inst_info_dict_ = {
-                "box": empty_array,
-                "centroid": empty_array,
-                "contours": empty_array,
-                "prob": empty_array,
-                "type": empty_array,
+                "box": empty_array.copy(),
+                "centroid": empty_array.copy(),
+                "contours": empty_array.copy(),
+                "prob": empty_array.copy(),
+                "type": empty_array.copy(),
             }
         else:
             nuc_inst_info_dict_ = _inst_dict_for_dask_processing(

@@ -1827,13 +1827,13 @@ class TestStore:
             store._load_cases(["foo"], lambda: None, lambda: None)
 
     @staticmethod
-    def test_py310_init(
+    def test_py311_init(
         fill_store: Callable,  # noqa: ARG004
         store_cls: type[AnnotationStore],
         monkeypatch: object,
     ) -> None:
-        """Test that __init__ is compatible with Python 3.10."""
-        py310_version = (3, 10, 0)
+        """Test that __init__ is compatible with Python 3.11."""
+        py311_version = (3, 11, 0)
 
         class Connection(sqlite3.Connection):
             """Mock SQLite connection."""
@@ -1847,7 +1847,7 @@ class TestStore:
                 """Mock create_function without `deterministic` kwarg."""
                 return self.create_function(self, name, num_params)
 
-        monkeypatch.setattr(sys, "version_info", py310_version)
+        monkeypatch.setattr(sys, "version_info", py311_version)
         monkeypatch.setattr(sqlite3, "Connection", Connection)
         _ = store_cls()
 

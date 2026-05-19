@@ -59,7 +59,7 @@ MacPorts
 Installing Stable Release
 =========================
 
-Please note that TIAToolbox is tested for Python versions 3.10, 3.11, 3.12 and 3.13.
+Please note that TIAToolbox is tested for Python versions 3.11, 3.12, 3.13 and 3.14. For the full range of supported Python versions, please refer to the package metadata (for example, the ``python_requires`` setting in ``setup.py`` or ``pyproject.toml``)
 
 Recommended
 -----------
@@ -114,6 +114,16 @@ or
     $ mamba install tiatoolbox
 
 An alternate way to install using conda on Windows could be to install it in `WSL2 with CUDA support <https://learn.microsoft.com/en-us/windows/ai/directml/gpu-cuda-in-wsl>`_. Depending on your hardware and workload, WSL2 may offer improved performance for some Python workflows, and therefore we **recommend** this option.
+
+Using uv
+--------
+
+To install using `uv <https://docs.astral.sh/uv/>`_, a fast Python package and project manager, written in Rust.
+
+.. code-block:: console
+
+    $ pip install uv
+    $ uv pip install tiatoolbox
 
 From Sources
 ------------

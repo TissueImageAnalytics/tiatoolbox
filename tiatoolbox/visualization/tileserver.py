@@ -470,7 +470,6 @@ class TileServer(Flask):
         if val in ["None", "null"]:
             val = None
         self.renderers[session_id].__setattr__(prop, val)
-        self.renderers[session_id].__setattr__(prop, val)
         if prop == "blur_radius":
             self.overlaps[session_id] = int(1.5 * val)
             self.get_ann_layer(session_id).overlap = self.overlaps[session_id]
@@ -633,8 +632,10 @@ class TileServer(Flask):
                 return ann
 
             sq = SQLiteStore.from_geojson(overlay_path, transform=unpack_qupath)
-        elif overlay_path.suffix == ".dat":
+
+        if overlay_path.suffix == ".dat":
             sq = store_from_dat(overlay_path)
+
         if overlay_path.suffix == ".db":
             sq = SQLiteStore(overlay_path, auto_commit=False)
         else:

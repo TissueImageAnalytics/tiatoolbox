@@ -58,6 +58,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     ClassVar,
+    Self,
     TypeVar,
     cast,
     overload,
@@ -72,7 +73,6 @@ from shapely.affinity import scale, translate
 from shapely.geometry import LineString, Point, Polygon
 from shapely.geometry import mapping as geometry2feature
 from shapely.geometry import shape as feature2geometry
-from typing_extensions import Self
 
 import tiatoolbox
 from tiatoolbox import DuplicateFilter, logger
@@ -230,7 +230,7 @@ class Annotation:
         return copy.copy(self.wkb)
 
     def to_wkt(self: Annotation) -> str:
-        """Returns the geometry as Well-Know Text (WKT).
+        """Returns the geometry as Well-Known Text (WKT).
 
         Returns:
             Annotation:
@@ -1481,7 +1481,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
             )
         # Are we scanning through all annotations?
         is_scan = not any((geometry, where))
-        items = self.items() if is_scan else self.query(geometry, where).items()
+        items = self.items() if is_scan else self.query(geometry, where).items()  # type: ignore[arg-type]
 
         def select_values(
             select: Select,
@@ -1877,7 +1877,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
     @classmethod
     def from_geojson(
         cls: type[AnnotationStore],
-        fp: IO | str,
+        fp: IO | str | Path,
         scale_factor: tuple[float, float] = (1, 1),
         origin: tuple[float, float] = (0, 0),
         transform: Callable[[Annotation], Annotation] | None = None,
@@ -1897,7 +1897,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
                 A function to apply to each annotation after loading. Should take an
                 annotation as input and return an annotation. Defaults to None.
                 Intended to facilitate modifying the way annotations are loaded to
-                accomodate the specifics of different annotation formats.
+                accommodate the specifics of different annotation formats.
 
         Returns:
             AnnotationStore:
@@ -1939,7 +1939,7 @@ class AnnotationStore(ABC, MutableMapping[str, Annotation]):
 
     def add_from_geojson(
         self: AnnotationStore,
-        fp: IO | str,
+        fp: IO | str | Path,
         scale_factor: tuple[float, float] = (1, 1),
         origin: tuple[float, float] = (0, 0),
         transform: Callable[[Annotation], Annotation] = lambda x: x,

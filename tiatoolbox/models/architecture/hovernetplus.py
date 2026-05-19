@@ -158,7 +158,7 @@ class HoVerNetPlus(HoVerNet):
         epith_all = epith_all > 0
         epith_mask = morphology.remove_small_objects(
             epith_all,
-            min_size=min_size,
+            max_size=min_size - 1,  # scikit-image >0.26.0
         ).astype("uint8")
         epith_edited = epith_mask * ls_map
         epith_edited = epith_edited.astype("uint8")
@@ -366,12 +366,17 @@ class HoVerNetPlus(HoVerNet):
 
         nuc_inst_info_dict_ = {}
         if not nuc_inst_info_dict:
+            empty = (
+                da.empty(shape=0, dtype=np.int8)
+                if is_dask
+                else np.empty(0, dtype=np.int8)
+            )
             nuc_inst_info_dict_ = {  # inst_id should start at 1
-                "box": da.empty(shape=0) if is_dask else np.empty(0),
-                "centroid": da.empty(shape=0) if is_dask else np.empty(0),
-                "contours": da.empty(shape=0) if is_dask else np.empty(0),
-                "prob": da.empty(shape=0) if is_dask else np.empty(0),
-                "type": da.empty(shape=0) if is_dask else np.empty(0),
+                "box": empty.copy(),
+                "centroid": empty.copy(),
+                "contours": empty.copy(),
+                "prob": empty.copy(),
+                "type": empty.copy(),
             }
         else:
             nuc_inst_info_dict_ = _inst_dict_for_dask_processing(
@@ -389,10 +394,15 @@ class HoVerNetPlus(HoVerNet):
 
         layer_info_dict_ = {}
         if not layer_info_dict:
+            empty = (
+                da.empty(shape=0, dtype=np.int8)
+                if is_dask
+                else np.empty(0, dtype=np.int8)
+            )
             layer_info_dict_ = {  # inst_id should start at 1
-                "box": da.empty(shape=0) if is_dask else np.empty(0),
-                "contours": da.empty(shape=0) if is_dask else np.empty(0),
-                "type": da.empty(shape=0) if is_dask else np.empty(0),
+                "box": empty.copy(),
+                "contours": empty.copy(),
+                "type": empty.copy(),
             }
         else:
             layer_info_dict_ = _inst_dict_for_dask_processing(

@@ -337,9 +337,13 @@ class SlideGraphConstructor:
         # Build a kd-tree and rank neighbours according to the euclidean
         # distance (nearest -> farthest).
         kd_tree = cKDTree(points)
-        neighbour_distances_ckd, neighbour_indexes_ckd = kd_tree.query(
+        kd_tree_results = kd_tree.query(
             x=points,
             k=len(points),
+        )
+        neighbour_distances_ckd, neighbour_indexes_ckd = (
+            np.array(kd_tree_results[0]),
+            np.array(kd_tree_results[1]),
         )
 
         # Initialise an empty 1-D condensed distance matrix.
@@ -384,11 +388,11 @@ class SlideGraphConstructor:
             i_vs_all_similarities[neighbour_indexes_single_point] = (
                 neighbour_similarities
             )
-            i_vs_all_similarities = i_vs_all_similarities[i + 1 :]
-            condensed_distance_matrix[index : index + len(i_vs_all_similarities)] = (
-                i_vs_all_similarities
-            )
-            index = index + len(i_vs_all_similarities)
+            i_vs_all_similarities_tail = i_vs_all_similarities[i + 1 :]
+            condensed_distance_matrix[
+                index : index + len(i_vs_all_similarities_tail)
+            ] = i_vs_all_similarities_tail
+            index = index + len(i_vs_all_similarities_tail)
 
         # Perform hierarchical clustering (using similarity as distance)
         linkage_matrix = hierarchy.linkage(condensed_distance_matrix, method="average")

@@ -31,7 +31,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
         os: [ubuntu-24.04, windows-latest, macos-latest]
 
     # Force UTF-8 everywhere (Windows is the one that really needs it)
@@ -42,6 +42,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+            fetch-depth: 0
 
       - name: Install Miniconda
         uses: conda-incubator/setup-miniconda@v3
@@ -58,7 +60,7 @@ jobs:
         shell: bash
         run: |
           source $CONDA/etc/profile.d/conda.sh
-          conda create -y -n test-env python=${{ matrix.python-version }}
+          conda create -y -n test-env python=${{ matrix.python-version }} pip
           conda activate test-env
           conda install -y openjpeg sqlite
           python -m pip install --upgrade pip setuptools wheel
@@ -70,7 +72,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          conda create -y -n test-env python=${{ matrix.python-version }}
+          conda create -y -n test-env python=${{ matrix.python-version }} pip
           conda activate test-env
           conda install -y openjpeg sqlite
           python -m pip install --upgrade pip setuptools wheel
@@ -122,14 +124,16 @@ jobs:
         run: |
           source $CONDA/etc/profile.d/conda.sh
           conda activate test-env
-          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install uv
+          uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
       - name: Install CPU-only PyTorch (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           conda activate test-env
-          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install uv
+          uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
       # -------------------------------
       # (Windows only) make console UTF-8 (extra safety)
@@ -151,14 +155,22 @@ jobs:
         run: |
           source $CONDA/etc/profile.d/conda.sh
           conda activate test-env
-          pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@${GITHUB_SHA}
+          pip install uv
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            REF="${{ github.event.pull_request.head.sha }}"
+          else
+            REF="${GITHUB_SHA}"
+          fi
+          echo "Installing tiatoolbox at ref: $REF"
+          uv pip install --system git+https://github.com/TissueImageAnalytics/tiatoolbox@$REF
 
       - name: Install tiatoolbox (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           conda activate test-env
-          pip install git+https://github.com/TissueImageAnalytics/tiatoolbox@$env:GITHUB_SHA
+          pip install uv
+          uv pip install --system git+https://github.com/TissueImageAnalytics/tiatoolbox@$env:GITHUB_SHA
 
       # -------------------------------
       # Test Imports
