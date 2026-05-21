@@ -1,5 +1,37 @@
 # History
 
+## TIAToolbox v2.1.0 (2026-05-19)
+
+### ✨ Major Updates and Feature Improvements
+
+- Python ≥3.11 required
+  - Supports up to 3.14 (#1035)
+  - Drops support for 3.10 (#1034)
+- Zarr v3 Support (#904)
+  - New storage APIs (zarr.Array, LocalStore, FsspecStore)
+  - Removal of object arrays → rectangular storage via pad_contours
+  - Update `FsspecJsonWSIReader` to support Zarr v3 (#1049), thanks to @aacic
+
+### ⚠️ API Changes
+
+- Python requirement updated → >=3.11, \<3.15
+
+### 🐞 Bug Fixes and Other Changes
+
+- Fixed
+  - Contour serialization and padding issues (Zarr compatibility) (#904)
+  - Invalid Geometry in JSON Outputs (#1057)
+- Fix typographical errors in `pre-trained` documentation (#1043, #1062)
+
+### 🛠️ Development-Related Changes
+
+- Use `uv` to set up CI environments, reduces installation time
+  - Update instructions for `uv` install
+- Use `max_image` for `remove_small_objects` in `scikit-image` usage (#1048)
+- Improve `mypy` workflow and typing errors (#1045)
+
+______________________________________________________________________
+
 ## TIAToolbox v2.0.1 (2026-03-16)
 
 ### Bug Fixes and Other Changes
