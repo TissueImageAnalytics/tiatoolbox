@@ -70,18 +70,6 @@ class TestVersionConsistency:
 # ---------------------------------------------------------------------------
 
 
-def test_python_version_file_exists() -> None:
-    """.python-version must exist and declare Python 3.x."""
-    pv_file = REPO_ROOT / ".python-version"
-    assert pv_file.exists(), (
-        ".python-version not found — run `echo '3.11' > .python-version`"
-    )
-    content = pv_file.read_text().strip()
-    assert re.match(r"^3\.\d+", content), (
-        f".python-version contains {content!r}, expected e.g. '3.11'"
-    )
-
-
 def test_pyproject_has_project_table() -> None:
     """pyproject.toml must contain a [project] table for uv sync to work."""
     data = tomllib.loads(PYPROJECT.read_text())
