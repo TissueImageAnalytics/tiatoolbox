@@ -1,4 +1,4 @@
-FROM python:3.14-slim
+FROM python:3.14-slim-trixie
 
 #get linux packages
 RUN apt-get -y update && apt-get -y install --no-install-recommends \
