@@ -233,6 +233,10 @@ class IOSegmentorConfig(ModelIOConfigABC):
             Resolution to save all output.
         tile_shape (tuple(int, int)):
             Tile shape to process the WSI.
+        postproc_halo (int | tuple[int, int]):
+            Optional extra context around each post-processing tile. If set, the
+            engine post-processes an expanded tile and keeps objects owned by the
+            original tile core.
 
     Attributes:
         input_resolutions (list(dict)):
@@ -257,6 +261,10 @@ class IOSegmentorConfig(ModelIOConfigABC):
             Tile shape to process the WSI.
         margin (int):
             Tile margin to accumulate the output.
+        postproc_halo (int | tuple[int, int]):
+            Optional extra context around each post-processing tile. If set, the
+            engine post-processes an expanded tile and keeps objects owned by the
+            original tile core.
 
     Examples:
         >>> # Defining io for a network having 1 input and 1 output at the
@@ -294,6 +302,7 @@ class IOSegmentorConfig(ModelIOConfigABC):
     save_resolution: dict = None
     tile_shape: tuple[int, int] | None = None
     margin: int | None = None
+    postproc_halo: int | tuple[int, int] | None = None
 
     def to_baseline(self: IOSegmentorConfig) -> IOSegmentorConfig:
         """Returns a new config object converted to baseline form.
@@ -389,6 +398,10 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
             Tile margin to accumulate the output.
         tile_shape (tuple(int, int)):
             Tile shape to process the WSI.
+        postproc_halo (int | tuple[int, int]):
+            Optional extra context around each post-processing tile. If set, the
+            engine post-processes an expanded tile and keeps objects owned by the
+            original tile core.
 
     Attributes:
         input_resolutions (list(dict)):
@@ -413,6 +426,10 @@ class IOInstanceSegmentorConfig(IOSegmentorConfig):
             Tile margin to accumulate the output.
         tile_shape (tuple(int, int)):
             Tile shape to process the WSI.
+        postproc_halo (int | tuple[int, int]):
+            Optional extra context around each post-processing tile. If set, the
+            engine post-processes an expanded tile and keeps objects owned by the
+            original tile core.
 
     Examples:
         >>> # Defining io for a network having 1 input and 1 output at the

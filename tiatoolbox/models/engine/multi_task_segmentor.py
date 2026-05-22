@@ -204,6 +204,10 @@ class MultiTaskSegmentorRunParams(SemanticSegmentorRunParams, total=False):
             Number of workers used in DataLoader.
         output_file (str):
             Output file name for saving results (e.g., .zarr or .db).
+        postproc_halo (int | tuple[int, int]):
+            Optional halo around each WSI post-processing tile. When set, tile-mode
+            post-processing runs on the expanded tile and keeps objects owned by
+            the original tile core.
         output_resolutions (Resolution):
             Resolution used for writing output predictions.
         patch_output_shape (tuple[int, int]):
@@ -224,6 +228,7 @@ class MultiTaskSegmentorRunParams(SemanticSegmentorRunParams, total=False):
 
     """
 
+    postproc_halo: int | tuple[int, int]
     return_predictions: tuple[bool, ...]
 
 
@@ -949,11 +954,15 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 if self.num_workers == 0
                 else self.num_workers
             )
+            postproc_halo = kwargs.get("postproc_halo")
+            if postproc_halo is None:
+                postproc_halo = getattr(self._ioconfig, "postproc_halo", None)
             post_process_predictions = self._process_tile_mode(
                 probabilities=probabilities,
                 save_path=save_path.with_suffix(".zarr"),
                 memory_threshold=kwargs.get("memory_threshold", 80),
                 return_predictions=kwargs.get("return_predictions"),
+                postproc_halo=postproc_halo,
             )
         else:
             post_process_predictions = self._process_full_wsi(
@@ -1083,6 +1092,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
         memory_threshold: float = 80,
         *,
         return_predictions: tuple[bool, ...] | None = None,
+        postproc_halo: int | tuple[int, int] | None = None,
     ) -> tuple[dict, ...] | None:
         """Convert WSI probability maps into outputs using tile-mode processing.
 
@@ -1120,6 +1130,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 prediction arrays are retained (i.e., they are set to ``None`` and not
                 allocated). The tuple length must match the number of task dictionaries
                 produced by ``postproc_func``.
+            postproc_halo (int | tuple[int, int] | None):
+                Optional halo around each tile before post-processing. Tuple values
+                follow image-shape order ``(height, width)``. With a non-zero halo,
+                only core grid tiles are processed; objects are kept if owned by the
+                unexpanded tile core.
 
         Returns:
             list[dict] | None:
@@ -1169,6 +1184,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
         tile_info_sets = self._get_tile_info(
             image_shape=masked_output_shape, wsi_proc_shape=wsi_proc_shape
         )
+        postproc_halo_xy = _normalise_postproc_halo(postproc_halo)
+        use_postproc_halo = np.any(postproc_halo_xy > 0)
+        if use_postproc_halo:
+            tile_info_sets = [
+                [tile_info_sets[0][0], np.zeros_like(tile_info_sets[0][1])]
+            ]
         ioconfig = self._ioconfig.to_baseline()
 
         tile_metadata = _build_tile_tasks(
@@ -1182,7 +1203,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
         # Calculate batch size for dask compute
         vm = psutil.virtual_memory()
         bytes_per_element = np.dtype(probabilities[0].dtype).itemsize
-        tile_elements = np.prod(self._ioconfig.tile_shape)
+        tile_shape = np.array(self._ioconfig.tile_shape)
+        tile_elements = np.prod(tile_shape + (2 * postproc_halo_xy[::-1]))
         prod_dim2 = math.prod(p.shape[2] for p in probabilities if len(p.shape) > 2)  # noqa: PLR2004
         tile_memory = len(probabilities) * tile_elements * prod_dim2 * bytes_per_element
         # available memory
@@ -1198,17 +1220,27 @@ class MultiTaskSegmentor(SemanticSegmentor):
             disable=not self.verbose,
         ):
             tile_metadata_ = tile_metadata[i : i + batch_size]
+            tile_read_bounds = [
+                _get_postproc_tile_read_bounds(
+                    tile_bounds=tile_meta[0],
+                    postproc_halo_xy=postproc_halo_xy,
+                    image_shape=masked_output_shape,
+                )
+                for tile_meta in tile_metadata_
+            ]
 
             # Build delayed tasks
             delayed_tasks = [
                 self._compute_tile(
-                    _tile_meta[0],
+                    tile_read_bounds[_tile_id],
                 )
-                for _tile_meta in tqdm(
-                    tile_metadata_,
-                    leave=False,
-                    desc="Creating list of delayed tasks for post-processing",
-                    disable=not self.verbose,
+                for _tile_id, _ in enumerate(
+                    tqdm(
+                        tile_metadata_,
+                        leave=False,
+                        desc="Creating list of delayed tasks for post-processing",
+                        disable=not self.verbose,
+                    )
                 )
             ]
 
@@ -1232,6 +1264,13 @@ class MultiTaskSegmentor(SemanticSegmentor):
             # Merge each tile result
             for _tile_id, post_process_output in enumerate(tqdm_loop):
                 tile_bounds, tile_flag, tile_mode = tile_metadata_[_tile_id]
+                tile_read_bounds_ = tile_read_bounds[_tile_id]
+                if use_postproc_halo:
+                    post_process_output = _crop_halo_post_process_output(  # noqa: PLW2901
+                        post_process_output=post_process_output,
+                        tile_bounds=tile_bounds,
+                        tile_read_bounds=tile_read_bounds_,
+                    )
 
                 # create a list of info dict for each task
                 wsi_info_dict = _create_wsi_info_dict(
@@ -3278,6 +3317,201 @@ def _build_tile_tasks(
             tile_metadata.append((tile_bounds, tile_flag, set_idx))
 
     return tile_metadata
+
+
+def _normalise_postproc_halo(
+    postproc_halo: int | tuple[int, int] | list[int] | np.ndarray | None,
+) -> np.ndarray:
+    """Return post-processing halo in ``(x, y)`` order."""
+    if postproc_halo is None:
+        return np.array([0, 0], dtype=np.int32)
+
+    halo = np.asarray(postproc_halo, dtype=np.int32)
+    if halo.ndim == 0:
+        halo = np.repeat(halo, 2)
+
+    if halo.shape != (2,):
+        msg = "`postproc_halo` must be an int or a length-2 sequence."
+        raise ValueError(msg)
+
+    if np.any(halo < 0):
+        msg = "`postproc_halo` must be non-negative."
+        raise ValueError(msg)
+
+    # Public tuple convention follows image shape order: (height, width).
+    return halo[::-1]
+
+
+def _get_postproc_tile_read_bounds(
+    tile_bounds: tuple[int, int, int, int] | np.ndarray,
+    postproc_halo_xy: np.ndarray,
+    image_shape: tuple[int, int] | np.ndarray,
+) -> tuple[int, int, int, int]:
+    """Expand tile bounds by halo and clip to the processed image shape."""
+    tile_bounds = np.asarray(tile_bounds, dtype=np.int32)
+    image_shape = np.asarray(image_shape, dtype=np.int32)
+    read_tl = np.maximum(tile_bounds[:2] - postproc_halo_xy, 0)
+    read_br = np.minimum(tile_bounds[2:] + postproc_halo_xy, image_shape)
+    return tuple(np.concatenate([read_tl, read_br]).tolist())
+
+
+def _crop_halo_post_process_output(
+    post_process_output: tuple[dict, ...],
+    tile_bounds: tuple[int, int, int, int] | np.ndarray,
+    tile_read_bounds: tuple[int, int, int, int] | np.ndarray,
+) -> tuple[dict, ...]:
+    """Crop halo-expanded post-processing output back to the tile core."""
+    tile_bounds = np.asarray(tile_bounds, dtype=np.int32)
+    tile_read_bounds = np.asarray(tile_read_bounds, dtype=np.int32)
+    core_tl_in_read = tile_bounds[:2] - tile_read_bounds[:2]
+    core_br_in_read = tile_bounds[2:] - tile_read_bounds[:2]
+
+    cropped_outputs = []
+    for output in post_process_output:
+        output_ = output.copy()
+
+        if "predictions" in output_:
+            output_["predictions"] = output_["predictions"][
+                core_tl_in_read[1] : core_br_in_read[1],
+                core_tl_in_read[0] : core_br_in_read[0],
+            ]
+
+        if "info_dict" in output_:
+            keep_mask = _get_halo_core_ownership_mask(
+                info_dict=output_["info_dict"],
+                core_tl_in_read=core_tl_in_read,
+                core_br_in_read=core_br_in_read,
+            )
+            output_["info_dict"] = _filter_and_shift_halo_info_dict(
+                info_dict=output_["info_dict"],
+                keep_mask=keep_mask,
+                offset=-core_tl_in_read,
+            )
+
+        cropped_outputs.append(output_)
+
+    return tuple(cropped_outputs)
+
+
+def _get_halo_core_ownership_mask(
+    info_dict: dict,
+    core_tl_in_read: np.ndarray,
+    core_br_in_read: np.ndarray,
+) -> np.ndarray:
+    """Return mask for objects owned by the unexpanded tile core."""
+    instance_count = _get_info_dict_instance_count(info_dict)
+    if instance_count == 0:
+        return np.zeros(0, dtype=bool)
+
+    points = _get_info_dict_ownership_points(info_dict)
+    if points is None:
+        return np.ones(instance_count, dtype=bool)
+
+    return (
+        (points[:, 0] >= core_tl_in_read[0])
+        & (points[:, 0] < core_br_in_read[0])
+        & (points[:, 1] >= core_tl_in_read[1])
+        & (points[:, 1] < core_br_in_read[1])
+    )
+
+
+def _get_info_dict_instance_count(info_dict: dict) -> int:
+    """Return the number of instances represented by an info dictionary."""
+    for value in info_dict.values():
+        if value is not None:
+            return len(value)
+    return 0
+
+
+def _get_info_dict_ownership_points(info_dict: dict) -> np.ndarray | None:
+    """Get representative points for ownership checks."""
+    if "centroid" in info_dict:
+        return np.asarray(info_dict["centroid"], dtype=np.float32)
+
+    if "box" in info_dict:
+        boxes = np.asarray(info_dict["box"], dtype=np.float32)
+        if boxes.size == 0:
+            return np.empty((0, 2), dtype=np.float32)
+        return (boxes[:, :2] + boxes[:, 2:]) / 2
+
+    if "contours" not in info_dict:
+        return None
+
+    contours = np.asarray(info_dict["contours"])
+    if contours.size == 0:
+        return np.empty((0, 2), dtype=np.float32)
+
+    points = []
+    pad_value = (
+        np.iinfo(contours.dtype).min
+        if np.issubdtype(contours.dtype, np.integer)
+        else np.nan
+    )
+    for contour in contours:
+        valid_mask = _get_valid_coordinate_rows(contour, pad_value)
+        valid_contour = contour[valid_mask]
+        if len(valid_contour) == 0:
+            points.append([np.nan, np.nan])
+            continue
+        points.append(
+            ((valid_contour.min(axis=0) + valid_contour.max(axis=0)) / 2).tolist()
+        )
+    return np.asarray(points, dtype=np.float32)
+
+
+def _filter_and_shift_halo_info_dict(
+    info_dict: dict,
+    keep_mask: np.ndarray,
+    offset: np.ndarray,
+) -> dict:
+    """Filter halo post-processing objects and shift coordinates to core space."""
+    return {
+        key: _shift_halo_info_field(
+            key=key,
+            value=np.asarray(value)[keep_mask],
+            offset=offset,
+        )
+        for key, value in info_dict.items()
+    }
+
+
+def _shift_halo_info_field(
+    key: str,
+    value: np.ndarray,
+    offset: np.ndarray,
+) -> np.ndarray:
+    """Shift geometric info fields from expanded-tile to core-tile coordinates."""
+    if key == "box":
+        return value + np.array([offset[0], offset[1], offset[0], offset[1]])
+
+    if key == "centroid":
+        return value + offset
+
+    if key != "contours":
+        return value
+
+    contours = value.copy()
+    if contours.size == 0:
+        return contours
+
+    pad_value = (
+        np.iinfo(contours.dtype).min
+        if np.issubdtype(contours.dtype, np.integer)
+        else np.nan
+    )
+    valid_mask = _get_valid_coordinate_rows(contours, pad_value)
+    contours[valid_mask] = (contours[valid_mask] + offset).astype(contours.dtype)
+    return contours
+
+
+def _get_valid_coordinate_rows(
+    coordinates: np.ndarray,
+    pad_value: float,
+) -> np.ndarray:
+    """Return rows that are not contour padding."""
+    if np.isnan(pad_value):
+        return ~np.isnan(coordinates).all(axis=-1)
+    return ~(coordinates == pad_value).all(axis=-1)
 
 
 def _compute_info_dict_for_merge(

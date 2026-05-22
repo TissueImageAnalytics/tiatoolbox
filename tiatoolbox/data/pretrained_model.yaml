@@ -689,7 +689,8 @@ cerberus-resnet34:
                 - {"units": "mpp", "resolution": 0.50}
                 - {"units": "mpp", "resolution": 0.50}
                 - {"units": "mpp", "resolution": 0.50}
-            margin: 64
+            margin: 512
+            postproc_halo: 512
             tile_shape: [4096, 4096]
             patch_input_shape: [448, 448]
             patch_output_shape: [144, 144]

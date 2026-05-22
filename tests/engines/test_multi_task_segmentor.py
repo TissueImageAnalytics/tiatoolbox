@@ -28,7 +28,10 @@ from tiatoolbox.models.engine.multi_task_segmentor import (
     DaskDelayedJSONStore,
     MultiTaskSegmentor,
     _clear_zarr,
+    _crop_halo_post_process_output,
+    _get_postproc_tile_read_bounds,
     _get_sel_indices_margin_lines,
+    _normalise_postproc_halo,
     _post_save_json_store,
     _process_instance_predictions,
     _save_multitask_vertical_to_cache,
@@ -1077,6 +1080,76 @@ def test_get_tile_info_small_image_triggers_early_return(
     assert np.array_equal(boxes, fake_boxes)
     assert flag.shape == (1, 4)
     assert np.all(flag == 0)
+
+
+def test_postproc_halo_bounds_and_output_crop() -> None:
+    """Test halo-expanded tile output is cropped and shifted to core space."""
+    halo_xy = _normalise_postproc_halo((3, 2))
+    assert np.array_equal(halo_xy, np.array([2, 3]))
+
+    read_bounds = _get_postproc_tile_read_bounds(
+        tile_bounds=(4, 5, 10, 11),
+        postproc_halo_xy=halo_xy,
+        image_shape=(12, 13),
+    )
+    assert read_bounds == (2, 2, 12, 13)
+
+    predictions = np.arange(11 * 10).reshape(11, 10)
+    info_dict = {
+        "box": np.array(
+            [
+                [2, 3, 4, 5],
+                [5, 6, 7, 8],
+                [9, 6, 11, 8],
+            ],
+            dtype=np.int32,
+        ),
+        "centroid": np.array(
+            [
+                [3, 4],
+                [6, 7],
+                [10, 7],
+            ],
+            dtype=np.float32,
+        ),
+        "contours": np.array(
+            [
+                [[2, 3], [4, 3], [4, 5], [2, 5]],
+                [[5, 6], [7, 6], [7, 8], [5, 8]],
+                [[9, 6], [11, 6], [11, 8], [9, 8]],
+            ],
+            dtype=np.int32,
+        ),
+        "type": np.array([1, 2, 3], dtype=np.int32),
+    }
+
+    cropped = _crop_halo_post_process_output(
+        post_process_output=(
+            {
+                "task_type": "gland",
+                "seg_type": "instance",
+                "predictions": predictions,
+                "info_dict": info_dict,
+            },
+        ),
+        tile_bounds=(4, 5, 10, 11),
+        tile_read_bounds=read_bounds,
+    )[0]
+
+    assert np.array_equal(cropped["predictions"], predictions[3:9, 2:8])
+    assert np.array_equal(cropped["info_dict"]["type"], np.array([1, 2]))
+    assert np.array_equal(
+        cropped["info_dict"]["box"],
+        np.array([[0, 0, 2, 2], [3, 3, 5, 5]], dtype=np.int32),
+    )
+    assert np.array_equal(
+        cropped["info_dict"]["centroid"],
+        np.array([[1, 1], [4, 4]], dtype=np.float32),
+    )
+    assert np.array_equal(
+        cropped["info_dict"]["contours"][0],
+        np.array([[0, 0], [2, 0], [2, 2], [0, 2]], dtype=np.int32),
+    )
 
 
 class FakeSeg(MultiTaskSegmentor):
