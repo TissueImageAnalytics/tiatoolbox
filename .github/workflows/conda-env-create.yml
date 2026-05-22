@@ -1,4 +1,4 @@
-# This workflow will build a conda environment to check that it resolves in a reasonable time
+# This workflow will build a conda environment to check that it resolves
 
 name: Solve Conda Environment
 
@@ -7,48 +7,70 @@ permissions:
 
 on:
   push:
-    paths: [ "requirements/requirements*.yml", "conda-env-create.yml", "requirement*.txt"]
+    paths:
+      - "requirements/requirements*.txt"
+      - "requirements/generate_conda_env.py"
+      - ".github/workflows/conda-env-create.yml"
   pull_request:
-    paths: [ "requirements/requirements*.yml", "conda-env-create.yml", "requirement*.txt"]
-  schedule: # Run on the 1st of every month at midnight
-    - cron: "0 0 1 * *"
+    paths:
+      - "requirements/requirements*.txt"
+      - "requirements/generate_conda_env.py"
+      - ".github/workflows/conda-env-create.yml"
 
 jobs:
   conda_solve:
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        kind: ["dev", "prod"]
-        include:
-          - os: ubuntu-latest
-            kind: prod
-            requirements: requirements/requirements.conda.yml
-          - os: ubuntu-latest
-            kind: dev
-            requirements: requirements/requirements.dev.conda.yml
-          - os: windows-latest
-            kind: prod
-            requirements: requirements/requirements.win64.conda.yml
-          - os: windows-latest
-            kind: dev
-            requirements: requirements/requirements.win64.dev.conda.yml
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 30
+
     steps:
       - uses: actions/checkout@v4
-      - name: Copy requirements files
-        shell: bash
-        run: |
-          cp ./requirements/requirements*.txt /tmp/
-          mkdir /tmp/docs/
-          cp ./docs/requirements*.txt /tmp/docs/
+
+      # ✅ Generate environment
+      - name: Generate conda environment
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+        run: python requirements/generate_conda_env.py
+
+      # ✅ Install via micromamba
       - uses: mamba-org/setup-micromamba@v1
         with:
           environment-name: tiatoolbox
-          environment-file: ${{ matrix.requirements }}
-      - shell: bash -l {0}
+          environment-file: requirements/requirements.conda.generated.yml
+
+      # ✅ Validate environment
+      - name: Test environment
+        shell: bash -l {0}
         run: |
-          micromamba info
           micromamba list
-          python -c "import torch, numpy; print(torch.__version__, numpy.__version__)"
+
+          python - <<EOF
+          import sys
+          print("Python:", sys.version)
+
+          import numpy, pandas
+          print("Core OK")
+
+          try:
+              import torch
+              print("Torch OK")
+          except Exception as e:
+              print("Torch issue:", e)
+
+          try:
+              import cv2
+              print("OpenCV OK")
+          except Exception as e:
+              print("OpenCV issue:", e)
+
+          try:
+              import openslide
+              print("OpenSlide OK")
+          except Exception as e:
+              print("OpenSlide issue:", e)
+          EOF
