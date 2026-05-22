@@ -274,14 +274,14 @@ def test_nucleus_detector_patches_zarr_output(
 
     output_zarr = zarr.open(output_path, mode="r")
 
-    assert output_zarr["x"][0].size == 1
-    assert output_zarr["x"][1].size == 0
-    assert output_zarr["y"][0].size == 1
-    assert output_zarr["y"][1].size == 0
-    assert output_zarr["classes"][0].size == 1
-    assert output_zarr["classes"][1].size == 0
-    assert output_zarr["probabilities"][0].size == 1
-    assert output_zarr["probabilities"][1].size == 0
+    assert output_zarr["x"]["0"].size == 1
+    assert output_zarr["x"]["1"].size == 0
+    assert output_zarr["y"]["0"].size == 1
+    assert output_zarr["y"]["1"].size == 0
+    assert output_zarr["classes"]["0"].size == 1
+    assert output_zarr["classes"]["1"].size == 0
+    assert output_zarr["probabilities"]["0"].size == 1
+    assert output_zarr["probabilities"]["1"].size == 0
 
     rm_dir(save_dir)
 
