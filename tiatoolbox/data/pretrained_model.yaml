@@ -611,7 +611,6 @@ fcn_resnet50_unet-bcss:
             patch_output_shape: [512, 512]
             stride_shape: [450, 450]
             save_resolution: {'units': 'mpp', 'resolution': 0.25}
-            ignore_index: 0
 
 unet_tissue_mask_tsef:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
