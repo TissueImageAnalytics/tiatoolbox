@@ -780,7 +780,7 @@ class EfficientUNetTissueMaskModel(ModelABC):
         self: EfficientUNetTissueMaskModel,
         num_classes: int = 1,
         threshold: float = 0.95,
-        class_dict: dict | None = None,  
+        class_dict: dict | None = None,
     ) -> None:
         """Initialize EfficientUNetTissueMaskModel.
 
@@ -792,6 +792,8 @@ class EfficientUNetTissueMaskModel(ModelABC):
                 Number of output classes. Defaults to 1 (binary segmentation).
             threshold (float):
                 Threshold for binary segmentation. Defaults to 0.95.
+            class_dict (dict | None):
+                Optional dictionary mapping class indices to names. Defaults to None.
 
         """
         super().__init__()
