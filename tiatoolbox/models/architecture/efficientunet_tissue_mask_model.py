@@ -780,6 +780,7 @@ class EfficientUNetTissueMaskModel(ModelABC):
         self: EfficientUNetTissueMaskModel,
         num_classes: int = 1,
         threshold: float = 0.95,
+        class_dict: dict | None = None,  
     ) -> None:
         """Initialize EfficientUNetTissueMaskModel.
 
@@ -798,6 +799,7 @@ class EfficientUNetTissueMaskModel(ModelABC):
         self.decoder = UnetDecoder()
         self.segmentation_head = SegmentationHead(16, num_classes)
         self.threshold = threshold
+        self.class_dict = class_dict
 
     def forward(  # skipcq: PYL-W0613
         self: EfficientUNetTissueMaskModel,
