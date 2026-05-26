@@ -297,9 +297,12 @@ class UNetModel(ModelABC):
         encoder_levels: list[int] | None = None,
         decoder_block: tuple[int] | None = None,
         skip_type: str = "add",
+        class_dict : dict | None = None,
     ) -> None:
         """Initialize :class:`UNetModel`."""
         super().__init__()
+
+        self.class_dict = class_dict
 
         if encoder.lower() not in {"resnet50", "unet"}:
             msg = f"Unknown encoder `{encoder}`"
