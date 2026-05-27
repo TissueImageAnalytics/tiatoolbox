@@ -1273,6 +1273,7 @@ def test_merge_stops_when_should_stop(
         *_: Any,  # noqa: ANN401
         **__: Any,  # noqa: ANN401
     ) -> tuple[zarr.Array | None, da.Array | None]:
+        """Record unexpected probability-store calls during merge tests."""
         nonlocal called_store
         called_store = True
         return None, None
@@ -1719,6 +1720,7 @@ def test_post_save_json_store_deletes_empty_store(
     # ---- Proxy object that LOOKS like a zarr.Group ----
     class GroupProxy:
         def __init__(self: GroupProxy, group: zarr.Group, path: Path | str) -> None:
+            """Wrap a Zarr group with a path used by cleanup code."""
             self._group = group
             self.path = path
             self.store = group.store
@@ -1726,19 +1728,23 @@ def test_post_save_json_store_deletes_empty_store(
         # Make isinstance(proxy, zarr.Group) return True
         @property
         def __class__(self: GroupProxy) -> type[zarr.Group]:
+            """Expose the wrapped object as a Zarr group for isinstance."""
             return zarr.Group
 
         # Delegate attribute access
         def __getattr__(
             self: GroupProxy, item: str
         ) -> zarr.Group | zarr.Array | str | int | float | Iterable[str]:
+            """Delegate unknown attributes to the wrapped Zarr group."""
             return getattr(self._group, item)
 
         # Delegate mapping behavior
         def keys(self: GroupProxy) -> Iterable[str]:
+            """Return keys from the wrapped Zarr group."""
             return self._group.keys()
 
         def __getitem__(self: GroupProxy, item: str) -> zarr.Group | zarr.Array:
+            """Return an item from the wrapped Zarr group."""
             return self._group[item]
 
     processed_predictions = GroupProxy(root, "dummy")
@@ -1747,6 +1753,7 @@ def test_post_save_json_store_deletes_empty_store(
     called = {"flag": False}
 
     def fake_rmtree(path: Path | str, *, ignore_errors: bool) -> None:  # noqa: ARG001
+        """Record that cleanup attempted to remove an empty Zarr store."""
         called["flag"] = True
 
     monkeypatch.setattr(shutil, "rmtree", fake_rmtree)
@@ -1830,6 +1837,7 @@ def patch_save_qupath_json(monkeypatch: pytest.MonkeyPatch) -> None:
         save_path: Path | None,  # noqa: ARG001
         qupath_json: dict[str, Any],
     ) -> dict[str, Any]:
+        """Return generated QuPath JSON instead of writing it to disk."""
         return qupath_json
 
     monkeypatch.setattr(
@@ -1866,6 +1874,7 @@ class DummyStoreCompute:
         scale_factor: tuple[float, float],
         class_colors: dict[int, Any],
     ) -> dict[str, Any]:
+        """Delegate feature construction to the production JSON store."""
         return DaskDelayedJSONStore._build_single_qupath_feature(
             self, i, class_dict, origin, scale_factor, class_colors
         )

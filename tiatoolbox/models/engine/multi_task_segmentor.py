@@ -4104,6 +4104,7 @@ def _post_save_json_store(
     save_path: Path | None,
     **kwargs: Unpack[MultiTaskSegmentorRunParams],
 ) -> None:
+    """Clean temporary JSON-store data and report unsupported probability saves."""
     for key in keys_to_compute:
         del processed_predictions[key]
 

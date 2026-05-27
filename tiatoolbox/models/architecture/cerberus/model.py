@@ -185,6 +185,7 @@ class Cerberus(ModelABC, NetDesc):
 
 
 def _strip_dataparallel_prefix(state: dict) -> dict:
+    """Remove ``module.`` prefixes from DataParallel checkpoint keys."""
     if all(key.split(".")[0] == "module" for key in state):
         return {".".join(key.split(".")[1:]): value for key, value in state.items()}
     return state
@@ -194,6 +195,7 @@ def _crop_center_tensor(
     tensor: torch.Tensor,
     output_shape: tuple[int, int],
 ) -> torch.Tensor:
+    """Crop a BHWC tensor to the requested center output shape."""
     h, w = tensor.shape[1:3]
     out_h, out_w = output_shape
     top = max((h - out_h) // 2, 0)
@@ -204,6 +206,7 @@ def _crop_center_tensor(
 def _build_tissue_raw_map(
     head_map: dict[str, np.ndarray], tissue_name: str
 ) -> tuple[np.ndarray, dict[str, list[int]]]:
+    """Combine Cerberus heads for one tissue into a raw postproc map."""
     idx_dict = {}
     maps = []
     start = 0
@@ -223,6 +226,7 @@ def _build_tissue_raw_map(
 
 
 def _inst_dict_for_dask_processing(inst_info_dict: dict, *, is_dask: bool) -> dict:
+    """Convert instance metadata into arrays with optional Dask wrapping."""
     if not inst_info_dict:
         output = {
             "box": np.empty((0, 4), dtype=np.int32),

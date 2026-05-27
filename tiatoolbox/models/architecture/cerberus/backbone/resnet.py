@@ -83,6 +83,7 @@ class ResNet34(nn.Module):
         blocks: int,
         stride: int = 1,
     ) -> nn.Sequential:
+        """Build one ResNet stage with optional downsampling."""
         downsample = None
         if stride != 1 or self.inplanes != planes * BasicBlock.expansion:
             downsample = nn.Sequential(

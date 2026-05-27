@@ -26,6 +26,7 @@ class PostProcInstErodedContourMap:
 
     @staticmethod
     def _proc_gland(inst_fg: np.ndarray, ds_factor: float = 1.0) -> np.ndarray:
+        """Extract labelled gland instances from inner and contour maps."""
         ksize = int((11 - 1) * ds_factor)
         k_disk = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ksize, ksize))
 
@@ -44,6 +45,7 @@ class PostProcInstErodedContourMap:
 
     @staticmethod
     def _proc_lumen(inst_fg: np.ndarray, ds_factor: float = 1.0) -> np.ndarray:
+        """Extract labelled lumen instances from inner and contour maps."""
         ksize = int((3 - 1) * ds_factor)
         k_disk = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (ksize, ksize))
 
@@ -62,6 +64,7 @@ class PostProcInstErodedContourMap:
 
     @staticmethod
     def _proc_nuclei(inst_fg: np.ndarray, ds_factor: float = 1.0) -> np.ndarray:
+        """Extract labelled nuclei instances from inner and contour maps."""
         _ = ds_factor
         k_disk = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
 

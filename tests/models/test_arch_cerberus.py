@@ -41,6 +41,7 @@ def test_cerberus_load_weights_from_desc_checkpoint(
         *_args: object,
         **_kwargs: object,
     ) -> dict[str, dict[str, torch.Tensor]]:
+        """Return a synthetic Cerberus checkpoint for load-weight tests."""
         return checkpoint
 
     monkeypatch.setattr(torch, "load", _mock_torch_load)
@@ -63,6 +64,7 @@ def test_cerberus_pretrained_registry(monkeypatch: pytest.MonkeyPatch) -> None:
         *_args: object,
         **_kwargs: object,
     ) -> dict[str, dict[str, torch.Tensor]]:
+        """Return a synthetic Cerberus checkpoint for registry loading."""
         return checkpoint
 
     monkeypatch.setattr(torch, "load", _mock_torch_load)
@@ -153,6 +155,7 @@ def test_cerberus_postproc_dask_maps_and_lumen_gland_mask(
         tissue_mode: str,
         ds_factor: float,
     ) -> tuple[np.ndarray, np.ndarray | None]:
+        """Return deterministic task maps for Cerberus postproc testing."""
         calls.append((tissue_mode, raw_map.shape, idx_dict, ds_factor))
         inst_map = np.zeros(output_shape, dtype=np.int32)
         type_map = np.ones(output_shape, dtype=np.uint8)
@@ -172,6 +175,7 @@ def test_cerberus_postproc_dask_maps_and_lumen_gland_mask(
         offset: tuple[int, int],
         verbose: object,
     ) -> dict[int, dict]:
+        """Return deterministic instance metadata for Cerberus postproc tests."""
         assert offset == (7, 11)
         assert verbose is False
         type_value = 0 if type_map is None else int(type_map[inst_map > 0][0])
