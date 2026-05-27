@@ -40,8 +40,8 @@ def combine_annotation_stores(
             Path to the combined annotation store.
 
     """
-    input_paths = [Path(path) for path in input_paths]
-    if len(input_paths) == 0:
+    input_path_objs = [Path(path) for path in input_paths]
+    if len(input_path_objs) == 0:
         msg = "At least one input annotation store path is required."
         raise ValueError(msg)
 
@@ -53,10 +53,10 @@ def combine_annotation_stores(
             raise FileExistsError(msg)
         output_path.unlink()
 
-    labels_ = _normalise_labels(input_paths, labels)
+    labels_ = _normalise_labels(input_path_objs, labels)
     combined_store = SQLiteStore(auto_commit=False)
 
-    for source_path in input_paths:
+    for source_path in input_path_objs:
         source_store = SQLiteStore.open(source_path)
         source_label = labels_[source_path]
         annotations = []
