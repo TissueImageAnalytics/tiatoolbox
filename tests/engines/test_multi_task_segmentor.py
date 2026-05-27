@@ -1248,6 +1248,83 @@ def test_postproc_halo_ownership_without_centroids() -> None:
     )
 
 
+def test_process_tile_mode_uses_postproc_halo(
+    track_tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test tile mode expands reads and crops outputs when halo is set."""
+    seg = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+    seg.verbose = False
+    seg.num_workers = 1
+    seg.mask_bounds = (0, 0, 10, 10)
+    seg.mask_padding = (0, 0, 0, 0)
+    seg.dataloader = SimpleNamespace(
+        dataset=SimpleNamespace(
+            reader=SimpleNamespace(slide_dimensions=lambda **_: (10, 10)),
+        ),
+    )
+    seg._ioconfig = SimpleNamespace(
+        highest_input_resolution={},
+        tile_shape=(4, 4),
+        to_baseline=lambda: SimpleNamespace(margin=0),
+    )
+
+    tile_info_sets = [
+        [
+            np.array([[2, 2, 6, 6]], dtype=np.int32),
+            np.array([[1, 1, 1, 1]], dtype=np.int32),
+        ],
+        [
+            np.array([[6, 6, 10, 10]], dtype=np.int32),
+            np.array([[1, 1, 1, 1]], dtype=np.int32),
+        ],
+    ]
+    seg._get_tile_info = lambda **_: tile_info_sets
+    recorded_bounds = []
+    expanded_predictions = np.arange(64, dtype=np.uint8).reshape(8, 8)
+
+    def _compute_tile(tile_bounds: tuple[int, int, int, int]) -> tuple[dict]:
+        """Return one halo-expanded post-processing output."""
+        recorded_bounds.append(tile_bounds)
+        return (
+            {
+                "task_type": "instance",
+                "seg_type": "instance",
+                "predictions": expanded_predictions,
+                "info_dict": {
+                    "box": np.empty((0, 4), dtype=np.int32),
+                    "centroid": np.empty((0, 2), dtype=np.float32),
+                    "contours": np.empty((0, 0, 2), dtype=np.int32),
+                    "prob": np.empty((0,), dtype=np.float32),
+                    "type": np.empty((0,), dtype=np.int32),
+                },
+            },
+        )
+
+    seg._compute_tile = _compute_tile
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.multi_task_segmentor.tqdm_dask_progress_bar",
+        lambda **kwargs: kwargs["write_tasks"],
+    )
+
+    output = seg._process_tile_mode(
+        probabilities=[da.zeros((10, 10, 1), chunks=(10, 10, 1))],
+        save_path=track_tmp_path / "halo.zarr",
+        memory_threshold=100,
+        return_predictions=(True,),
+        postproc_halo=2,
+    )
+
+    assert recorded_bounds == [(0, 0, 8, 8)]
+    assert len(output) == 1
+    predictions = output[0]["predictions"]
+    assert np.array_equal(predictions[2:6, 2:6], expanded_predictions[2:6, 2:6])
+    assert np.count_nonzero(predictions[:2, :]) == 0
+    assert np.count_nonzero(predictions[:, :2]) == 0
+    assert np.count_nonzero(predictions[6:, :]) == 0
+    assert np.count_nonzero(predictions[:, 6:]) == 0
+
+
 class FakeSeg(MultiTaskSegmentor):
     """Minimal subclass that allows us to override internals cleanly."""
 
