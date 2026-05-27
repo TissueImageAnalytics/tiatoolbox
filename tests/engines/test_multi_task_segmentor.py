@@ -1186,6 +1186,68 @@ def test_postproc_halo_bounds_and_output_crop() -> None:
     )
 
 
+def test_postproc_halo_ownership_without_centroids() -> None:
+    """Test halo ownership falls back to boxes and padded contours."""
+    read_bounds = (2, 2, 12, 13)
+    predictions = np.arange(11 * 10).reshape(11, 10)
+
+    box_cropped = _crop_halo_post_process_output(
+        post_process_output=(
+            {
+                "task_type": "gland",
+                "seg_type": "instance",
+                "predictions": predictions,
+                "info_dict": {
+                    "box": np.array(
+                        [
+                            [2, 3, 4, 5],
+                            [9, 6, 11, 8],
+                        ],
+                        dtype=np.int32,
+                    ),
+                    "type": np.array([1, 2], dtype=np.int32),
+                },
+            },
+        ),
+        tile_bounds=(4, 5, 10, 11),
+        tile_read_bounds=read_bounds,
+    )[0]
+    assert np.array_equal(
+        box_cropped["info_dict"]["box"],
+        np.array([[0, 0, 2, 2]], dtype=np.int32),
+    )
+    assert np.array_equal(box_cropped["info_dict"]["type"], np.array([1]))
+
+    pad_value = np.iinfo(np.int32).min
+    contour_cropped = _crop_halo_post_process_output(
+        post_process_output=(
+            {
+                "task_type": "gland",
+                "seg_type": "instance",
+                "predictions": predictions,
+                "info_dict": {
+                    "contours": np.array(
+                        [
+                            [[2, 3], [4, 3], [4, 5], [2, 5]],
+                            [[9, 6], [11, 6], [11, 8], [9, 8]],
+                            [[pad_value, pad_value]] * 4,
+                        ],
+                        dtype=np.int32,
+                    ),
+                    "type": np.array([1, 2, 3], dtype=np.int32),
+                },
+            },
+        ),
+        tile_bounds=(4, 5, 10, 11),
+        tile_read_bounds=read_bounds,
+    )[0]
+    assert np.array_equal(contour_cropped["info_dict"]["type"], np.array([1]))
+    assert np.array_equal(
+        contour_cropped["info_dict"]["contours"][0],
+        np.array([[0, 0], [2, 0], [2, 2], [0, 2]], dtype=np.int32),
+    )
+
+
 class FakeSeg(MultiTaskSegmentor):
     """Minimal subclass that allows us to override internals cleanly."""
 

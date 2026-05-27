@@ -257,6 +257,19 @@ def test_cerberus_model_helpers() -> None:
 
 def test_cerberus_eroded_contour_postproc_non_empty_and_errors() -> None:
     """Test non-empty Cerberus contour post-processing and validation errors."""
+    nuclei_raw_map = np.zeros((40, 40, 2), dtype=np.float32)
+    nuclei_raw_map[6:18, 6:18, 0] = 0.9
+    nuclei_raw_map[22:34, 22:34, 0] = 0.9
+    nuclei_inst_map, nuclei_type_map = PostProcInstErodedContourMap.post_process(
+        raw_map=nuclei_raw_map,
+        idx_dict={"Nuclei-INST": [0, 2]},
+        tissue_mode="Nuclei",
+    )
+    assert nuclei_inst_map.shape == (40, 40)
+    assert nuclei_inst_map.max() == 2
+    assert get_bounding_box(nuclei_inst_map > 0) == (7, 33, 7, 33)
+    assert nuclei_type_map is None
+
     gland_raw_map = np.zeros((80, 80, 3), dtype=np.float32)
     gland_raw_map[10:60, 10:60, 0] = 0.9
     gland_raw_map[..., 2] = 2
