@@ -44,10 +44,7 @@ class Cerberus(ModelABC, NetDesc):
         lumen_type_dict: dict | None = None,
     ) -> None:
         """Initialize the fixed Cerberus ResNet-34 model."""
-        nn.Module.__init__(self)
-        self._postproc = self.postproc
-        self._preproc = self.preproc
-        self.class_dict = None
+        ModelABC.__init__(self)
         NetDesc.__init__(self)
         self.patch_output_shape = tuple(patch_output_shape)
         self.tasks = ("nuclei", "gland", "lumen")
@@ -67,7 +64,7 @@ class Cerberus(ModelABC, NetDesc):
             "lumen": lumen_type_dict or {0: "Background", 1: "Lumen"},
         }
 
-    def forward(
+    def forward(  # skipcq: PYL-W0221
         self, imgs: torch.Tensor, train_decoder_list: list[str] | None = None
     ) -> OrderedDict:
         """Forward pass through the shared encoder and selected Cerberus decoders."""
@@ -135,6 +132,7 @@ class Cerberus(ModelABC, NetDesc):
 
         return tuple(outputs)
 
+    # skipcq: PYL-W0221  # noqa: ERA001
     def postproc(
         self, raw_maps: list[np.ndarray | da.Array], offset: tuple[int, int] = (0, 0)
     ) -> tuple[dict, ...]:
