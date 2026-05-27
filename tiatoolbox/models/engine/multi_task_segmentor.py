@@ -1174,10 +1174,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
         # assume ioconfig has already been converted to `baseline` for `tile` mode
         wsi_proc_shape = wsi_reader.slide_dimensions(**highest_input_resolution)
 
-        masked_output_shape = (
-            self.mask_bounds[2] - self.mask_bounds[0],  # X/row
-            self.mask_bounds[3] - self.mask_bounds[1],  # Y/col
-        )
+        # Tile over the actual probability canvas, which may be larger than the
+        # mask bounding box because inference keeps whole patch-output regions.
+        masked_output_shape = np.array(probabilities[0].shape[:2][::-1])
 
         # * retrieve tile placement and tile info flag
         # tile shape will always be corrected to be multiple of output
@@ -3235,15 +3234,26 @@ def _update_tile_based_predictions_array(
             continue
 
         max_h, max_w = wsi_info_dict[idx]["predictions"].shape
-        x_end, y_end = min(x_end, max_w), min(y_end, max_h)
+        predictions = post_process_output_["predictions"]
+        tile_h, tile_w = predictions.shape[:2]
+        x_end_, y_end_ = (
+            min(x_end, max_w, x_start + tile_w),
+            min(
+                y_end,
+                max_h,
+                y_start + tile_h,
+            ),
+        )
+        if x_end_ <= x_start or y_end_ <= y_start:
+            continue
         new_predictions_ = post_process_output_["predictions"][
-            0 : y_end - y_start, 0 : x_end - x_start
+            0 : y_end_ - y_start, 0 : x_end_ - x_start
         ]
 
         # Update instance values
         if post_process_output_["seg_type"] == "instance":
             previous_predictions_ = wsi_info_dict[idx]["predictions"][
-                y_start:y_end, x_start:x_end
+                y_start:y_end_, x_start:x_end_
             ]
             overlap = (new_predictions_ > 0) & (previous_predictions_ > 0)
             max_inst_value = 0 if max_inst_value is None else max_inst_value
@@ -3265,7 +3275,7 @@ def _update_tile_based_predictions_array(
                 else max_inst_value
             )
 
-        wsi_info_dict[idx]["predictions"][y_start:y_end, x_start:x_end] = (
+        wsi_info_dict[idx]["predictions"][y_start:y_end_, x_start:x_end_] = (
             new_predictions_
         )
 
