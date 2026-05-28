@@ -1395,6 +1395,84 @@ def get_wsi_output_shape(dataset: object) -> tuple[int, int] | None:
     return int(wsi_shape[1]), int(wsi_shape[0])
 
 
+def _get_vertical_chunk_locations(
+    output_locs_y: np.ndarray,
+    num_chunks: int,
+) -> np.ndarray:
+    """Return unique vertical chunk locations in processing order."""
+    chunk_locs = np.unique(output_locs_y, axis=0)
+    chunk_locs = chunk_locs[np.argsort(chunk_locs[:, 0], kind="stable")]
+    if len(chunk_locs) != num_chunks:
+        msg = (
+            "Number of vertical output locations does not match the number "
+            "of merged canvas chunks."
+        )
+        raise ValueError(msg)
+    return chunk_locs.astype(np.int64, copy=False)
+
+
+def _aggregate_vertical_segment(
+    active_chunks: list[tuple[int, int, np.ndarray, np.ndarray]],
+    start_y: int,
+    end_y: int,
+) -> np.ndarray:
+    """Average all active chunks covering a finalized vertical segment."""
+    if end_y <= start_y:
+        return np.empty((0, *active_chunks[0][2].shape[1:]))
+
+    segment_shape = (end_y - start_y, *active_chunks[0][2].shape[1:])
+    segment = np.zeros(segment_shape, dtype=active_chunks[0][2].dtype)
+    segment_count = np.zeros(
+        (end_y - start_y, *active_chunks[0][3].shape[1:]),
+        dtype=np.uint32,
+    )
+
+    for chunk_start_y, chunk_end_y, chunk, chunk_count in active_chunks:
+        overlap_start = max(start_y, chunk_start_y)
+        overlap_end = min(end_y, chunk_end_y)
+        if overlap_end <= overlap_start:
+            continue
+
+        source_start = overlap_start - chunk_start_y
+        source_end = overlap_end - chunk_start_y
+        target_start = overlap_start - start_y
+        target_end = overlap_end - start_y
+
+        segment[target_start:target_end] += chunk[source_start:source_end]
+        segment_count[target_start:target_end] += chunk_count[source_start:source_end]
+
+    segment_count = np.where(segment_count == 0, 1, segment_count)
+    return segment / segment_count.astype(np.float32)
+
+
+def _store_vertical_segment(
+    probabilities: np.ndarray,
+    output_shape: tuple[int, int] | None,
+    written_height: int,
+    chunk_shape: tuple[int, ...],
+    probabilities_zarr: zarr.Array | None,
+    probabilities_da: da.Array | None,
+    zarr_group: zarr.Group | None,
+) -> tuple[zarr.Array | None, da.Array | None, int, bool]:
+    """Clip and store a finalized vertical probability segment."""
+    probabilities, written_height, should_stop = clip_probabilities_to_shape(
+        probabilities=probabilities,
+        output_shape=output_shape,
+        written_height=written_height,
+    )
+    if should_stop or probabilities.shape[0] == 0:
+        return probabilities_zarr, probabilities_da, written_height, should_stop
+
+    probabilities_zarr, probabilities_da = store_probabilities(
+        probabilities=probabilities,
+        chunk_shape=chunk_shape,
+        probabilities_zarr=probabilities_zarr,
+        probabilities_da=probabilities_da,
+        zarr_group=zarr_group,
+    )
+    return probabilities_zarr, probabilities_da, written_height, False
+
+
 def merge_vertical_chunkwise(
     canvas: da.Array,
     count: da.Array,
@@ -1410,8 +1488,8 @@ def merge_vertical_chunkwise(
 
     This function processes vertically stacked image blocks (`canvas`) and their
     associated count arrays to compute normalized probabilities. It handles overlapping
-    regions between chunks by applying seam folding and trimming halos to ensure smooth
-    transitions. If a Zarr group is provided, the result is stored incrementally.
+    regions between chunks by keeping active rows until no later chunk can contribute
+    to them. If a Zarr group is provided, the result is stored incrementally.
 
     Args:
         canvas (da.Array):
@@ -1441,16 +1519,14 @@ def merge_vertical_chunkwise(
             or constructed in memory.
 
     """
-    y0s, y1s = np.unique(output_locs_y_[:, 0]), np.unique(output_locs_y_[:, 1])
-    overlaps = np.append(y1s[:-1] - y0s[1:], 0)
-
     num_chunks = canvas.numblocks[0]
     probabilities_zarr, probabilities_da = None, None
     chunk_shape = tuple(chunk[0] for chunk in canvas.chunks)
     written_height = 0
+    chunk_locs = _get_vertical_chunk_locations(output_locs_y_, num_chunks)
 
     tqdm_loop = tqdm(
-        overlaps,
+        range(num_chunks),
         leave=False,
         desc="Merging rows",
         disable=not verbose,
@@ -1458,37 +1534,46 @@ def merge_vertical_chunkwise(
 
     used_percent = 0
 
-    curr_chunk = canvas.blocks[0, 0].compute()
-    curr_count = count.blocks[0, 0].compute()
-    next_chunk = canvas.blocks[1, 0].compute() if num_chunks > 1 else None
-    next_count = count.blocks[1, 0].compute() if num_chunks > 1 else None
-
+    active_chunks: list[tuple[int, int, np.ndarray, np.ndarray]] = []
     probabilities = np.empty(0)
+    current_y = int(chunk_locs[0, 0])
+    should_stop = False
 
-    for i, overlap in enumerate(tqdm_loop):
-        if next_chunk is not None and overlap > 0:
-            curr_chunk[-overlap:] += next_chunk[:overlap]
-            curr_count[-overlap:] += next_count[:overlap]
+    for chunk_idx in tqdm_loop:
+        chunk_start_y, chunk_end_y = map(int, chunk_locs[chunk_idx])
 
-        # Normalize
-        curr_count = np.where(curr_count == 0, 1, curr_count)
-        probabilities = curr_chunk / curr_count.astype(np.float32)
+        if active_chunks and chunk_start_y > current_y:
+            probabilities = _aggregate_vertical_segment(
+                active_chunks=active_chunks,
+                start_y=current_y,
+                end_y=chunk_start_y,
+            )
+            probabilities_zarr, probabilities_da, written_height, should_stop = (
+                _store_vertical_segment(
+                    probabilities=probabilities,
+                    output_shape=output_shape,
+                    written_height=written_height,
+                    chunk_shape=chunk_shape,
+                    probabilities_zarr=probabilities_zarr,
+                    probabilities_da=probabilities_da,
+                    zarr_group=zarr_group,
+                )
+            )
+            if should_stop:
+                break
 
-        probabilities, written_height, should_stop = clip_probabilities_to_shape(
-            probabilities=probabilities,
-            output_shape=output_shape,
-            written_height=written_height,
-        )
-        if should_stop:
-            break
+            current_y = chunk_start_y
+            active_chunks = [
+                active_chunk
+                for active_chunk in active_chunks
+                if active_chunk[1] > current_y
+            ]
 
-        probabilities_zarr, probabilities_da = store_probabilities(
-            probabilities=probabilities,
-            chunk_shape=chunk_shape,
-            probabilities_zarr=probabilities_zarr,
-            probabilities_da=probabilities_da,
-            zarr_group=zarr_group,
-        )
+        chunk = canvas.blocks[chunk_idx, 0].compute()
+        chunk_count = count.blocks[chunk_idx, 0].compute()
+        valid_chunk_end_y = min(chunk_end_y, chunk_start_y + chunk.shape[0])
+        if valid_chunk_end_y > chunk_start_y:
+            active_chunks.append((chunk_start_y, valid_chunk_end_y, chunk, chunk_count))
 
         if probabilities_da is not None:
             vm = psutil.virtual_memory()
@@ -1514,16 +1599,24 @@ def merge_vertical_chunkwise(
             probabilities_da = None
             update_tqdm_desc(tqdm_loop=tqdm_loop, desc=desc)
 
-        if next_chunk is not None:
-            curr_chunk, curr_count = next_chunk[overlap:], next_count[overlap:]
+    if active_chunks and not should_stop:
+        final_y = max(active_chunk[1] for active_chunk in active_chunks)
+        probabilities = _aggregate_vertical_segment(
+            active_chunks=active_chunks,
+            start_y=current_y,
+            end_y=final_y,
+        )
+        probabilities_zarr, probabilities_da, _, _ = _store_vertical_segment(
+            probabilities=probabilities,
+            output_shape=output_shape,
+            written_height=written_height,
+            chunk_shape=chunk_shape,
+            probabilities_zarr=probabilities_zarr,
+            probabilities_da=probabilities_da,
+            zarr_group=zarr_group,
+        )
 
-        if i + 2 < num_chunks:
-            next_chunk = canvas.blocks[i + 2, 0].compute()
-            next_count = count.blocks[i + 2, 0].compute()
-        else:
-            next_chunk, next_count = None, None
-
-    if probabilities_zarr:
+    if probabilities_zarr is not None:
         return _get_probabilities_da_from_zarr(
             zarr_group=zarr_group,
             probabilities_zarr=probabilities_zarr,

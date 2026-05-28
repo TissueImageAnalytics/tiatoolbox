@@ -404,6 +404,32 @@ def test_merge_vertical_chunkwise_memory_threshold_triggered() -> None:
         assert np.all(zarr_group["probabilities"][:] == data)
 
 
+def test_merge_vertical_chunkwise_multi_row_overlap() -> None:
+    """Test vertical merging when one row overlaps multiple following rows."""
+    rows = [
+        np.ones((4, 2, 1), dtype=np.float32),
+        np.ones((4, 2, 1), dtype=np.float32) * 2,
+        np.ones((4, 2, 1), dtype=np.float32) * 4,
+    ]
+    data = np.concatenate(rows, axis=0)
+    canvas = da.from_array(data, chunks=(4, 2, 1))
+    count = da.from_array(np.ones_like(data, dtype=np.uint8), chunks=(4, 2, 1))
+    output_locs_y_ = np.array([[0, 4], [1, 5], [2, 6]])
+
+    result = merge_vertical_chunkwise(
+        canvas=canvas,
+        count=count,
+        output_locs_y_=output_locs_y_,
+        zarr_group=None,
+        save_path=Path("unused"),
+        verbose=False,
+    )
+
+    expected_rows = np.array([1, 1.5, 7 / 3, 7 / 3, 3, 4], dtype=np.float32)
+    expected = np.broadcast_to(expected_rows[:, None, None], (6, 2, 1))
+    np.testing.assert_allclose(result.compute(), expected)
+
+
 def test_raise_value_error_return_labels_wsi(
     remote_sample: Callable,
     track_tmp_path: Path,
