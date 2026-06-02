@@ -33,7 +33,7 @@ jobs:
         sudo apt update
         sudo apt-get install -y libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-        python -m pip install ruff==0.15.12 pytest pytest-cov pytest-runner
+        python -m pip install ruff==0.15.15 pytest pytest-cov pytest-runner
         pip install uv
         uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
         uv pip install --system -r requirements/requirements.txt
