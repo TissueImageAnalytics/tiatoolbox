@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
 
     steps:
     - uses: actions/checkout@v4
@@ -33,9 +33,10 @@ jobs:
         sudo apt update
         sudo apt-get install -y libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-        python -m pip install ruff==0.15.4 pytest pytest-cov pytest-runner
-        pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-        pip install -r requirements/requirements.txt
+        python -m pip install ruff==0.15.15 pytest pytest-cov pytest-runner
+        pip install uv
+        uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
+        uv pip install --system -r requirements/requirements.txt
     - name: Cache tiatoolbox static assets
       uses: actions/cache@v4
       with:
@@ -101,19 +102,20 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python 3.10
+    - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.11'
         cache: 'pip'
 
     - name: Install dependencies
       run: |
         sudo apt-get install -y libopenslide-dev libopenjp2-7
         python -m pip install --upgrade pip
-        pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-        pip install -r requirements/requirements.txt
-        pip install build
+        pip install uv
+        uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
+        uv pip install --system -r requirements/requirements.txt
+        uv pip install --system build
     - name: Build package
       run: python -m build
 

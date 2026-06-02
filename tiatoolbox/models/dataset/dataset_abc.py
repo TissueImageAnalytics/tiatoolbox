@@ -334,15 +334,15 @@ class WSIPatchDataset(PatchDatasetABC):
                 stride_shape=stride_shape[::-1],
             )
 
-        mask_reader = self._setup_mask_reader(
+        self.mask_reader = self._setup_mask_reader(
             input_mask=input_mask,
             reader=reader,
             auto_get_mask=auto_get_mask,
         )
 
-        if mask_reader is not None:
+        if self.mask_reader is not None:
             selected = PatchExtractor.filter_coordinates(
-                mask_reader,  # must be at the same resolution
+                self.mask_reader,  # must be at the same resolution
                 self.inputs,  # must already be at requested resolution
                 wsi_shape=wsi_shape,
                 min_mask_ratio=min_mask_ratio,

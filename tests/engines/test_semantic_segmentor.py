@@ -116,7 +116,7 @@ def test_semantic_segmentor_patches(
     assert "predictions" in output_
 
     processed_predictions = {
-        k: da.from_zarr(v) for k, v in output_.items() if k != "labels"
+        k: da.from_zarr(v) for k, v in output_.members() if k != "labels"
     }
 
     # Test for saving output as annotation store.
@@ -124,6 +124,7 @@ def test_semantic_segmentor_patches(
         processed_predictions=processed_predictions,
         output_type="annotationstore",
         save_path=output.with_suffix(".db"),
+        class_dict=None,
     )
 
     assert output_seg[0] == track_tmp_path / "output1" / (sample_image.stem + ".db")
@@ -245,6 +246,7 @@ def test_save_annotation_store_nparray(
         patch_mode=True,
         save_dir=track_tmp_path / "output1",
         output_type="annotationstore",
+        class_dict=None,
     )
 
     assert output[0] == track_tmp_path / "output1" / "0.db"
@@ -268,6 +270,7 @@ def test_save_annotation_store_nparray(
         patch_mode=True,
         save_dir=track_tmp_path / "output2",
         output_type="annotationstore",
+        class_dict=None,
     )
 
     assert output[0] == track_tmp_path / "output2" / "0.db"

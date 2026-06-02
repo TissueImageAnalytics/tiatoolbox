@@ -18,7 +18,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
 
     steps:
 
@@ -35,12 +35,19 @@ jobs:
         sudo apt update
         sudo apt-get install -y libopenslide-dev openslide-tools libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-        pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-        pip install -r requirements/requirements_dev.txt
+        pip install uv
+        uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
+        uv pip install --system -r requirements/requirements_dev.txt
+
+    - name: Debug typing environment
+      run: |
+        python --version
+        mypy --version
+        pip freeze | grep -E '^(mypy|types-)'
 
     - name: Perform type checking
       run: |
-        mypy --install-types --non-interactive --follow-imports=skip \
+        mypy --install-types --non-interactive --follow-imports=skip --ignore-missing-imports \
           tiatoolbox/__init__.py \
           tiatoolbox/__main__.py \
           tiatoolbox/type_hints.py \

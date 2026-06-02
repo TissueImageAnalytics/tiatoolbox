@@ -78,6 +78,10 @@ def compile_model(
             Compiled model.
 
     """
+    if model is None:
+        msg = "`model` must not be None."
+        raise ValueError(msg)
+
     if mode == "disable":
         return model
 
@@ -320,6 +324,8 @@ class AttentionModule(nn.Module):
 
         """
         super().__init__()
+
+        self.attention: nn.Module
 
         if name is None:
             self.attention = nn.Identity()

@@ -131,7 +131,6 @@ import torch
 import zarr
 from dask import delayed
 from matplotlib import pyplot as plt
-from shapely import Polygon
 from shapely.geometry import mapping
 from shapely.geometry import shape as feature2geometry
 from shapely.strtree import STRtree
@@ -145,6 +144,7 @@ from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.misc import (
     create_smart_array,
     make_valid_poly,
+    pad_contours,
     save_qupath_json,
     tqdm_dask_progress_bar,
     update_tqdm_desc,
@@ -210,7 +210,7 @@ class MultiTaskSegmentorRunParams(SemanticSegmentorRunParams, total=False):
             Shape of output patches (height, width).
         return_labels (bool):
             Whether to return labels with predictions.
-        return_predictions (tuple(bool, ...):
+        return_predictions (tuple[bool, ...]):
             Whether to return array predictions for individual tasks.
         return_probabilities (bool):
             Whether to return per-class probabilities.
@@ -533,7 +533,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         Shape of output patches (height, width).
                     return_labels (bool):
                         Whether to return labels with predictions.
-                    return_predictions (tuple(bool, ...):
+                    return_predictions (tuple[bool, ...]):
                         Whether to return array predictions for individual tasks.
                     return_probabilities (bool):
                         Whether to return per-class probabilities.
@@ -783,7 +783,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         Shape of output patches (height, width).
                     return_labels (bool):
                         Whether to return labels with predictions.
-                    return_predictions (tuple(bool, ...):
+                    return_predictions (tuple[bool, ...]):
                         Whether to return array predictions for individual tasks.
                     return_probabilities (bool):
                         Whether to return per-class probabilities.
@@ -893,7 +893,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                         Shape of output patches (height, width).
                     return_labels (bool):
                         Whether to return labels with predictions.
-                    return_predictions (tuple(bool, ...):
+                    return_predictions (tuple[bool, ...]):
                         Whether to return array predictions for individual tasks.
                     return_probabilities (bool):
                         Whether to return per-class probabilities.
@@ -1166,7 +1166,9 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         # * retrieve tile placement and tile info flag
         # tile shape will always be corrected to be multiple of output
-        tile_info_sets = self._get_tile_info(masked_output_shape, self._ioconfig)
+        tile_info_sets = self._get_tile_info(
+            image_shape=masked_output_shape, wsi_proc_shape=wsi_proc_shape
+        )
         ioconfig = self._ioconfig.to_baseline()
 
         tile_metadata = _build_tile_tasks(
@@ -1311,8 +1313,14 @@ class MultiTaskSegmentor(SemanticSegmentor):
             dict_info_wsi = {}
             offset = np.array(self.mask_padding[:2])
             for key, col in info_df.items():
+                col_list = col.to_numpy().tolist()
+                # inhomogenous arrays.
+                if len({np.asarray(arr).shape for arr in col_list}) > 1:
+                    col_np = pad_contours(col_list)
+                else:
+                    col_np = np.asarray(col_list)
                 col_np = apply_coordinate_offset(
-                    data_array=col.to_numpy(),
+                    data_array=col_np,
                     offset=offset,
                     key=key,
                     keys_to_shift=keys_to_shift,
@@ -1320,7 +1328,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 )
                 dict_info_wsi[key] = da.from_array(
                     col_np,
-                    chunks=(len(col),),
+                    chunks="auto",
                 )
             wsi_info_dict[idx]["info_dict"] = dict_info_wsi
 
@@ -1358,11 +1366,11 @@ class MultiTaskSegmentor(SemanticSegmentor):
         postproc_func = self._get_model_attr("postproc_func")
         return postproc_func(head_raws)  # offset is (0, 0) by default.
 
-    @staticmethod
     def _get_tile_info(
+        self: MultiTaskSegmentor,
         image_shape: list[int, int] | tuple[int, int] | np.ndarray,
-        ioconfig: IOSegmentorConfig,
-    ) -> list[list, ...]:
+        wsi_proc_shape: tuple[int, int] | np.ndarray,
+    ) -> list[list]:
         """Generating tile information.
 
         To avoid out of memory problem when processing WSI-scale in
@@ -1379,8 +1387,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
             image_shape (:class:`numpy.ndarray`, list(int, int), tuple(int, int)):
                 The shape of WSI to extract the tile from, assumed to be
                 in `[width, height]` / `[x, y]`.
-            ioconfig (:obj:IOSegmentorConfig):
-                The input and output configuration objects.
+            wsi_proc_shape (:class:`numpy.ndarray`, list(int, int), tuple(int, int)):
+                Full wsi processing shape.
 
         Returns:
             list:
@@ -1398,6 +1406,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
                     - :class:`numpy.ndarray` - Removal flags
 
         """
+        ioconfig = self._ioconfig
         margin = 0 if ioconfig.margin is None else np.array(ioconfig.margin)
         tile_shape = np.array(ioconfig.tile_shape)
         tile_shape = (
@@ -1415,6 +1424,21 @@ class MultiTaskSegmentor(SemanticSegmentor):
         # * === Now generating the flags to indicate which side should
         # * === be removed in postproc callback
         boxes = tile_outputs[1]
+        offset = self.mask_padding[:2]
+        boxes = boxes + np.array((*offset, *offset))
+        mask_reader = self.dataloader.dataset.mask_reader
+
+        # Filter masked regions
+        if mask_reader is not None:
+            selected = PatchExtractor.filter_coordinates(
+                mask_reader,  # must be at the same resolution
+                boxes,  # must already be at requested resolution
+                wsi_shape=wsi_proc_shape,
+                min_mask_ratio=0,
+            )
+            boxes = boxes[selected]
+
+        boxes = boxes - np.array((*offset, *offset))
 
         # This saves computation time if the image is smaller than the expected tile
         if np.all(image_shape <= tile_shape):
@@ -1440,7 +1464,6 @@ class MultiTaskSegmentor(SemanticSegmentor):
             return removal_flag
 
         w, h = image_shape
-        boxes = tile_outputs[1]
         #  expand to full four corners
         boxes_br = boxes[:, 2:]
         boxes_tr = np.dstack([boxes[:, 2], boxes[:, 1]])[0]
@@ -1662,6 +1685,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
                     # Add new keys safely
                     for subkey in first:
+                        if subkey.startswith("_"):
+                            continue
                         raw_predictions[task][subkey] = [d[subkey] for d in values]
 
                     del raw_predictions[task][key]
@@ -1746,7 +1771,8 @@ class MultiTaskSegmentor(SemanticSegmentor):
         logger.info("Saving predictions as AnnotationStore.")
 
         for key in ("canvas", "count"):
-            processed_predictions.pop(key, None)
+            if key in processed_predictions:
+                del processed_predictions[key]  # noqa: RUF051
 
         return_predictions = (
             next(iter(self.return_predictions_dict.values()))
@@ -1759,7 +1785,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             keys_to_compute.remove("probabilities")
         if "predictions" in keys_to_compute:
             if not return_predictions:
-                processed_predictions.pop("predictions")
+                del processed_predictions["predictions"]
             keys_to_compute.remove("predictions")
         num_workers = (
             kwargs.get("num_workers", multiprocessing.cpu_count())
@@ -1768,7 +1794,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
         )
         if self.patch_mode:
             for idx, curr_image in enumerate(self.images):
-                values = [processed_predictions[key][idx] for key in keys_to_compute]
+                values = [
+                    processed_predictions[key][str(idx)]  # Zarr v3 Group
+                    if isinstance(processed_predictions[key], zarr.Group)
+                    else processed_predictions[key][idx]
+                    for key in keys_to_compute
+                ]
                 predictions = dict(zip(keys_to_compute, values, strict=False))
                 output_path = _save_annotation_json_store(
                     curr_image=curr_image,
@@ -1802,18 +1833,12 @@ class MultiTaskSegmentor(SemanticSegmentor):
                 )
             ]
 
-        for key in keys_to_compute:
-            del processed_predictions[key]
-
-        return_probabilities = kwargs.get("return_probabilities", False)
-        if return_probabilities:
-            msg = (
-                f"Probability maps cannot be saved as AnnotationStore or JSON. "
-                f"To visualise heatmaps in TIAToolbox Visualization tool,"
-                f"convert heatmaps in {save_path} to ome.tiff using"
-                f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
-            )
-            logger.info(msg)
+        _post_save_json_store(
+            keys_to_compute=keys_to_compute,
+            processed_predictions=processed_predictions,
+            save_path=save_path,
+            **kwargs,
+        )
 
         return save_paths
 
@@ -1976,7 +2001,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
             processed_predictions = zarr.open(str(processed_predictions), mode="r+")
 
         # For single tasks there should be no overlap
-        if self.tasks & processed_predictions.keys():
+        if self.tasks & set(processed_predictions.keys()):
             for task_name in self.tasks:
                 dict_for_store = processed_predictions[task_name]
                 kwargs["class_dict"] = class_dict[task_name]
@@ -2645,7 +2670,7 @@ def _save_multitask_vertical_to_cache(
         )
         update_tqdm_desc(tqdm_loop=tqdm_loop, desc=msg)
         zarr_group = zarr.open(str(save_path), mode="a")
-        probabilities_zarr[idx] = zarr_group.create_dataset(
+        probabilities_zarr[idx] = zarr_group.create_array(
             name=f"probabilities/{idx}",
             shape=probabilities_da[idx].shape,
             chunks=(chunk_shape[0], *probabilities.shape[1:]),
@@ -2670,9 +2695,9 @@ def _clear_zarr(
     """Helper function to clear all zarr contents and return dask array."""
     if probabilities_zarr is not None:
         if zarr_group is not None and "canvas" in zarr_group:
-            del zarr_group["canvas"][idx]
+            del zarr_group["canvas"][str(idx)]
         if zarr_group is not None and "count" in zarr_group:
-            del zarr_group["count"][idx]
+            del zarr_group["count"][str(idx)]
         return da.from_zarr(
             probabilities_zarr, chunks=(chunk_shape[0], *probabilities_shape)
         )
@@ -2706,7 +2731,7 @@ def _calculate_probabilities(
             canvas[idx] = da.from_zarr(canvas_zarr_, chunks=canvas_zarr_.chunks)
             count[idx] = da.from_zarr(count_zarr[idx], chunks=count_zarr[idx].chunks)
 
-        zarr_group = zarr.open(canvas_zarr[0].store.path, mode="a")
+        zarr_group = zarr.open(canvas_zarr[0].store.root, mode="a")
 
     # Final vertical merge
     return merge_multitask_vertical_chunkwise(
@@ -3036,14 +3061,19 @@ def _move_tile_space_to_wsi_space(
             inst_info["box"] += np.concatenate([tile_tl] * 2)
             if "centroid" in inst_info:
                 inst_info["centroid"] += tile_tl
-            inst_info["contours"] += tile_tl
+            if not np.all(tile_tl == [0, 0]):
+                contours = inst_info["contours"]
+                pad_value = np.iinfo(contours.dtype).min
+                row_mask = np.any(contours != pad_value, axis=1)
+                contours[row_mask] += tile_tl
+                inst_info["contours"] = contours
             inst_uuid = uuid.uuid4().hex
             new_inst_dict[inst_uuid] = inst_info
     return new_inst_dict
 
 
 def _get_inst_info_dicts(post_process_output: tuple[dict]) -> list:
-    """Helper to convert post processing output to dictionary list.
+    """Helper to convert post-processing output to dictionary list.
 
     This function makes the info_dict compatible with tile based processing of
     info_dictionaries from HoVerNet.
@@ -3183,7 +3213,11 @@ def _update_tile_based_predictions_array(
             final_combined = previous_predictions_.copy()
             final_combined[keep_mask] = new_predictions_[keep_mask] + max_inst_value
             new_predictions_ = final_combined  # Update for final merge
-            max_inst_value = np.max(new_predictions_[:][:]) + max_inst_value
+            max_inst_value = (
+                np.max(new_predictions_[:][:]) + max_inst_value
+                if np.any(keep_mask)
+                else max_inst_value
+            )
 
         wsi_info_dict[idx]["predictions"][y_start:y_end, x_start:x_end] = (
             new_predictions_
@@ -3350,10 +3384,17 @@ def dict_to_json_store(
     """
     # Assumes annotationstore is computed for properties which can fit in memory.
     processed_predictions = {
-        key: np.asarray(arr) if isinstance(arr, zarr.Array) and len(arr) > 0 else arr
+        key: np.asarray(arr) if isinstance(arr, zarr.Array) else arr
         for key, arr in processed_predictions.items()
     }
     contours = processed_predictions.pop("contours")
+    pad_value = np.iinfo(contours.dtype).min
+
+    # Reproduce inhomogeneous array for saving to JSON.
+    contours = np.array(
+        [row[~(np.asarray(row) == pad_value).all(axis=1)] for row in contours],
+        dtype=object,
+    )
     delayed_tasks = DaskDelayedJSONStore(
         contours=contours,
         processed_predictions=processed_predictions,
@@ -3514,12 +3555,16 @@ class DaskDelayedJSONStore:
                 to QuPath JSON.
 
         """
-        contour = np.array(self._contours[i], dtype=float)
-        contour[:, 0] = contour[:, 0] * scale_factor[0] + origin[0]
-        contour[:, 1] = contour[:, 1] * scale_factor[1] + origin[1]
-
-        poly = Polygon(contour)
-        poly_geo = mapping(poly)
+        geom = make_valid_poly(
+            feature2geometry(
+                {
+                    "type": self._processed_predictions.get("geom_type", "Polygon"),
+                    "coordinates": scale_factor * np.array([self._contours[i]]),
+                }
+            ),
+            tuple(origin),
+        )
+        geo_map = mapping(geom)
 
         props = {}
         class_value = None
@@ -3563,7 +3608,7 @@ class DaskDelayedJSONStore:
         return {
             "type": "Feature",
             "id": f"object_{i}",
-            "geometry": poly_geo,
+            "geometry": geo_map,
             "properties": props,
             "objectType": "annotation",
             "name": class_name if class_name is not None else "object",
@@ -3783,7 +3828,12 @@ def apply_coordinate_offset(
         return data_array
 
     # 1. Create the 'container' first to define the structure
-    result = np.empty(len(data_array), dtype=object)
+    result = np.empty(data_array.shape, dtype=data_array.dtype)
+    mask_value = (
+        np.iinfo(data_array.dtype).min
+        if np.issubdtype(data_array.dtype, np.integer)
+        else np.nan
+    )
 
     # 2. Iterate and fill slots manually to prevent NumPy from collapsing rows
     for i, item in enumerate(
@@ -3800,6 +3850,43 @@ def apply_coordinate_offset(
             shift_vector = np.array([dx, dy])
 
         # Perform addition and place the resulting array object into the slot
-        result[i] = (item + shift_vector).astype(item.dtype)
+        mask = (item == mask_value).all(axis=-1)
+        result[i][~mask] = (item[~mask] + shift_vector).astype(item.dtype)
+        result[i][mask] = item[mask]
 
     return result
+
+
+def _post_save_json_store(
+    keys_to_compute: list[str],
+    processed_predictions: dict | zarr.Group,
+    save_path: Path | None,
+    **kwargs: Unpack[MultiTaskSegmentorRunParams],
+) -> None:
+    for key in keys_to_compute:
+        del processed_predictions[key]
+
+    store_root = getattr(getattr(processed_predictions, "store", {}), "root", "")
+    store_path = getattr(processed_predictions, "path", "")
+
+    # Zarr v3 retains metadata and the file which needs to be manually deleted
+    if (
+        isinstance(processed_predictions, zarr.Group)
+        and len(list(processed_predictions.keys())) == 0
+    ):
+        shutil.rmtree(Path(store_root) / Path(store_path), ignore_errors=True)
+
+    if store_path != "" and isinstance(processed_predictions, zarr.Group):
+        zarr_store = zarr.open(store_root, mode="r")
+        if len(list(zarr_store.keys())) == 0:
+            shutil.rmtree(store_root, ignore_errors=True)
+
+    return_probabilities = kwargs.get("return_probabilities", False)
+    if return_probabilities:
+        msg = (
+            f"Probability maps cannot be saved as AnnotationStore or JSON. "
+            f"To visualise heatmaps in TIAToolbox Visualization tool,"
+            f"convert heatmaps in {save_path} to ome.tiff using"
+            f"tiatoolbox.utils.misc.write_probability_heatmap_as_ome_tiff."
+        )
+        logger.info(msg)

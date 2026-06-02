@@ -22,6 +22,7 @@
 - Abishekraj Vinayagar Gnanasambandam \<@AbishekRajVG>
 - Wenqi Lu \<@wenqi006>
 - Saad Bashir \<@rajasaad>
+- Aakash Madhav Rao \<@mraoaakash>
 - Behnaz Elhaminia \<@behnazelhaminia>
 
 ## Contributors
@@ -30,6 +31,7 @@
 - Fayyaz Minhas \<@foxtrotmike>
 - George Batchkala \<@GeorgeBatch>
 - Aleksandar Acic \<@aacic>
+- Esha Nasir \<@eshasadia>
 - Rob Jewsbury \<@R-J96>
 - Mohsin Bilal \<@mbhahsmi>
 - Musraf Basheer \<mbasheer04>

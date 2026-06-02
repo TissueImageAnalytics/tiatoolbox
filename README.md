@@ -18,8 +18,8 @@
             <img src="https://shields.io/conda/dn/conda-forge/tiatoolbox"  alt="conda-forge downloads"/>
     </a>
   <br>
-  <a href="https://tia-toolbox.readthedocs.io/en/latest/?badge=latest">
-    <img src="https://readthedocs.org/projects/tia-toolbox/badge/?version=latest" alt="Documentation Status" />
+  <a href="https://tia-toolbox.readthedocs.io/en/stable/?badge=stable">
+    <img src="https://readthedocs.org/projects/tia-toolbox/badge/?version=stable" alt="Documentation Status" />
   </a>
   <br>
   <a href="#license">
@@ -106,7 +106,7 @@ Prepare a computer as a convenient platform for further development of the Pytho
 5. Create virtual environment for TIAToolbox using
 
 ```sh
-    $ conda create -n tiatoolbox-dev python=3.10 # select version of your choice
+    $ conda create -n tiatoolbox-dev python=3.11 # select version of your choice
     $ conda activate tiatoolbox-dev
     $ pip install -r requirements/requirements_dev.txt
 ```
