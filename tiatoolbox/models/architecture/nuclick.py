@@ -679,7 +679,7 @@ class NuClick(ModelABC):
         model.eval()
 
         # Assume batch_data is NCHW
-        batch_data = batch_data.to(device).type(torch.float32)
+        batch_data = batch_data.to(device=device, dtype=torch.float32)
 
         with torch.inference_mode():
             output = model(batch_data)

@@ -440,7 +440,7 @@ class HoVerNetPlus(HoVerNet):
         """
         patch_imgs = batch_data
 
-        patch_imgs_gpu = patch_imgs.to(device).type(torch.float32)  # to NCHW
+        patch_imgs_gpu = patch_imgs.to(device=device, dtype=torch.float32)  # to NCHW
         patch_imgs_gpu = patch_imgs_gpu.permute(0, 3, 1, 2).contiguous()
 
         model.eval()  # infer mode
