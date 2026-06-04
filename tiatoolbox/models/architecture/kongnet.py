@@ -862,9 +862,14 @@ class KongNet(ModelABC):
         imgs = imgs.to(device=device, dtype=torch.float32)
         imgs = imgs.permute(0, 3, 1, 2)  # to NCHW
 
+        try:
+            target_channels = model.target_channels
+        except AttributeError:
+            target_channels = model.module.target_channels
+
         with torch.inference_mode():
             logits = model(imgs)
-            target_logits = logits[:, model.target_channels, :, :]
+            target_logits = logits[:, target_channels, :, :]
             probs = torch.nn.functional.sigmoid(target_logits)
             probs = probs.permute(0, 2, 3, 1)  # to NHWC
 
