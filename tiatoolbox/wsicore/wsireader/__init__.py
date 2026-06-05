@@ -21,13 +21,14 @@ from .annotation_store import AnnotationStoreReader
 # Import base classes and utility functions
 from .base import (
     WSIReader,
+    VirtualWSIReader,
     _handle_tiff_wsi,
     _handle_virtual_wsi,
     fix_mangled_url_by_pathlib,
     is_dicom,
     is_ngff,
     is_tiled_tiff,
-    is_zarr,
+    is_zarr, ArrayView,
 )
 from .dicom import DICOMWSIReader
 from .fsspec_json import FsspecJsonWSIReader
@@ -38,7 +39,6 @@ from .ngff import NGFFWSIReader
 from .openslide import OpenSlideWSIReader
 from .tiff import TIFFWSIReader, TIFFWSIReaderDelegate
 from .transformed import TransformedWSIReader
-from .virtual import ArrayView, VirtualWSIReader
 
 __all__ = [
     # Standard library imports (re-exported for backward compatibility)

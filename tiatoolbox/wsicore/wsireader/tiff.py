@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
+from datetime import datetime, UTC
 from numbers import Number
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -10,17 +12,20 @@ import numpy as np
 import tifffile
 import zarr
 from defusedxml import ElementTree
+from tifffile import TiffPages
 from zarr.storage import MemoryStore
 from zarr.experimental.cache_store import CacheStore
 
 from tiatoolbox import logger, utils
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.wsicore.wsimeta import WSIMeta
+import matplotlib.colors as mcolors
 
-from .base import WSIReader
+from .base import WSIReader, ArrayView
+from tiatoolbox.utils import postproc_defs
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.type_hints import IntPair, Resolution, Units
+    from tiatoolbox.type_hints import IntPair, Resolution, Units, IntBounds
 
 
 class TIFFWSIReader(WSIReader):

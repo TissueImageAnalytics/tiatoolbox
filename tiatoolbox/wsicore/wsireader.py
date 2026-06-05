@@ -11,7 +11,6 @@ from __future__ import annotations
 from .wsireader import (
     UTC,
     AnnotationStoreReader,
-    ArrayView,
     CacheStore,
     DICOMWSIReader,
     FsspecJsonWSIReader,
@@ -41,6 +40,7 @@ from .wsireader import (
     re,
     zarr,
 )
+from tiatoolbox.wsicore.wsireader import ArrayView
 
 __all__ = [
     # Standard library imports (re-exported for backward compatibility)
@@ -69,7 +69,6 @@ __all__ = [
     "OpenSlideWSIReader",
     "JP2WSIReader",
     "VirtualWSIReader",
-    "ArrayView",
     "TIFFWSIReader",
     "TIFFWSIReaderDelegate",
     "FsspecJsonWSIReader",

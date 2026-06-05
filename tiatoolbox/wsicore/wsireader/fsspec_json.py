@@ -19,11 +19,11 @@ from zarr.storage import FsspecStore, MemoryStore
 from tiatoolbox import logger
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
-from .base import WSIReader
+from .base import WSIReader, ArrayView
 from .tiff import TIFFWSIReaderDelegate
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.type_hints import IntPair, Resolution, Units
+    from tiatoolbox.type_hints import IntPair, Resolution, Units, IntBounds
 
 
 class FsspecJsonWSIReader(WSIReader):
