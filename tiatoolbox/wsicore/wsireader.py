@@ -40,7 +40,6 @@ from .wsireader import (
     re,
     zarr,
 )
-from tiatoolbox.wsicore.wsireader import ArrayView
 
 __all__ = [
     # Standard library imports (re-exported for backward compatibility)

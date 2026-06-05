@@ -12,10 +12,10 @@ from zarr.storage import FsspecStore
 from tiatoolbox import logger, utils
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
-from .base import WSIReader, ArrayView
+from .base import ArrayView, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.type_hints import Resolution, Units, IntPair, IntBounds
+    from tiatoolbox.type_hints import IntBounds, IntPair, Resolution, Units
     from tiatoolbox.wsicore import WSIReaderParams
 
 

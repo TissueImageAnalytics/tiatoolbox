@@ -20,15 +20,16 @@ from .annotation_store import AnnotationStoreReader
 
 # Import base classes and utility functions
 from .base import (
-    WSIReader,
+    ArrayView,
     VirtualWSIReader,
+    WSIReader,
     _handle_tiff_wsi,
     _handle_virtual_wsi,
     fix_mangled_url_by_pathlib,
     is_dicom,
     is_ngff,
     is_tiled_tiff,
-    is_zarr, ArrayView,
+    is_zarr,
 )
 from .dicom import DICOMWSIReader
 from .fsspec_json import FsspecJsonWSIReader
