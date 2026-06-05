@@ -9,7 +9,9 @@ from typing import TYPE_CHECKING
 import numpy as np
 import tifffile
 import zarr
+from defusedxml import ElementTree
 from zarr.storage import MemoryStore
+from zarr.experimental.cache_store import CacheStore
 
 from tiatoolbox import logger, utils
 from tiatoolbox.utils.exceptions import FileNotSupportedError
