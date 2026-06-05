@@ -37,7 +37,15 @@ if TYPE_CHECKING:  # pragma: no cover
     )
     from tiatoolbox.wsicore import WSIReaderParams
     from tiatoolbox.wsicore.metadata.ngff import Multiscales
-    from . import TIFFWSIReader, OpenSlideWSIReader, DICOMWSIReader, FsspecJsonWSIReader, AnnotationStoreReader, NGFFWSIReader
+
+    from . import (
+        AnnotationStoreReader,
+        DICOMWSIReader,
+        FsspecJsonWSIReader,
+        NGFFWSIReader,
+        OpenSlideWSIReader,
+        TIFFWSIReader,
+    )
 
 pixman_warning()
 

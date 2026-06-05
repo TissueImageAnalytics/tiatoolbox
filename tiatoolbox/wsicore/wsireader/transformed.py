@@ -15,7 +15,7 @@ from numpy.linalg import inv
 from tiatoolbox import utils
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
-from .base import WSIReader, VirtualWSIReader
+from .base import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.type_hints import IntPair, Resolution, Units
