@@ -239,8 +239,9 @@ def _infer_batch(
         >>> print(output)
 
     """
-    img_patches_device = batch_data.to(device=device).type(
-        torch.float32,
+    img_patches_device = batch_data.to(
+        device=device,
+        dtype=torch.float32,
     )  # to NCHW
     img_patches_device = img_patches_device.permute(0, 3, 1, 2).contiguous()
 

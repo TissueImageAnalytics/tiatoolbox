@@ -82,7 +82,7 @@ def test_efficientnetunet_with_semantic_segmentor(
         output_type="annotationstore",
         save_dir=track_tmp_path / "efficientnetunet_test_outputs",
         overwrite=True,
-        class_dict={0: "background", 1: "tissue"},
+        class_dict={1: "Tissue"},
     )
 
     assert len(output) == 1
@@ -96,12 +96,12 @@ def test_efficientnetunet_with_semantic_segmentor(
     for annotation in store.values():
         unique_types.add(annotation.properties["type"])
 
-    assert unique_types == {"background", "tissue"}
+    assert unique_types == {"Tissue"}
 
     tissue_area_px = 0.0
     for annotation in store.values():
         unique_types.add(annotation.properties["type"])
-        if annotation.properties["type"] == "tissue":
+        if annotation.properties["type"] == "Tissue":
             tissue_area_px += annotation.geometry.area
     assert 1800000 < tissue_area_px < 20000000
 
