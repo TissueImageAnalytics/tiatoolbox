@@ -12,7 +12,7 @@ import numpy as np
 import SimpleITK as sitk  # noqa: N813
 from numpy.linalg import inv
 
-from tiatoolbox import logger, utils
+from tiatoolbox import utils
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 from .base import WSIReader
@@ -20,7 +20,6 @@ from .virtual import VirtualWSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.type_hints import IntPair, Resolution, Units
-    from tiatoolbox.wsicore import WSIReaderParams
 
 
 class TransformedWSIReader(WSIReader):

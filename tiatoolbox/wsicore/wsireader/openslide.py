@@ -16,7 +16,6 @@ from .base import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.type_hints import IntPair, Resolution, Units
-    from tiatoolbox.wsicore import WSIReaderParams
 
 
 class OpenSlideWSIReader(WSIReader):
@@ -563,5 +562,3 @@ class OpenSlideWSIReader(WSIReader):
             mpp=mpp,
             raw=dict(**props),
         )
-
-

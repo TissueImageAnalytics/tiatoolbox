@@ -18,7 +18,6 @@ if TYPE_CHECKING:  # pragma: no cover
     import glymur
 
     from tiatoolbox.type_hints import IntPair, Resolution, Units
-    from tiatoolbox.wsicore import WSIReaderParams
 
 
 class JP2WSIReader(WSIReader):
@@ -624,5 +623,3 @@ class JP2WSIReader(WSIReader):
             vendor=vendor,
             mpp=mpp,
         )
-
-

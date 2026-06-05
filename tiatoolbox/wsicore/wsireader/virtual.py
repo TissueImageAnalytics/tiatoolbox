@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import zarr
-from PIL import Image
 
 from tiatoolbox import logger, utils
 from tiatoolbox.wsicore.wsimeta import WSIMeta
@@ -17,7 +16,6 @@ from .base import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.type_hints import IntPair, Resolution, Units
-    from tiatoolbox.wsicore import WSIReaderParams
 
 
 class VirtualWSIReader(WSIReader):
@@ -642,5 +640,3 @@ class ArrayView:
             return np.rollaxis(self.array[index], 0, 3)
         msg = f"Unsupported axes `{self.axes}`."
         raise ValueError(msg)
-
-

@@ -576,5 +576,3 @@ class NGFFWSIReader(WSIReader):
             im_region = self.post_proc(im_region)
 
         return im_region
-
-

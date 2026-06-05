@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import tifffile
 import zarr
-from zarr.storage import FsspecStore, MemoryStore
+from zarr.storage import MemoryStore
 
 from tiatoolbox import logger, utils
 from tiatoolbox.utils.exceptions import FileNotSupportedError
@@ -19,7 +19,6 @@ from .base import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.type_hints import IntPair, Resolution, Units
-    from tiatoolbox.wsicore import WSIReaderParams
 
 
 class TIFFWSIReader(WSIReader):
@@ -729,14 +728,14 @@ class TIFFWSIReaderDelegate:
             def us_date(string: str) -> datetime:
                 """Return datetime parsed according to US date format (UTC-aware)."""
                 # and we immediately attach UTC.
-                dt = datetime.strptime(string, r"%m/%d/%y")  # noqa: DTZ007
+                dt = datetime.strptime(string, r"%m/%d/%y")
                 return dt.replace(tzinfo=UTC)
 
             def time(string: str) -> datetime:
                 """Return datetime parsed according to HMS format (UTC-aware)."""
                 # parse to time first; although .time() is tz-agnostic
                 # DTZ007 is triggered by strptime
-                t = datetime.strptime(string, r"%H:%M:%S").time()  # noqa: DTZ007
+                t = datetime.strptime(string, r"%H:%M:%S").time()
                 today_utc = datetime.now(UTC)
                 return today_utc.replace(
                     hour=t.hour, minute=t.minute, second=t.second, microsecond=0
@@ -1235,5 +1234,3 @@ class TIFFWSIReaderDelegate:
             "mpp": mpp,
             "raw": raw,
         }
-
-

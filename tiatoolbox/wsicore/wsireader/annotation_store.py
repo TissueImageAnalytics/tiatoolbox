@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Unpack
 import numpy as np
 from PIL import Image
 
-from tiatoolbox import logger, utils
+from tiatoolbox import utils
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsimeta import WSIMeta
@@ -16,7 +16,7 @@ from tiatoolbox.wsicore.wsimeta import WSIMeta
 from .base import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.type_hints import Bounds, Resolution, Units
+    from tiatoolbox.type_hints import Resolution, Units
     from tiatoolbox.wsicore import WSIReaderParams
 
 
@@ -597,5 +597,3 @@ class AnnotationStoreReader(WSIReader):
         if self.post_proc is not None:
             im_region = self.post_proc(im_region)
         return utils.transforms.background_composite(im_region, alpha=False)
-
-

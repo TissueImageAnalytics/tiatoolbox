@@ -15,7 +15,7 @@ from numcodecs import register_codec
 from zarr.experimental.cache_store import CacheStore
 from zarr.storage import FsspecStore, MemoryStore
 
-from tiatoolbox import logger, utils
+from tiatoolbox import logger
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 from .base import WSIReader
@@ -23,7 +23,6 @@ from .tiff import TIFFWSIReaderDelegate
 
 if TYPE_CHECKING:  # pragma: no cover
     from tiatoolbox.type_hints import IntPair, Resolution, Units
-    from tiatoolbox.wsicore import WSIReaderParams
 
 
 class FsspecJsonWSIReader(WSIReader):
@@ -265,5 +264,3 @@ class FsspecJsonWSIReader(WSIReader):
             coord_space,
             **kwargs,
         )
-
-

@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from numbers import Number
 from pathlib import Path
 from typing import TYPE_CHECKING, Unpack
 
 import numpy as np
 
-from tiatoolbox import logger, utils
+from tiatoolbox import utils
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 from .base import WSIReader
@@ -549,5 +548,3 @@ class DICOMWSIReader(WSIReader):
         if self.post_proc is not None:
             return self.post_proc(im_region)
         return utils.transforms.background_composite(image=im_region, alpha=False)
-
-

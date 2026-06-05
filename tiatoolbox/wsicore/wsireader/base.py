@@ -1,52 +1,31 @@
-﻿"""This module defines classes which can read image data from WSI formats."""
+"""This module defines classes which can read image data from WSI formats."""
 
 from __future__ import annotations
 
-import itertools
-import json
 import logging
 import math
-import os
 import re
-from collections import defaultdict
-from datetime import UTC, datetime
 from numbers import Number
 from pathlib import Path
 from typing import TYPE_CHECKING, Unpack
 from urllib.parse import urlparse
 
-import cv2
-import fsspec
-import matplotlib.colors as mcolors
 import numpy as np
 import openslide
 import pandas as pd
-import SimpleITK as sitk  # noqa: N813
 import tifffile
 import zarr
-from defusedxml import ElementTree
-from fsspec.implementations.reference import ReferenceFileSystem
-from imagecodecs.numcodecs import Delta, Jpeg, Jpeg2k, Lzw
-from numcodecs import register_codec
-from numpy.linalg import inv
 from packaging.version import Version
-from PIL import Image
-from tifffile import TiffPages
-from zarr.experimental.cache_store import CacheStore
-from zarr.storage import FsspecStore, MemoryStore
 
 from tiatoolbox import logger, utils
-from tiatoolbox.annotation import AnnotationStore, SQLiteStore
+from tiatoolbox.annotation import AnnotationStore
 from tiatoolbox.utils import postproc_defs
 from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupportedError
-from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterable
-
-    import glymur
 
     from tiatoolbox.type_hints import (
         Bounds,
@@ -409,6 +388,7 @@ class WSIReader:
 
         if isinstance(input_img, np.ndarray):
             from .virtual import VirtualWSIReader  # noqa: PLC0415
+
             return VirtualWSIReader(
                 input_img, mpp=mpp, power=power, post_proc=post_proc
             )
@@ -429,6 +409,7 @@ class WSIReader:
 
         # Try openslide last
         from .openslide import OpenSlideWSIReader  # noqa: PLC0415
+
         return OpenSlideWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
 
     @staticmethod
@@ -557,6 +538,7 @@ class WSIReader:
         if last_suffix in (".tif", ".tiff"):
             try:
                 from .openslide import OpenSlideWSIReader  # noqa: PLC0415
+
                 return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
             except (
                 openslide.OpenSlideUnsupportedFormatError,
@@ -575,6 +557,7 @@ class WSIReader:
         """Try to create a DICOMWSIReader if the input is a DICOM file."""
         if is_dicom(input_path):
             from .dicom import DICOMWSIReader  # noqa: PLC0415
+
             return DICOMWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
         return None
 
@@ -586,6 +569,7 @@ class WSIReader:
     ) -> FsspecJsonWSIReader | None:
         """Try to create a FsspecJsonWSIReader if the input is a valid Zarr fsspec."""
         from .fsspec_json import FsspecJsonWSIReader  # noqa: PLC0415
+
         if FsspecJsonWSIReader.is_valid_zarr_fsspec(input_img):
             return FsspecJsonWSIReader(input_img, mpp=mpp, power=power)
         return None
@@ -600,6 +584,7 @@ class WSIReader:
         """Try to create an AnnotationStoreReader if the file is a .db."""
         if last_suffix == ".db":
             from .annotation_store import AnnotationStoreReader  # noqa: PLC0415
+
             kwargs["post_proc"] = post_proc
             return AnnotationStoreReader(input_path, **kwargs)
         return None
@@ -618,6 +603,7 @@ class WSIReader:
                 msg = f"File {input_path} does not appear to be a v0.4 NGFF zarr."
                 raise FileNotSupportedError(msg)
             from .ngff import NGFFWSIReader  # noqa: PLC0415
+
             return NGFFWSIReader(input_path, mpp=mpp, power=power, **kwargs)
         return None
 
@@ -636,6 +622,7 @@ class WSIReader:
             or last_suffix == ".qptiff"
         ):
             from .tiff import TIFFWSIReader  # noqa: PLC0415
+
             return TIFFWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
         return None
 
@@ -656,6 +643,7 @@ class WSIReader:
         if last_suffix in (".tif", ".tiff"):
             try:
                 from .tiff import TIFFWSIReader  # noqa: PLC0415
+
                 return TIFFWSIReader(
                     input_path, mpp=mpp, power=power, post_proc=post_proc
                 )
@@ -752,6 +740,9 @@ class WSIReader:
         if post_proc == "auto":
             # if its TIFFWSIReader or VirtualWSIReader, return fn to
             # allow multichannel, else return None
+            from .tiff import TIFFWSIReader  # noqa: PLC0415
+            from .virtual import VirtualWSIReader  # noqa: PLC0415
+
             if isinstance(self, (TIFFWSIReader, VirtualWSIReader)):
                 return postproc_defs.MultichannelToRGB()
             return None
