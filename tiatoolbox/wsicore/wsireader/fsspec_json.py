@@ -7,6 +7,7 @@ from numbers import Number
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import fsspec
 import numpy as np
 import zarr
 from fsspec.implementations.reference import ReferenceFileSystem
