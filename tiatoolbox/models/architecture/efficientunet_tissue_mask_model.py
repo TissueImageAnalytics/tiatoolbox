@@ -861,8 +861,8 @@ class EfficientUNetTissueMaskModel(ModelABC):
     ) -> np.ndarray:
         """Postprocess model output to generate tissue mask.
 
-        Applies thresholding and morphological operations to classify pixels
-        as tissue or background and clean up the mask.
+        Applies thresholding and morphological operations for binary tissue
+        masks. For multi-class outputs, returns the per-pixel argmax class map.
 
         Args:
             image (np.ndarray):
@@ -881,6 +881,9 @@ class EfficientUNetTissueMaskModel(ModelABC):
         """
         if isinstance(image, da.Array):
             image = image.compute()
+        if image.shape[-1] > 1:
+            return np.asarray(np.argmax(image, axis=-1), dtype=np.int64)
+
         binary_image = np.where(image[..., 0] >= self.threshold, 1, 0).astype(np.uint8)
 
         kernel_diameter = 31
@@ -932,7 +935,10 @@ class EfficientUNetTissueMaskModel(ModelABC):
 
         with torch.inference_mode():
             logits = model(imgs)
-            probs = torch.nn.functional.sigmoid(logits)
+            if logits.shape[1] > 1:
+                probs = torch.nn.functional.softmax(logits, dim=1)
+            else:
+                probs = torch.nn.functional.sigmoid(logits)
             probs = probs.permute(0, 2, 3, 1)  # to NHWC
 
         return probs.cpu().numpy()
