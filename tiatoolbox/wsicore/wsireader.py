@@ -32,6 +32,7 @@ from numpy.linalg import inv
 from packaging.version import Version
 from PIL import Image
 from tifffile import TiffPages
+from upath import UPath
 from zarr.experimental.cache_store import CacheStore
 from zarr.storage import FsspecStore, MemoryStore
 
@@ -148,7 +149,7 @@ def is_ngff(  # noqa: PLR0911
 
     """
     try:
-        zarr_group = zarr.open(path, mode="r")
+        zarr_group = zarr.open(path, mode="r", **kwargs)
     except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
     if not isinstance(zarr_group, zarr.Group):
@@ -220,6 +221,12 @@ def is_ngff(  # noqa: PLR0911
         return True
 
     return is_zarr(path, **kwargs)
+
+
+def is_url(path_or_url: str | Path) -> bool:
+    """Returns True if input is a URL else False."""
+    parsed = urlparse(str(path_or_url))
+    return bool(parsed.scheme and parsed.netloc)
 
 
 def _handle_virtual_wsi(
@@ -411,7 +418,8 @@ class WSIReader:
             return input_img
 
         # Input is a string or Path, normalise to Path
-        input_path = Path(input_img)
+        # UPath preserves s3 paths on Windows
+        input_path = UPath(input_img)
         WSIReader.verify_supported_wsi(input_path, **kwargs)
 
         # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)
@@ -660,7 +668,7 @@ class WSIReader:
         """Initialize :class:`WSIReader`."""
         if isinstance(input_img, (np.ndarray, AnnotationStore)):
             self.input_path = None
-        elif bool(urlparse(str(input_img)).scheme):
+        elif is_url(path_or_url=input_img):
             self.input_path = str(input_img)
         else:
             self.input_path = Path(input_img)

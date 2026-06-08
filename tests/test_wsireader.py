@@ -2236,7 +2236,7 @@ def test_ngff_s3() -> None:
     url = "s3://idr/zarr/v0.4/idr0062A/6001247.zarr"
     storage_options = {
         "anon": True,
-        "client_kwargs": {"endpoint_url": "https://uk1s3.embassy.ebi.ac.uk"},
+        "client_kwargs": {"endpoint_url": "https://livingobjects.ebi.ac.uk"},
     }
     wsi = WSIReader.open(url, storage_options=storage_options)
 
