@@ -386,12 +386,10 @@ class EngineABC(ABC):  # noqa: B024
         return model, None
 
     def _get_model_attr(self: EngineABC, attr_name: str) -> Callable:
-        """Return a model attribute, unwrapping DataParallel if required."""
-        try:
-            return getattr(self.model, attr_name)
-        except AttributeError:
-            module = getattr(self.model, "module", None)
-            return getattr(module, attr_name)
+        """Return a model attribute, unwrapping DataParallel/DDP if required (happens in multi-gpu settings).
+        Reads the attribute from ``self.model.module`` if the model is wrapped, otherwise directly from ``self.model``.
+        """
+        return getattr(getattr(self.model, "module", self.model), attr_name)
 
     def get_dataloader(
         self: EngineABC,

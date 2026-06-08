@@ -862,10 +862,8 @@ class KongNet(ModelABC):
         imgs = imgs.to(device=device, dtype=torch.float32)
         imgs = imgs.permute(0, 3, 1, 2)  # to NCHW
 
-        try:
-            target_channels = model.target_channels
-        except AttributeError:
-            target_channels = model.module.target_channels
+        # unwrap DataParallel/DDP if present (happens in multi-gpu settings)
+        target_channels = getattr(model, "module", model).target_channels
 
         with torch.inference_mode():
             logits = model(imgs)
