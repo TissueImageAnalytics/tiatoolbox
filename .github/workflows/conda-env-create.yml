@@ -34,7 +34,7 @@ jobs:
         run: python requirements/generate_conda_env.py
 
       # ✅ Install via micromamba
-      - uses: mamba-org/setup-micromamba@v1
+      - uses: mamba-org/setup-micromamba@v3
         with:
           environment-name: tiatoolbox
           environment-file: requirements/requirements.conda.generated.yml
