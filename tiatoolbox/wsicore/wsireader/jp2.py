@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import os
 import re
-from numbers import Number
-from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
+import glymur
 
 from tiatoolbox import logger, utils
 from tiatoolbox.wsicore.wsimeta import WSIMeta
@@ -16,9 +14,12 @@ from tiatoolbox.wsicore.wsimeta import WSIMeta
 from .base import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
-    import glymur
+    from numbers import Number
+    from pathlib import Path
 
-    from tiatoolbox.type_hints import IntPair, Resolution, Units
+    import numpy as np
+
+    from tiatoolbox.type_hints import IntBounds, IntPair, Resolution, Units
 
 
 class JP2WSIReader(WSIReader):
@@ -42,7 +43,6 @@ class JP2WSIReader(WSIReader):
     ) -> None:
         """Initialize :class:`OmnyxJP2WSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power, post_proc=post_proc)
-        import glymur  # noqa: PLC0415
 
         glymur.set_option("lib.num_threads", os.cpu_count() or 1)
         self.glymur_jp2 = glymur.Jp2k(filename=str(self.input_path))

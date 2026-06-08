@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from numbers import Number
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -15,6 +13,9 @@ from tiatoolbox.wsicore.wsimeta import WSIMeta
 from .base import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from numbers import Number
+    from pathlib import Path
+
     from tiatoolbox.type_hints import IntPair, Resolution, Units
 
 

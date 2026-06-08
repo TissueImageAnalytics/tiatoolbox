@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Unpack
 
-import numpy as np
 import zarr
 from zarr.storage import FsspecStore
 
@@ -15,6 +13,10 @@ from tiatoolbox.wsicore.wsimeta import WSIMeta
 from .base import ArrayView, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from pathlib import Path
+
+    import numpy as np
+
     from tiatoolbox.type_hints import IntBounds, IntPair, Resolution, Units
     from tiatoolbox.wsicore import WSIReaderParams
 

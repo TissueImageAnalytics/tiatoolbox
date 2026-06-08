@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from numbers import Number
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -23,6 +22,8 @@ from .base import ArrayView, WSIReader
 from .tiff import TIFFWSIReaderDelegate
 
 if TYPE_CHECKING:  # pragma: no cover
+    from numbers import Number
+
     from tiatoolbox.type_hints import IntBounds, IntPair, Resolution, Units
 
 

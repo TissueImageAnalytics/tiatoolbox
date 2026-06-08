@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import UTC, datetime
-from numbers import Number
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import matplotlib.colors as mcolors
@@ -25,6 +23,9 @@ from tiatoolbox.wsicore.wsimeta import WSIMeta
 from .base import ArrayView, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from numbers import Number
+    from pathlib import Path
+
     from tiatoolbox.type_hints import IntBounds, IntPair, Resolution, Units
 
 
@@ -735,14 +736,14 @@ class TIFFWSIReaderDelegate:
             def us_date(string: str) -> datetime:
                 """Return datetime parsed according to US date format (UTC-aware)."""
                 # and we immediately attach UTC.
-                dt = datetime.strptime(string, r"%m/%d/%y")
+                dt = datetime.strptime(string, r"%m/%d/%y").astimezone()
                 return dt.replace(tzinfo=UTC)
 
             def time(string: str) -> datetime:
                 """Return datetime parsed according to HMS format (UTC-aware)."""
                 # parse to time first; although .time() is tz-agnostic
                 # DTZ007 is triggered by strptime
-                t = datetime.strptime(string, r"%H:%M:%S").time()
+                t = datetime.strptime(string, r"%H:%M:%S").astimezone().time()
                 today_utc = datetime.now(UTC)
                 return today_utc.replace(
                     hour=t.hour, minute=t.minute, second=t.second, microsecond=0
