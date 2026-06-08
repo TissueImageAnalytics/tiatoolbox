@@ -5,7 +5,7 @@ description = "Computational pathology toolbox developed by TIA Centre."
 readme = "README.md"
 license = { text = "BSD-3-Clause" }
 authors = [{ name = "TIA Centre", email = "TIA@warwick.ac.uk" }]
-requires-python = ">=3.11, <3.14"
+requires-python = ">=3.11, <3.15"
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
   "Intended Audience :: Developers",
@@ -14,6 +14,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
   "aiohttp>=3.8.1",
