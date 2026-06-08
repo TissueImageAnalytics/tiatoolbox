@@ -221,7 +221,7 @@ def is_ngff(  # skipcq: PY-R1000  # noqa: PLR0911
         )
         return True
 
-    return is_zarr(path, **kwargs)
+    return is_zarr(path, **zarr_kwargs)
 
 
 def is_url(path_or_url: str | Path) -> bool:
