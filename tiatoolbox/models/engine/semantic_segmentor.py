@@ -1473,7 +1473,7 @@ def _store_vertical_segment(
     return probabilities_zarr, probabilities_da, written_height, False
 
 
-def merge_vertical_chunkwise(
+def merge_vertical_chunkwise(  # skipcq: PY-R1000
     canvas: da.Array,
     count: da.Array,
     output_locs_y_: np.ndarray,
