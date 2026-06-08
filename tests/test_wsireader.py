@@ -2236,7 +2236,7 @@ def test_ngff_s3() -> None:
     url = "s3://idr/zarr/v0.4/idr0062A/6001247.zarr"
     storage_options = {
         "anon": True,
-        "client_kwargs": {"endpoint_url": "https://uk1s3.embassy.ebi.ac.uk"},
+        "client_kwargs": {"endpoint_url": "https://livingobjects.ebi.ac.uk"},
     }
     wsi = WSIReader.open(url, storage_options=storage_options)
 
@@ -3124,7 +3124,9 @@ def test_fsspec_json_wsi_reader_instantiation() -> None:
             "tiatoolbox.wsicore.wsireader.FsspecJsonWSIReader.is_valid_zarr_fsspec",
             return_value=True,
         ),
-        patch("tiatoolbox.wsicore.wsireader.FsspecJsonWSIReader") as mock_reader,
+        patch(
+            "tiatoolbox.wsicore.wsireader.fsspec_json.FsspecJsonWSIReader"
+        ) as mock_reader,
     ):
         WSIReader.open(input_path, mpp, power)
         mock_reader.assert_called_once_with(input_path, mpp=mpp, power=power)
@@ -3784,14 +3786,14 @@ def test_virtualwsireader_mode_detection_edge_cases() -> None:
     """Test VirtualWSIReader mode detection with various image types."""
     # Test with 2D image (should set mode to 'feature')
     img_2d = np.ones((100, 100), dtype=np.uint8)
-    with patch("tiatoolbox.wsicore.wsireader.logger") as mock_logger:
+    with patch("tiatoolbox.wsicore.wsireader.base.logger") as mock_logger:
         wsi = VirtualWSIReader(img_2d, mode="rgb")
         mock_logger.warning.assert_called()
         assert wsi.mode == "feature"
 
     # Test with 5-channel image (should set mode to 'feature')
     img_5ch = np.ones((100, 100, 5), dtype=np.uint8)
-    with patch("tiatoolbox.wsicore.wsireader.logger") as mock_logger:
+    with patch("tiatoolbox.wsicore.wsireader.base.logger") as mock_logger:
         wsi = VirtualWSIReader(img_5ch, mode="rgb")
         mock_logger.warning.assert_called()
         assert wsi.mode == "feature"
@@ -3810,7 +3812,7 @@ def test_openslide_estimate_mpp_edge_cases() -> None:
         "tiff.ResolutionUnit": "inch",
         # Missing YResolution
     }
-    with patch("tiatoolbox.wsicore.wsireader.logger") as mock_logger:
+    with patch("tiatoolbox.wsicore.wsireader.openslide.logger") as mock_logger:
         result = OpenSlideWSIReader._estimate_mpp(props)
         mock_logger.warning.assert_called()
         assert result is None
@@ -4262,7 +4264,7 @@ def test_virtual_read_rect_resolution_coord_space_roundtrip() -> None:
 class TestTryOpenSlide:
     """Unit tests for the WSIReader.try_openslide static method."""
 
-    @patch("tiatoolbox.wsicore.wsireader.OpenSlideWSIReader")
+    @patch("tiatoolbox.wsicore.wsireader.openslide.OpenSlideWSIReader")
     def test_tiff_suffix_success(self, mock_reader: MagicMock) -> None:
         """Test that a valid TIFF file results in an OpenSlideWSIReader instance."""
         mock_instance = MagicMock()
@@ -4282,7 +4284,7 @@ class TestTryOpenSlide:
         )
         assert result is mock_instance
 
-    @patch("tiatoolbox.wsicore.wsireader.OpenSlideWSIReader")
+    @patch("tiatoolbox.wsicore.wsireader.openslide.OpenSlideWSIReader")
     def test_tiff_suffix_raises_openslide_error(self, mock_reader: MagicMock) -> None:
         """Test that OpenSlide errors are caught and the function returns None."""
         mock_reader.side_effect = openslide.OpenSlideError("bad file")
