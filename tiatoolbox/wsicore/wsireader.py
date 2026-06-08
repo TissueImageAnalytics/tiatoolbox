@@ -148,8 +148,9 @@ def is_ngff(  # noqa: PLR0911
             True if the file is an NGFF file.
 
     """
+    zarr_kwargs = {k: v for k, v in kwargs.items() if k in ["storage_options"]}
     try:
-        zarr_group = zarr.open(path, mode="r", **kwargs)
+        zarr_group = zarr.open(path, mode="r", **zarr_kwargs)
     except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
     if not isinstance(zarr_group, zarr.Group):
@@ -226,7 +227,7 @@ def is_ngff(  # noqa: PLR0911
 def is_url(path_or_url: str | Path) -> bool:
     """Returns True if input is a URL else False."""
     parsed = urlparse(str(path_or_url))
-    return bool(parsed.scheme and parsed.netloc)
+    return parsed.scheme in {"s3", "http", "https", "ftp", "file"}
 
 
 def _handle_virtual_wsi(
