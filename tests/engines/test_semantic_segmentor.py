@@ -430,6 +430,97 @@ def test_merge_vertical_chunkwise_multi_row_overlap() -> None:
     np.testing.assert_allclose(result.compute(), expected)
 
 
+def test_get_vertical_chunk_locations_raises_for_mismatched_chunks() -> None:
+    """Test mismatch between unique vertical locations and canvas chunks."""
+    output_locs_y = np.array([[0, 4], [0, 4], [4, 8]])
+
+    with pytest.raises(ValueError, match="Number of vertical output locations"):
+        semantic_segmentor._get_vertical_chunk_locations(output_locs_y, num_chunks=3)
+
+
+def test_aggregate_vertical_segment_empty_range() -> None:
+    """Test empty vertical segment request."""
+    chunk = np.ones((2, 3, 1), dtype=np.float32)
+    chunk_count = np.ones_like(chunk, dtype=np.uint8)
+
+    result = semantic_segmentor._aggregate_vertical_segment(
+        active_chunks=[(0, 2, chunk, chunk_count)],
+        start_y=2,
+        end_y=2,
+    )
+
+    assert result.shape == (0, 3, 1)
+    assert result.size == 0
+
+
+def test_aggregate_vertical_segment_skips_non_overlapping_chunk() -> None:
+    """Test non-overlapping active chunks are ignored."""
+    skipped_chunk = np.ones((2, 2, 1), dtype=np.float32) * 4
+    included_chunk = np.ones((2, 2, 1), dtype=np.float32) * 6
+    chunk_count = np.ones((2, 2, 1), dtype=np.uint8)
+
+    result = semantic_segmentor._aggregate_vertical_segment(
+        active_chunks=[
+            (0, 2, skipped_chunk, chunk_count),
+            (2, 4, included_chunk, chunk_count),
+        ],
+        start_y=2,
+        end_y=4,
+    )
+
+    np.testing.assert_allclose(result, included_chunk)
+
+
+def test_store_vertical_segment_stops_when_output_shape_is_filled() -> None:
+    """Test storing short-circuits after clipping reaches target height."""
+    existing_da = da.from_array(
+        np.ones((1, 2, 1), dtype=np.float32),
+        chunks=(1, 2, 1),
+    )
+
+    probabilities_zarr, probabilities_da, written_height, should_stop = (
+        semantic_segmentor._store_vertical_segment(
+            probabilities=np.ones((2, 2, 1), dtype=np.float32),
+            output_shape=(1, 2),
+            written_height=1,
+            chunk_shape=(2, 2, 1),
+            probabilities_zarr=None,
+            probabilities_da=existing_da,
+            zarr_group=None,
+        )
+    )
+
+    assert probabilities_zarr is None
+    assert probabilities_da is existing_da
+    assert written_height == 1
+    assert should_stop is True
+
+
+def test_store_vertical_segment_skips_empty_probabilities() -> None:
+    """Test zero-height probability chunks are not stored."""
+    existing_da = da.from_array(
+        np.ones((1, 2, 1), dtype=np.float32),
+        chunks=(1, 2, 1),
+    )
+
+    probabilities_zarr, probabilities_da, written_height, should_stop = (
+        semantic_segmentor._store_vertical_segment(
+            probabilities=np.empty((0, 2, 1), dtype=np.float32),
+            output_shape=None,
+            written_height=3,
+            chunk_shape=(2, 2, 1),
+            probabilities_zarr=None,
+            probabilities_da=existing_da,
+            zarr_group=None,
+        )
+    )
+
+    assert probabilities_zarr is None
+    assert probabilities_da is existing_da
+    assert written_height == 3
+    assert should_stop is False
+
+
 def test_raise_value_error_return_labels_wsi(
     remote_sample: Callable,
     track_tmp_path: Path,
