@@ -541,8 +541,6 @@ class JP2WSIReader(WSIReader):
                 Metadata information.
 
         """
-        import glymur  # noqa: PLC0415
-
         jp2 = self.glymur_jp2
         boxes = self._get_jp2_boxes(jp2)
         objective_power = None

@@ -2053,7 +2053,7 @@ class ArrayView:
             index = (s, y, x)
             return np.rollaxis(self.array[index], 0, 3)
         msg = f"Unsupported axes `{self.axes}`."
-        raise ValueError(msg)
+        raise IndexError(msg)
 
 
 class VirtualWSIReader(WSIReader):
