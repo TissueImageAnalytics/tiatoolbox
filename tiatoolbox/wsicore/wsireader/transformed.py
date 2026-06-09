@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import itertools
-from numbers import Number
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import cv2
@@ -13,12 +11,15 @@ import SimpleITK as sitk  # noqa: N813
 from numpy.linalg import inv
 
 from tiatoolbox import utils
-from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 from .base import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
-    from tiatoolbox.type_hints import IntPair, Resolution, Units
+    from numbers import Number
+    from pathlib import Path
+
+    from tiatoolbox.type_hints import Bounds, IntPair, Resolution, Units
+    from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 
 class TransformedWSIReader(WSIReader):
