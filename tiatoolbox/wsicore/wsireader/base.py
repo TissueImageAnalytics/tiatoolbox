@@ -16,6 +16,7 @@ import pandas as pd
 import tifffile
 import zarr
 from packaging.version import Version
+from upath import UPath
 
 from tiatoolbox import logger, utils
 from tiatoolbox.annotation import AnnotationStore
@@ -135,8 +136,9 @@ def is_ngff(  # noqa: PLR0911
             True if the file is an NGFF file.
 
     """
+    zarr_kwargs = {k: v for k, v in kwargs.items() if k in ["storage_options"]}
     try:
-        zarr_group = zarr.open(path, mode="r", **kwargs)
+        zarr_group = zarr.open(path, mode="r", **zarr_kwargs)
     except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
     if not isinstance(zarr_group, zarr.Group):
@@ -207,13 +209,13 @@ def is_ngff(  # noqa: PLR0911
         )
         return True
 
-    return is_zarr(path, **kwargs)
+    return True
 
 
 def is_url(path_or_url: str | Path) -> bool:
     """Returns True if input is a URL else False."""
     parsed = urlparse(str(path_or_url))
-    return bool(parsed.scheme and parsed.netloc)
+    return parsed.scheme in {"s3", "http", "https", "ftp", "file"}
 
 
 def _handle_virtual_wsi(
@@ -409,7 +411,7 @@ class WSIReader:
             return input_img
 
         # Input is a string or Path, normalise to Path
-        input_path = Path(input_img)
+        input_path = UPath(input_img)
         WSIReader.verify_supported_wsi(input_path, **kwargs)
 
         # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)

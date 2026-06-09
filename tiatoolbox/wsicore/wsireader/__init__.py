@@ -2,18 +2,6 @@
 
 from __future__ import annotations
 
-import json
-import logging
-import re
-from collections import defaultdict
-from datetime import UTC, datetime
-from numbers import Number
-
-import fsspec
-import matplotlib.colors as mcolors
-import zarr
-from zarr.experimental.cache_store import CacheStore
-
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
 from .annotation_store import AnnotationStoreReader
@@ -29,6 +17,7 @@ from .base import (
     is_dicom,
     is_ngff,
     is_tiled_tiff,
+    is_url,
     is_zarr,
 )
 from .dicom import DICOMWSIReader
@@ -61,5 +50,6 @@ __all__ = [
     "is_dicom",
     "is_ngff",
     "is_tiled_tiff",
+    "is_url",
     "is_zarr",
 ]
