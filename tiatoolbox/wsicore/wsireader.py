@@ -32,6 +32,7 @@ from numpy.linalg import inv
 from packaging.version import Version
 from PIL import Image
 from tifffile import TiffPages
+from upath import UPath
 from zarr.experimental.cache_store import CacheStore
 from zarr.storage import FsspecStore, MemoryStore
 
@@ -123,7 +124,7 @@ def is_zarr(path: Path, **kwargs: Unpack[WSIReaderParams]) -> bool:
     return True
 
 
-def is_ngff(  # noqa: PLR0911
+def is_ngff(  # skipcq: PY-R1000  # noqa: PLR0911
     path: str | Path,
     min_version: Version = MIN_NGFF_VERSION,
     max_version: Version = MAX_NGFF_VERSION,
@@ -147,8 +148,9 @@ def is_ngff(  # noqa: PLR0911
             True if the file is an NGFF file.
 
     """
+    zarr_kwargs = {k: v for k, v in kwargs.items() if k in ["storage_options"]}
     try:
-        zarr_group = zarr.open(path, mode="r")
+        zarr_group = zarr.open(path, mode="r", **zarr_kwargs)
     except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
     if not isinstance(zarr_group, zarr.Group):
@@ -219,7 +221,13 @@ def is_ngff(  # noqa: PLR0911
         )
         return True
 
-    return is_zarr(path, **kwargs)
+    return is_zarr(path, **zarr_kwargs)
+
+
+def is_url(path_or_url: str | Path) -> bool:
+    """Returns True if input is a URL else False."""
+    parsed = urlparse(str(path_or_url))
+    return parsed.scheme in {"s3", "http", "https", "ftp", "file"}
 
 
 def _handle_virtual_wsi(
@@ -411,7 +419,8 @@ class WSIReader:
             return input_img
 
         # Input is a string or Path, normalise to Path
-        input_path = Path(input_img)
+        # UPath preserves s3 paths on Windows
+        input_path = UPath(input_img)
         WSIReader.verify_supported_wsi(input_path, **kwargs)
 
         # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)
@@ -660,7 +669,7 @@ class WSIReader:
         """Initialize :class:`WSIReader`."""
         if isinstance(input_img, (np.ndarray, AnnotationStore)):
             self.input_path = None
-        elif bool(urlparse(str(input_img)).scheme):
+        elif is_url(path_or_url=input_img):
             self.input_path = str(input_img)
         else:
             self.input_path = Path(input_img)
