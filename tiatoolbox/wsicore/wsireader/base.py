@@ -112,7 +112,7 @@ def is_zarr(path: Path, **kwargs: Unpack[WSIReaderParams]) -> bool:
     return True
 
 
-def is_ngff(  # noqa: PLR0911
+def is_ngff(  # skipcq: PY-R1000  # noqa: PLR0911
     path: str | Path,
     min_version: Version = MIN_NGFF_VERSION,
     max_version: Version = MAX_NGFF_VERSION,
