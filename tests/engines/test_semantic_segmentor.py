@@ -1193,3 +1193,191 @@ def _test_store_output_patch(output: Path) -> None:
     assert 1 in annotation_types
 
     assert annotations_properties is not None
+
+
+def test_merge_vertical_chunkwise_breaks_when_should_stop_true(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Tests in `merge_vertical_chunkwise`.
+
+    - if should_stop is True.
+    - if active_chunks and not should_stop is False.
+
+    """
+    canvas_np = np.array(
+        [
+            [[1.0]],
+            [[2.0]],
+        ],
+        dtype=np.float32,
+    )
+    count_np = np.array(
+        [
+            [[1]],
+            [[1]],
+        ],
+        dtype=np.uint32,
+    )
+
+    canvas = da.from_array(canvas_np, chunks=(1, 1, 1))
+    count = da.from_array(count_np, chunks=(1, 1, 1))
+
+    # First chunk creates active_chunks.
+    # Second chunk starts later, so the function will try to store the previous segment.
+    output_locs_y_ = np.array(
+        [
+            [0, 1],
+            [3, 4],
+        ],
+        dtype=np.int64,
+    )
+
+    zarr_group = zarr.open_group(str(track_tmp_path / "out.zarr"), mode="w")
+    save_path = track_tmp_path / "out.zarr"
+
+    aggregate_calls = []
+    store_calls = []
+
+    def fake_aggregate_vertical_segment(
+        active_chunks: list[tuple[int, int, np.ndarray, np.ndarray]],
+        start_y: int,
+        end_y: int,
+    ) -> np.ndarray:
+        aggregate_calls.append((start_y, end_y, len(active_chunks)))
+        return np.ones((1, 1, 1), dtype=np.float32)
+
+    def fake_store_vertical_segment(
+        probabilities: np.ndarray,
+        output_shape: tuple[int, int] | None,  # noqa: ARG001
+        written_height: int,
+        chunk_shape: tuple[int, ...],  # noqa: ARG001
+        probabilities_zarr: zarr.Array | None,
+        probabilities_da: da.Array | None,
+        zarr_group: zarr.Group | None,  # noqa: ARG001
+    ) -> tuple[zarr.Array | None, da.Array | None, int, bool]:
+        store_calls.append(
+            {
+                "shape": probabilities.shape,
+                "written_height": written_height,
+            }
+        )
+        # This is the branch you want to test.
+        return probabilities_zarr, probabilities_da, written_height, True
+
+    monkeypatch.setattr(
+        semantic_segmentor,
+        "_aggregate_vertical_segment",
+        fake_aggregate_vertical_segment,
+    )
+    monkeypatch.setattr(
+        semantic_segmentor, "_store_vertical_segment", fake_store_vertical_segment
+    )
+
+    result = semantic_segmentor.merge_vertical_chunkwise(
+        canvas=canvas,
+        count=count,
+        output_locs_y_=output_locs_y_,
+        zarr_group=zarr_group,
+        save_path=save_path,
+        memory_threshold=80,
+        output_shape=None,
+        verbose=False,
+    )
+
+    # Because should_stop=True, the loop breaks and the function does not
+    # continue to final aggregation / zarr conversion.
+    assert result is None
+    assert len(aggregate_calls) == 1
+    assert len(store_calls) == 1
+
+
+def test_merge_vertical_chunkwise_skips_append_when_valid_chunk_end_is_not_greater(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Tests in `merge_vertical_chunkwise`.
+
+    - if valid_chunk_end_y > chunk_start_y is False
+      skips append
+
+    """
+    canvas_np = np.array(
+        [
+            [[1.0]],
+            [[2.0]],
+        ],
+        dtype=np.float32,
+    )
+    count_np = np.array(
+        [
+            [[1]],
+            [[1]],
+        ],
+        dtype=np.uint32,
+    )
+
+    canvas = da.from_array(canvas_np, chunks=(1, 1, 1))
+    count = da.from_array(count_np, chunks=(1, 1, 1))
+
+    # Make valid_chunk_end_y == chunk_start_y for both chunks:
+    # Use valid_chunk_end_y = min(chunk_end_y, chunk_start_y + chunk.shape[0])
+    # If chunk_end_y == chunk_start_y, then the condition is False.
+    output_locs_y_ = np.array(
+        [
+            [0, 0],
+            [5, 5],
+        ],
+        dtype=np.int64,
+    )
+
+    zarr_group = zarr.open_group(str(track_tmp_path / "out.zarr"), mode="w")
+    save_path = track_tmp_path / "out.zarr"
+
+    aggregate_calls = []
+    store_calls = []
+
+    def fake_aggregate_vertical_segment(
+        active_chunks: list[tuple[int, int, np.ndarray, np.ndarray]],
+        start_y: int,
+        end_y: int,
+    ) -> np.ndarray:
+        aggregate_calls.append((start_y, end_y, len(active_chunks)))
+        return np.ones((1, 1, 1), dtype=np.float32)
+
+    def fake_store_vertical_segment(
+        probabilities: np.ndarray,
+        output_shape: tuple[int, int] | None,  # noqa: ARG001
+        written_height: int,
+        chunk_shape: tuple[int, ...],  # noqa: ARG001
+        probabilities_zarr: zarr.Array | None,
+        probabilities_da: da.Array | None,
+        zarr_group: zarr.Group | None,  # noqa: ARG001
+    ) -> tuple[zarr.Array | None, da.Array | None, int, bool]:
+        store_calls.append((probabilities.shape, written_height))
+        return probabilities_zarr, probabilities_da, written_height, False
+
+    monkeypatch.setattr(
+        semantic_segmentor,
+        "_aggregate_vertical_segment",
+        fake_aggregate_vertical_segment,
+    )
+    monkeypatch.setattr(
+        semantic_segmentor, "_store_vertical_segment", fake_store_vertical_segment
+    )
+
+    result = semantic_segmentor.merge_vertical_chunkwise(
+        canvas=canvas,
+        count=count,
+        output_locs_y_=output_locs_y_,
+        zarr_group=zarr_group,
+        save_path=save_path,
+        memory_threshold=80,
+        output_shape=None,
+        verbose=False,
+    )
+
+    # No chunk is appended, so no aggregation/store should happen.
+    assert result is None
+    assert aggregate_calls == []
+    assert store_calls == []
