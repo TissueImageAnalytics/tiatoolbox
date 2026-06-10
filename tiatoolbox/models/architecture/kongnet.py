@@ -1372,9 +1372,10 @@ class KongNet(ModelABC):
             ... (256, 256, 3)
 
         """
-        mean = np.array([0.485, 0.456, 0.406])
-        std = np.array([0.229, 0.224, 0.225])
-        return (image / 255.0 - mean) / std
+        mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+        std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+        image = image.astype(np.float32, copy=False) / np.float32(255.0)
+        return (image - mean) / std
 
     def forward(  # skipcq: PYL-W0613
         self: KongNet,
@@ -1505,12 +1506,15 @@ class KongNet(ModelABC):
         model.eval()
 
         imgs = batch_data
-        imgs = imgs.to(device).type(torch.float32)
+        imgs = imgs.to(device=device, dtype=torch.float32)
         imgs = imgs.permute(0, 3, 1, 2)  # to NCHW
+
+        # unwrap DataParallel/DDP if present (happens in multi-gpu settings)
+        target_channels = getattr(model, "module", model).target_channels
 
         with torch.inference_mode():
             logits = model(imgs)
-            target_logits = logits[:, model.target_channels, :, :]
+            target_logits = logits[:, target_channels, :, :]
             probs = torch.nn.functional.sigmoid(target_logits)
             probs = probs.permute(0, 2, 3, 1)  # to NHWC
 

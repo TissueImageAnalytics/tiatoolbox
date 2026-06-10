@@ -453,7 +453,7 @@ class UNetModel(ModelABC):
         ####
         imgs = batch_data
 
-        imgs = imgs.to(device).type(torch.float32)
+        imgs = imgs.to(device=device, dtype=torch.float32)
         imgs = imgs.permute(0, 3, 1, 2)  # to NCHW
 
         _, _, h, w = imgs.shape
