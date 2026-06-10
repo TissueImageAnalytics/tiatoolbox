@@ -273,6 +273,8 @@ class UNetModel(ModelABC):
             Choosing between "add" or "concat" method to be used for
             combining feature maps from encoder and decoder parts at
             skip connections. Default is "add".
+        class_dict (dict | None):
+                Optional dictionary mapping class indices to names. Defaults to None.
 
     Returns:
         torch.nn.Module:
@@ -297,9 +299,12 @@ class UNetModel(ModelABC):
         encoder_levels: list[int] | None = None,
         decoder_block: tuple[int] | None = None,
         skip_type: str = "add",
+        class_dict: dict | None = None,
     ) -> None:
         """Initialize :class:`UNetModel`."""
         super().__init__()
+
+        self.class_dict = class_dict
 
         if encoder.lower() not in {"resnet50", "unet"}:
             msg = f"Unknown encoder `{encoder}`"
@@ -448,7 +453,7 @@ class UNetModel(ModelABC):
         ####
         imgs = batch_data
 
-        imgs = imgs.to(device).type(torch.float32)
+        imgs = imgs.to(device=device, dtype=torch.float32)
         imgs = imgs.permute(0, 3, 1, 2)  # to NCHW
 
         _, _, h, w = imgs.shape
