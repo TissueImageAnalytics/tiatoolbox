@@ -56,6 +56,7 @@ from tiatoolbox.wsicore.wsireader import (
     is_dicom,
     is_ngff,
     is_tiled_tiff,
+    is_url,
     is_zarr,
 )
 
@@ -2236,7 +2237,7 @@ def test_ngff_s3() -> None:
     url = "s3://idr/zarr/v0.4/idr0062A/6001247.zarr"
     storage_options = {
         "anon": True,
-        "client_kwargs": {"endpoint_url": "https://uk1s3.embassy.ebi.ac.uk"},
+        "client_kwargs": {"endpoint_url": "https://livingobjects.ebi.ac.uk"},
     }
     wsi = WSIReader.open(url, storage_options=storage_options)
 
@@ -4325,3 +4326,28 @@ def test_handle_tiff_wsi_returns_none_when_no_handlers_match(
         )
 
     assert result is None
+
+
+@pytest.mark.parametrize(
+    ("input_path", "expected"),
+    [
+        # --- True Cases (Valid URL Schemes) ---
+        ("s3://bucket/key/slide.svs", True),
+        ("http://example.com", True),
+        ("https://example.com", True),
+        ("ftp://server.local/data/image.ndpi", True),
+        ("file:///home/user/slide.svs", True),
+        (Path("s3://bucket/key"), True),
+        # --- False Cases (Local Paths / Non-URL Schemes) ---
+        (r"C:\path\slide.svs", False),
+        (r"D:\Data\image.tif", False),
+        ("/home/user/downloads/slide.svs", False),
+        ("./relative/path/image.png", False),
+        ("relative/path/image.png", False),
+        (Path("C:/path/slide.svs"), False),
+        (Path("/home/user/slide.svs"), False),
+    ],
+)
+def test_is_url(input_path: str | Path, *, expected: bool) -> None:
+    """Verify that is_url correctly identifies URLs and ignores local paths."""
+    assert is_url(input_path) is expected
