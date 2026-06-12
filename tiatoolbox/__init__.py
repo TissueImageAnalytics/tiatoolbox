@@ -16,7 +16,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 __author__ = """TIA Centre"""
 __email__ = "TIA@warwick.ac.uk"
-__version__ = "2.1.1"
+__version__ = "2.1.2"
 
 # This will set the tiatoolbox external data
 # default to be the user home folder, should work on both Windows and Unix/Linux
