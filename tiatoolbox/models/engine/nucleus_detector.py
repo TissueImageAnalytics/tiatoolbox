@@ -1048,7 +1048,7 @@ def save_detection_arrays_to_qupath_json(
 
     # Color map for classes
     num_classes = len(class_dict)
-    cmap = plt.cm.get_cmap("tab20", num_classes)
+    cmap = plt.colormaps["tab20"].resampled(num_classes)
     class_colors = {
         class_idx: [
             int(cmap(class_idx)[0] * 255),

@@ -1265,7 +1265,7 @@ def patch_predictions_as_qupath_json(
     features = []
     # pick a color for each class based on the class index, using a colormap
     num_classes = len(class_dict)
-    cmap = plt.cm.get_cmap("tab20", num_classes)
+    cmap = plt.colormaps["tab20"].resampled(num_classes)
     class_colours = {
         class_idx: [
             int(cmap(class_idx)[0] * 255),
@@ -1518,7 +1518,7 @@ def _semantic_segmentations_as_qupath_json(
 
     # color map for classes
     num_classes = len(class_dict)
-    cmap = plt.cm.get_cmap("tab20", num_classes)
+    cmap = plt.colormaps["tab20"].resampled(num_classes)
     class_colours = {
         class_idx: [
             int(cmap(class_idx)[0] * 255),
@@ -1553,11 +1553,17 @@ def _semantic_segmentations_as_qupath_json(
 
             # scale coordinates
             cnt_scaled: np.ndarray = cnt.squeeze(1).astype(float)
-            cnt_scaled[:, 0] *= scale_factor[0]
-            cnt_scaled[:, 1] *= scale_factor[1]
 
-            poly = Polygon(cnt_scaled)
-            poly_geo = mapping(poly)
+            geom = make_valid_poly(
+                feature2geometry(
+                    {
+                        "type": "Polygon",
+                        "coordinates": scale_factor * np.array([cnt_scaled]),
+                    }
+                ),
+                (0, 0),
+            )
+            poly_geo = mapping(geom)
 
             feature = {
                 "type": "Feature",
