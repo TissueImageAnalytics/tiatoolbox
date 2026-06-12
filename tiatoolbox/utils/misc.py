@@ -1265,7 +1265,7 @@ def patch_predictions_as_qupath_json(
     features = []
     # pick a color for each class based on the class index, using a colormap
     num_classes = len(class_dict)
-    cmap = plt.cm.get_cmap("tab20", num_classes)
+    cmap = plt.colormaps["tab20"].resampled(num_classes)
     class_colours = {
         class_idx: [
             int(cmap(class_idx)[0] * 255),
@@ -1518,7 +1518,7 @@ def _semantic_segmentations_as_qupath_json(
 
     # color map for classes
     num_classes = len(class_dict)
-    cmap = plt.cm.get_cmap("tab20", num_classes)
+    cmap = plt.colormaps["tab20"].resampled(num_classes)
     class_colours = {
         class_idx: [
             int(cmap(class_idx)[0] * 255),
