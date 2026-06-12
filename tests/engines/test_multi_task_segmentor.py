@@ -889,9 +889,10 @@ def test_vertical_save_branch_without_patch(
     )
 
     # --- Call function ---
-    new_zarr, new_da = _save_multitask_vertical_to_cache(
+    new_zarr, new_da, zarr_group = _save_multitask_vertical_to_cache(
         probabilities_zarr=probabilities_zarr,
         probabilities_da=probabilities_da,
+        zarr_group=None,
         probabilities=probabilities,
         idx=idx,
         tqdm_loop=tqdm_loop,
@@ -905,9 +906,42 @@ def test_vertical_save_branch_without_patch(
 
     # new_zarr must be a real zarr array
     assert isinstance(new_zarr[idx], zarr.Array)
+    assert zarr_group is not None
 
     # Data was written correctly
     assert np.array_equal(new_zarr[idx][:], np.array([[1, 2, 3]]))
+
+
+def test_multitask_vertical_merge_continues_after_zarr_spill(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test multitask vertical merge appends all chunks after spilling to Zarr."""
+
+    class FakeVM:
+        """Fake psutil.virtual_memory() with extremely low available memory."""
+
+        available = 1
+
+    monkeypatch.setattr(psutil, "virtual_memory", FakeVM)
+
+    values = np.arange(8 * 3, dtype=np.float32).reshape(8, 3, 1)
+    canvas = [da.from_array(values, chunks=(2, 3, 1))]
+    count = [da.from_array(np.ones_like(values), chunks=(2, 3, 1))]
+    output_locs_y = np.array([[0, 2], [2, 4], [4, 6], [6, 8]])
+
+    result = merge_multitask_vertical_chunkwise(
+        canvas=canvas,
+        count=count,
+        output_locs_y_=output_locs_y,
+        zarr_group=None,
+        save_path=tmp_path / "vertical.zarr",
+        memory_threshold=0,
+        output_shape=(8, 3),
+        verbose=False,
+    )
+
+    assert result[0].shape == values.shape
+    assert np.array_equal(result[0].compute(), values)
 
 
 def test_qupath_feature_class_dict_lookup_fails() -> None:
