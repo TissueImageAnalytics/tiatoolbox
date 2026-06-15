@@ -1,5 +1,19 @@
 # History
 
+## TIAToolbox v2.1.2 (2026-06-12)
+
+### 🐞 Bug Fixes and Other Changes
+
+- Fix errors due to changes in matplotlib colormaps API (#1081)
+- Fix semantic segmentor JSON output (#1082)
+
+### 🛠️ Development-Related Changes
+
+- Add `albucore` dependency for conda build (#1081)
+- Update minimum requirement for `matplotlib` to `3.10.0`
+
+______________________________________________________________________
+
 ## TIAToolbox v2.1.1 (2026-06-10)
 
 ### 🐞 Bug Fixes and Other Changes
