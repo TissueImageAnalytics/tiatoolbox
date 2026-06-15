@@ -141,13 +141,6 @@ For CPU-only machines (no CUDA GPU):
     $ pip install -e ".[dev]"
 ```
 
-or (Linux/macOS only):
-
-```sh
-    $ conda env create -f requirements/requirements.dev.conda.yml
-    $ conda activate tiatoolbox-dev
-```
-
 6. To re-enter the environment in a new terminal:
 
 ```sh
