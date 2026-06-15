@@ -7,9 +7,9 @@ permissions:
 
 on:
   push:
-    paths: [ "requirements/requirements*.yml", "conda-env-create.yml", "pyproject.toml"]
+    paths: [ "requirements/generate_conda_env.py", "conda-env-create.yml", "pyproject.toml"]
   pull_request:
-    paths: [ "requirements/requirements*.yml", "conda-env-create.yml", "pyproject.toml"]
+    paths: [ "requirements/generate_conda_env.py", "conda-env-create.yml", "pyproject.toml"]
   schedule: # Run on the 1st of every month at midnight
     - cron: "0 0 1 * *"
 

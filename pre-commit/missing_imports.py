@@ -35,12 +35,7 @@ KNOWN_ALIASES = {
     "ipython": ["IPython"],
 }
 
-REQUIREMENTS_FILES = (
-    "requirements/requirements.conda.yml",
-    "requirements/requirements.dev.conda.yml",
-    "requirements/requirements.win64.conda.yml",
-    "setup.py",
-)
+REQUIREMENTS_FILES = ("setup.py",)
 
 
 def find_source_files(base_dir: Path) -> list[Path]:
