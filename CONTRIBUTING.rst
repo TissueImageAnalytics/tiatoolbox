@@ -58,9 +58,15 @@ Ready to contribute? Here's how to set up ``tiatoolbox`` for local development.
 
     $ git clone git@github.com:your_name_here/tiatoolbox.git
 
-3. Set up the development environment. Using ``uv`` (recommended)::
+3. Set up the development environment. Using ``conda``::
 
     $ cd tiatoolbox/
+    $ conda create -n tiatoolbox-dev python=3.11
+    $ conda activate tiatoolbox-dev
+    $ pip install -e ".[dev]"
+
+   Alternatively, using ``uv``::
+
     $ uv sync --extra dev
 
    This creates a ``.venv`` directory with Python 3.11 and all development
@@ -72,16 +78,6 @@ Ready to contribute? Here's how to set up ``tiatoolbox`` for local development.
    For CPU-only machines (no CUDA GPU)::
 
     $ uv sync --extra dev --index pytorch-cpu=https://download.pytorch.org/whl/cpu
-
-   Alternatively, using ``virtualenvwrapper``::
-
-    $ mkvirtualenv tiatoolbox
-    $ pip install -e ".[dev]"
-
-   Or using ``conda`` (see ``requirements/*.conda.yml`` for platform-specific files)::
-
-    $ conda env create -f requirements/requirements.dev.conda.yml
-    $ conda activate tiatoolbox-dev
 
 4. Create a branch for local development::
 
