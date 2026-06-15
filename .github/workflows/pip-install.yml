@@ -3,7 +3,6 @@ name: pip Install
 on:
   push:
     paths:
-      - "requirements*.yml"
       - "conda-env-create.yml"
       - "setup*py"
       - "setup*cfg"
@@ -12,7 +11,6 @@ on:
       - ".github/workflows/pip-install.yml"
   pull_request:
     paths:
-      - "requirements*.yml"
       - "conda-env-create.yml"
       - "setup*py"
       - "setup*cfg"
