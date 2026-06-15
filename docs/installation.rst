@@ -118,23 +118,24 @@ An alternate way to install using conda on Windows could be to install it in `WS
 Using uv
 --------
 
-`uv <https://docs.astral.sh/uv/>`_ is a Python package and project manager. First, install uv:
-
-.. code-block:: console
-
-    $ curl -LsSf https://astral.sh/uv/install.sh | sh
-
-or via pip:
-
-.. code-block:: console
-
-    $ pip install uv
+`uv <https://docs.astral.sh/uv/>`_ is a Python package and project manager. First, install uv by following the `official installation guide <https://docs.astral.sh/uv/getting-started/installation/#installing-uv>`_ for your platform (macOS, Linux, and Windows).
 
 **End-user installation**
 
+Create a virtual environment and install the latest stable release from PyPI:
+
 .. code-block:: console
 
+    $ uv venv
+    $ source .venv/bin/activate   # Linux/macOS
+    $ .venv\Scripts\activate      # Windows
     $ uv pip install tiatoolbox
+
+To upgrade an existing installation to the latest stable release:
+
+.. code-block:: console
+
+    $ uv pip install --upgrade tiatoolbox
 
 **Development setup (from source)**
 
