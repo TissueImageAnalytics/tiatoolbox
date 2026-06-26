@@ -3981,7 +3981,7 @@ class DaskDelayedJSONStore:
         # Enumerate class_dict keys to assign stable integer color indices
         class_keys = list(class_dict.keys())
         num_classes = len(class_keys)
-        cmap = plt.cm.get_cmap("tab20", num_classes)
+        cmap = plt.colormaps["tab20"].resampled(num_classes)
 
         class_colors = {
             key: [

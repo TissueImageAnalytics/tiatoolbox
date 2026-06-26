@@ -1,5 +1,38 @@
 # History
 
+## TIAToolbox v2.1.2 (2026-06-12)
+
+### 🐞 Bug Fixes and Other Changes
+
+- Fix errors due to changes in matplotlib colormaps API (#1081)
+- Fix semantic segmentor JSON output (#1082)
+
+### 🛠️ Development-Related Changes
+
+- Add `albucore` dependency for conda build (#1081)
+- Update minimum requirement for `matplotlib` to `3.10.0`
+
+______________________________________________________________________
+
+## TIAToolbox v2.1.1 (2026-06-10)
+
+### 🐞 Bug Fixes and Other Changes
+
+- Fix errors while running engines on an `mps` device (#1073)
+- Fix `pre-trained.yaml` typos and errors (#1069)
+- Fix WSI reading on Windows (#1076)
+- Fix `multi-gpu` run error (#1074)
+- Fix broken margin behaviour while generating output using semantic segmentor and multi-task segmentor (#1067).
+
+### 🛠️ Development-Related Changes
+
+- Add and update Python 3.14 docker image (#1066)
+- Pin `sphinx>=9.0.0` (#1050)
+- Update `ruff` versions to `0.15.15` (#1072)
+- Update `conda-resolve` workflow (#1077)
+
+______________________________________________________________________
+
 ## TIAToolbox v2.1.0 (2026-05-19)
 
 ### ✨ Major Updates and Feature Improvements
