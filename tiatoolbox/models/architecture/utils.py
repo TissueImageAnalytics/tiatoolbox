@@ -15,7 +15,11 @@ from torch import nn
 from tiatoolbox import logger
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Sequence
+
     from tiatoolbox.models.models_abc import ModelABC
+
+DEFAULT_IN_CHANNELS = 3
 
 
 def is_torch_compile_compatible() -> bool:
@@ -307,6 +311,115 @@ class SegmentationHead(nn.Sequential):
         super().__init__(conv2d, upsampling_layer, activation)
 
 
+class Conv2dReLU(nn.Sequential):
+    """Conv2d + BatchNorm + ReLU block."""
+
+    def __init__(
+        self: Conv2dReLU,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        padding: int = 0,
+        stride: int = 1,
+        *,
+        bias: bool = False,
+        batch_norm_eps: float = 1e-5,
+        batch_norm_momentum: float = 0.1,
+    ) -> None:
+        """Initialize Conv2dReLU block.
+
+        Args:
+            in_channels (int):
+                Number of input channels.
+            out_channels (int):
+                Number of output channels.
+            kernel_size (int):
+                Convolution kernel size.
+            padding (int):
+                Padding applied to the input.
+            stride (int):
+                Convolution stride.
+            bias (bool):
+                If `True`, adds a learnable bias to the convolution output.
+            batch_norm_eps (float):
+                Epsilon value for batch normalization.
+            batch_norm_momentum (float):
+                Momentum value for batch normalization.
+
+        """
+        super().__init__(
+            nn.Conv2d(
+                in_channels,
+                out_channels,
+                kernel_size,
+                stride=stride,
+                padding=padding,
+                bias=bias,
+            ),
+            nn.BatchNorm2d(
+                out_channels,
+                eps=batch_norm_eps,
+                momentum=batch_norm_momentum,
+            ),
+            nn.ReLU(inplace=True),
+        )
+
+
+class EncoderMixin:
+    """Mixin class adding encoder-specific functionality."""
+
+    _is_torch_scriptable = True
+    _is_torch_exportable = True
+    _is_torch_compilable = True
+
+    def __init__(self) -> None:
+        """Initialize EncoderMixin defaults."""
+        self._depth = 5
+        self._in_channels = 3
+        self._output_stride = 32
+        self._out_channels: list[int] = []
+
+    @property
+    def out_channels(self) -> list[int]:
+        """Return channels dimensions for each tensor of forward output of encoder."""
+        return self._out_channels[: self._depth + 1]
+
+    @property
+    def output_stride(self) -> int:
+        """Return the effective output stride of the encoder."""
+        return min(self._output_stride, 2**self._depth)
+
+    def set_in_channels(self, in_channels: int, *, pretrained: bool = True) -> None:
+        """Change first convolution channels."""
+        if in_channels == DEFAULT_IN_CHANNELS:
+            return
+
+        self._in_channels = in_channels
+        if self._out_channels[0] == DEFAULT_IN_CHANNELS:
+            self._out_channels = [in_channels, *self._out_channels[1:]]
+
+        patch_first_conv(model=self, new_in_channels=in_channels, pretrained=pretrained)  # type: ignore[arg-type]
+
+    def get_stages(self) -> dict[int, Sequence[torch.nn.Module]]:
+        """Return encoder stages for dilation modification."""
+        raise NotImplementedError
+
+    def make_dilated(self, output_stride: int) -> None:
+        """Convert encoder to a dilated version for segmentation."""
+        if output_stride not in [8, 16]:
+            msg = f"Output stride should be 16 or 8, got {output_stride}."
+            raise ValueError(msg)
+
+        stages = self.get_stages()
+        for stage_stride, stage_modules in stages.items():
+            if stage_stride <= output_stride:
+                continue
+
+            dilation_rate = stage_stride // output_stride
+            for module in stage_modules:
+                replace_strides_with_dilation(module, dilation_rate)
+
+
 class AttentionModule(nn.Module):
     """Attention module to apply attention mechanism on feature maps."""
 
@@ -545,3 +658,103 @@ def nms_on_detection_maps(
 
     # Apply mask
     return np.where(keep_mask, detection_maps, 0)
+
+
+def replace_strides_with_dilation(module: nn.Module, dilation_rate: int) -> None:
+    """Replace strides with dilation in Conv2d layers.
+
+    Converts convolutional layers to use dilation instead of stride, enabling
+    atrous convolutions for semantic segmentation tasks.
+
+    Args:
+        module (nn.Module):
+            Module containing Conv2d layers to patch.
+        dilation_rate (int):
+            Dilation rate to apply to all Conv2d layers.
+
+    Example:
+        >>> replace_strides_with_dilation(model, dilation_rate=2)
+
+    """
+    for mod in module.modules():
+        if isinstance(mod, nn.Conv2d):
+            mod.stride = (1, 1)
+            mod.dilation = (dilation_rate, dilation_rate)
+            kh, _ = mod.kernel_size
+            mod.padding = ((kh // 2) * dilation_rate, (kh // 2) * dilation_rate)
+
+            # Workaround for EfficientNet
+            if hasattr(mod, "static_padding"):
+                mod.static_padding = nn.Identity()  # type: ignore[attr-defined]
+
+
+def patch_first_conv(
+    model: nn.Module,
+    new_in_channels: int,
+    default_in_channels: int = 3,
+    *,
+    pretrained: bool = True,
+) -> None:
+    """Update the first convolution layer for a new input channel size.
+
+    This function updates the first convolutional layer of a model to handle
+    arbitrary input channels. It optionally reuses pretrained weights or
+    initializes weights randomly.
+
+    Args:
+        model (nn.Module):
+            The neural network model whose first convolution layer will be patched.
+        new_in_channels (int):
+            Number of input channels for the new first layer.
+        default_in_channels (int):
+            Original number of input channels. Defaults to 3.
+        pretrained (bool):
+            Whether to reuse pretrained weights. Defaults to True.
+
+    Notes:
+        - If `new_in_channels` == 1 or 2 → reuse original weights.
+        - If `new_in_channels` > 3 → initialize weights using Kaiming normal.
+
+    Example:
+        >>> patch_first_conv(model, new_in_channels=1, pretrained=True)
+
+    """
+    # get first conv
+    conv_module: nn.Conv2d | None = None
+    for module in model.modules():
+        if isinstance(module, nn.Conv2d) and module.in_channels == default_in_channels:
+            conv_module = module
+            break
+
+    if conv_module is None:
+        return
+
+    weight = conv_module.weight.detach()
+    conv_module.in_channels = new_in_channels
+
+    if not pretrained:
+        conv_module.weight = nn.parameter.Parameter(
+            torch.Tensor(
+                conv_module.out_channels,
+                new_in_channels // conv_module.groups,
+                *conv_module.kernel_size,
+            )
+        )
+        conv_module.reset_parameters()
+
+    elif new_in_channels == 1:
+        new_weight = weight.sum(1, keepdim=True)
+        conv_module.weight = nn.parameter.Parameter(new_weight)
+
+    else:
+        new_weight = torch.Tensor(
+            conv_module.out_channels,
+            new_in_channels // conv_module.groups,
+            *conv_module.kernel_size,
+        )
+
+        for i in range(new_in_channels):
+            new_weight[:, i] = weight[:, i % default_in_channels]
+
+        new_weight = new_weight * (default_in_channels / new_in_channels)
+        conv_module.weight = nn.parameter.Parameter(new_weight)
