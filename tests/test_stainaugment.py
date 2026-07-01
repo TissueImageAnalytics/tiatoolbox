@@ -1,5 +1,7 @@
 """Test for stain augmentation code."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 import numpy as np
@@ -56,3 +58,36 @@ def test_stainaugment(source_image: Path, norm_vahadane: Path) -> None:
 
     # Should match vahadane normalized image
     assert np.mean(np.abs(vahadane_img / 255.0 - source_img_aug / 255.0)) < 1e-1
+
+
+def test_call_returns_original_image_when_probability_check_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test StainAugmentor class when probability > 0.5."""
+
+    class FakeRNG:
+        """Fake random number generator."""
+
+        def random(self: FakeRNG) -> float:
+            """Fake random mimics np.random.default_rng().random()."""
+            return 0.9
+
+    img = np.zeros((10, 10, 3), dtype=np.uint8)
+
+    augmentor = StainAugmentor(p=0.5)
+
+    monkeypatch.setattr(augmentor, "rng", FakeRNG())
+
+    fit_called = False
+
+    def mock_fit(x: np.ndarray) -> None:
+        nonlocal fit_called
+        fit_called = True
+        augmentor._original_img = x
+
+    monkeypatch.setattr(augmentor, "fit", mock_fit)
+
+    result = augmentor(img)
+
+    assert fit_called
+    assert result is img
