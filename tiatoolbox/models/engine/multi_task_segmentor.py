@@ -149,7 +149,7 @@ from tiatoolbox.utils.misc import (
     tqdm_dask_progress_bar,
     update_tqdm_desc,
 )
-from tiatoolbox.wsicore.wsireader import is_zarr
+from tiatoolbox.wsicore.wsireader.base import is_zarr
 
 from .semantic_segmentor import (
     SemanticSegmentor,

@@ -17,7 +17,7 @@ from typing import Any
 
 from tifffile import TiffFile, tiff2fsspec
 
-from tiatoolbox.wsicore.wsireader import TIFFWSIReaderDelegate
+from tiatoolbox.wsicore.wsireader.base import TIFFWSIReaderDelegate
 
 # Constants
 EXPECTED_KEY_VALUE_PAIRS = 2
