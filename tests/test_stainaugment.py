@@ -68,7 +68,7 @@ def test_call_returns_original_image_when_probability_check_fails(
     class FakeRNG:
         """Fake random number generator."""
 
-        def random(self: FakeRNG) -> float:
+        def random(self: FakeRNG) -> float:  # skipcq: PYL-R0201
             """Fake random mimics np.random.default_rng().random()."""
             return 0.9
 
