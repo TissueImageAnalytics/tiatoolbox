@@ -81,6 +81,7 @@ def test_call_returns_original_image_when_probability_check_fails(
     fit_called = False
 
     def mock_fit(x: np.ndarray) -> None:
+        """Mock fit function."""
         nonlocal fit_called
         fit_called = True
         augmentor._original_img = x
