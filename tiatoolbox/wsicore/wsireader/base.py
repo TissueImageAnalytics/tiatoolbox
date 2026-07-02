@@ -392,8 +392,8 @@ class WSIReader:
             >>> from tiatoolbox.wsicore.wsireader import WSIReader
             >>> wsi = WSIReader.open(input_img="./sample.svs")
 
-        When working with multi-channel images such as immunofluorescence,
-        the default behaviour when post_proc is set to "auto" is to convert
+        When working with multichannel images such as immunofluorescence,
+        the default behavior when post_proc is set to "auto" is to convert
         the output to RGB when reading from the slide. If you need the raw
         channel outputs, set post_proc to None:
 
@@ -418,7 +418,7 @@ class WSIReader:
         if isinstance(input_img, WSIReader):
             return input_img
 
-        # Input is a string or Path, normalise to Path
+        # Input is a string or Path, normalize to Path
         # UPath preserves s3 paths on Windows
         input_path = UPath(input_img)
         WSIReader.verify_supported_wsi(input_path, **kwargs)
@@ -3733,7 +3733,7 @@ class ArrayView:
     """
 
     def __init__(self: ArrayView, array: zarr.Array, axes: str) -> None:
-        """Initialise the view object.
+        """Initialize the view object.
 
         Args:
             array (zarr.Array):
@@ -4418,8 +4418,8 @@ class FsspecJsonWSIReader(WSIReader):
     that be accessed using byte range HTTP API.
 
     All the information on the chunk locations in the SVS or TIFF file
-    is outlined as byte-ranges in the JSON,
-    so the reader requests only chunks that are needed to display requested tiles,
+    is outlined as byte-ranges in the JSON. This ensures that the reader
+    requests only chunks that are needed to display requested tiles,
     rather than the entire SVS or TIFF file.
 
     """
@@ -6341,7 +6341,7 @@ class AnnotationStoreReader(WSIReader):
             If no source of metadata is found, will raise an error.
         renderer (AnnotationRenderer):
             Renderer to use for rendering annotations. Providing a renderer
-            allows for customisation of the rendering process. If not provided,
+            allows for customization of the rendering process. If not provided,
             a sensible default will be created.
         base_wsi (WSIReader | str):
             Base WSI reader or path to use for reading the base WSI. Annotations
@@ -7186,8 +7186,8 @@ class TransformedWSIReader(WSIReader):
     ) -> tuple[tuple[int, int], tuple[int, int]]:
         """Get corresponding location on unregistered image and the required patch size.
 
-        This function applies inverse transformation to the centre point of the region.
-        The transformed centre point is used to obtain the transformed top left pixel
+        This function applies inverse transformation to the center point of the region.
+        The transformed center point is used to obtain the transformed top left pixel
         of the region.
 
         Args:
