@@ -98,6 +98,51 @@ def test_estimate_affine_transform_recovery() -> None:
     np.testing.assert_allclose(output, expected, atol=1e-6)
 
 
+def test_register_improved_dice_branch(
+    monkeypatch: pytest.MonkeyPatch,
+    fixed_image: Path,
+    moving_image: Path,
+    fixed_mask: Path,
+    moving_mask: Path,
+) -> None:
+    """Cover branch where after_dice > before_dice."""
+    fixed_img = imread(fixed_image)
+    moving_img = imread(moving_image)
+    fixed_msk = imread(fixed_mask)
+    moving_msk = imread(moving_mask)
+
+    dfbr = DFBRegister()
+
+    call_count = 0
+
+    def mock_dice(*args, **kwargs) -> float:  # noqa: ANN002, ARG001, ANN003
+        nonlocal call_count
+        call_count += 1
+
+        # before_dice
+        if call_count == 1:
+            return 0.5
+
+        # after_dice and any further calls
+        return 0.9
+
+    monkeypatch.setattr(
+        "tiatoolbox.tools.registration.wsi_registration.dice",
+        mock_dice,
+    )
+
+    transform = dfbr.register(
+        fixed_img,
+        moving_img,
+        fixed_msk,
+        moving_msk,
+        transform_initializer=np.eye(3),
+    )
+
+    assert transform.shape == (3, 3)
+    assert call_count >= 2
+
+
 def test_dfbr_features() -> None:
     """Test for feature input to feature_mapping function."""
     dfbr = DFBRegister()
