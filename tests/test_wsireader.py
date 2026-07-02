@@ -4131,7 +4131,7 @@ def test_wsireader_read_with_different_interpolations(sample_svs: Path) -> None:
     location = (100, 100)
     size = (50, 50)
 
-    interpolation_methods = ["linear", "cubic", "lanczos", "area", "optimise"]
+    interpolation_methods = ["linear", "cubic", "lanczos", "area", "optimize"]
 
     for method in interpolation_methods:
         region = wsi.read_rect(location=location, size=size, interpolation=method)
@@ -4188,7 +4188,7 @@ def test_virtualwsireader_bool_mode_interpolation() -> None:
         bounds=(0, 0, 50, 50),
         resolution=0.5,
         units="baseline",
-        interpolation="optimise",  # Should be overridden to "nearest"
+        interpolation="optimize",  # Should be overridden to "nearest"
     )
     assert isinstance(region, np.ndarray)
     # Values should still be 0 or 1 (or close) due to nearest interpolation

@@ -1361,7 +1361,7 @@ class WSIReader:
         size: NumPair,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: Number | Iterable[NumPair] = 0,
         **kwargs: dict,
@@ -1393,7 +1393,7 @@ class WSIReader:
         size: IntPair,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | tuple[int, int] = 0,
         coord_space: str = "baseline",
@@ -1436,7 +1436,7 @@ class WSIReader:
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -1586,7 +1586,7 @@ class WSIReader:
         bounds: Bounds,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: Number | Iterable[NumPair] = 0,
         coord_space: str = "baseline",
@@ -1630,7 +1630,7 @@ class WSIReader:
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -2035,7 +2035,7 @@ class OpenSlideWSIReader(WSIReader):
         size: IntPair,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -2078,7 +2078,7 @@ class OpenSlideWSIReader(WSIReader):
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -2278,7 +2278,7 @@ class OpenSlideWSIReader(WSIReader):
         bounds: IntPair,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -2322,7 +2322,7 @@ class OpenSlideWSIReader(WSIReader):
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -2575,7 +2575,7 @@ class JP2WSIReader(WSIReader):
         size: IntPair,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -2618,7 +2618,7 @@ class JP2WSIReader(WSIReader):
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -2816,7 +2816,7 @@ class JP2WSIReader(WSIReader):
         bounds: IntBounds,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -2860,7 +2860,7 @@ class JP2WSIReader(WSIReader):
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -3303,7 +3303,7 @@ class VirtualWSIReader(WSIReader):
         size: IntPair,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -3346,7 +3346,7 @@ class VirtualWSIReader(WSIReader):
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -3547,7 +3547,7 @@ class VirtualWSIReader(WSIReader):
         bounds: IntBounds,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -3591,7 +3591,7 @@ class VirtualWSIReader(WSIReader):
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -3688,7 +3688,7 @@ class VirtualWSIReader(WSIReader):
         if interpolation in [None, "none"]:
             interpolation = None
 
-        if interpolation == "optimise" and self.mode == "bool":
+        if interpolation == "optimize" and self.mode == "bool":
             interpolation = "nearest"
 
         im_region = utils.image.sub_pixel_read(
@@ -4368,7 +4368,7 @@ class TIFFWSIReader(WSIReader):
         size: IntPair,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -4392,7 +4392,7 @@ class TIFFWSIReader(WSIReader):
         bounds: IntBounds,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -4609,7 +4609,7 @@ class FsspecJsonWSIReader(WSIReader):
         size: IntPair,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -4633,7 +4633,7 @@ class FsspecJsonWSIReader(WSIReader):
         bounds: IntBounds,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -4783,7 +4783,7 @@ class TIFFWSIReaderDelegate:
         size: IntPair,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -4826,7 +4826,7 @@ class TIFFWSIReaderDelegate:
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -5023,7 +5023,7 @@ class TIFFWSIReaderDelegate:
         bounds: IntBounds,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -5067,7 +5067,7 @@ class TIFFWSIReaderDelegate:
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -5301,7 +5301,7 @@ class DICOMWSIReader(WSIReader):
         size: IntPair,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -5344,7 +5344,7 @@ class DICOMWSIReader(WSIReader):
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -5569,7 +5569,7 @@ class DICOMWSIReader(WSIReader):
         bounds: IntBounds,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -5613,7 +5613,7 @@ class DICOMWSIReader(WSIReader):
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -5911,7 +5911,7 @@ class NGFFWSIReader(WSIReader):
         size: IntPair,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -5954,7 +5954,7 @@ class NGFFWSIReader(WSIReader):
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -6150,7 +6150,7 @@ class NGFFWSIReader(WSIReader):
         bounds: IntBounds,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -6194,7 +6194,7 @@ class NGFFWSIReader(WSIReader):
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -6411,7 +6411,7 @@ class AnnotationStoreReader(WSIReader):
         size: IntPair,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | tuple[int, int] = 0,
         coord_space: str = "baseline",
@@ -6457,7 +6457,7 @@ class AnnotationStoreReader(WSIReader):
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -6705,7 +6705,7 @@ class AnnotationStoreReader(WSIReader):
         bounds: IntBounds,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | tuple[int, int] = 0,
         coord_space: str = "baseline",
@@ -6752,7 +6752,7 @@ class AnnotationStoreReader(WSIReader):
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -7345,7 +7345,7 @@ class TransformedWSIReader(WSIReader):
         size: IntPair,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -7379,7 +7379,7 @@ class TransformedWSIReader(WSIReader):
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
@@ -7508,7 +7508,7 @@ class TransformedWSIReader(WSIReader):
         bounds: Bounds,
         resolution: Resolution = 0,
         units: Units = "level",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         pad_mode: str = "constant",
         pad_constant_values: int | IntPair = 0,
         coord_space: str = "baseline",
@@ -7557,7 +7557,7 @@ class TransformedWSIReader(WSIReader):
             interpolation (str):
                 Method to use when resampling the output image. Possible
                 values are "linear", "cubic", "lanczos", "area", and
-                "optimise". Defaults to 'optimise' which will use cubic
+                "optimize". Defaults to 'optimize' which will use cubic
                 interpolation for upscaling and area interpolation for
                 downscaling to avoid moiré patterns.
             pad_mode (str):
