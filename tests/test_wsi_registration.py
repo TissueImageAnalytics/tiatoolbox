@@ -73,6 +73,31 @@ def test_feature_mapping(fixed_image: Path) -> None:
     assert np.median(dist) < 5
 
 
+def test_estimate_affine_transform_recovery() -> None:
+    """Test estimate affine transform recovery function."""
+    rng = np.random.default_rng(42)
+
+    fixed_points = rng.uniform(0, 1000, size=(200, 2))
+
+    expected = np.array(
+        [
+            [0.98, -0.01, 5.0],
+            [0.02, 1.01, 10.0],
+            [0.0, 0.0, 1.0],
+        ]
+    )
+
+    x = np.hstack([fixed_points, np.ones((len(fixed_points), 1))])
+    moving_points = (expected @ x.T).T[:, :2]
+
+    output = DFBRegister.estimate_affine_transform(
+        fixed_points,
+        moving_points,
+    )
+
+    np.testing.assert_allclose(output, expected, atol=1e-6)
+
+
 def test_dfbr_features() -> None:
     """Test for feature input to feature_mapping function."""
     dfbr = DFBRegister()
