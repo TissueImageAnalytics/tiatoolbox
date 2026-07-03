@@ -11,6 +11,9 @@ import pytest
 from defusedxml import ElementTree
 from PIL import Image
 
+from tiatoolbox.wsicore.wsireader import factory
+from tiatoolbox.wsicore.wsireader.factory import try_tiff
+
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
@@ -144,17 +147,27 @@ def test_tiffreader_fallback_to_virtual(
             error_msg = "Unsupported TIFF WSI format"
             raise ValueError(error_msg)
 
-    monkeypatch.setattr(wsireader, "TIFFWSIReader", DummyTIFFWSIReader)
+    def raise_unsupported(*args, **kwargs) -> None:  # noqa: ARG001, ANN002, ANN003
+        msg = "Unsupported TIFF WSI format"
+        raise ValueError(msg)
+
+    monkeypatch.setattr(
+        factory,
+        "_handle_tiff_wsi",
+        raise_unsupported,
+    )
+
+    monkeypatch.setattr(factory, "TIFFWSIReader", DummyTIFFWSIReader)
 
     dummy_file = track_tmp_path / "dummy.tiff"
     dummy_img = np.zeros((10, 10, 3), dtype=np.uint8)
     cv2.imwrite(str(dummy_file), dummy_img)
 
-    reader = wsireader.WSIReader.try_tiff(dummy_file, ".tiff", None, None, None)
+    reader = try_tiff(dummy_file, ".tiff", None, None, None)
     assert isinstance(reader, wsireader.VirtualWSIReader)
 
 
-def test_try_tiff_raises_other_valueerror(
+def test_try_tiff_raises_other_value_error(
     monkeypatch: pytest.MonkeyPatch, track_tmp_path: Path
 ) -> None:
     """Test try_tiff raises ValueError if not an unsupported TIFF format."""
@@ -162,7 +175,7 @@ def test_try_tiff_raises_other_valueerror(
     Image.new("RGB", (10, 10), color="white").save(tiff_path)
 
     # Patch TIFFWSIReader to raise a different ValueError
-    def raise_other_valueerror(*args: object, **kwargs: object) -> None:
+    def raise_other_value_error(*args: object, **kwargs: object) -> None:
         """Raise a ValueError emulating a non-unsupported TIFF error.
 
         This helper is patched in tests to ensure that `WSIReader.try_tiff`
@@ -174,10 +187,14 @@ def test_try_tiff_raises_other_valueerror(
         msg = "Some other TIFF error"
         raise ValueError(msg)
 
-    monkeypatch.setattr(wsireader.base, "TIFFWSIReader", raise_other_valueerror)
+    monkeypatch.setattr(
+        factory,
+        "_handle_tiff_wsi",
+        raise_other_value_error,
+    )
 
     with pytest.raises(ValueError, match="Some other TIFF error"):
-        wsireader.WSIReader.try_tiff(
+        try_tiff(
             input_path=tiff_path,
             last_suffix=".tiff",
             mpp=(0.5, 0.5),
