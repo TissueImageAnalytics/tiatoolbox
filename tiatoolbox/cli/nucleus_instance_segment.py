@@ -110,6 +110,7 @@ def nucleus_instance_segment(
     )
 
     class_dict = dict(class_dict) if class_dict else None
+    return_predictions = return_predictions or (False,)
     files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,
         output_path=output_path,
