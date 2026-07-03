@@ -21,7 +21,7 @@ from .base import (
     OpenSlideWSIReader,
     TIFFWSIReader,
     VirtualWSIReader,
-    WSIReader,
+    WSIReader,  # skipcq: PYL-R0401
     _handle_tiff_wsi,
     _handle_virtual_wsi,
     fix_mangled_url_by_pathlib,
