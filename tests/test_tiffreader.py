@@ -148,6 +148,7 @@ def test_tiffreader_fallback_to_virtual(
             raise ValueError(error_msg)
 
     def raise_unsupported(*args, **kwargs) -> None:  # noqa: ARG001, ANN002, ANN003
+        """Help raise unsupported TIFF formats error."""
         msg = "Unsupported TIFF WSI format"
         raise ValueError(msg)
 

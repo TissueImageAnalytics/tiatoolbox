@@ -239,7 +239,7 @@ class WSIReader:
             (100, 100, 5)  # raw channel outputs
 
         """
-        from .factory import open_wsi  # noqa: PLC0415
+        from .factory import open_wsi  # skipcq: PYL-R0401  # noqa: PLC0415
 
         return open_wsi(input_img, mpp, power, post_proc, **kwargs)
 
