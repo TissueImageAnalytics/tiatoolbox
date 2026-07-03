@@ -63,6 +63,7 @@ from tiatoolbox.wsicore.wsireader import (
 from tiatoolbox.wsicore.wsireader.detection import is_valid_zarr_fsspec
 from tiatoolbox.wsicore.wsireader.factory import (
     _handle_special_cases,
+    _validate_input,
     try_annotation_store,
     try_dicom,
     try_fsspec,
@@ -3458,16 +3459,16 @@ def test_read_bounds_transformedreader_baseline(
 def test_wsireader_validate_input_edge_cases() -> None:
     """Test WSIReader._validate_input with various edge cases."""
     # Test with valid inputs
-    WSIReader._validate_input("test.svs")
-    WSIReader._validate_input(Path("test.svs"))
-    WSIReader._validate_input(np.array([1, 2, 3]))
+    _validate_input("test.svs")
+    _validate_input(Path("test.svs"))
+    _validate_input(np.array([1, 2, 3]))
 
     # Test with invalid inputs
     with pytest.raises(TypeError, match="Invalid input"):
-        WSIReader._validate_input(123)
+        _validate_input(123)
 
     with pytest.raises(TypeError, match="Invalid input"):
-        WSIReader._validate_input({"invalid": "dict"})
+        _validate_input({"invalid": "dict"})
 
 
 def test_wsireader_verify_supported_wsi_edge_cases(track_tmp_path: Path) -> None:
