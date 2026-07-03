@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 from unittest.mock import MagicMock
 
 from tiatoolbox.wsicore import wsireader
+from tiatoolbox.wsicore.wsireader import tiff
 
 
 def test_ome_missing_instrument_ref(
@@ -154,7 +155,7 @@ def test_tiffreader_fallback_to_virtual(
     assert isinstance(reader, wsireader.VirtualWSIReader)
 
 
-def test_try_tiff_raises_other_valueerror(
+def test_try_tiff_raises_other_value_error(
     monkeypatch: pytest.MonkeyPatch, track_tmp_path: Path
 ) -> None:
     """Test try_tiff raises ValueError if not an unsupported TIFF format."""
@@ -174,7 +175,7 @@ def test_try_tiff_raises_other_valueerror(
         msg = "Some other TIFF error"
         raise ValueError(msg)
 
-    monkeypatch.setattr(wsireader, "TIFFWSIReader", raise_other_valueerror)
+    monkeypatch.setattr(tiff, "TIFFWSIReader", raise_other_valueerror)
 
     with pytest.raises(ValueError, match="Some other TIFF error"):
         wsireader.WSIReader.try_tiff(
@@ -619,11 +620,11 @@ def test_handle_tiff_wsi_returns_tiff_reader(
     image.save(tiff_path)
 
     # Patch is_tiled_tiff to return True
-    monkeypatch.setattr(wsireader, "is_tiled_tiff", lambda _: True)
+    monkeypatch.setattr(wsireader.base, "is_tiled_tiff", lambda _: True)
 
     # Patch TIFFWSIReader.__init__ to bypass internal checks
     with patch(
-        "tiatoolbox.wsicore.wsireader.TIFFWSIReader.__init__", return_value=None
+        "tiatoolbox.wsicore.wsireader.tiff.TIFFWSIReader.__init__", return_value=None
     ):
         reader = wsireader._handle_tiff_wsi(
             input_path=tiff_path,
@@ -639,7 +640,7 @@ def raise_openslide_error(*args: object, **kwargs: object) -> None:
     _ = args
     _ = kwargs
     msg = "mock error"
-    raise wsireader.openslide.OpenSlideError(msg)
+    raise wsireader.openslide.openslide.OpenSlideError(msg)
 
 
 def test_handle_tiff_wsi_openslide_error(
@@ -651,19 +652,23 @@ def test_handle_tiff_wsi_openslide_error(
     Image.new("RGB", (10, 10), color="white").save(tiff_path)
 
     # Patch detect_format to return a non-None value
-    monkeypatch.setattr(wsireader.openslide.OpenSlide, "detect_format", lambda _: "SVS")
+    monkeypatch.setattr(
+        wsireader.openslide.openslide.OpenSlide, "detect_format", lambda _: "SVS"
+    )
 
     # Patch OpenSlideWSIReader to raise OpenSlideError
-    monkeypatch.setattr(wsireader, "OpenSlideWSIReader", raise_openslide_error)
+    monkeypatch.setattr(
+        wsireader.openslide, "OpenSlideWSIReader", raise_openslide_error
+    )
 
     # Patch is_tiled_tiff to return True so fallback to TIFFWSIReader is triggered
-    monkeypatch.setattr(wsireader, "is_tiled_tiff", lambda _: True)
+    monkeypatch.setattr(wsireader.base, "is_tiled_tiff", lambda _: True)
 
     # Patch TIFFWSIReader.__init__ to bypass internal checks
     with patch(
-        "tiatoolbox.wsicore.wsireader.TIFFWSIReader.__init__", return_value=None
+        "tiatoolbox.wsicore.wsireader.tiff.TIFFWSIReader.__init__", return_value=None
     ):
-        result = wsireader._handle_tiff_wsi(
+        result = wsireader.base._handle_tiff_wsi(
             input_path=tiff_path,
             mpp=(0.5, 0.5),
             power=20.0,
@@ -681,7 +686,9 @@ def test_handle_tiff_wsi_openslide_success(
     Image.new("RGB", (10, 10), color="white").save(tiff_path)
 
     # Patch detect_format to return a valid format
-    monkeypatch.setattr(wsireader.openslide.OpenSlide, "detect_format", lambda _: "SVS")
+    monkeypatch.setattr(
+        wsireader.openslide.openslide.OpenSlide, "detect_format", lambda _: "SVS"
+    )
 
     # Patch OpenSlideWSIReader.__init__ to bypass actual init logic
     with patch.object(wsireader.OpenSlideWSIReader, "__init__", return_value=None):
