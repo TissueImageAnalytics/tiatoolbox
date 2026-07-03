@@ -39,10 +39,10 @@ from tiatoolbox.utils.transforms import imresize, locsize2bounds
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore import WSIReader, wsireader
 from tiatoolbox.wsicore.wsimeta import WSIMeta
-from tiatoolbox.wsicore.wsireader import DICOMWSIReader
-from tiatoolbox.wsicore.wsireader.base import (
+from tiatoolbox.wsicore.wsireader import (
     AnnotationStoreReader,
     ArrayView,
+    DICOMWSIReader,
     FsspecJsonWSIReader,
     JP2WSIReader,
     NGFFWSIReader,
@@ -301,7 +301,7 @@ def fsspec_wsi(sample_svs: Path, track_tmp_path: Path) -> FsspecJsonWSIReader:
     final_url = "https://huggingface.co/datasets/TIACentre/TIAToolBox_Remote_Samples/resolve/main/sample_wsis/CMU-1-Small-Region.svs"
     tiff_to_fsspec.main(svs_file_path, json_file_path, final_url)
 
-    _FSSPEC_WSI_CACHE[cache_key] = FsspecJsonWSIReader(json_file_path)
+    _FSSPEC_WSI_CACHE[cache_key] = wsireader.FsspecJsonWSIReader(json_file_path)
     return _FSSPEC_WSI_CACHE[cache_key]
 
 
@@ -347,7 +347,7 @@ def test_wsireader_slide_info(sample_svs: Path, track_tmp_path: Path) -> None:
         input_path=str(Path(sample_svs).parent),
         file_types=file_types,
     )
-    wsi = OpenSlideWSIReader(files_all[0])
+    wsi = wsireader.OpenSlideWSIReader(files_all[0])
     slide_param = wsi.info
     out_path = track_tmp_path / slide_param.file_path.with_suffix(".yaml").name
     utils.misc.save_yaml(slide_param.as_dict(), out_path)
@@ -360,7 +360,7 @@ def test_wsireader_slide_info_cache(sample_svs: Path) -> None:
         input_path=str(Path(sample_svs).parent),
         file_types=file_types,
     )
-    wsi = OpenSlideWSIReader(files_all[0])
+    wsi = wsireader.OpenSlideWSIReader(files_all[0])
     info = wsi.info
     cached_info = wsi.info
     assert info.as_dict() == cached_info.as_dict()
@@ -373,19 +373,19 @@ def test_wsireader_slide_info_cache(sample_svs: Path) -> None:
 
 def test_relative_level_scales_openslide_baseline(sample_ndpi: Path) -> None:
     """Test openslide relative level scales for pixels per baseline pixel."""
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     relative_level_scales_baseline(wsi)
 
 
 def test_relative_level_scales_jp2_baseline(sample_jp2: Path) -> None:
     """Test jp2 relative level scales for pixels per baseline pixel."""
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     relative_level_scales_baseline(wsi)
 
 
 def test_relative_level_scales_openslide_mpp(sample_ndpi: Path) -> None:
     """Test openslide calculation of relative level scales for mpp."""
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     level_scales = wsi.info.relative_level_scales(0.5, "mpp")
     level_scales = np.array(level_scales)
     assert strictly_increasing(level_scales[:, 0])
@@ -395,7 +395,7 @@ def test_relative_level_scales_openslide_mpp(sample_ndpi: Path) -> None:
 
 def test_relative_level_scales_jp2_mpp(sample_jp2: Path) -> None:
     """Test jp2 calculation of relative level scales for mpp."""
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     level_scales = wsi.info.relative_level_scales(0.5, "mpp")
     level_scales = np.array(level_scales)
     assert strictly_increasing(level_scales[:, 0])
@@ -417,13 +417,13 @@ def relative_level_scales_power(wsi: WSIReader) -> None:
 
 def test_relative_level_scales_openslide_power(sample_ndpi: Path) -> None:
     """Test openslide calculation of relative level scales for objective power."""
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     relative_level_scales_power(wsi)
 
 
 def test_relative_level_scales_jp2_power(sample_jp2: Path) -> None:
     """Test jp2 calculation of relative level scales for objective power."""
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     relative_level_scales_power(wsi)
 
 
@@ -440,13 +440,13 @@ def relative_level_scales_level(wsi: WSIReader) -> None:
 
 def test_relative_level_scales_openslide_level(sample_ndpi: Path) -> None:
     """Test openslide calculation of relative level scales for level."""
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     relative_level_scales_level(wsi)
 
 
 def test_relative_level_scales_jp2_level(sample_jp2: Path) -> None:
     """Test jp2 calculation of relative level scales for level."""
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     relative_level_scales_level(wsi)
 
 
@@ -463,19 +463,19 @@ def relative_level_scales_float(wsi: WSIReader) -> None:
 
 def test_relative_level_scales_openslide_level_float(sample_ndpi: Path) -> None:
     """Test openslide calculation of relative level scales for fractional level."""
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     relative_level_scales_float(wsi)
 
 
 def test_relative_level_scales_jp2_level_float(sample_jp2: Path) -> None:
     """Test jp2 calculation of relative level scales for fractional level."""
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     relative_level_scales_float(wsi)
 
 
 def test_relative_level_scales_invalid_units(sample_svs: Path) -> None:
     """Test relative_level_scales with invalid units."""
-    wsi = OpenSlideWSIReader(sample_svs)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs)
     with pytest.raises(ValueError, match="Invalid units"):
         wsi.info.relative_level_scales(1.0, "gibberish")
 
@@ -488,7 +488,7 @@ def test_relative_level_scales_no_mpp() -> None:
 
         @property
         def info(self: DummyWSI) -> WSIMeta:
-            return wsireader.base.WSIMeta((100, 100), axes="YXS")
+            return wsireader.WSIMeta((100, 100), axes="YXS")
 
     wsi = DummyWSI()
     with pytest.raises(ValueError, match="MPP is None"):
@@ -503,7 +503,7 @@ def test_relative_level_scales_no_objective_power() -> None:
 
         @property
         def info(self: DummyWSI) -> WSIMeta:
-            return wsireader.base.WSIMeta((100, 100), axes="YXS")
+            return wsireader.WSIMeta((100, 100), axes="YXS")
 
     wsi = DummyWSI()
     with pytest.raises(ValueError, match="Objective power is None"):
@@ -512,7 +512,7 @@ def test_relative_level_scales_no_objective_power() -> None:
 
 def test_relative_level_scales_level_too_high(sample_svs: Path) -> None:
     """Test relative_level_scales levels set too high."""
-    wsi = OpenSlideWSIReader(sample_svs)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs)
     with pytest.raises(ValueError, match="levels"):
         wsi.info.relative_level_scales(100, "level")
 
@@ -527,7 +527,7 @@ def test_find_optimal_level_and_downsample_openslide_interpolation_warning(
     will be applied to the output. A UserWarning should be raised in this case.
 
     """
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
     assert (
         "Read: Scale > 1.This means that the desired resolution is higher"
@@ -545,7 +545,7 @@ def test_find_optimal_level_and_downsample_jp2_interpolation_warning(
     will be applied to the output. A UserWarning should be raised in this case.
 
     """
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
     assert (
         "Read: Scale > 1.This means that the desired resolution is higher"
@@ -555,7 +555,7 @@ def test_find_optimal_level_and_downsample_jp2_interpolation_warning(
 
 def test_find_optimal_level_and_downsample_mpp(sample_ndpi: Path) -> None:
     """Test finding optimal level for mpp read."""
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
 
     mpps = [0.5, 10]
     expected_levels = [0, 4]
@@ -578,7 +578,7 @@ def test_find_optimal_level_and_downsample_mpp(sample_ndpi: Path) -> None:
 
 def test_find_optimal_level_and_downsample_power(sample_ndpi: Path) -> None:
     """Test finding optimal level for objective power read."""
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
 
     objective_powers = [20, 10, 5, 2.5, 1.25]
     expected_levels = [0, 1, 2, 3, 4]
@@ -601,7 +601,7 @@ def test_find_optimal_level_and_downsample_level(sample_ndpi: Path) -> None:
     the input level.
 
     """
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
 
     for level in range(wsi.info.level_count):
         read_level, post_read_scale_factor = wsi._find_optimal_level_and_downsample(
@@ -681,7 +681,7 @@ def test_convert_resolution_units(
 
 def test_find_read_rect_params_power(sample_ndpi: Path) -> None:
     """Test finding read rect parameters for objective power."""
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
 
     location = NDPI_TEST_TISSUE_LOCATION
     size = NDPI_TEST_TISSUE_SIZE
@@ -702,7 +702,7 @@ def test_find_read_rect_params_power(sample_ndpi: Path) -> None:
 
 def test_find_read_rect_params_mpp(sample_ndpi: Path) -> None:
     """Test finding read rect parameters for objective mpp."""
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
 
     location = NDPI_TEST_TISSUE_LOCATION
     size = NDPI_TEST_TISSUE_SIZE
@@ -727,7 +727,7 @@ def test_read_rect_openslide_baseline(sample_ndpi: Path) -> None:
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     location = NDPI_TEST_TISSUE_LOCATION
     size = NDPI_TEST_TISSUE_SIZE
     im_region = wsi.read_rect(location, size, resolution=0, units="level")
@@ -743,7 +743,7 @@ def test_read_rect_jp2_baseline(sample_jp2: Path) -> None:
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     location = JP2_TEST_TISSUE_LOCATION
     size = JP2_TEST_TISSUE_SIZE
     im_region = wsi.read_rect(location, size, resolution=0, units="level")
@@ -755,7 +755,7 @@ def test_read_rect_jp2_baseline(sample_jp2: Path) -> None:
 
 def test_read_rect_tiffreader_svs_baseline(sample_svs: Path) -> None:
     """Test TIFFWSIReader.read_rect with an SVS file at baseline."""
-    wsi = TIFFWSIReader(sample_svs)
+    wsi = wsireader.TIFFWSIReader(sample_svs)
     location = SVS_TEST_TISSUE_LOCATION
     size = SVS_TEST_TISSUE_SIZE
     im_region = wsi.read_rect(location, size, resolution=0, units="level")
@@ -767,7 +767,7 @@ def test_read_rect_tiffreader_svs_baseline(sample_svs: Path) -> None:
 
 def test_read_rect_tiffreader_ome_tiff_baseline(sample_ome_tiff: Path) -> None:
     """Test TIFFWSIReader.read_rect with an OME-TIFF file at baseline."""
-    wsi = TIFFWSIReader(sample_ome_tiff)
+    wsi = wsireader.TIFFWSIReader(sample_ome_tiff)
     location = SVS_TEST_TISSUE_LOCATION
     size = SVS_TEST_TISSUE_SIZE
     im_region = wsi.read_rect(location, size, resolution=0, units="level")
@@ -780,7 +780,7 @@ def test_read_rect_tiffreader_ome_tiff_baseline(sample_ome_tiff: Path) -> None:
 def test_is_tiled_tiff(source_image: Path) -> None:
     """Test if source_image is a tiled tiff."""
     source_image.replace(source_image.with_suffix(".tiff"))
-    assert is_tiled_tiff(source_image.with_suffix(".tiff")) is False
+    assert wsireader.is_tiled_tiff(source_image.with_suffix(".tiff")) is False
     source_image.with_suffix(".tiff").replace(source_image)
 
 
@@ -792,7 +792,7 @@ def test_is_not_tiled_tiff(tmp_samples_path: Path) -> None:
     with tifffile.TiffWriter(temp_tiff_path) as tif:
         for image in images:
             tif.write(image, compression=None, tile=None)
-    assert is_tiled_tiff(temp_tiff_path) is False
+    assert wsireader.is_tiled_tiff(temp_tiff_path) is False
 
 
 def test_read_rect_openslide_levels(sample_ndpi: Path) -> None:
@@ -801,7 +801,7 @@ def test_read_rect_openslide_levels(sample_ndpi: Path) -> None:
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     location = NDPI_TEST_TISSUE_LOCATION
     size = NDPI_TEST_TISSUE_SIZE
     for level in range(wsi.info.level_count):
@@ -818,7 +818,7 @@ def test_read_rect_jp2_levels(sample_jp2: Path) -> None:
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     location = (0, 0)
     size = JP2_TEST_TISSUE_SIZE
     width, height = size
@@ -861,7 +861,7 @@ def test_read_rect_openslide_mpp(sample_ndpi: Path) -> None:
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     location = NDPI_TEST_TISSUE_LOCATION
     size = NDPI_TEST_TISSUE_SIZE
     read_rect_mpp(wsi, location, size)
@@ -873,7 +873,7 @@ def test_read_rect_jp2_mpp(sample_jp2: Path) -> None:
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     location = JP2_TEST_TISSUE_LOCATION
     size = JP2_TEST_TISSUE_SIZE
     read_rect_mpp(wsi, location, size)
@@ -885,7 +885,7 @@ def test_read_rect_openslide_objective_power(sample_ndpi: Path) -> None:
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     location = NDPI_TEST_TISSUE_LOCATION
     size = NDPI_TEST_TISSUE_SIZE
 
@@ -898,7 +898,7 @@ def test_read_rect_jp2_objective_power(sample_jp2: Path) -> None:
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     location = JP2_TEST_TISSUE_LOCATION
     size = JP2_TEST_TISSUE_SIZE
 
@@ -911,7 +911,7 @@ def test_read_bounds_openslide_baseline(sample_ndpi: Path) -> None:
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     bounds = NDPI_TEST_TISSUE_BOUNDS
     size = NDPI_TEST_TISSUE_SIZE
     im_region = wsi.read_bounds(bounds, resolution=0, units="level")
@@ -927,7 +927,7 @@ def test_read_bounds_jp2_baseline(sample_jp2: Path) -> None:
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
     size = JP2_TEST_TISSUE_SIZE
     im_region = wsi.read_bounds(bounds, resolution=0, units="level")
@@ -943,7 +943,7 @@ def test_read_bounds_openslide_levels(sample_ndpi: Path) -> None:
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     bounds = NDPI_TEST_TISSUE_BOUNDS
     width, height = NDPI_TEST_TISSUE_SIZE
     for level, downsample in enumerate(wsi.info.level_downsamples):
@@ -963,7 +963,7 @@ def test_read_bounds_jp2_levels(sample_jp2: Path) -> None:
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
     width, height = JP2_TEST_TISSUE_SIZE
     for level, downsample in enumerate(wsi.info.level_downsamples):
@@ -984,7 +984,7 @@ def test_read_bounds_openslide_mpp(sample_ndpi: Path) -> None:
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     bounds = NDPI_TEST_TISSUE_BOUNDS
     size = NDPI_TEST_TISSUE_SIZE
 
@@ -997,7 +997,7 @@ def test_read_bounds_jp2_mpp(sample_jp2: Path) -> None:
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
     size = JP2_TEST_TISSUE_SIZE
 
@@ -1010,7 +1010,7 @@ def test_read_bounds_openslide_objective_power(sample_ndpi: Path) -> None:
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     bounds = NDPI_TEST_TISSUE_BOUNDS
     size = NDPI_TEST_TISSUE_SIZE
     slide_power = wsi.info.objective_power
@@ -1024,7 +1024,7 @@ def test_read_bounds_jp2_objective_power(sample_jp2: Path) -> None:
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
     size = JP2_TEST_TISSUE_SIZE
     slide_power = wsi.info.objective_power
@@ -1038,7 +1038,7 @@ def test_read_bounds_interpolated(sample_svs: Path) -> None:
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = OpenSlideWSIReader(sample_svs)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs)
     bounds = SVS_TEST_TISSUE_BOUNDS
     size = SVS_TEST_TISSUE_SIZE
     im_region = wsi.read_bounds(
@@ -1061,7 +1061,7 @@ def test_read_bounds_level_consistency_openslide(sample_ndpi: Path) -> None:
     with OpenSlideWSIReader.
 
     """
-    wsi = OpenSlideWSIReader(sample_ndpi)
+    wsi = wsireader.OpenSlideWSIReader(sample_ndpi)
     bounds = NDPI_TEST_TISSUE_BOUNDS
 
     read_bounds_level_consistency(wsi, bounds)
@@ -1074,7 +1074,7 @@ def test_read_bounds_level_consistency_jp2(sample_jp2: Path) -> None:
 
     """
     bounds = JP2_TEST_TISSUE_BOUNDS
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
 
     read_bounds_level_consistency(wsi, bounds)
 
@@ -1086,7 +1086,7 @@ def test_wsireader_save_tiles(sample_svs: Path, track_tmp_path: Path) -> None:
         input_path=str(Path(sample_svs).parent),
         file_types=file_types,
     )
-    wsi = OpenSlideWSIReader(files_all[0])
+    wsi = wsireader.OpenSlideWSIReader(files_all[0])
     wsi.save_tiles(
         output_dir=str(track_tmp_path / "test_wsireader_save_tiles"),
         tile_objective_value=5,
@@ -1115,7 +1115,7 @@ def test_wsireader_save_tiles(sample_svs: Path, track_tmp_path: Path) -> None:
 
 def test_incompatible_objective_value(sample_svs: Path, track_tmp_path: Path) -> None:
     """Test for incompatible objective value."""
-    wsi = OpenSlideWSIReader(sample_svs)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs)
     with pytest.raises(ValueError, match="objective power"):
         wsi.save_tiles(
             output_dir=str(
@@ -1133,7 +1133,7 @@ def test_incompatible_level(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test for incompatible objective value."""
-    wsi = OpenSlideWSIReader(sample_svs)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs)
     wsi.save_tiles(
         output_dir=str(Path(track_tmp_path).joinpath("test_wsireader_save_tiles2")),
         tile_objective_value=1,
@@ -1146,7 +1146,7 @@ def test_incompatible_level(
 
 def test_wsireader_jp2_save_tiles(sample_jp2: Path, track_tmp_path: Path) -> None:
     """Test for save_tiles in wsireader as a python function."""
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     wsi.save_tiles(
         output_dir=str(track_tmp_path / "test_wsireader_jp2_save_tiles"),
         tile_objective_value=5,
@@ -1178,7 +1178,7 @@ def test_openslide_objective_power_from_mpp(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test OpenSlideWSIReader approximation of objective power from mpp."""
-    wsi = OpenSlideWSIReader(sample_svs)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs)
     wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
     props = wsi.openslide_wsi._properties
 
@@ -1197,7 +1197,7 @@ def test_openslide_mpp_from_tiff_resolution(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test OpenSlideWSIReader mpp from TIFF resolution tags."""
-    wsi = OpenSlideWSIReader(sample_svs)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs)
     wsi.openslide_wsi = DummyMutableOpenSlideObject(wsi.openslide_wsi)
     props = wsi.openslide_wsi._properties
 
@@ -1217,7 +1217,7 @@ def test_virtual_wsi_reader(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test VirtualWSIReader."""
-    wsi = VirtualWSIReader(Path(source_image))
+    wsi = wsireader.VirtualWSIReader(Path(source_image))
     _ = wsi._info()
     assert "Unknown scale" in caplog.text
 
@@ -1236,12 +1236,12 @@ def test_virtual_wsi_reader(
 def test_virtual_wsi_reader_invalid_mode(source_image: Path) -> None:
     """Test creating a VritualWSIReader with an invalid mode."""
     with pytest.raises(ValueError, match="Invalid mode"):
-        VirtualWSIReader(Path(source_image), mode="foo")
+        wsireader.VirtualWSIReader(Path(source_image), mode="foo")
 
 
 def test_virtual_wsi_reader_read_bounds(source_image: Path) -> None:
     """Test VirtualWSIReader read bounds."""
-    wsi = VirtualWSIReader(Path(source_image))
+    wsi = wsireader.VirtualWSIReader(Path(source_image))
     img = wsi.read_bounds(bounds=(0, 0, 50, 100))
     assert img.shape == (100, 50, 3)
 
@@ -1260,7 +1260,7 @@ def test_virtual_wsi_reader_read_bounds(source_image: Path) -> None:
 
 def test_virtual_wsi_reader_read_rect(source_image: Path) -> None:
     """Test VirtualWSIReader read rect."""
-    wsi = VirtualWSIReader(Path(source_image))
+    wsi = wsireader.VirtualWSIReader(Path(source_image))
     info = wsi.info
 
     img = wsi.read_rect(location=(0, 0), size=(50, 100))
@@ -1293,7 +1293,7 @@ def test_virtual_wsi_reader_read_rect(source_image: Path) -> None:
     with pytest.raises(ValueError, match="level"):
         _ = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
 
-    wsi = VirtualWSIReader(Path(source_image), info=info)
+    wsi = wsireader.VirtualWSIReader(Path(source_image), info=info)
 
     assert info.as_dict() == wsi.info.as_dict()
 
@@ -1304,7 +1304,7 @@ def test_virtual_rgb_mode_postproc_then_composite(
     """Test that post-processing in VirtualWSIReader occurs before compositing."""
     # 3-channel input -> VirtualWSIReader.mode == "rgb"
     img = np.zeros((16, 16, 3), dtype=np.uint8)
-    v = VirtualWSIReader(img, post_proc=None)
+    v = wsireader.VirtualWSIReader(img, post_proc=None)
 
     calls = {"bg": 0, "alphas": [], "last": None}
 
@@ -1343,8 +1343,8 @@ def test_virtual_wsi_reader_read_bounds_virtual_baseline(source_image: Path) -> 
     img_array = utils.misc.imread(image_path)
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
-    meta = WSIMeta(slide_dimensions=double_size, axes="YXS")
-    wsi = VirtualWSIReader(image_path, info=meta)
+    meta = wsireader.WSIMeta(slide_dimensions=double_size, axes="YXS")
+    wsi = wsireader.VirtualWSIReader(image_path, info=meta)
     location = (0, 0)
     size = (50, 100)
     bounds = utils.transforms.locsize2bounds(location, size)
@@ -1369,8 +1369,8 @@ def test_virtual_wsi_reader_read_rect_virtual_baseline(source_image: Path) -> No
     img_array = utils.misc.imread(Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
-    meta = WSIMeta(slide_dimensions=double_size, axes="YXS")
-    wsi = VirtualWSIReader(Path(source_image), info=meta)
+    meta = wsireader.WSIMeta(slide_dimensions=double_size, axes="YXS")
+    wsi = wsireader.VirtualWSIReader(Path(source_image), info=meta)
     region = wsi.read_rect(location=(0, 0), size=(50, 100), pad_mode="reflect")
     target = cv2.resize(
         img_array[:50, :25, :],
@@ -1392,12 +1392,12 @@ def test_virtual_wsi_reader_read_rect_virtual_levels(source_image: Path) -> None
     img_array = utils.misc.imread(Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
-    meta = WSIMeta(
+    meta = wsireader.WSIMeta(
         slide_dimensions=double_size,
         level_downsamples=[1, 2, 4],
         axes="YXS",
     )
-    wsi = VirtualWSIReader(Path(source_image), info=meta)
+    wsi = wsireader.VirtualWSIReader(Path(source_image), info=meta)
     region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=1, units="level")
     target = img_array[:100, :50, :]
     assert np.abs(np.median(region.astype(int) - target.astype(int))) == 0
@@ -1420,12 +1420,12 @@ def test_virtual_wsi_reader_read_bounds_virtual_levels(source_image: Path) -> No
     img_array = utils.misc.imread(Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
-    meta = WSIMeta(
+    meta = wsireader.WSIMeta(
         slide_dimensions=double_size,
         level_downsamples=[1, 2, 4],
         axes="YXS",
     )
-    wsi = VirtualWSIReader(Path(source_image), info=meta)
+    wsi = wsireader.VirtualWSIReader(Path(source_image), info=meta)
     location = (0, 0)
     size = (50, 100)
     bounds = utils.transforms.locsize2bounds(location, size)
@@ -1462,13 +1462,13 @@ def test_virtual_wsi_reader_read_rect_virtual_levels_mpp(source_image: Path) -> 
     img_array = utils.misc.imread(Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
-    meta = WSIMeta(
+    meta = wsireader.WSIMeta(
         slide_dimensions=double_size,
         axes="YXS",
         level_downsamples=[1, 2, 4],
         mpp=(0.25, 0.25),
     )
-    wsi = VirtualWSIReader(Path(source_image), info=meta)
+    wsi = wsireader.VirtualWSIReader(Path(source_image), info=meta)
     region = wsi.read_rect(location=(0, 0), size=(50, 100), resolution=0.5, units="mpp")
     target = img_array[:100, :50, :]
     assert np.abs(np.mean(region.astype(int) - target.astype(int))) < 1
@@ -1497,13 +1497,13 @@ def test_virtual_wsi_reader_read_bounds_virtual_levels_mpp(source_image: Path) -
     img_array = utils.misc.imread(Path(source_image))
     img_size = np.array(img_array.shape[:2][::-1])
     double_size = tuple((img_size * 2).astype(int))
-    meta = WSIMeta(
+    meta = wsireader.WSIMeta(
         slide_dimensions=double_size,
         axes="YXS",
         level_downsamples=[1, 2, 4],
         mpp=(0.25, 0.25),
     )
-    wsi = VirtualWSIReader(Path(source_image), info=meta)
+    wsi = wsireader.VirtualWSIReader(Path(source_image), info=meta)
     location = (0, 0)
     size = (50, 100)
     bounds = utils.transforms.locsize2bounds(location, size)
@@ -1529,7 +1529,7 @@ def test_virtual_wsi_reader_read_bounds_virtual_levels_mpp(source_image: Path) -
 
 def test_tissue_mask_otsu(sample_svs: Path) -> None:
     """Test wsi.tissue_mask with Otsu's method."""
-    wsi = OpenSlideWSIReader(sample_svs)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs)
 
     tissue_thumb = wsi.slide_thumbnail()
     grey_thumb = cv2.cvtColor(tissue_thumb, cv2.COLOR_RGB2GRAY)
@@ -1545,7 +1545,7 @@ def test_tissue_mask_otsu(sample_svs: Path) -> None:
 
 def test_tissue_mask_morphological(sample_svs: Path) -> None:
     """Test wsi.tissue_mask with morphological method."""
-    wsi = OpenSlideWSIReader(sample_svs)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs)
     resolutions = [5, 10]
     units = ["power", "mpp"]
     scale_fns = [lambda x: x * 2, lambda x: 32 / x]
@@ -1571,7 +1571,7 @@ def test_tissue_mask_morphological(sample_svs: Path) -> None:
 
 def test_tissue_mask_morphological_levels(sample_svs: Path) -> None:
     """Test wsi.tissue_mask with morphological method and resolution in level."""
-    wsi = OpenSlideWSIReader(sample_svs)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs)
     thumb = wsi.slide_thumbnail(0, "level")
     grey_thumb = cv2.cvtColor(thumb, cv2.COLOR_RGB2GRAY)
     threshold = threshold_otsu(grey_thumb)
@@ -1589,7 +1589,7 @@ def test_tissue_mask_morphological_levels(sample_svs: Path) -> None:
 
 def test_tissue_mask_read_bounds_none_interpolation(sample_svs: Path) -> None:
     """Test reading a mask using read_bounds with no interpolation."""
-    wsi = OpenSlideWSIReader(sample_svs)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs)
     mask = wsi.tissue_mask("otsu")
     mask_region = mask.read_bounds((0, 0, 512, 512), interpolation="none")
     assert mask_region.shape[0] == 32
@@ -1598,7 +1598,7 @@ def test_tissue_mask_read_bounds_none_interpolation(sample_svs: Path) -> None:
 
 def test_tissue_mask_read_rect_none_interpolation(sample_svs: Path) -> None:
     """Test reading a mask using read_rect with no interpolation."""
-    wsi = OpenSlideWSIReader(sample_svs)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs)
     mask = wsi.tissue_mask("otsu")
     mask_region = mask.read_rect((0, 0), (512, 512), interpolation="none")
     assert mask_region.shape[0] == 32
@@ -1607,7 +1607,7 @@ def test_tissue_mask_read_rect_none_interpolation(sample_svs: Path) -> None:
 
 def test_invalid_masker_method(sample_svs: Path) -> None:
     """Test that an invalid masking method string raises a ValueError."""
-    wsi = OpenSlideWSIReader(sample_svs)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs)
     with pytest.raises(ValueError, match="masking method"):
         wsi.tissue_mask(method="foo")
 
@@ -1631,32 +1631,32 @@ def test_wsireader_open(
         _ = WSIReader.open([1, 2])
 
     wsi = WSIReader.open(sample_svs)
-    assert isinstance(wsi, OpenSlideWSIReader)
+    assert isinstance(wsi, wsireader.OpenSlideWSIReader)
 
     wsi = WSIReader.open(sample_ndpi)
-    assert isinstance(wsi, OpenSlideWSIReader)
+    assert isinstance(wsi, wsireader.OpenSlideWSIReader)
 
     wsi = WSIReader.open(sample_jp2)
-    assert isinstance(wsi, JP2WSIReader)
+    assert isinstance(wsi, wsireader.JP2WSIReader)
 
     wsi = WSIReader.open(sample_ome_tiff)
-    assert isinstance(wsi, TIFFWSIReader)
+    assert isinstance(wsi, wsireader.TIFFWSIReader)
 
     wsi = WSIReader.open(sample_ventana_tif)
-    assert isinstance(wsi, (OpenSlideWSIReader, TIFFWSIReader))
+    assert isinstance(wsi, (wsireader.OpenSlideWSIReader, wsireader.TIFFWSIReader))
 
     wsi = WSIReader.open(sample_regular_tif)
-    assert isinstance(wsi, VirtualWSIReader)
+    assert isinstance(wsi, wsireader.VirtualWSIReader)
 
     wsi = WSIReader.open(Path(source_image))
-    assert isinstance(wsi, VirtualWSIReader)
+    assert isinstance(wsi, wsireader.VirtualWSIReader)
 
     wsi = WSIReader.open(sample_qptiff)
-    assert isinstance(wsi, TIFFWSIReader)
+    assert isinstance(wsi, wsireader.TIFFWSIReader)
 
     img = utils.misc.imread(str(Path(source_image)))
     wsi = WSIReader.open(input_img=img)
-    assert isinstance(wsi, VirtualWSIReader)
+    assert isinstance(wsi, wsireader.VirtualWSIReader)
 
     # test if WSIReader.open can accept a wsireader instance
     wsi_type = type(wsi)
@@ -1672,7 +1672,7 @@ def test_wsireader_open(
 
 def test_jp2_missing_cod(sample_jp2: Path, caplog: pytest.LogCaptureFixture) -> None:
     """Test for warning if JP2 is missing COD segment."""
-    wsi = JP2WSIReader(sample_jp2)
+    wsi = wsireader.JP2WSIReader(sample_jp2)
     wsi.glymur_jp2.codestream.segment = []
     _ = wsi.info
     assert "missing COD" in caplog.text
@@ -2002,14 +2002,14 @@ def test_command_line_unsupported_file_read_bounds(sample_svs: Path) -> None:
 
 def test_openslide_read_rect_edge_reflect_padding(sample_svs: Path) -> None:
     """Test openslide edge reflect padding for read_rect."""
-    wsi = OpenSlideWSIReader(sample_svs)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs)
     region = wsi.read_rect((-64, -64), (128, 128), pad_mode="reflect")
     assert 0 not in region.min(axis=-1)
 
 
 def test_openslide_read_bounds_edge_reflect_padding(sample_svs: Path) -> None:
     """Test openslide edge reflect padding for read_bounds."""
-    wsi = OpenSlideWSIReader(sample_svs)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs)
     region = wsi.read_bounds((-64, -64, 64, 64), pad_mode="reflect")
     assert 0 not in region.min(axis=-1)
 
@@ -2017,7 +2017,7 @@ def test_openslide_read_bounds_edge_reflect_padding(sample_svs: Path) -> None:
 def test_tiffwsireader_invalid_tiff(remote_sample: Callable) -> None:
     """Test for TIFF which is not supported by TIFFWSIReader."""
     with pytest.raises(ValueError, match="Unsupported TIFF"):
-        _ = TIFFWSIReader(remote_sample("two-tiled-pages"))
+        _ = wsireader.TIFFWSIReader(remote_sample("two-tiled-pages"))
 
 
 def test_tiffwsireader_invalid_svs_metadata(
@@ -2025,7 +2025,7 @@ def test_tiffwsireader_invalid_svs_metadata(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test for invalid SVS key-value pairs in TIFF escription tag."""
-    wsi = TIFFWSIReader(sample_svs)
+    wsi = wsireader.TIFFWSIReader(sample_svs)
     monkeypatch.setattr(
         wsi.tiff.pages[0],
         "description",
@@ -2040,7 +2040,7 @@ def test_tiffwsireader_invalid_ome_metadata(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test fallback behaviour for invalid OME-XML metadata instrument."""
-    wsi = TIFFWSIReader(sample_ome_tiff_level_0)
+    wsi = wsireader.TIFFWSIReader(sample_ome_tiff_level_0)
     monkeypatch.setattr(
         wsi.tiff.pages[0],
         "description",
@@ -2062,7 +2062,7 @@ def test_tiffwsireader_ome_metadata_missing_one_mppy(
 ) -> None:
     """Test no exception raised for missing x/y mpp but warning given."""
     for dim in "XY":
-        wsi = TIFFWSIReader(sample_ome_tiff)
+        wsi = wsireader.TIFFWSIReader(sample_ome_tiff)
         monkeypatch.setattr(
             wsi.tiff.pages[0],
             "description",
@@ -2085,7 +2085,7 @@ def test_arrayview_unsupported_axes_shape(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test accessing an unspported axes in TIFFWSIReader._shape_channels_last."""
-    wsi = TIFFWSIReader(sample_ome_tiff)
+    wsi = wsireader.TIFFWSIReader(sample_ome_tiff)
     monkeypatch.setattr(wsi, "_axes", "FOO")
     with pytest.raises(ValueError, match="Unsupported axes"):
         _ = wsi._info()
@@ -2116,34 +2116,34 @@ def test_arrayview_single_number_index() -> None:
 
 def test_manual_mpp_tuple(sample_svs: Path) -> None:
     """Test setting a manual mpp for a WSI."""
-    wsi = OpenSlideWSIReader(sample_svs, mpp=(0.123, 0.123))
+    wsi = wsireader.OpenSlideWSIReader(sample_svs, mpp=(0.123, 0.123))
     assert tuple(wsi.info.mpp) == (0.123, 0.123)
 
 
 def test_manual_mpp_float(sample_svs: Path) -> None:
     """Test setting a manual mpp for a WSI."""
-    wsi = OpenSlideWSIReader(sample_svs, mpp=0.123)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs, mpp=0.123)
     assert tuple(wsi.info.mpp) == (0.123, 0.123)
 
 
 def test_manual_mpp_invalid(sample_svs: Path) -> None:
     """Test setting a manual mpp for a WSI."""
     with pytest.raises(TypeError, match="mpp"):
-        _ = OpenSlideWSIReader(sample_svs, mpp=(0.5,))
+        _ = wsireader.OpenSlideWSIReader(sample_svs, mpp=(0.5,))
     with pytest.raises(TypeError, match="mpp"):
-        _ = OpenSlideWSIReader(sample_svs, mpp="foo")
+        _ = wsireader.OpenSlideWSIReader(sample_svs, mpp="foo")
 
 
 def test_manual_power_tuple(sample_svs: Path) -> None:
     """Test setting a manual power for a WSI."""
-    wsi = OpenSlideWSIReader(sample_svs, power=42)
+    wsi = wsireader.OpenSlideWSIReader(sample_svs, power=42)
     assert wsi.info.objective_power == 42
 
 
 def test_manual_power_invalid(sample_svs: Path) -> None:
     """Test setting a manual power for a WSI."""
     with pytest.raises(TypeError, match="power"):
-        _ = OpenSlideWSIReader(sample_svs, power=(42,))
+        _ = wsireader.OpenSlideWSIReader(sample_svs, power=(42,))
 
 
 def test_tiled_tiff_openslide(remote_sample: Callable) -> None:
@@ -2151,7 +2151,7 @@ def test_tiled_tiff_openslide(remote_sample: Callable) -> None:
     sample_path = remote_sample("tiled-tiff-1-small-jpeg")
     # Test with top-level import
     wsi = WSIReader.open(sample_path)
-    assert isinstance(wsi, (OpenSlideWSIReader, TIFFWSIReader))
+    assert isinstance(wsi, (wsireader.OpenSlideWSIReader, wsireader.TIFFWSIReader))
 
 
 def test_tiled_tiff_tifffile(remote_sample: Callable) -> None:
@@ -2162,7 +2162,7 @@ def test_tiled_tiff_tifffile(remote_sample: Callable) -> None:
     """
     sample_path = remote_sample("tiled-tiff-1-small-jp2k")
     wsi = wsireader.WSIReader.open(sample_path)
-    assert isinstance(wsi, TIFFWSIReader)
+    assert isinstance(wsi, wsireader.TIFFWSIReader)
 
 
 def test_is_zarr_empty_dir(track_tmp_path: Path) -> None:
@@ -2344,7 +2344,7 @@ def test_ngff_zattrs_non_micrometer_scale_mpp(
     with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
 
-    wsi = NGFFWSIReader(sample_copy)
+    wsi = wsireader.NGFFWSIReader(sample_copy)
     assert "micrometer" in caplog.text
 
     assert wsi.info.mpp is None
@@ -2363,7 +2363,7 @@ def test_ngff_zattrs_missing_axes_mpp(
     zattrs["multiscales"][0]["axes"] = []
     with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
-    wsi = NGFFWSIReader(sample_copy)
+    wsi = wsireader.NGFFWSIReader(sample_copy)
     assert wsi.info.mpp is None
 
 
@@ -2378,7 +2378,7 @@ def test_ngff_empty_datasets_mpp(track_tmp_path: Path, remote_sample: Callable) 
     zattrs["multiscales"][0]["datasets"] = []
     with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
-    wsi = NGFFWSIReader(sample_copy)
+    wsi = wsireader.NGFFWSIReader(sample_copy)
     assert wsi.info.mpp is None
 
 
@@ -2397,7 +2397,7 @@ def test_ngff_no_scale_transforms_mpp(
         datasets["coordinateTransformations"][0]["type"] = "identity"
     with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
-    wsi = NGFFWSIReader(sample_copy)
+    wsi = wsireader.NGFFWSIReader(sample_copy)
     assert wsi.info.mpp is None
 
 
@@ -2433,7 +2433,7 @@ def test_ngff_missing_multiscales_returns_false(
     del zattrs["multiscales"]
     with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
-    assert not is_ngff(sample_copy)
+    assert not wsireader.is_ngff(sample_copy)
 
 
 def test_ngff_wrong_format_metadata(
@@ -2453,7 +2453,7 @@ def test_ngff_wrong_format_metadata(
     with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     with caplog.at_level(logging.WARNING):
-        assert not is_ngff(sample_copy)
+        assert not wsireader.is_ngff(sample_copy)
     assert "must be present and of the correct type" in caplog.text
 
 
@@ -2556,7 +2556,7 @@ def test_ngff_non_numeric_version(
         """Patched is_ngff function with new min/max version."""
         return is_ngff(path, min_version, max_version)
 
-    monkeypatch.setattr(wsireader.base, "is_ngff", patched_is_ngff)
+    monkeypatch.setattr(wsireader, "is_ngff", patched_is_ngff)
 
     sample = remote_sample("ngff-1")
     # Create a copy of the sample
@@ -3063,7 +3063,7 @@ def test_get_post_proc_variants() -> None:
 
 def test_post_proc_applied() -> None:
     """Test that post_proc is applied to image region."""
-    reader = VirtualWSIReader(np.ones((100, 100, 3), dtype=np.uint8))
+    reader = wsireader.VirtualWSIReader(np.ones((100, 100, 3), dtype=np.uint8))
     reader.post_proc = lambda x: x * 0
     region = reader.read_rect((0, 0), (50, 50))
     assert np.all(region == 0)
@@ -3081,7 +3081,7 @@ def test_post_proc_applied() -> None:
     mock_reader = SimpleNamespace(post_proc=mock_post_proc)
 
     # Create a delegate with the mock reader
-    delegate = TIFFWSIReaderDelegate.__new__(TIFFWSIReaderDelegate)
+    delegate = wsireader.TIFFWSIReaderDelegate.__new__(wsireader.TIFFWSIReaderDelegate)
     delegate.reader = mock_reader
 
     # Simulate the logic that includes the yellow line
@@ -3093,11 +3093,13 @@ def test_post_proc_applied() -> None:
 
 def test_explicit_none_postproc(sample_svs: Path) -> None:
     """Test explicit None postproc."""
-    reader = VirtualWSIReader(np.ones((100, 100, 3), dtype=np.uint8), post_proc=None)
+    reader = wsireader.VirtualWSIReader(
+        np.ones((100, 100, 3), dtype=np.uint8), post_proc=None
+    )
     region = reader.read_bounds((0, 0, 50, 50))
     assert np.all(region == 1)
 
-    reader = TIFFWSIReader(sample_svs, post_proc=None)
+    reader = wsireader.TIFFWSIReader(sample_svs, post_proc=None)
     region = reader.read_bounds((0, 0, 50, 50))
     assert isinstance(region, np.ndarray)
     assert region.shape == (50, 50, 3)
@@ -3318,7 +3320,9 @@ def test_read_rect_transformedreader_svs_baseline(
     sample_svs: Path, remote_sample: Callable, track_tmp_path: Path
 ) -> None:
     """Test TransformedWSIReader.read_rect with an SVS file at baseline."""
-    wsi = TransformedWSIReader(sample_svs, target_img=sample_svs, transform=np.eye(3))
+    wsi = wsireader.TransformedWSIReader(
+        sample_svs, target_img=sample_svs, transform=np.eye(3)
+    )
     location = SVS_TEST_TISSUE_LOCATION
     size = SVS_TEST_TISSUE_SIZE
     im_region = wsi.read_rect(location, size, resolution=0, units="level")
@@ -3328,7 +3332,7 @@ def test_read_rect_transformedreader_svs_baseline(
     assert im_region.shape == (*size[::-1], 3)
 
     fixed_info = wsi.info
-    wsi2 = TransformedWSIReader(
+    wsi2 = wsireader.TransformedWSIReader(
         sample_svs, target_img=sample_svs, transform=np.eye(3), fixed_info=fixed_info
     )
     im_region_2 = wsi2.read_rect(location, size, resolution=0, units="level")
@@ -3339,10 +3343,12 @@ def test_read_rect_transformedreader_svs_baseline(
         ValueError,
         match=r"Transform cannot be None. Please provide a valid transformation",
     ):
-        _ = TransformedWSIReader(sample_svs, target_img=sample_svs, transform=None)
+        _ = wsireader.TransformedWSIReader(
+            sample_svs, target_img=sample_svs, transform=None
+        )
 
     # Now test MHA displacement field
-    wsi3 = TransformedWSIReader(
+    wsi3 = wsireader.TransformedWSIReader(
         sample_svs,
         target_img=sample_svs,
         transform=remote_sample("reg_disp_mha_example"),
@@ -3353,7 +3359,7 @@ def test_read_rect_transformedreader_svs_baseline(
     assert im_region.shape == im_region_3.shape
 
     # Now test NPY affine transformation
-    wsi4 = TransformedWSIReader(
+    wsi4 = wsireader.TransformedWSIReader(
         sample_svs,
         target_img=sample_svs,
         transform=remote_sample("reg_affine_npy_example"),
@@ -3374,7 +3380,7 @@ def test_read_rect_transformedreader_svs_baseline(
     transform_path = track_tmp_path / "new_disp.mha"
     sitk.WriteImage(disp_image, str(transform_path))
 
-    wsi5 = TransformedWSIReader(
+    wsi5 = wsireader.TransformedWSIReader(
         sample_svs,
         target_img=sample_svs,
         transform=transform_path,
@@ -3386,7 +3392,7 @@ def test_read_rect_transformedreader_svs_baseline(
 
     # Test wrong file type
     with pytest.raises(ValueError, match="Unsupported transformation file format"):
-        TransformedWSIReader(
+        wsireader.TransformedWSIReader(
             sample_svs,
             target_img=sample_svs,
             transform=sample_svs,
@@ -3401,7 +3407,9 @@ def test_read_bounds_transformedreader_baseline(
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = TransformedWSIReader(sample_svs, target_img=sample_svs, transform=np.eye(3))
+    wsi = wsireader.TransformedWSIReader(
+        sample_svs, target_img=sample_svs, transform=np.eye(3)
+    )
 
     bounds = SVS_TEST_TISSUE_BOUNDS
     size = SVS_TEST_TISSUE_SIZE
@@ -3412,7 +3420,7 @@ def test_read_bounds_transformedreader_baseline(
     assert im_region.shape == (*size[::-1], 3)
 
     # Now test MHA displacement field
-    wsi3 = TransformedWSIReader(
+    wsi3 = wsireader.TransformedWSIReader(
         sample_svs,
         target_img=sample_svs,
         transform=remote_sample("reg_disp_mha_example"),
@@ -3423,7 +3431,7 @@ def test_read_bounds_transformedreader_baseline(
     assert im_region.shape == im_region_3.shape
 
     # Now test NPY affine transformation
-    wsi4 = TransformedWSIReader(
+    wsi4 = wsireader.TransformedWSIReader(
         sample_svs,
         target_img=sample_svs,
         transform=remote_sample("reg_affine_npy_example"),
@@ -4123,7 +4131,7 @@ def test_wsireader_read_with_different_interpolations(sample_svs: Path) -> None:
     location = (100, 100)
     size = (50, 50)
 
-    interpolation_methods = ["linear", "cubic", "lanczos", "area", "optimise"]
+    interpolation_methods = ["linear", "cubic", "lanczos", "area", "optimize"]
 
     for method in interpolation_methods:
         region = wsi.read_rect(location=location, size=size, interpolation=method)
@@ -4180,7 +4188,7 @@ def test_virtualwsireader_bool_mode_interpolation() -> None:
         bounds=(0, 0, 50, 50),
         resolution=0.5,
         units="baseline",
-        interpolation="optimise",  # Should be overridden to "nearest"
+        interpolation="optimize",  # Should be overridden to "nearest"
     )
     assert isinstance(region, np.ndarray)
     # Values should still be 0 or 1 (or close) due to nearest interpolation
@@ -4246,7 +4254,7 @@ def test_canonical_shape_handles_cyx_and_syx() -> None:
 def test_virtual_read_rect_resolution_coord_space_roundtrip() -> None:
     """Test VirtualWSIReader read_rect with resolution coord_space."""
     img = np.arange(0, 32 * 32 * 4, dtype=np.uint8).reshape(32, 32, 4)
-    v = VirtualWSIReader(img)
+    v = wsireader.VirtualWSIReader(img)
     r1 = v.read_rect((0, 0), (8, 8), coord_space="resolution")
     r2 = v.read_bounds((0, 0, 8, 8))
     assert np.array_equal(r1, r2)
@@ -4308,7 +4316,7 @@ def test_handle_tiff_wsi_returns_none_when_no_handlers_match(
 
     with (
         patch("openslide.OpenSlide.detect_format", return_value=None),
-        patch("tiatoolbox.wsicore.wsireader.base.is_tiled_tiff", return_value=False),
+        patch("tiatoolbox.wsicore.wsireader.is_tiled_tiff", return_value=False),
     ):
         result = _handle_tiff_wsi(
             input_path=fake_path,

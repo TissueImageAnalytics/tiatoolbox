@@ -60,7 +60,7 @@ from tiatoolbox.utils.misc import (
     dict_to_store_patch_predictions,
     tqdm_dask_progress_bar,
 )
-from tiatoolbox.wsicore.wsireader.base import WSIReader, is_zarr
+from tiatoolbox.wsicore.wsireader import WSIReader, is_zarr
 
 from .io_config import ModelIOConfigABC
 

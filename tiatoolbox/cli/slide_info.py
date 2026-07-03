@@ -45,7 +45,7 @@ def slide_info(
 
     for file in all_files:
         curr_file = Path(file)
-        wsi = wsicore.wsireader.base.WSIReader.open(input_img=curr_file)
+        wsi = wsicore.wsireader.WSIReader.open(input_img=curr_file)
 
         if verbose:
             logger.setLevel(logging.DEBUG)

@@ -14,7 +14,7 @@ from tiatoolbox import logger
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils import imread
 from tiatoolbox.utils.exceptions import DimensionMismatchError
-from tiatoolbox.wsicore.wsireader.base import VirtualWSIReader, WSIReader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable, Iterable

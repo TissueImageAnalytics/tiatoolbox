@@ -21,7 +21,7 @@ from tiatoolbox.models.architecture.utils import compile_model
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.metrics import dice
 from tiatoolbox.utils.transforms import imresize
-from tiatoolbox.wsicore.wsireader.base import VirtualWSIReader, WSIReader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader, WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable
@@ -1708,5 +1708,5 @@ class AffineWSITransformer:
             img=transformed_patch,
             scale_factor=post_read_scale,
             output_size=size,
-            interpolation="optimise",
+            interpolation="optimize",
         )
