@@ -53,11 +53,24 @@ from tiatoolbox.wsicore.wsireader import (
     VirtualWSIReader,
     _handle_tiff_wsi,
     _handle_virtual_wsi,
+    detection,
     is_dicom,
     is_ngff,
     is_tiled_tiff,
     is_url,
     is_zarr,
+)
+from tiatoolbox.wsicore.wsireader.detection import is_valid_zarr_fsspec
+from tiatoolbox.wsicore.wsireader.factory import (
+    _handle_special_cases,
+    try_annotation_store,
+    try_dicom,
+    try_fsspec,
+    try_ngff,
+    try_ome_tiff,
+    try_openslide,
+    try_tiff,
+    verify_supported_wsi,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -780,7 +793,7 @@ def test_read_rect_tiffreader_ome_tiff_baseline(sample_ome_tiff: Path) -> None:
 def test_is_tiled_tiff(source_image: Path) -> None:
     """Test if source_image is a tiled tiff."""
     source_image.replace(source_image.with_suffix(".tiff"))
-    assert wsireader.is_tiled_tiff(source_image.with_suffix(".tiff")) is False
+    assert detection.is_tiled_tiff(source_image.with_suffix(".tiff")) is False
     source_image.with_suffix(".tiff").replace(source_image)
 
 
@@ -792,7 +805,7 @@ def test_is_not_tiled_tiff(tmp_samples_path: Path) -> None:
     with tifffile.TiffWriter(temp_tiff_path) as tif:
         for image in images:
             tif.write(image, compression=None, tile=None)
-    assert wsireader.is_tiled_tiff(temp_tiff_path) is False
+    assert detection.is_tiled_tiff(temp_tiff_path) is False
 
 
 def test_read_rect_openslide_levels(sample_ndpi: Path) -> None:
@@ -2433,7 +2446,7 @@ def test_ngff_missing_multiscales_returns_false(
     del zattrs["multiscales"]
     with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
-    assert not wsireader.is_ngff(sample_copy)
+    assert not detection.is_ngff(sample_copy)
 
 
 def test_ngff_wrong_format_metadata(
@@ -2453,7 +2466,7 @@ def test_ngff_wrong_format_metadata(
     with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
     with caplog.at_level(logging.WARNING):
-        assert not wsireader.is_ngff(sample_copy)
+        assert not detection.is_ngff(sample_copy)
     assert "must be present and of the correct type" in caplog.text
 
 
@@ -3122,10 +3135,12 @@ def test_fsspec_json_wsi_reader_instantiation() -> None:
 
     with (
         patch(
-            "tiatoolbox.wsicore.wsireader.base.FsspecJsonWSIReader.is_valid_zarr_fsspec",
+            "tiatoolbox.wsicore.wsireader.factory.is_valid_zarr_fsspec",
             return_value=True,
         ),
-        patch("tiatoolbox.wsicore.wsireader.base.FsspecJsonWSIReader") as mock_reader,
+        patch(
+            "tiatoolbox.wsicore.wsireader.factory.FsspecJsonWSIReader"
+        ) as mock_reader,
     ):
         WSIReader.open(input_path, mpp, power)
         mock_reader.assert_called_once_with(input_path, mpp=mpp, power=power)
@@ -3134,7 +3149,7 @@ def test_fsspec_json_wsi_reader_instantiation() -> None:
 def test_generate_fsspec_json_file_and_validate(
     sample_svs: Path, track_tmp_path: Path
 ) -> None:
-    """Test generate fsspec json file and validate it."""
+    """Test generate fsspec JSON file and validate it."""
     file_types = ("*.svs",)
 
     files_all = utils.misc.grab_files_from_dir(
@@ -3150,9 +3165,7 @@ def test_generate_fsspec_json_file_and_validate(
 
     assert Path(json_file_path).exists(), "Output JSON file was not created."
 
-    assert FsspecJsonWSIReader.is_valid_zarr_fsspec(json_file_path), (
-        "FSSPEC JSON file is invalid."
-    )
+    assert is_valid_zarr_fsspec(json_file_path), "FSSPEC JSON file is invalid."
 
 
 def test_fsspec_wsireader_info_read(sample_svs: Path, track_tmp_path: Path) -> None:
@@ -3215,17 +3228,17 @@ def test_fsspec_reader_open_invalid_json_file(track_tmp_path: Path) -> None:
     json_path = track_tmp_path / "invalid.json"
     json_path.write_text("{invalid json}")  # Corrupt JSON
 
-    assert not FsspecJsonWSIReader.is_valid_zarr_fsspec(str(json_path))
+    assert not is_valid_zarr_fsspec(str(json_path))
 
 
 def test_fsspec_reader_open_oserror_handling() -> None:
     """Ensure OSError is handled properly.
 
-    Pass non existent JSON to  FsspecJsonWSIReader.is_valid_zarr_fsspec.
+    Pass non-existent JSON to  FsspecJsonWSIReader.is_valid_zarr_fsspec.
 
     """
     with patch("builtins.open", side_effect=OSError("File not found")):
-        result = FsspecJsonWSIReader.is_valid_zarr_fsspec("non_existent.json")
+        result = is_valid_zarr_fsspec("non_existent.json")
 
     assert result is False, "Function should return False for OSError"
 
@@ -3241,7 +3254,7 @@ def test_fsspec_reader_open_pass_empty_json(track_tmp_path: Path) -> None:
     json_path = track_tmp_path / "empty.json"
     json_path.write_text("{}")
 
-    assert not FsspecJsonWSIReader.is_valid_zarr_fsspec(str(json_path))
+    assert not is_valid_zarr_fsspec(str(json_path))
 
 
 def test_fsspec_reader_group_branch(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -3462,11 +3475,11 @@ def test_wsireader_verify_supported_wsi_edge_cases(track_tmp_path: Path) -> None
     # Test with unsupported extension
     unsupported_file = track_tmp_path / "test.xyz"
     with pytest.raises(FileNotSupportedError, match="not a supported file format"):
-        WSIReader.verify_supported_wsi(unsupported_file)
+        verify_supported_wsi(unsupported_file)
 
     # Test with no extension
     no_ext_file = track_tmp_path / "test"
-    WSIReader.verify_supported_wsi(no_ext_file)
+    verify_supported_wsi(no_ext_file)
 
 
 def test_wsireader_handle_virtual_wsi_edge_cases(track_tmp_path: Path) -> None:
@@ -3502,7 +3515,7 @@ def test_wsireader_special_cases_coverage(track_tmp_path: Path) -> None:
         ValueError,
         match="No metadata found in store",
     ):
-        WSIReader._handle_special_cases(db_file, db_file, None, None, None, info=None)
+        _handle_special_cases(db_file, db_file, None, None, None, info=None)
 
 
 def test_wsireader_get_post_proc_edge_cases() -> None:
@@ -4038,29 +4051,27 @@ def test_wsireader_find_read_bounds_params_edge_cases(sample_svs: Path) -> None:
 def test_wsireader_try_methods_comprehensive() -> None:
     """Test WSIReader.try_* methods comprehensively."""
     # Test try_dicom with non-DICOM path
-    result = WSIReader.try_dicom(Path("test.txt"), None, None, None)
+    result = try_dicom(Path("test.txt"), None, None, None)
     assert result is None
 
     # Test try_fsspec with invalid input
-    result = WSIReader.try_fsspec("invalid.txt", None, None)
+    result = try_fsspec("invalid.txt", None, None)
     assert result is None
 
     # Test try_annotation_store with non-.db file
-    result = WSIReader.try_annotation_store(Path("test.txt"), ".txt", None, {})
+    result = try_annotation_store(Path("test.txt"), ".txt", None, {})
     assert result is None
 
     # Test try_ngff with non-.zarr file
-    result = WSIReader.try_ngff(Path("test.txt"), ".txt", None, None)
+    result = try_ngff(Path("test.txt"), ".txt", None, None)
     assert result is None
 
     # Test try_ome_tiff with non-OME file
-    result = WSIReader.try_ome_tiff(
-        Path("test.txt"), [".txt"], ".txt", None, None, None
-    )
+    result = try_ome_tiff(Path("test.txt"), [".txt"], ".txt", None, None, None)
     assert result is None
 
     # Test try_tiff with non-TIFF file
-    result = WSIReader.try_tiff(Path("test.txt"), ".txt", None, None, None)
+    result = try_tiff(Path("test.txt"), ".txt", None, None, None)
     assert result is None
 
 
@@ -4263,13 +4274,13 @@ def test_virtual_read_rect_resolution_coord_space_roundtrip() -> None:
 class TestTryOpenSlide:
     """Unit tests for the WSIReader.try_openslide static method."""
 
-    @patch("tiatoolbox.wsicore.wsireader.base.OpenSlideWSIReader")
+    @patch("tiatoolbox.wsicore.wsireader.factory.OpenSlideWSIReader")
     def test_tiff_suffix_success(self, mock_reader: MagicMock) -> None:
         """Test that a valid TIFF file results in an OpenSlideWSIReader instance."""
         mock_instance = MagicMock()
         mock_reader.return_value = mock_instance
 
-        result: OpenSlideWSIReader | None = WSIReader.try_openslide(
+        result: OpenSlideWSIReader | None = try_openslide(
             input_path=Path("sample.tif"),
             last_suffix=".tif",
             mpp=(0.5, 0.5),
@@ -4283,12 +4294,12 @@ class TestTryOpenSlide:
         )
         assert result is mock_instance
 
-    @patch("tiatoolbox.wsicore.wsireader.base.OpenSlideWSIReader")
+    @patch("tiatoolbox.wsicore.wsireader.factory.OpenSlideWSIReader")
     def test_tiff_suffix_raises_openslide_error(self, mock_reader: MagicMock) -> None:
         """Test that OpenSlide errors are caught and the function returns None."""
         mock_reader.side_effect = openslide.OpenSlideError("bad file")
 
-        result: OpenSlideWSIReader | None = WSIReader.try_openslide(
+        result: OpenSlideWSIReader | None = try_openslide(
             input_path=Path("bad.tiff"),
             last_suffix=".tiff",
             mpp=None,
