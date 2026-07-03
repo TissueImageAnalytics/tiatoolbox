@@ -8,7 +8,6 @@ from tiatoolbox.wsicore.wsimeta import WSIMeta
 from .base import (
     AnnotationStoreReader,
     ArrayView,
-    DICOMWSIReader,
     FsspecJsonWSIReader,
     JP2WSIReader,
     NGFFWSIReader,
@@ -27,6 +26,9 @@ from .base import (
     is_url,
     is_zarr,
 )
+
+# Import reader classes
+from .dicom import DICOMWSIReader
 
 __all__ = [
     "AnnotationStoreReader",
