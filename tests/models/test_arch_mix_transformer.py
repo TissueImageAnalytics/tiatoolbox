@@ -9,14 +9,13 @@ if TYPE_CHECKING:
 
 import pytest
 import torch
-from torch import nn
 
 from tiatoolbox.models.architecture.mix_transformer import (
     MAX_ENCODER_DEPTH,
     MIN_ENCODER_DEPTH,
     Attention,
     Block,
-    DWConv,
+    DWConvBlock,
     LayerNorm,
     MixVisionTransformer,
     MixVisionTransformerEncoder,
@@ -120,9 +119,6 @@ def test_mix_vision_transformer_helpers_and_classifier_paths() -> None:
     """Helper methods should expose expected metadata and edge behaviors."""
     model = MixVisionTransformer(**tiny_transformer_kwargs())
 
-    model.freeze_patch_emb()
-    assert model.patch_embed1.requires_grad is False
-
     no_decay = model.no_weight_decay()
     assert {
         "pos_embed1",
@@ -131,15 +127,6 @@ def test_mix_vision_transformer_helpers_and_classifier_paths() -> None:
         "pos_embed4",
         "cls_token",
     } <= no_decay
-
-    model.head = nn.Identity()
-    assert isinstance(model.get_classifier(), nn.Identity)
-
-    model.reset_classifier(0)
-    assert isinstance(model.head, nn.Identity)
-
-    with pytest.raises(AttributeError):
-        model.reset_classifier(2)
 
 
 def test_reset_drop_path_updates_drop_probabilities() -> None:
@@ -154,7 +141,7 @@ def test_reset_drop_path_updates_drop_probabilities() -> None:
 
 def test_dwconv_forward_shape() -> None:
     """Depthwise convolution token mixer should preserve token dimensions."""
-    dwconv = DWConv(dim=8)
+    dwconv = DWConvBlock(dim=8)
     x = torch.randn(2, 64, 8)
     output = dwconv(x, height=8, width=8)
     assert output.shape == (2, 64, 8)

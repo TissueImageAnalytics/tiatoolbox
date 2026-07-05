@@ -74,7 +74,7 @@ class Mlp(nn.Module):
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
         self.fc1 = nn.Linear(in_features, hidden_features)
-        self.dwconv = DWConv(hidden_features)
+        self.dwconv = DWConvBlock(hidden_features)
         self.act = act_layer()
         self.fc2 = nn.Linear(hidden_features, out_features)
         self.drop = nn.Dropout(drop)
@@ -426,10 +426,6 @@ class MixVisionTransformer(nn.Module):
         for i in range(self.depths[3]):
             self.block4[i].drop_path.drop_prob = dpr[cur + i]
 
-    def freeze_patch_emb(self) -> None:
-        """Freeze the patch embedding layers of the Mix Vision Transformer."""
-        self.patch_embed1.requires_grad = False
-
     @torch.jit.ignore
     def no_weight_decay(self) -> set[str]:
         """Return the names of parameters that should not be subject to weight decay."""
@@ -440,17 +436,6 @@ class MixVisionTransformer(nn.Module):
             "pos_embed4",
             "cls_token",
         }  # has pos_embed may be better
-
-    def get_classifier(self) -> nn.Module:
-        """Return the classifier head of the Mix Vision Transformer."""
-        return self.head
-
-    def reset_classifier(self, num_classes: int) -> None:
-        """Reset the classifier head of the Mix Vision Transformer."""
-        self.num_classes = num_classes
-        self.head = (
-            nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
-        )
 
     def forward_features(self, x: torch.Tensor) -> list[torch.Tensor]:
         """Forward pass for the Mix Vision Transformer to extract features."""
@@ -487,7 +472,7 @@ class MixVisionTransformer(nn.Module):
         return self.forward_features(x)
 
 
-class DWConv(nn.Module):
+class DWConvBlock(nn.Module):
     """Depthwise Convolution module for Mix Transformer."""
 
     def __init__(self, dim: int = 768) -> None:
