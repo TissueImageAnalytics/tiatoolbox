@@ -14,6 +14,6 @@ class WSIReaderParams(TypedDict, total=False):
     """Parameters for reading whole slide images."""
 
     meta: WSIMeta | None
-    mpp: tuple[Number, Number] | Number
-    power: Number
+    mpp: tuple[Number, Number] | Number | None
+    power: Number | None
     storage_options: dict  # For FsspecStore

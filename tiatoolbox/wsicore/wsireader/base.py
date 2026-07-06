@@ -152,12 +152,6 @@ def _handle_tiff_wsi(
     return None
 
 
-def fix_mangled_url_by_pathlib(input_path: str | Path) -> str:
-    """Fix URl mangled by Path."""
-    # Fix Mangled URL
-    return re.sub(r"^(s3|http|https|ftp|file):/(?!/)", r"\1://", str(input_path))
-
-
 class WSIReader:
     """Base whole slide image (WSI) reader class.
 

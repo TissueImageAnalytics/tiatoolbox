@@ -11,7 +11,7 @@ import pytest
 from defusedxml import ElementTree
 from PIL import Image
 
-from tiatoolbox.wsicore.wsireader import factory
+from tiatoolbox.wsicore.wsireader import base
 from tiatoolbox.wsicore.wsireader.factory import try_tiff
 
 if TYPE_CHECKING:
@@ -153,12 +153,12 @@ def test_tiffreader_fallback_to_virtual(
         raise ValueError(msg)
 
     monkeypatch.setattr(
-        factory,
+        wsireader.base,
         "_handle_tiff_wsi",
         raise_unsupported,
     )
 
-    monkeypatch.setattr(factory, "TIFFWSIReader", DummyTIFFWSIReader)
+    monkeypatch.setattr(wsireader.base, "TIFFWSIReader", DummyTIFFWSIReader)
 
     dummy_file = track_tmp_path / "dummy.tiff"
     dummy_img = np.zeros((10, 10, 3), dtype=np.uint8)
@@ -189,7 +189,7 @@ def test_try_tiff_raises_other_value_error(
         raise ValueError(msg)
 
     monkeypatch.setattr(
-        factory,
+        base,
         "_handle_tiff_wsi",
         raise_other_value_error,
     )

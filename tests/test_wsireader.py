@@ -3139,9 +3139,7 @@ def test_fsspec_json_wsi_reader_instantiation() -> None:
             "tiatoolbox.wsicore.wsireader.factory.is_valid_zarr_fsspec",
             return_value=True,
         ),
-        patch(
-            "tiatoolbox.wsicore.wsireader.factory.FsspecJsonWSIReader"
-        ) as mock_reader,
+        patch("tiatoolbox.wsicore.wsireader.base.FsspecJsonWSIReader") as mock_reader,
     ):
         WSIReader.open(input_path, mpp, power)
         mock_reader.assert_called_once_with(input_path, mpp=mpp, power=power)
@@ -4275,7 +4273,7 @@ def test_virtual_read_rect_resolution_coord_space_roundtrip() -> None:
 class TestTryOpenSlide:
     """Unit tests for the WSIReader.try_openslide static method."""
 
-    @patch("tiatoolbox.wsicore.wsireader.factory.OpenSlideWSIReader")
+    @patch("tiatoolbox.wsicore.wsireader.base.OpenSlideWSIReader")
     def test_tiff_suffix_success(self, mock_reader: MagicMock) -> None:
         """Test that a valid TIFF file results in an OpenSlideWSIReader instance."""
         mock_instance = MagicMock()
@@ -4295,7 +4293,7 @@ class TestTryOpenSlide:
         )
         assert result is mock_instance
 
-    @patch("tiatoolbox.wsicore.wsireader.factory.OpenSlideWSIReader")
+    @patch("tiatoolbox.wsicore.wsireader.base.OpenSlideWSIReader")
     def test_tiff_suffix_raises_openslide_error(self, mock_reader: MagicMock) -> None:
         """Test that OpenSlide errors are caught and the function returns None."""
         mock_reader.side_effect = openslide.OpenSlideError("bad file")
@@ -4363,3 +4361,35 @@ def test_handle_tiff_wsi_returns_none_when_no_handlers_match(
 def test_is_url(input_path: str | Path, *, expected: bool) -> None:
     """Verify that is_url correctly identifies URLs and ignores local paths."""
     assert is_url(input_path) is expected
+
+
+def test_is_ngff_keyerror_returns_false(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test is_ngff returns False when attrs access raises KeyError."""
+
+    class BrokenAttrs(dict):
+        def get(self, key, default=None) -> None:  # noqa: ANN001, ARG002
+            raise KeyError(key)
+
+    class MockAttrs:
+        def asdict(self) -> BrokenAttrs:
+            return BrokenAttrs()
+
+    class MockGroup:
+        attrs = MockAttrs()
+
+    monkeypatch.setattr(
+        zarr,
+        "open",
+        lambda *args, **kwargs: MockGroup(),  # noqa: ARG005
+    )
+
+    # Make isinstance(zarr_group, zarr.Group) pass
+    monkeypatch.setattr(
+        zarr,
+        "Group",
+        MockGroup,
+    )
+
+    assert is_ngff("dummy.zarr") is False
