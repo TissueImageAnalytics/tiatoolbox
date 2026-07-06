@@ -4369,14 +4369,22 @@ def test_is_ngff_keyerror_returns_false(
     """Test is_ngff returns False when attrs access raises KeyError."""
 
     class BrokenAttrs(dict):
+        """Dummy BrokenAttrs."""
+
         def get(self, key, default=None) -> None:  # noqa: ANN001, ARG002
+            """Dummy get function raises error."""
             raise KeyError(key)
 
     class MockAttrs:
+        """Dummy MockAttrs."""
+
         def asdict(self) -> BrokenAttrs:
+            """Dummy asdict, returns BrokenAttrs."""
             return BrokenAttrs()
 
     class MockGroup:
+        """Mock Group."""
+
         attrs = MockAttrs()
 
     monkeypatch.setattr(
