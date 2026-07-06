@@ -4378,7 +4378,8 @@ def test_is_ngff_keyerror_returns_false(
     class MockAttrs:
         """Dummy MockAttrs."""
 
-        def asdict(self) -> BrokenAttrs:
+        @staticmethod
+        def asdict() -> BrokenAttrs:
             """Dummy asdict, returns BrokenAttrs."""
             return BrokenAttrs()
 
@@ -4401,3 +4402,8 @@ def test_is_ngff_keyerror_returns_false(
     )
 
     assert is_ngff("dummy.zarr") is False
+
+
+def test_is_valid_zarr_not_str_path() -> None:
+    """Tests is_valid_zarr_fsspec if not str or path."""
+    assert not is_valid_zarr_fsspec(np.zeros(0))
