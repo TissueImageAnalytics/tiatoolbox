@@ -2112,3 +2112,30 @@ def pad_contours(
             for c in contours
         ]
     )
+
+
+def remove_padded_values_in_contours(inst_dict: dict) -> dict:
+    """Removes padded contour values.
+
+    This function removes padded contour values introduced for compatibility
+    with Zarr v3. Zarr v3 does not support "object" dtype which was used as to wrap
+    inhomogenous arrays while saving using Zarr v2. To process contours, the contours
+    are saved as rectangular arrays with padded dtype min values.
+
+    Args:
+        inst_dict (dict):
+            Output of MultiTaskSegmentor Engine.
+
+    Returns:
+        dict:
+            Returns inst_dict with padded values in contours removed.
+
+    """
+    for _k, tile_pred in inst_dict.items():
+        contour = tile_pred["contour"]
+        pad_value = np.iinfo(contour.dtype).min
+        row_mask = np.any(contour != pad_value, axis=1)
+        contour = contour[row_mask]
+        inst_dict[_k]["contour"] = contour
+
+    return inst_dict
