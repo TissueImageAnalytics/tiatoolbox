@@ -81,7 +81,7 @@ dev = [
   "pytest-cov>=4.0.0",
   "pytest-runner>=6.0",
   "pytest-xdist[psutil]",
-  "ruff==0.15.15",
+  "ruff==0.15.20",
   "toml>=0.10.2",
   "twine>=4.0.1",
   "wheel>=0.37.1",
