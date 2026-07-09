@@ -157,7 +157,7 @@ class TilePyramidGenerator:
         y: int,
         res: int = 1,
         pad_mode: str = "constant",
-        interpolation: str = "optimise",
+        interpolation: str = "optimize",
         transparent_value: int | None = None,
     ) -> Image.Image:
         """Get a tile at a given level and coordinate.
