@@ -2131,8 +2131,8 @@ def remove_padded_values_in_contours(inst_dict: dict) -> dict:
             Returns inst_dict with padded values in contours removed.
 
     """
-    for _k, tile_pred in inst_dict.items():
-        contour = tile_pred["contour"]
+    for _k, inst_pred in inst_dict.items():
+        contour = np.asarray(inst_pred["contour"])
         pad_value = np.iinfo(contour.dtype).min
         row_mask = np.any(contour != pad_value, axis=1)
         contour = contour[row_mask]
