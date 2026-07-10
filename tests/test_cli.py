@@ -285,6 +285,21 @@ def test_prepare_ioconfig_with_pretrained_weights(
     assert ioconfig.kwargs["input_resolutions"][0]["resolution"] == 0.5
 
 
+def _fake_grab_files_from_dir(
+    input_path: Path,
+    file_types: tuple[str, ...],
+) -> list:
+    """Fake grab_files_from_dir function."""
+    _ = input_path, file_types
+    msg = "grab_files_from_dir should not be called"
+    raise AssertionError(msg)
+
+
+def _fake_string_to_tuple(in_str: str) -> tuple[str, ...]:
+    """Fake string to tuple."""
+    return tuple(part.strip() for part in in_str.split(","))
+
+
 def test_prepare_model_cli_with_input_dir_and_mask_dir(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
@@ -319,10 +334,11 @@ def test_prepare_model_cli_with_input_dir_and_mask_dir(
     output_path = track_tmp_path / "output"
     file_types = "*.png, *.jpg"
 
-    def _fake_grab_files_from_dir(
+    def _fake_grab_files_from_dir_for_dirs(
         input_path: Path,
         file_types: tuple[str, ...],
     ) -> list:
+        """Fake grab_files_from_dir function."""
         _ = file_types
         if input_path == img_dir:
             return [img_dir / "sample_1.png", img_dir / "sample_2.png"]
@@ -331,12 +347,9 @@ def test_prepare_model_cli_with_input_dir_and_mask_dir(
         msg = f"Unexpected path: {input_path}"
         raise AssertionError(msg)
 
-    def _fake_string_to_tuple(in_str: str) -> tuple[str, ...]:
-        return tuple(part.strip() for part in in_str.split(","))
-
     monkeypatch.setattr(
         "tiatoolbox.utils.misc.grab_files_from_dir",
-        _fake_grab_files_from_dir,
+        _fake_grab_files_from_dir_for_dirs,
     )
     monkeypatch.setattr(
         "tiatoolbox.utils.misc.string_to_tuple",
@@ -382,17 +395,6 @@ def test_prepare_model_cli_with_single_input_and_mask_file(
     mask_file.write_bytes(b"fake mask")
 
     output_path = track_tmp_path / "output"
-
-    def _fake_grab_files_from_dir(
-        input_path: Path,
-        file_types: tuple[str, ...],
-    ) -> list:
-        _ = input_path, file_types
-        msg = "grab_files_from_dir should not be called"
-        raise AssertionError(msg)
-
-    def _fake_string_to_tuple(in_str: str) -> tuple[str, ...]:
-        return tuple(part.strip() for part in in_str.split(","))
 
     monkeypatch.setattr(
         "tiatoolbox.utils.misc.grab_files_from_dir",

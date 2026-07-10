@@ -40,7 +40,10 @@ _RUNNING_ON_CI = running_on_ci()
 class FakeMiniModel(ModelABC):
     """Lightweight model double with a realistic TIAToolbox-style interface."""
 
-    class_dict = {0: "background", 1: "tumour"}  # noqa: RUF012
+    def __init__(self) -> None:
+        """Initialize FakeMiniModel."""
+        super().__init__()
+        self.class_dict = {0: "background", 1: "tumour"}
 
     def forward(self, x: np.ndarray) -> np.ndarray:
         """Forward pass of the model."""
@@ -234,6 +237,7 @@ def test_patch_predictor_cli_forwards_arguments(
         masks: str | Path | None,
         file_types: str,
     ) -> tuple[list[Path], list[Path] | None, Path]:
+        """Fake prepare_model_cli method."""
         _ = img_input, masks, file_types
         return [sample_image], None, Path(output_path)
 
@@ -242,6 +246,7 @@ def test_patch_predictor_cli_forwards_arguments(
         pretrained_weights: str | Path | None,
         yaml_config_path: str | Path,
     ) -> object | None:
+        """Fake prepare_ioconfig method."""
         _ = config_class, pretrained_weights, yaml_config_path
         return None
 
@@ -253,6 +258,7 @@ def test_patch_predictor_cli_forwards_arguments(
         *,
         verbose: bool,
     ) -> FakePatchPredictor:
+        """Fake patch_predictor method."""
         assert model == "resnet18-kather100k"
         assert weights is None
         assert batch_size == 64
@@ -350,7 +356,8 @@ def test_patch_predictor_cli_uses_yaml_config(
         masks: str | Path | None,
         file_types: str,
     ) -> tuple[list[Path], list[Path] | None, Path]:
-        del masks, file_types
+        """Fake prepare_model_cli method."""
+        _ = masks, file_types
         return [Path(img_input) / "sample.png"], None, Path(output_path)
 
     def _fake_prepare_ioconfig(
@@ -358,7 +365,8 @@ def test_patch_predictor_cli_uses_yaml_config(
         pretrained_weights: str | Path | None,
         yaml_config_path: str | Path,
     ) -> object | None:
-        del config_class, pretrained_weights
+        """Fake prepare_ioconfig method."""
+        _ = config_class, pretrained_weights
         assert Path(yaml_config_path) == yaml_path
         return object()
 
@@ -370,6 +378,7 @@ def test_patch_predictor_cli_uses_yaml_config(
         *,
         verbose: bool,
     ) -> FakePatchPredictor:
+        """Fake patch_predictor method."""
         assert model == "resnet18-kather100k"
         assert weights is None
         assert batch_size == 64
