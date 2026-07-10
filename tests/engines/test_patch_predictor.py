@@ -11,28 +11,223 @@ from typing import TYPE_CHECKING
 
 import dask.array as da
 import numpy as np
+import pytest
 import torch
 import yaml
 import zarr
 from click.testing import CliRunner
 
-from tests.conftest import timed
+from tests.conftest import _RUNNING_ON_CI, timed
 from tiatoolbox import cli, logger, rcParam
 from tiatoolbox.models import IOPatchPredictorConfig
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.vanilla import CNNModel
+from tiatoolbox.models.engine.engine_abc import EngineABC
 from tiatoolbox.models.engine.patch_predictor import PatchPredictor
+from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils.misc import download_data, get_zarr_array, imwrite
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    import pytest
-
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
 
 
+class FakeMiniModel(ModelABC):
+    """Lightweight model double with a realistic TIAToolbox-style interface."""
+
+    class_dict = {0: "background", 1: "tumour"}  # noqa: RUF012
+
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        """Forward pass of the model."""
+        batch = np.asarray(x)
+        batch_size = batch.shape[0]
+        logits = np.zeros((batch_size, 2), dtype=np.float32)
+        logits[:, 1] = np.linspace(0.2, 0.8, batch_size, dtype=np.float32)
+        logits[:, 0] = 1.0 - logits[:, 1]
+        return logits
+
+    @staticmethod
+    def infer_batch(
+        model: ModelABC,
+        batch_image: np.ndarray,
+        device: str = "cpu",
+    ) -> np.ndarray:
+        """Model inference."""
+        del device
+        return model.forward(batch_image)
+
+    @staticmethod
+    def postproc_func(probabilities: np.ndarray) -> np.ndarray:
+        """Model postprocessing function."""
+        return np.argmax(probabilities, axis=1)
+
+
+class DummyIOConfig:
+    """Dummy IOConfig."""
+
+    patch_input_shape = (224, 224)
+    stride_shape = (224, 224)
+    input_resolutions = [{"units": "mpp", "resolution": 0.5}]  # noqa: RUF012
+
+
+@pytest.fixture
+def predictor() -> PatchPredictor:
+    """Fake PatchPredictor."""
+    return PatchPredictor(model=FakeMiniModel(), batch_size=2, verbose=False)
+
+
+@pytest.fixture
+def fake_patch_batches(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Patch the dataloader so tests do not touch file IO or image decoding."""
+
+    def _fake_get_dataloader(
+        self: EngineABC,
+        images: object,
+        masks: object | None = None,
+        labels: list | None = None,
+        ioconfig: object | None = None,
+        *,
+        patch_mode: bool = True,
+        auto_get_mask: bool = True,
+        wsireader_kwargs: object | None = None,
+    ) -> list[dict[str, np.ndarray]]:
+        del (
+            self,
+            images,
+            masks,
+            labels,
+            ioconfig,
+            patch_mode,
+            auto_get_mask,
+            wsireader_kwargs,
+        )
+        batch_1 = {"image": np.zeros((1, 4, 4, 3), dtype=np.uint8)}
+        batch_2 = {"image": np.ones((1, 4, 4, 3), dtype=np.uint8)}
+        return [batch_1, batch_2]
+
+    monkeypatch.setattr(EngineABC, "get_dataloader", _fake_get_dataloader)
+
+
+def test_string_model_initialization(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Ensure model-name initialization can be tested without any download."""
+
+    def _fake_get_pretrained_model(
+        model: str,
+        weights: str | Path | None,
+    ) -> tuple[FakeMiniModel, DummyIOConfig]:
+        del weights
+        assert model == "resnet18-kather100k"
+        return FakeMiniModel(), DummyIOConfig()
+
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.engine_abc.get_pretrained_model",
+        _fake_get_pretrained_model,
+    )
+
+    predictor = PatchPredictor(model="resnet18-kather100k", batch_size=1, verbose=False)
+
+    assert isinstance(predictor.model, FakeMiniModel)
+    assert predictor.ioconfig is not None
+    assert predictor.ioconfig.patch_input_shape == (224, 224)
+
+
+def test_patch_run_fast_in_memory(
+    predictor: PatchPredictor,
+    fake_patch_batches: None,
+) -> None:
+    """Run the patch pipeline entirely in memory using monkeypatched batches."""
+    del fake_patch_batches
+    patches = np.zeros((2, 4, 4, 3), dtype=np.uint8)
+    ioconfig = IOPatchPredictorConfig(
+        patch_input_shape=(224, 224),
+        stride_shape=(224, 224),
+        input_resolutions=[{"units": "mpp", "resolution": 0.5}],
+    )
+
+    output = predictor.run(
+        images=patches,
+        patch_mode=True,
+        output_type="dict",
+        return_probabilities=True,
+        return_labels=False,
+        device="cpu",
+        ioconfig=ioconfig,
+    )
+
+    assert sorted(output.keys()) == ["predictions", "probabilities"]
+    assert output["probabilities"].shape == (2, 2)
+    assert output["predictions"].shape == (2,)
+    assert np.all(output["probabilities"] >= 0.0)
+    assert np.all(output["probabilities"] <= 1.0)
+
+
+@pytest.mark.parametrize("output_type", ["zarr", "annotationstore", "qupath"])
+def test_save_predictions_formats(
+    predictor: PatchPredictor,
+    tmp_path: Path,
+    output_type: str,
+) -> None:
+    """Make sure the output writers work with small synthetic predictions."""
+    processed_predictions = {
+        "probabilities": da.from_array(
+            np.asarray([[0.1, 0.9], [0.8, 0.2]], dtype=np.float32)
+        ),
+        "predictions": da.from_array(np.asarray([1, 0], dtype=np.uint8)),
+        "coordinates": da.from_array(
+            np.asarray([[0, 0, 224, 224], [224, 224, 448, 448]], dtype=np.int64)
+        ),
+    }
+
+    if output_type == "zarr":
+        save_path = tmp_path / "out.zarr"
+        result = predictor.save_predictions(
+            processed_predictions=processed_predictions,
+            output_type=output_type,
+            save_path=save_path,
+        )
+        assert isinstance(result, Path)
+        assert result.exists()
+        return
+
+    if output_type == "annotationstore":
+        save_path = tmp_path / "out.db"
+        result = predictor.save_predictions(
+            processed_predictions=processed_predictions,
+            output_type=output_type,
+            save_path=save_path,
+        )
+        assert isinstance(result, Path)
+        assert result.exists()
+
+        with sqlite3.connect(result) as con:
+            cursor = con.cursor()
+            rows = list(cursor.execute("SELECT properties FROM annotations"))
+        assert len(rows) == 2
+        return
+
+    save_path = tmp_path / "out.json"
+    result = predictor.save_predictions(
+        processed_predictions=processed_predictions,
+        output_type=output_type,
+        save_path=save_path,
+    )
+    assert isinstance(result, Path)
+    assert result.exists()
+
+    with result.open("r", encoding="utf-8") as fptr:
+        payload = json.load(fptr)
+    assert isinstance(payload, dict)
+    assert payload.get("features")
+
+
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_io_config_delegation(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test for delegating args to io config."""
     mini_wsi_svs = Path(remote_sample("wsi4_512_512_svs"))
@@ -124,6 +319,10 @@ def test_io_config_delegation(remote_sample: Callable, track_tmp_path: Path) -> 
     shutil.rmtree(track_tmp_path / "dump", ignore_errors=True)
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_patch_predictor_api(
     sample_patch1: Path,
     sample_patch2: Path,
@@ -212,6 +411,10 @@ def test_patch_predictor_api(
     assert np.all(np.array(output_ann["probabilities"]) >= 0)
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_wsi_predictor_api(
     sample_wsi_dict: dict,
     track_tmp_path: Path,
@@ -260,6 +463,10 @@ def test_wsi_predictor_api(
     shutil.rmtree(_kwargs["save_dir"], ignore_errors=True)
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_patch_predictor_kather100k_output(
     sample_patch1: Path,
     sample_patch2: Path,
@@ -290,6 +497,10 @@ def test_patch_predictor_kather100k_output(
         )
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_wsi_predictor_zarr(
     sample_wsi_dict: dict, track_tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
@@ -350,6 +561,10 @@ def test_wsi_predictor_zarr(
     assert "Output file saved at " in caplog.text
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_patch_predictor_patch_mode_annotation_store(
     sample_patch1: Path,
     sample_patch2: Path,
@@ -381,6 +596,10 @@ def test_patch_predictor_patch_mode_annotation_store(
     assert np.all(np.array(output["probabilities"]) >= 0)
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_patch_predictor_patch_mode_no_probabilities(
     sample_patch1: Path,
     sample_patch2: Path,
@@ -436,6 +655,10 @@ def test_patch_predictor_patch_mode_no_probabilities(
     assert "probabilities" not in output
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_engine_run_wsi_annotation_store(
     sample_wsi_dict: dict,
     track_tmp_path: Path,
@@ -484,6 +707,10 @@ def test_engine_run_wsi_annotation_store(
     shutil.rmtree(save_dir)
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_engine_run_wsi_qupath(
     sample_wsi_dict: dict,
     track_tmp_path: Path,
@@ -535,6 +762,10 @@ def test_engine_run_wsi_qupath(
 # --------------------------------------------------------------------------------------
 # torch.compile
 # --------------------------------------------------------------------------------------
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_patch_predictor_torch_compile(
     sample_patch1: Path,
     sample_patch2: Path,
@@ -585,6 +816,10 @@ def test_patch_predictor_torch_compile(
 # -------------------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test for models CLI single file."""
     wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
@@ -606,6 +841,10 @@ def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) ->
     assert (track_tmp_path / "output" / (wsi4_512_512_svs.stem + ".db")).exists()
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_cli_model_multiple_file_mask(
     remote_sample: Callable, track_tmp_path: Path
 ) -> None:
