@@ -711,10 +711,6 @@ def patch_first_conv(
         pretrained (bool):
             Whether to reuse pretrained weights. Defaults to True.
 
-    Notes:
-        - If `new_in_channels` == 1 or 2 → reuse original weights.
-        - If `new_in_channels` > 3 → initialize weights using Kaiming normal.
-
     Example:
         >>> patch_first_conv(model, new_in_channels=1, pretrained=True)
 

@@ -275,17 +275,17 @@ class MixVisionTransformer(nn.Module):
         in_chans: int = 3,
         *,
         num_classes: int = 1000,
-        embed_dims: Sequence[int] = [64, 128, 256, 512],
-        num_heads: Sequence[int] = [1, 2, 4, 8],
-        mlp_ratios: Sequence[float] = [4, 4, 4, 4],
+        embed_dims: Sequence[int] = (64, 128, 256, 512),
+        num_heads: Sequence[int] = (1, 2, 4, 8),
+        mlp_ratios: Sequence[float] = (4, 4, 4, 4),
         qkv_bias: bool = False,
         qk_scale: float | None = None,
         drop_rate: float = 0.0,
         attn_drop_rate: float = 0.0,
         drop_path_rate: float = 0.0,
         norm_layer: Callable[[int], nn.Module] = LayerNorm,
-        depths: Sequence[int] = [3, 4, 6, 3],
-        sr_ratios: Sequence[int] = [8, 4, 2, 1],
+        depths: Sequence[int] = (3, 4, 6, 3),
+        sr_ratios: Sequence[int] = (8, 4, 2, 1),
     ) -> None:
         """Initializes the Mix Vision Transformer module."""
         super().__init__()

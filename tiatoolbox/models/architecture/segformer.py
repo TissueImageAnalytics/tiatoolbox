@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import cv2
 import dask.array as da
@@ -16,9 +16,6 @@ from tiatoolbox.models.architecture.mix_transformer import (
 )
 from tiatoolbox.models.architecture.utils import Conv2dReLU, SegmentationHead
 from tiatoolbox.models.models_abc import ModelABC
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
 
 MIN_SEGFORMER_DECODER_DEPTH = 3
 
@@ -108,10 +105,6 @@ class Segformer(ModelABC):
             features with shapes [(N, C, H, W),], for depth 1
             [(N, C, H, W), (N, C, H // 2, W // 2)], and so on.
             Default is 5
-        encoder_weights: One of **None** (random initialization),
-            **"imagenet"** (pre-training on ImageNet), and
-            other pretrained weights (see table with available weights
-            for each encoder_name)
         decoder_segmentation_channels: A number of convolution filters in
             segmentation blocks, default is 256
         in_channels: A number of input channels for the model, default is 3
@@ -138,7 +131,7 @@ class Segformer(ModelABC):
         decoder_segmentation_channels: int = 256,
         in_channels: int = 3,
         classes: int = 1,
-        activation: str | Callable[..., object] | None = None,
+        activation: nn.Module | None = None,
         upsampling: int = 4,
     ) -> None:
         """Initializes the Segformer model."""
@@ -247,7 +240,7 @@ class Segformer(ModelABC):
         """Run inference on a batch of images.
 
         Transfers the model and input batch to the specified device, performs
-        forward pass, and returns sigmoid probabilities.
+        forward pass, and returns softmax probabilities.
 
         Args:
             model (Segformer):
