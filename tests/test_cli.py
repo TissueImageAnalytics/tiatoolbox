@@ -2,6 +2,7 @@
 
 import json
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import click
@@ -13,6 +14,7 @@ from tiatoolbox.cli.common import (
     cli_input_resolutions,
     cli_output_resolutions,
     parse_bool_list,
+    prepare_ioconfig,
     prepare_model_cli,
 )
 
@@ -231,3 +233,53 @@ def test_masks_is_file() -> None:
     assert files == [img_input]
     assert masks_all == [masks]
     assert out == output_path
+
+
+class FakeIOConfig:
+    """Minimal stand-in for a ModelIOConfigABC subclass."""
+
+    def __init__(self, **kwargs: Any) -> None:  # noqa: ANN401
+        """Initialize a FakeIOConfig object."""
+        self.kwargs = kwargs
+
+
+def test_prepare_ioconfig_with_pretrained_weights(
+    track_tmp_path: Path,
+) -> None:
+    """Test the branch where ``pretrained_weights`` is provided.
+
+    This test verifies that:
+    - the YAML file is read,
+    - the parsed YAML is passed into ``config_class``,
+    - a config object is returned instead of ``None``.
+
+    Args:
+        track_tmp_path (Path):
+            Temporary directory used to create the YAML fixture file.
+
+    Returns:
+        None:
+            Assertions validate the expected behavior.
+
+    """
+    yaml_path = track_tmp_path / "config.yaml"
+    yaml_path.write_text(
+        "patch_input_shape: [224, 224]\n"
+        "stride_shape: [112, 112]\n"
+        "input_resolutions:\n"
+        "  - units: mpp\n"
+        "    resolution: 0.5\n",
+        encoding="utf-8",
+    )
+
+    ioconfig = prepare_ioconfig(
+        config_class=FakeIOConfig,
+        pretrained_weights=track_tmp_path / "weights.pth",
+        yaml_config_path=yaml_path,
+    )
+
+    assert isinstance(ioconfig, FakeIOConfig)
+    assert ioconfig.kwargs["patch_input_shape"] == [224, 224]
+    assert ioconfig.kwargs["stride_shape"] == [112, 112]
+    assert ioconfig.kwargs["input_resolutions"][0]["units"] == "mpp"
+    assert ioconfig.kwargs["input_resolutions"][0]["resolution"] == 0.5
