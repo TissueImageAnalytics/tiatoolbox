@@ -44,6 +44,7 @@ from tiatoolbox.utils.misc import (
     cast_to_min_dtype,
     create_smart_array,
     dict_to_store_patch_predictions,
+    get_zarr_array,
     imread,
     pad_contours,
 )
@@ -2546,3 +2547,35 @@ def test_create_smart_array_chunks_auto(track_tmp_path: Path) -> None:
 
     # The key assertion: chunks must equal shape_tuple
     assert arr.chunks == shape
+
+
+def test_get_zarr_array_from_zarr_array(track_tmp_path: Path) -> None:
+    """Test conversion of a zarr.Array to a NumPy array.
+
+    This test covers the branch where the input is a ``zarr.Array``.
+    The returned value should contain the same data as the zarr array
+    and be converted to a NumPy array.
+
+    Args:
+        track_tmp_path (Path):
+            Temporary directory supplied by pytest.
+
+    Returns:
+        None:
+            Assertions verify the expected behavior.
+
+    """
+    zarr_path = track_tmp_path / "test.zarr"
+
+    zarr_array = zarr.open(
+        str(zarr_path),
+        mode="w",
+        shape=(3,),
+        dtype="int32",
+    )
+    zarr_array[:] = [1, 2, 3]
+
+    output = get_zarr_array(zarr_array)
+
+    assert isinstance(output, np.ndarray)
+    np.testing.assert_array_equal(output, np.asarray([1, 2, 3]))
