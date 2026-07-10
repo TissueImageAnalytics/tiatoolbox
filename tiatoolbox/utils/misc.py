@@ -2118,9 +2118,9 @@ def remove_padded_values_in_contours(inst_dict: dict) -> dict:
     """Removes padded contour values.
 
     This function removes padded contour values introduced for compatibility
-    with Zarr v3. Zarr v3 does not support "object" dtype which was used as to wrap
-    inhomogenous arrays while saving using Zarr v2. To process contours, the contours
-    are saved as rectangular arrays with padded dtype min values.
+    with Zarr v3. Zarr v3 does not support "object" dtype which was used to wrap
+    inhomogeneous arrays while saving using Zarr v2. To process contours, the
+    contours are saved as rectangular arrays with padded dtype min values.
 
     Args:
         inst_dict (dict):
@@ -2128,14 +2128,20 @@ def remove_padded_values_in_contours(inst_dict: dict) -> dict:
 
     Returns:
         dict:
-            Returns inst_dict with padded values in contours removed.
+            Returns a copy of inst_dict with padded values in contours removed.
 
     """
-    for _k, inst_pred in inst_dict.items():
+    cleaned: dict = {}
+    for k, inst_pred in inst_dict.items():
         contour = np.asarray(inst_pred["contour"])
+        # Only attempt padding removal for signed integer contours (the padding
+        # value is expected to be np.iinfo(dtype).min).
+        if contour.ndim != 2 or not np.issubdtype(contour.dtype, np.signedinteger):  # noqa: PLR2004
+            cleaned[k] = {**inst_pred, "contour": contour}
+            continue
         pad_value = np.iinfo(contour.dtype).min
         row_mask = np.any(contour != pad_value, axis=1)
         contour = contour[row_mask]
-        inst_dict[_k]["contour"] = contour
+        cleaned[k] = {**inst_pred, "contour": contour}
 
-    return inst_dict
+    return cleaned
