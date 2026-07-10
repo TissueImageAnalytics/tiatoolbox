@@ -17,7 +17,7 @@ import yaml
 import zarr
 from click.testing import CliRunner
 
-from tests.conftest import _RUNNING_ON_CI, timed
+from tests.conftest import timed
 from tiatoolbox import cli, logger, rcParam
 from tiatoolbox.models import IOPatchPredictorConfig
 from tiatoolbox.models.architecture import fetch_pretrained_weights
@@ -26,12 +26,14 @@ from tiatoolbox.models.engine.engine_abc import EngineABC
 from tiatoolbox.models.engine.patch_predictor import PatchPredictor
 from tiatoolbox.models.models_abc import ModelABC
 from tiatoolbox.utils import env_detection as toolbox_env
+from tiatoolbox.utils.env_detection import running_on_ci
 from tiatoolbox.utils.misc import download_data, get_zarr_array, imwrite
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
+_RUNNING_ON_CI = running_on_ci()
 
 
 class FakeMiniModel(ModelABC):
@@ -55,13 +57,13 @@ class FakeMiniModel(ModelABC):
         device: str = "cpu",
     ) -> np.ndarray:
         """Model inference."""
-        del device
+        _ = device
         return model.forward(batch_image)
 
     @staticmethod
-    def postproc_func(probabilities: np.ndarray) -> np.ndarray:
+    def postproc(image: np.ndarray) -> np.ndarray:
         """Model postprocessing function."""
-        return np.argmax(probabilities, axis=1)
+        return np.argmax(image, axis=1)
 
 
 class DummyIOConfig:
@@ -93,7 +95,8 @@ def fake_patch_batches(monkeypatch: pytest.MonkeyPatch) -> None:
         auto_get_mask: bool = True,
         wsireader_kwargs: object | None = None,
     ) -> list[dict[str, np.ndarray]]:
-        del (
+        """Fake get dataloader function."""
+        _ = (
             self,
             images,
             masks,
@@ -119,7 +122,8 @@ def test_string_model_initialization(
         model: str,
         weights: str | Path | None,
     ) -> tuple[FakeMiniModel, DummyIOConfig]:
-        del weights
+        """Fake get pretrained model function."""
+        _ = weights
         assert model == "resnet18-kather100k"
         return FakeMiniModel(), DummyIOConfig()
 
@@ -139,8 +143,8 @@ def test_patch_run_fast_in_memory(
     predictor: PatchPredictor,
     fake_patch_batches: None,
 ) -> None:
-    """Run the patch pipeline entirely in memory using monkeypatched batches."""
-    del fake_patch_batches
+    """Run the patch pipeline entirely in memory using fake batches."""
+    _ = fake_patch_batches
     patches = np.zeros((2, 4, 4, 3), dtype=np.uint8)
     ioconfig = IOPatchPredictorConfig(
         patch_input_shape=(224, 224),
@@ -973,9 +977,9 @@ def _test_predictor_output(
         shutil.rmtree(save_dir)
 
 
-def _extract_probabilities_from_annotation_store(dbfile: str | Path) -> dict:
+def _extract_probabilities_from_annotation_store(db_file: str | Path) -> dict:
     """Helper function to extract probabilities from Annotation Store."""
-    con = sqlite3.connect(dbfile)
+    con = sqlite3.connect(db_file)
     cur = con.cursor()
     annotations_properties = list(cur.execute("SELECT properties FROM annotations"))
 
