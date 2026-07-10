@@ -283,3 +283,133 @@ def test_prepare_ioconfig_with_pretrained_weights(
     assert ioconfig.kwargs["stride_shape"] == [112, 112]
     assert ioconfig.kwargs["input_resolutions"][0]["units"] == "mpp"
     assert ioconfig.kwargs["input_resolutions"][0]["resolution"] == 0.5
+
+
+def test_prepare_model_cli_with_input_dir_and_mask_dir(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test ``prepare_model_cli`` when both input and masks are directories.
+
+    This test covers:
+    - ``if masks.is_dir():``
+    - ``if Path.is_dir(img_input):``
+
+    Args:
+        monkeypatch (pytest.MonkeyPatch):
+            Pytest fixture used to replace filesystem helper functions.
+        track_tmp_path (Path):
+            Temporary directory used to create input, mask, and output fixtures.
+
+    Returns:
+        None:
+            Assertions verify the expected behavior.
+
+    """
+    img_dir = track_tmp_path / "images"
+    img_dir.mkdir()
+    (img_dir / "sample_1.png").write_bytes(b"fake image")
+    (img_dir / "sample_2.png").write_bytes(b"fake image")
+
+    mask_dir = track_tmp_path / "masks"
+    mask_dir.mkdir()
+    (mask_dir / "mask_1.png").write_bytes(b"fake mask")
+    (mask_dir / "mask_2.jpg").write_bytes(b"fake mask")
+
+    output_path = track_tmp_path / "output"
+    file_types = "*.png, *.jpg"
+
+    def _fake_grab_files_from_dir(
+        input_path: Path,
+        file_types: tuple[str, ...],
+    ) -> list:
+        _ = file_types
+        if input_path == img_dir:
+            return [img_dir / "sample_1.png", img_dir / "sample_2.png"]
+        if input_path == mask_dir:
+            return [mask_dir / "mask_1.png", mask_dir / "mask_2.jpg"]
+        msg = f"Unexpected path: {input_path}"
+        raise AssertionError(msg)
+
+    def _fake_string_to_tuple(in_str: str) -> tuple[str, ...]:
+        return tuple(part.strip() for part in in_str.split(","))
+
+    monkeypatch.setattr(
+        "tiatoolbox.utils.misc.grab_files_from_dir",
+        _fake_grab_files_from_dir,
+    )
+    monkeypatch.setattr(
+        "tiatoolbox.utils.misc.string_to_tuple",
+        _fake_string_to_tuple,
+    )
+
+    files_all, masks_all, returned_output = prepare_model_cli(
+        img_input=img_dir,
+        output_path=output_path,
+        masks=mask_dir,
+        file_types=file_types,
+    )
+
+    assert files_all == [img_dir / "sample_1.png", img_dir / "sample_2.png"]
+    assert masks_all == [mask_dir / "mask_1.png", mask_dir / "mask_2.jpg"]
+    assert returned_output == output_path
+
+
+def test_prepare_model_cli_with_single_input_and_mask_file(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test ``prepare_model_cli`` when the mask is provided as a file.
+
+    This test covers:
+    - ``if masks.is_file():``
+
+    Args:
+        monkeypatch (pytest.MonkeyPatch):
+            Pytest fixture used to replace filesystem helper functions.
+        track_tmp_path (Path):
+            Temporary directory used to create input, mask, and output fixtures.
+
+    Returns:
+        None:
+            Assertions verify the expected behavior.
+
+    """
+    img_file = track_tmp_path / "sample.png"
+    img_file.write_bytes(b"fake image")
+
+    mask_file = track_tmp_path / "mask.png"
+    mask_file.write_bytes(b"fake mask")
+
+    output_path = track_tmp_path / "output"
+
+    def _fake_grab_files_from_dir(
+        input_path: Path,
+        file_types: tuple[str, ...],
+    ) -> list:
+        _ = input_path, file_types
+        msg = "grab_files_from_dir should not be called"
+        raise AssertionError(msg)
+
+    def _fake_string_to_tuple(in_str: str) -> tuple[str, ...]:
+        return tuple(part.strip() for part in in_str.split(","))
+
+    monkeypatch.setattr(
+        "tiatoolbox.utils.misc.grab_files_from_dir",
+        _fake_grab_files_from_dir,
+    )
+    monkeypatch.setattr(
+        "tiatoolbox.utils.misc.string_to_tuple",
+        _fake_string_to_tuple,
+    )
+
+    files_all, masks_all, returned_output = prepare_model_cli(
+        img_input=img_file,
+        output_path=output_path,
+        masks=mask_file,
+        file_types="*.png",
+    )
+
+    assert files_all == [img_file]
+    assert masks_all == [mask_file]
+    assert returned_output == output_path
