@@ -7,7 +7,7 @@ import json
 import shutil
 import sqlite3
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import dask.array as da
 import numpy as np
@@ -19,6 +19,7 @@ from click.testing import CliRunner
 
 from tests.conftest import timed
 from tiatoolbox import cli, logger, rcParam
+from tiatoolbox.cli.common import tiatoolbox_cli
 from tiatoolbox.models import IOPatchPredictorConfig
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.architecture.vanilla import CNNModel
@@ -167,6 +168,246 @@ def test_patch_run_fast_in_memory(
     assert output["predictions"].shape == (2,)
     assert np.all(output["probabilities"] >= 0.0)
     assert np.all(output["probabilities"] <= 1.0)
+
+
+class FakePatchPredictor:
+    """Minimal stand-in for PatchPredictor that records run arguments."""
+
+    def __init__(
+        self,
+        model: str,
+        weights: str | None,
+        batch_size: int,
+        num_workers: int,
+        *,
+        verbose: bool,
+    ) -> None:
+        """Initialize FakePatchPredictor."""
+        _ = model, weights, batch_size, num_workers, verbose
+        self.run_calls: list[dict[str, Any]] = []
+
+    def run(self, **kwargs: Any) -> None:  # noqa: ANN401
+        """Run function."""
+        self.run_calls.append(kwargs)
+
+
+def test_patch_predictor_cli_forwards_arguments(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Test that the patch-predictor CLI forwards parsed values correctly.
+
+    This test covers the CLI wiring only. It verifies that:
+    - input and output paths are prepared,
+    - the predictor is instantiated with CLI arguments,
+    - the run method receives the expected keyword arguments.
+
+    Args:
+        monkeypatch (pytest.MonkeyPatch):
+            Pytest fixture used to replace expensive collaborators.
+        tmp_path (Path):
+            Temporary directory used to create input and output test data.
+
+    Returns:
+        None:
+            Assertions verify the expected CLI behavior.
+
+    """
+    img_input = tmp_path / "input"
+    img_input.mkdir()
+    sample_image = img_input / "sample.png"
+    sample_image.write_bytes(b"fake image data")
+
+    output_dir = tmp_path / "output"
+
+    fake_predictor = FakePatchPredictor(
+        model="resnet18-kather100k",
+        weights=None,
+        batch_size=64,
+        num_workers=0,
+        verbose=True,
+    )
+
+    def _fake_prepare_model_cli(
+        img_input: str | Path,
+        output_path: str | Path,
+        masks: str | Path | None,
+        file_types: str,
+    ) -> tuple[list[Path], list[Path] | None, Path]:
+        _ = img_input, masks, file_types
+        return [sample_image], None, Path(output_path)
+
+    def _fake_prepare_ioconfig(
+        config_class: type[Any],
+        pretrained_weights: str | Path | None,
+        yaml_config_path: str | Path,
+    ) -> object | None:
+        _ = config_class, pretrained_weights, yaml_config_path
+        return None
+
+    def _fake_patch_predictor(
+        model: str,
+        weights: str | None,
+        batch_size: int,
+        num_workers: int,
+        *,
+        verbose: bool,
+    ) -> FakePatchPredictor:
+        assert model == "resnet18-kather100k"
+        assert weights is None
+        assert batch_size == 64
+        assert num_workers == 0
+        assert verbose is True
+        return fake_predictor
+
+    monkeypatch.setattr(
+        "tiatoolbox.cli.common.prepare_model_cli",
+        _fake_prepare_model_cli,
+    )
+    monkeypatch.setattr(
+        "tiatoolbox.cli.common.prepare_ioconfig",
+        _fake_prepare_ioconfig,
+    )
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.patch_predictor.PatchPredictor",
+        _fake_patch_predictor,
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        tiatoolbox_cli,
+        [
+            "patch-predictor",
+            "--img-input",
+            str(img_input),
+            "--output-path",
+            str(output_dir),
+            "--patch-mode",
+            "False",
+            "--model",
+            "resnet18-kather100k",
+            "--device",
+            "cpu",
+            "--batch-size",
+            "64",
+            "--return-probabilities",
+            "True",
+            "--auto-get-mask",
+            "True",
+            "--overwrite",
+            "False",
+            "--verbose",
+            "True",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert len(fake_predictor.run_calls) == 1
+
+    run_kwargs = fake_predictor.run_calls[0]
+    assert run_kwargs["images"] == [sample_image]
+    assert run_kwargs["masks"] is None
+    assert run_kwargs["patch_mode"] is False
+    assert run_kwargs["device"] == "cpu"
+    assert run_kwargs["save_dir"] == output_dir
+    assert run_kwargs["output_type"] == "AnnotationStore"
+    assert run_kwargs["return_probabilities"] is True
+    assert run_kwargs["auto_get_mask"] is True
+    assert run_kwargs["overwrite"] is False
+    assert run_kwargs["verbose"] is True
+
+
+def test_patch_predictor_cli_uses_yaml_config(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Test that the patch-predictor CLI forwards YAML config information."""
+    img_input = tmp_path / "input"
+    img_input.mkdir()
+    (img_input / "sample.png").write_bytes(b"fake image data")
+
+    yaml_path = tmp_path / "config.yaml"
+    yaml_path.write_text(
+        "patch_input_shape: [224, 224]\n"
+        "stride_shape: [224, 224]\n"
+        "input_resolutions:\n"
+        "  - units: mpp\n"
+        "    resolution: 0.5\n",
+        encoding="utf-8",
+    )
+
+    fake_predictor = FakePatchPredictor(
+        model="resnet18-kather100k",
+        weights=None,
+        batch_size=64,
+        num_workers=0,
+        verbose=True,
+    )
+
+    def _fake_prepare_model_cli(
+        img_input: str | Path,
+        output_path: str | Path,
+        masks: str | Path | None,
+        file_types: str,
+    ) -> tuple[list[Path], list[Path] | None, Path]:
+        del masks, file_types
+        return [Path(img_input) / "sample.png"], None, Path(output_path)
+
+    def _fake_prepare_ioconfig(
+        config_class: type[Any],
+        pretrained_weights: str | Path | None,
+        yaml_config_path: str | Path,
+    ) -> object | None:
+        del config_class, pretrained_weights
+        assert Path(yaml_config_path) == yaml_path
+        return object()
+
+    def _fake_patch_predictor(
+        model: str,
+        weights: str | None,
+        batch_size: int,
+        num_workers: int,
+        *,
+        verbose: bool,
+    ) -> FakePatchPredictor:
+        assert model == "resnet18-kather100k"
+        assert weights is None
+        assert batch_size == 64
+        assert num_workers == 0
+        assert verbose is True
+        return fake_predictor
+
+    monkeypatch.setattr(
+        "tiatoolbox.cli.common.prepare_model_cli",
+        _fake_prepare_model_cli,
+    )
+    monkeypatch.setattr(
+        "tiatoolbox.cli.common.prepare_ioconfig",
+        _fake_prepare_ioconfig,
+    )
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.patch_predictor.PatchPredictor",
+        _fake_patch_predictor,
+    )
+
+    runner = CliRunner()
+    result = runner.invoke(
+        tiatoolbox_cli,
+        [
+            "patch-predictor",
+            "--img-input",
+            str(img_input),
+            "--output-path",
+            str(tmp_path / "output"),
+            "--yaml-config-path",
+            str(yaml_path),
+            "--patch-mode",
+            "False",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert len(fake_predictor.run_calls) == 1
 
 
 @pytest.mark.parametrize("output_type", ["zarr", "annotationstore", "qupath"])
