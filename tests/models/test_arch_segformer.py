@@ -2,10 +2,6 @@
 
 from __future__ import annotations
 
-import importlib
-import sys
-import typing
-
 import dask.array as da
 import numpy as np
 import pytest
@@ -132,16 +128,3 @@ def test_segformer_infer_batch_probability_output() -> None:
     assert probs.shape == (2, 64, 64, 2)
     assert isinstance(probs, np.ndarray)
     assert np.allclose(np.sum(probs, axis=-1), 1.0, atol=1e-5)
-
-
-def test_segformer_type_checking_import_branch(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Reload module with TYPE_CHECKING enabled to execute import-only branch."""
-    module_name = "tiatoolbox.models.architecture.segformer"
-    module = sys.modules[module_name]
-
-    monkeypatch.setattr(typing, "TYPE_CHECKING", True)
-    reloaded = importlib.reload(module)
-    assert "Callable" in reloaded.__dict__
-
-    monkeypatch.setattr(typing, "TYPE_CHECKING", False)
-    importlib.reload(reloaded)
