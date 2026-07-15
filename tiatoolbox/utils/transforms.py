@@ -97,7 +97,7 @@ def imresize(
     img: np.ndarray,
     scale_factor: float | tuple[float, float] | None = None,
     output_size: int | tuple[int, int] | None = None,
-    interpolation: str | int = "optimise",
+    interpolation: str | int = "optimize",
 ) -> np.ndarray:
     """Resize input image.
 
@@ -147,7 +147,7 @@ def imresize(
         return img
 
     # Get appropriate cv2 interpolation enum
-    if interpolation == "optimise":
+    if interpolation == "optimize":
         interpolation = select_cv2_interpolation(scale_factor_array)
 
     # a list of (original type, converted type) tuple
