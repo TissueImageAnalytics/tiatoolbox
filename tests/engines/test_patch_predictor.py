@@ -478,6 +478,62 @@ def test_save_predictions_formats(
     assert payload.get("features")
 
 
+def test_infer_wsi_calls_infer_patches(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Tests ``infer_wsi``.
+
+    Args:
+        monkeypatch (pytest.MonkeyPatch):
+            Fixture used to patch ``infer_patches``.
+
+    Returns:
+        None:
+            Assertions verify expected behavior.
+
+    """
+    predictor = PatchPredictor(
+        model=FakeMiniModel(),
+        batch_size=1,
+        verbose=False,
+    )
+
+    expected_output = {
+        "predictions": "dummy_predictions",
+        "coordinates": "dummy_coordinates",
+    }
+
+    called: dict[str, Any] = {}
+
+    def _fake_infer_patches(
+        self: PatchPredictor,
+        dataloader: object,
+        *,
+        return_coordinates: bool,
+    ) -> dict[str, object]:
+        _ = self
+        called["dataloader"] = dataloader
+        called["return_coordinates"] = return_coordinates
+        return expected_output
+
+    monkeypatch.setattr(
+        PatchPredictor,
+        "infer_patches",
+        _fake_infer_patches,
+    )
+
+    dataloader = object()
+
+    result = predictor.infer_wsi(
+        dataloader=dataloader,
+        save_path=Path("unused.zarr"),
+    )
+
+    assert result is expected_output
+    assert called["dataloader"] is dataloader
+    assert called["return_coordinates"] is True
+
+
 @pytest.mark.skipif(
     _RUNNING_ON_CI,
     reason="Local test only.",
