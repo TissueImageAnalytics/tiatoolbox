@@ -76,7 +76,8 @@ def is_zarr(path: str | Path, **kwargs: Unpack[WSIReaderParams]) -> bool:
 
     """
     try:
-        _ = zarr.open(path, **kwargs, mode="r")
+        zarr_kwargs = {k: v for k, v in kwargs.items() if k == "storage_options"}
+        _ = zarr.open(path, mode="r", **zarr_kwargs)
     except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
         return False
 
@@ -97,9 +98,9 @@ def is_ngff(  # skipcq: PY-R1000  # noqa: PLR0911
     Args:
         path (Path):
             Path to the file to check.
-        min_version (Tuple[int, ...]):
+        min_version (Version):
             Minimum version of the NGFF file to be considered valid.
-        max_version (Tuple[int, ...]):
+        max_version (Version):
             Maximum version of the NGFF file to be considered valid.
 
     Returns:
