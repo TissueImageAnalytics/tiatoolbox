@@ -47,6 +47,7 @@ from tiatoolbox.utils.misc import (
     get_zarr_array,
     imread,
     pad_contours,
+    remove_padded_values_in_contours,
 )
 from tiatoolbox.utils.transforms import locsize2bounds
 
@@ -2579,3 +2580,120 @@ def test_get_zarr_array_from_zarr_array(track_tmp_path: Path) -> None:
 
     assert isinstance(output, np.ndarray)
     np.testing.assert_array_equal(output, np.asarray([1, 2, 3]))
+
+
+def test_removes_padded_rows() -> None:
+    """Test removes_padded_rows."""
+    contour = np.array(
+        [
+            [1, 2],
+            [np.iinfo(np.int32).min, np.iinfo(np.int32).min],
+            [3, 4],
+        ],
+        dtype=np.int32,
+    )
+
+    inst_dict = {
+        "inst1": {
+            "contour": contour,
+            "score": 0.9,
+        }
+    }
+
+    result = remove_padded_values_in_contours(inst_dict)
+
+    expected = np.array([[1, 2], [3, 4]], dtype=np.int32)
+
+    np.testing.assert_array_equal(result["inst1"]["contour"], expected)
+    assert result["inst1"]["score"] == 0.9
+
+
+def test_keeps_rows_with_at_least_one_non_padding_value() -> None:
+    """Test with mixed rows to retain padding value."""
+    pad = np.iinfo(np.int16).min
+
+    contour = np.array(
+        [
+            [pad, 5],
+            [pad, pad],
+        ],
+        dtype=np.int16,
+    )
+
+    result = remove_padded_values_in_contours({"inst1": {"contour": contour}})
+
+    expected = np.array([[pad, 5]], dtype=np.int16)
+
+    np.testing.assert_array_equal(
+        result["inst1"]["contour"],
+        expected,
+    )
+
+
+def test_unsigned_integer_contour_is_not_modified() -> None:
+    """Test unsigned integer contour."""
+    contour = np.array([[1, 2], [3, 4]], dtype=np.uint8)
+
+    result = remove_padded_values_in_contours({"inst1": {"contour": contour}})
+
+    np.testing.assert_array_equal(
+        result["inst1"]["contour"],
+        contour,
+    )
+
+
+def test_non_2d_contour_is_not_modified() -> None:
+    """Test non-2d contour."""
+    contour = np.array([1, 2, 3], dtype=np.int32)
+
+    result = remove_padded_values_in_contours({"inst1": {"contour": contour}})
+
+    np.testing.assert_array_equal(
+        result["inst1"]["contour"],
+        contour,
+    )
+
+
+def test_all_padding_rows_removed() -> None:
+    """Tests all padding rows are removed."""
+    pad = np.iinfo(np.int32).min
+
+    contour = np.array(
+        [
+            [pad, pad],
+            [pad, pad],
+        ],
+        dtype=np.int32,
+    )
+
+    result = remove_padded_values_in_contours({"inst1": {"contour": contour}})
+
+    assert result["inst1"]["contour"].shape == (0, 2)
+
+
+def test_returns_new_dict_without_modifying_input() -> None:
+    """Tests the output without modifying input."""
+    pad = np.iinfo(np.int32).min
+
+    contour = np.array(
+        [
+            [1, 2],
+            [pad, pad],
+        ],
+        dtype=np.int32,
+    )
+
+    inst_dict = {"inst1": {"contour": contour}}
+
+    result = remove_padded_values_in_contours(inst_dict)
+
+    assert result is not inst_dict
+
+    # original remains unchanged
+    np.testing.assert_array_equal(
+        inst_dict["inst1"]["contour"],
+        contour,
+    )
+
+    # cleaned result differs
+    assert result["inst1"]["contour"].shape == (1, 2)
