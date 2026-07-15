@@ -11,6 +11,7 @@ on:
       - "pyproject*toml"
       - "MANIFEST*in"
       - ".github/workflows/pip-install.yml"
+    branches: [ develop, master, main ]
   pull_request:
     paths:
       - "requirements*.yml"
@@ -21,6 +22,7 @@ on:
       - "pyproject*toml"
       - "MANIFEST*in"
       - ".github/workflows/pip-install.yml"
+    branches: [ develop, pre-release, master, main ]
 
 permissions:
   contents: read
