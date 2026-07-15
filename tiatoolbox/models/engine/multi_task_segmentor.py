@@ -1969,7 +1969,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         # Save to AnnotationStore
         return_probabilities = kwargs.get("return_probabilities", False)
-        return_predictions = kwargs.get("return_predictions", (False,))
+        return_predictions = kwargs.get("return_predictions") or (False,)
         return_predictions_ = any(rp_ is True for rp_ in return_predictions)
         output_type_ = (
             "zarr"
