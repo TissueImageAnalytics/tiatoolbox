@@ -17,3 +17,4 @@ class WSIReaderParams(TypedDict, total=False):
     mpp: tuple[Number, Number] | Number | None
     power: Number | None
     storage_options: dict  # For FsspecStore
+    post_proc: str | callable | None

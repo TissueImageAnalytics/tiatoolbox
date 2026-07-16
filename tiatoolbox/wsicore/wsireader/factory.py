@@ -146,7 +146,8 @@ def _handle_special_cases(
     from .base import _handle_virtual_wsi  # noqa: PLC0415
 
     _, _, suffixes = utils.misc.split_path_name_ext(input_path)
-    last_suffix = suffixes[-1]
+    last_suffix = suffixes[-1] if suffixes else None
+    post_proc = "auto" if post_proc is None else post_proc
 
     reader = (
         try_dicom(input_path, mpp, power, post_proc)
