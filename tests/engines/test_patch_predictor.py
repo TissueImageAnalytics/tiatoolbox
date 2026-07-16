@@ -534,6 +534,114 @@ def test_infer_wsi_calls_infer_patches(
     assert called["return_coordinates"] is True
 
 
+def test_update_run_params_does_not_drop_label_when_return_labels_true(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Cover the branch where ``if not self.return_labels`` is False.
+
+    This test verifies that when ``return_labels=True`` is supplied via kwargs,
+    the engine does not append ``"label"`` to ``drop_keys`` during
+    ``_update_run_params``.
+
+    Args:
+        monkeypatch (pytest.MonkeyPatch):
+            Pytest fixture used to replace downstream validation helpers.
+        tmp_path (Path):
+            Temporary directory used to create a dummy image fixture.
+
+    Returns:
+        None:
+            Assertions validate the expected branch behavior.
+
+    """
+    predictor = PatchPredictor(
+        model=FakeMiniModel(),
+        batch_size=1,
+        verbose=False,
+    )
+
+    # Minimal valid image input so the method can proceed far enough.
+    img_path = tmp_path / "sample.png"
+    img_path.write_bytes(b"fake image")
+
+    def _fake_validate_input_numbers(
+        *,
+        images: object,
+        masks: object,
+        labels: object,
+    ) -> None:
+        _ = images, masks, labels
+
+    def _fake_validate_images_masks(
+        *,
+        images: object,
+    ) -> list:
+        return [Path(img_path)] if images is not None else []
+
+    def _fake_load_ioconfig(
+        *,
+        ioconfig: object,
+    ) -> object:
+        return ioconfig
+
+    def _fake_update_ioconfig(
+        ioconfig: object,
+        patch_input_shape: object,
+        stride_shape: object,
+        input_resolutions: object,
+    ) -> object:
+        _ = patch_input_shape, stride_shape, input_resolutions
+        return ioconfig
+
+    def _fake_prepare_engines_save_dir(
+        save_dir: Path | None,
+        *,
+        patch_mode: bool,
+        overwrite: bool = False,
+    ) -> Path | None:
+        _ = patch_mode, overwrite
+        return save_dir
+
+    monkeypatch.setattr(
+        predictor,
+        "_validate_input_numbers",
+        _fake_validate_input_numbers,
+    )
+    monkeypatch.setattr(
+        predictor,
+        "_validate_images_masks",
+        _fake_validate_images_masks,
+    )
+    monkeypatch.setattr(
+        predictor,
+        "_load_ioconfig",
+        _fake_load_ioconfig,
+    )
+    monkeypatch.setattr(
+        predictor,
+        "_update_ioconfig",
+        _fake_update_ioconfig,
+    )
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.engine_abc.prepare_engines_save_dir",
+        _fake_prepare_engines_save_dir,
+    )
+
+    predictor.drop_keys = []
+
+    predictor._update_run_params(
+        images=[img_path],
+        patch_mode=True,
+        output_type="dict",
+        save_dir=None,
+        return_labels=True,
+    )
+
+    assert "label" not in predictor.drop_keys
+    assert predictor.return_labels is True
+
+
 @pytest.mark.skipif(
     _RUNNING_ON_CI,
     reason="Local test only.",
