@@ -115,3 +115,31 @@ def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) ->
     assert "probabilities" in zarr_group
     assert "nuclei_segmentation" not in zarr_group
     assert "predictions" in zarr_group
+
+
+def test_cli_default_return_predictions(
+    remote_sample: Callable, track_tmp_path: Path
+) -> None:
+    """Test CLI does not crash when return_predictions defaults to None.
+
+    Regression test: omitting ``--return-predictions`` leaves it as ``None``,
+    which previously reached the engine and raised
+    ``TypeError: 'NoneType' is not iterable``.
+    """
+    wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
+    runner = CliRunner()
+    models_wsi_result = runner.invoke(
+        cli.main,
+        [
+            "nucleus-instance-segment",
+            "--img-input",
+            str(wsi4_512_512_svs),
+            "--patch-mode",
+            "False",
+            "--output-path",
+            str(track_tmp_path / "output"),
+        ],
+    )
+
+    assert models_wsi_result.exit_code == 0
+    assert (track_tmp_path / "output" / f"{wsi4_512_512_svs.stem}.db").exists()
