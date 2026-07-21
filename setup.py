@@ -34,13 +34,12 @@ test_requirements = [
 setup(
     author="TIA Centre",
     author_email="TIA@warwick.ac.uk",
-    python_requires=">=3.11, <3.15",
+    python_requires=">=3.12, <3.15",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Intended Audience :: Developers",
         "Natural Language :: English",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
         "Programming Language :: Python :: 3.13",
         "Programming Language :: Python :: 3.14",
