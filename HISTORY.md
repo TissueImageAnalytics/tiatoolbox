@@ -12,11 +12,11 @@
 
 - Remove `albumentations` dependencies (#1086)
   - The alternative `albumentationsx` has incompatible license. Therefore, we do not plan to include this in future release.
-- ♻️ Refactor `wsireader` #1088
+- Refactor `wsireader` #1088
   - `wsireader` will be restructured for maintainability in future releases without breaking changes to the API.
-- 🐛 Fix `tifffile` and `zarr` min versions on Colab (#1091)
+- Fix `tifffile` and `zarr` min versions on Colab (#1091)
   - Python `3.11` will be dropped in future releases for compatibility with latest releases of `zarr`.
-- 👷 Remove Unnecessary Workflows on push (#1094)
+- Remove Unnecessary Workflows on push (#1094)
 
 ______________________________________________________________________
 
