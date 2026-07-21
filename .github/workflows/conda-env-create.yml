@@ -11,11 +11,13 @@ on:
       - "requirements/requirements*.txt"
       - "requirements/generate_conda_env.py"
       - ".github/workflows/conda-env-create.yml"
+    branches: [ develop, master, main ]
   pull_request:
     paths:
       - "requirements/requirements*.txt"
       - "requirements/generate_conda_env.py"
       - ".github/workflows/conda-env-create.yml"
+    branches: [ develop, pre-release, master, main ]
 
 jobs:
   conda_solve:
