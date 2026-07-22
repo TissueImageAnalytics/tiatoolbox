@@ -120,7 +120,7 @@ import shutil
 import uuid
 from collections import deque
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Unpack
 
 import dask.array as da
 import numpy as np
@@ -135,7 +135,6 @@ from shapely.geometry import mapping
 from shapely.geometry import shape as feature2geometry
 from shapely.strtree import STRtree
 from tqdm.auto import tqdm
-from typing_extensions import Unpack
 
 from tiatoolbox import logger
 from tiatoolbox.annotation import SQLiteStore

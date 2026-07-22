@@ -40,14 +40,13 @@ Example:
 from __future__ import annotations
 
 import gc
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Unpack
 
 import dask.array as da
 import psutil
 import zarr
 from dask import compute
 from tqdm.auto import tqdm
-from typing_extensions import Unpack
 
 from tiatoolbox.utils.misc import update_tqdm_desc
 
