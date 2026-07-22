@@ -61,7 +61,7 @@ Ready to contribute? Here's how to set up ``tiatoolbox`` for local development.
 3. Set up the development environment. Using ``conda``::
 
     $ cd tiatoolbox/
-    $ conda create -n tiatoolbox-dev python=3.11
+    $ conda create -n tiatoolbox-dev python=3.12
     $ conda activate tiatoolbox-dev
     $ pip install -e ".[dev]"
 
@@ -69,7 +69,7 @@ Ready to contribute? Here's how to set up ``tiatoolbox`` for local development.
 
     $ uv sync --extra dev
 
-   This creates a ``.venv`` directory with Python 3.11 and all development
+   This creates a ``.venv`` directory with Python 3.12 and all development
    dependencies installed. Activate it with::
 
     $ source .venv/bin/activate        # Linux/macOS

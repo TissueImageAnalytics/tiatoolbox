@@ -136,7 +136,7 @@ For CPU-only machines (no CUDA GPU):
 **Using conda:**
 
 ```sh
-    $ conda create -n tiatoolbox-dev python=3.11
+    $ conda create -n tiatoolbox-dev python=3.12
     $ conda activate tiatoolbox-dev
     $ pip install -e ".[dev]"
 ```
