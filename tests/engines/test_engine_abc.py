@@ -6,14 +6,13 @@ import copy
 import logging
 import shutil
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Unpack
 
 import dask.array as da
 import numpy as np
 import pytest
 import torch
 import torchvision.models as torch_models
-from typing_extensions import Unpack
 
 from tiatoolbox.models.architecture import (
     fetch_pretrained_weights,
