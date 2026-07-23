@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, TypedDict, cast, overload
+from typing import TYPE_CHECKING, TypedDict, Unpack, cast, overload
 
 import numpy as np
-from typing_extensions import Unpack
 
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import AnnotationStore
