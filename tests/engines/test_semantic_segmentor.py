@@ -30,6 +30,7 @@ from tiatoolbox.models.engine.semantic_segmentor import (
     prepare_full_batch,
 )
 from tiatoolbox.utils import env_detection as toolbox_env
+from tiatoolbox.utils.env_detection import running_on_ci
 from tiatoolbox.utils.misc import imread
 from tiatoolbox.wsicore import WSIReader
 
@@ -37,6 +38,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
+_RUNNING_ON_CI = running_on_ci()
 
 
 def test_semantic_segmentor_init() -> None:
@@ -549,6 +551,10 @@ def test_raise_value_error_return_labels_wsi(
         )
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_wsi_segmentor_zarr(
     remote_sample: Callable,
     sample_svs: Path,
@@ -650,6 +656,10 @@ def test_wsi_segmentor_zarr(
     assert 0.48 < np.mean(output_["probabilities"][:]) < 0.52
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_wsi_segmentor_annotationstore_qupath(
     remote_sample: Callable, track_tmp_path: Path, caplog: pytest.CaptureFixture
 ) -> None:
