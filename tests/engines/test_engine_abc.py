@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import logging
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Unpack
 
@@ -607,3 +608,78 @@ class TestEngineABC(EngineABC):
             save_path,
             **kwargs,
         )
+
+
+@dataclass
+class FakeReaderInfo:
+    """Minimal fake reader-info object with an ``as_dict`` method."""
+
+    meta: dict[str, object]
+
+    def as_dict(self) -> dict[str, object]:
+        """Return the fake WSI metadata."""
+        return self.meta
+
+
+@dataclass
+class FakeDataset:
+    """Minimal fake dataset exposing the attributes used by the helper."""
+
+    units: str
+    resolution: float | np.ndarray
+    reader_info: FakeReaderInfo
+
+
+@dataclass
+class FakeDataLoader:
+    """Minimal fake dataloader exposing a dataset attribute."""
+
+    dataset: FakeDataset
+
+
+@pytest.mark.parametrize(
+    ("units", "resolution", "meta", "expected"),
+    [
+        (
+            "mpp",
+            np.array([0.5, 0.25], dtype=np.float32),
+            {"mpp": np.array([0.25, 0.125], dtype=np.float32)},
+            (2.0, 2.0),
+        ),
+        (
+            "level",
+            1,
+            {"level_downsamples": {1: 4.0}},
+            (4.0, 4.0),
+        ),
+        (
+            "power",
+            10.0,
+            {"objective_power": 20.0},
+            (2.0, 2.0),
+        ),
+        (
+            "baseline",
+            12.5,
+            {},
+            12.5,
+        ),
+    ],
+)
+def test_calculate_scale_factor_branches(
+    units: str,
+    resolution: float | np.ndarray,
+    meta: dict[str, object],
+    expected: tuple[float, float] | float,
+) -> None:
+    """Cover all branches of ``_calculate_scale_factor``."""
+    dataloader = FakeDataLoader(
+        dataset=FakeDataset(
+            units=units,
+            resolution=resolution,
+            reader_info=FakeReaderInfo(meta=meta),
+        )
+    )
+
+    result = EngineABC._calculate_scale_factor(dataloader)  # type: ignore[arg-type]
+    assert result == expected
