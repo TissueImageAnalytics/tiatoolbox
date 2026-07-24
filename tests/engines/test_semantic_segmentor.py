@@ -875,7 +875,9 @@ def test_infer_wsi_spills_to_disk_and_wraps_zarr(  # noqa: PLR0915
         output_locs_y: object,
         zarr_group: object,
         save_path_: object,
-        **kwargs: object,
+        output_shape: object,
+        *,
+        verbose: bool = False,
     ) -> da.Array:
         """Fake merge_vertical_chunkwise."""
         _ = (
@@ -884,7 +886,8 @@ def test_infer_wsi_spills_to_disk_and_wraps_zarr(  # noqa: PLR0915
             output_locs_y,
             zarr_group,
             save_path_,
-            kwargs,
+            output_shape,
+            verbose,
         )
 
         return da.from_array(
