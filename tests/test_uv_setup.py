@@ -2,6 +2,7 @@
 
 These tests confirm that pyproject.toml is well-formed and that a uv-synced
 environment can actually import and exercise key tiatoolbox functionality.
+
 """
 
 from __future__ import annotations
