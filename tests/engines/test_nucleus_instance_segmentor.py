@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
+import pytest
 import torch
 import zarr
 from click.testing import CliRunner
@@ -25,9 +26,8 @@ from .test_multi_task_segmentor import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    import pytest
-
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
+_RUNNING_ON_CI = toolbox_env.running_on_ci()
 OutputType = dict[str, Any] | Any
 
 
@@ -43,6 +43,10 @@ def test_mtsegmentor_init(caplog: pytest.LogCaptureFixture) -> None:
     )
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_mtsegmentor_patches(remote_sample: Callable) -> None:
     """Tests NucleusInstanceSegmentor on image patches."""
     mtsegmentor = NucleusInstanceSegmentor(
@@ -88,6 +92,10 @@ def test_mtsegmentor_patches(remote_sample: Callable) -> None:
 # -------------------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test semantic segmentor CLI single file."""
     wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
@@ -117,6 +125,10 @@ def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) ->
     assert "predictions" in zarr_group
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_cli_default_return_predictions(
     remote_sample: Callable, track_tmp_path: Path
 ) -> None:
@@ -125,6 +137,7 @@ def test_cli_default_return_predictions(
     Regression test: omitting ``--return-predictions`` leaves it as ``None``,
     which previously reached the engine and raised
     ``TypeError: 'NoneType' is not iterable``.
+
     """
     wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
     runner = CliRunner()
