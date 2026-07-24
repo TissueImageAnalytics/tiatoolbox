@@ -870,25 +870,11 @@ def test_infer_wsi_spills_to_disk_and_wraps_zarr(  # noqa: PLR0915
     )
 
     def _fake_merge_vertical_chunkwise(
-        canvas: object,
-        count: object,
-        output_locs_y: object,
-        zarr_group: object,
-        save_path_: object,
-        output_shape: object,
-        *,
-        verbose: bool = False,
+        *args: object,
+        **kwargs: object,
     ) -> da.Array:
         """Fake merge_vertical_chunkwise."""
-        _ = (
-            canvas,
-            count,
-            output_locs_y,
-            zarr_group,
-            save_path_,
-            output_shape,
-            verbose,
-        )
+        _ = args, kwargs
 
         return da.from_array(
             np.ones((4, 4, 2), dtype=np.float32),
