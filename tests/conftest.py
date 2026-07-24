@@ -604,39 +604,6 @@ def moving_mask(remote_sample: Callable) -> Path:
     return remote_sample("moving_mask")
 
 
-@pytest.fixture(scope="session")
-def chdir() -> Callable:
-    """Return a context manager to change the current working directory.
-
-    Todo: switch to chdir from contextlib when Python 3.11 is required
-
-    """
-    try:
-        from contextlib import chdir  # noqa: PLC0415
-    except ImportError:
-        from contextlib import AbstractContextManager  # noqa: PLC0415
-
-        class chdir(AbstractContextManager):  # noqa: N801
-            """Non thread-safe context manager to change the current working directory.
-
-            See Also: https://github.com/python/cpython/blob/main/Lib/contextlib.py.
-
-            """
-
-            def __init__(self: chdir, path: Path) -> None:
-                self.path = path
-                self._old_cwd = []
-
-            def __enter__(self: chdir) -> None:
-                self._old_cwd.append(os.getcwd())  # noqa: PTH109
-                os.chdir(self.path)
-
-            def __exit__(self: chdir, *excinfo: object) -> None:
-                os.chdir(self._old_cwd.pop())
-
-    return chdir
-
-
 @pytest.fixture(scope="module")
 def data_path(tmp_path_factory: pytest.TempPathFactory) -> dict[str, object]:
     """Set up a temporary data directory for testing visualization UI."""

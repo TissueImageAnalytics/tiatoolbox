@@ -39,7 +39,7 @@ import gc
 import shutil
 from abc import ABC
 from pathlib import Path
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, TypedDict, Unpack
 
 import dask
 import dask.array as da
@@ -49,7 +49,6 @@ import zarr
 from dask import compute
 from torch import nn
 from tqdm.auto import tqdm
-from typing_extensions import Unpack
 
 from tiatoolbox import DuplicateFilter, logger, rcParam
 from tiatoolbox.models.architecture import get_pretrained_model
@@ -386,12 +385,13 @@ class EngineABC(ABC):  # noqa: B024
         return model, None
 
     def _get_model_attr(self: EngineABC, attr_name: str) -> Callable:
-        """Return a model attribute, unwrapping DataParallel if required."""
-        try:
-            return getattr(self.model, attr_name)
-        except AttributeError:
-            module = getattr(self.model, "module", None)
-            return getattr(module, attr_name)
+        """Return a model attribute, unwrapping DataParallel/DDP if required.
+
+        Reads the attribute from ``self.model.module`` if the model is wrapped
+        (in multi-gpu settings), otherwise directly from ``self.model``.
+
+        """
+        return getattr(getattr(self.model, "module", self.model), attr_name)
 
     def get_dataloader(
         self: EngineABC,

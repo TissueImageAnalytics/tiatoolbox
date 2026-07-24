@@ -55,25 +55,92 @@ def test_extract_features(dfbr_features: Path) -> None:
     assert np.mean(np.abs(pool5_feat - _pool5_feat)) < 1.0e-4
 
 
-def test_feature_mapping(fixed_image: Path, moving_image: Path) -> None:
+def test_feature_mapping(fixed_image: Path) -> None:
     """Test for CNN based feature matching function."""
-    fixed_img = imread(fixed_image)
-    moving_img = imread(moving_image)
-    pre_transform = np.array([[-1, 0, 337.8], [0, -1, 767.7], [0, 0, 1]])
-    moving_img = cv2.warpAffine(
-        moving_img,
-        pre_transform[0:-1][:],
-        fixed_img.shape[:2][::-1],
-    )
+    img = imread(fixed_image)
 
     dfbr = DFBRegister()
-    features = dfbr.extract_features(fixed_img, moving_img)
-    fixed_matched_points, moving_matched_points, _ = dfbr.feature_mapping(features)
-    output = dfbr.estimate_affine_transform(fixed_matched_points, moving_matched_points)
+
+    features = dfbr.extract_features(img, img)
+
+    fixed_pts, moving_pts, _quality = dfbr.feature_mapping(features)
+
+    assert len(fixed_pts) > 100
+    assert len(moving_pts) == len(fixed_pts)
+
+    dist = np.linalg.norm(fixed_pts - moving_pts, axis=1)
+
+    assert np.median(dist) < 5
+
+
+def test_estimate_affine_transform_recovery() -> None:
+    """Test estimate affine transform recovery function."""
+    rng = np.random.default_rng(42)
+
+    fixed_points = rng.uniform(0, 1000, size=(200, 2))
+
     expected = np.array(
-        [[0.98843, 0.00184, 1.75437], [-0.00472, 0.96973, 5.38854], [0, 0, 1]],
+        [
+            [0.98, -0.01, 5.0],
+            [0.02, 1.01, 10.0],
+            [0.0, 0.0, 1.0],
+        ]
     )
-    assert np.mean(output - expected) < 1.0e-6
+
+    x = np.hstack([fixed_points, np.ones((len(fixed_points), 1))])
+    moving_points = (expected @ x.T).T[:, :2]
+
+    output = DFBRegister.estimate_affine_transform(
+        fixed_points,
+        moving_points,
+    )
+
+    np.testing.assert_allclose(output, expected, atol=1e-6)
+
+
+def test_register_improved_dice_branch(
+    monkeypatch: pytest.MonkeyPatch,
+    fixed_image: Path,
+    moving_image: Path,
+    fixed_mask: Path,
+    moving_mask: Path,
+) -> None:
+    """Cover branch where after_dice > before_dice."""
+    fixed_img = imread(fixed_image)
+    moving_img = imread(moving_image)
+    fixed_msk = imread(fixed_mask)
+    moving_msk = imread(moving_mask)
+
+    dfbr = DFBRegister()
+
+    call_count = 0
+
+    def mock_dice(*args, **kwargs) -> float:  # noqa: ANN002, ARG001, ANN003
+        nonlocal call_count
+        call_count += 1
+
+        # before_dice
+        if call_count == 1:
+            return 0.5
+
+        # after_dice and any further calls
+        return 0.9
+
+    monkeypatch.setattr(
+        "tiatoolbox.tools.registration.wsi_registration.dice",
+        mock_dice,
+    )
+
+    transform = dfbr.register(
+        fixed_img,
+        moving_img,
+        fixed_msk,
+        moving_msk,
+        transform_initializer=np.eye(3),
+    )
+
+    assert transform.shape == (3, 3)
+    assert call_count >= 2
 
 
 def test_dfbr_features() -> None:

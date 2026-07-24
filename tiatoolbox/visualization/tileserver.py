@@ -306,7 +306,7 @@ class TileServer(Flask):
                 interpolation = "nearest"
                 transparent_value = 0
             else:
-                interpolation = "optimise"
+                interpolation = "optimize"
                 transparent_value = None
             if isinstance(pyramid, AnnotationTileGenerator):
                 interpolation = None

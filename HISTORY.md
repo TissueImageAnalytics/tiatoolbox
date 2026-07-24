@@ -1,5 +1,58 @@
 # History
 
+## TIAToolbox v2.1.3 (2026-07-21)
+
+### 🐞 Bug Fixes and Other Changes
+
+- Fix DFBR feature mapping test (#1090)
+- Fix padded contours for Visualization (#1095)
+- Fix handling of `None` `return_predictions` in `NucleusInstanceSegmentor` CLI (#1089), contributed by @Anannya30
+
+### 🛠️ Development-Related Changes
+
+- Remove `albumentations` dependencies (#1086)
+  - The alternative `albumentationsx` has incompatible license. Therefore, we do not plan to include this in future release.
+- Refactor `wsireader` #1088
+  - `wsireader` will be restructured for maintainability in future releases without breaking changes to the API.
+- Fix `tifffile` and `zarr` min versions on Colab (#1091)
+  - Python `3.11` will be dropped in future releases for compatibility with latest releases of `zarr`.
+- Remove Unnecessary Workflows on push (#1094)
+
+______________________________________________________________________
+
+## TIAToolbox v2.1.2 (2026-06-12)
+
+### 🐞 Bug Fixes and Other Changes
+
+- Fix errors due to changes in matplotlib colormaps API (#1081)
+- Fix semantic segmentor JSON output (#1082)
+
+### 🛠️ Development-Related Changes
+
+- Add `albucore` dependency for conda build (#1081)
+- Update minimum requirement for `matplotlib` to `3.10.0`
+
+______________________________________________________________________
+
+## TIAToolbox v2.1.1 (2026-06-10)
+
+### 🐞 Bug Fixes and Other Changes
+
+- Fix errors while running engines on an `mps` device (#1073)
+- Fix `pre-trained.yaml` typos and errors (#1069)
+- Fix WSI reading on Windows (#1076)
+- Fix `multi-gpu` run error (#1074)
+- Fix broken margin behaviour while generating output using semantic segmentor and multi-task segmentor (#1067).
+
+### 🛠️ Development-Related Changes
+
+- Add and update Python 3.14 docker image (#1066)
+- Pin `sphinx>=9.0.0` (#1050)
+- Update `ruff` versions to `0.15.15` (#1072)
+- Update `conda-resolve` workflow (#1077)
+
+______________________________________________________________________
+
 ## TIAToolbox v2.1.0 (2026-05-19)
 
 ### ✨ Major Updates and Feature Improvements

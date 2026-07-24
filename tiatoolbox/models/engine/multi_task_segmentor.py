@@ -120,7 +120,7 @@ import shutil
 import uuid
 from collections import deque
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Unpack
 
 import dask.array as da
 import numpy as np
@@ -135,7 +135,6 @@ from shapely.geometry import mapping
 from shapely.geometry import shape as feature2geometry
 from shapely.strtree import STRtree
 from tqdm.auto import tqdm
-from typing_extensions import Unpack
 
 from tiatoolbox import logger
 from tiatoolbox.annotation import SQLiteStore
@@ -1969,7 +1968,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         # Save to AnnotationStore
         return_probabilities = kwargs.get("return_probabilities", False)
-        return_predictions = kwargs.get("return_predictions", (False,))
+        return_predictions = kwargs.get("return_predictions") or (False,)
         return_predictions_ = any(rp_ is True for rp_ in return_predictions)
         output_type_ = (
             "zarr"
@@ -2608,19 +2607,24 @@ def merge_multitask_vertical_chunkwise(
                 chunk_shape=chunk_shape,
                 probabilities_zarr=probabilities_zarr[idx],
                 probabilities_da=probabilities_da[idx],
-                zarr_group=zarr_group,
+                zarr_group=(
+                    zarr_group if probabilities_zarr[idx] is not None else None
+                ),
                 name=f"probabilities/{idx}",
             )
 
-            probabilities_zarr, probabilities_da = _save_multitask_vertical_to_cache(
-                probabilities_zarr=probabilities_zarr,
-                probabilities_da=probabilities_da,
-                probabilities=probabilities,
-                idx=idx,
-                tqdm_loop=tqdm_loop,
-                save_path=save_path,
-                chunk_shape=chunk_shape,
-                memory_threshold=memory_threshold,
+            probabilities_zarr, probabilities_da, zarr_group = (
+                _save_multitask_vertical_to_cache(
+                    probabilities_zarr=probabilities_zarr,
+                    probabilities_da=probabilities_da,
+                    zarr_group=zarr_group,
+                    probabilities=probabilities,
+                    idx=idx,
+                    tqdm_loop=tqdm_loop,
+                    save_path=save_path,
+                    chunk_shape=chunk_shape,
+                    memory_threshold=memory_threshold,
+                )
             )
 
             if next_chunk is not None:
@@ -2647,13 +2651,14 @@ def merge_multitask_vertical_chunkwise(
 def _save_multitask_vertical_to_cache(
     probabilities_zarr: list[zarr.Array] | list[None],
     probabilities_da: list[da.Array] | list[None],
+    zarr_group: zarr.Group | None,
     probabilities: np.ndarray,
     idx: int,
     tqdm_loop: tqdm,
     save_path: Path,
     chunk_shape: tuple,
     memory_threshold: int = 80,
-) -> tuple[list[zarr.Array], list[da.Array] | None]:
+) -> tuple[list[zarr.Array], list[da.Array] | None, zarr.Group | None]:
     """Helper function to save to zarr if vertical merge is out of memory."""
     used_percent = 0
     if probabilities_da[idx] is not None:
@@ -2669,7 +2674,8 @@ def _save_multitask_vertical_to_cache(
             f"Saving intermediate results to disk."
         )
         update_tqdm_desc(tqdm_loop=tqdm_loop, desc=msg)
-        zarr_group = zarr.open(str(save_path), mode="a")
+        if zarr_group is None:
+            zarr_group = zarr.open(str(save_path), mode="a")
         probabilities_zarr[idx] = zarr_group.create_array(
             name=f"probabilities/{idx}",
             shape=probabilities_da[idx].shape,
@@ -2681,7 +2687,7 @@ def _save_multitask_vertical_to_cache(
         update_tqdm_desc(tqdm_loop=tqdm_loop, desc=desc)
         probabilities_da[idx] = None
 
-    return probabilities_zarr, probabilities_da
+    return probabilities_zarr, probabilities_da, zarr_group
 
 
 def _clear_zarr(
@@ -3730,7 +3736,7 @@ class DaskDelayedJSONStore:
         # Enumerate class_dict keys to assign stable integer color indices
         class_keys = list(class_dict.keys())
         num_classes = len(class_keys)
-        cmap = plt.cm.get_cmap("tab20", num_classes)
+        cmap = plt.colormaps["tab20"].resampled(num_classes)
 
         class_colors = {
             key: [
