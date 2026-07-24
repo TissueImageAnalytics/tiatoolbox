@@ -1,5 +1,25 @@
 # History
 
+## TIAToolbox v2.1.3 (2026-07-21)
+
+### 🐞 Bug Fixes and Other Changes
+
+- Fix DFBR feature mapping test (#1090)
+- Fix padded contours for Visualization (#1095)
+- Fix handling of `None` `return_predictions` in `NucleusInstanceSegmentor` CLI (#1089), contributed by @Anannya30
+
+### 🛠️ Development-Related Changes
+
+- Remove `albumentations` dependencies (#1086)
+  - The alternative `albumentationsx` has incompatible license. Therefore, we do not plan to include this in future release.
+- Refactor `wsireader` #1088
+  - `wsireader` will be restructured for maintainability in future releases without breaking changes to the API.
+- Fix `tifffile` and `zarr` min versions on Colab (#1091)
+  - Python `3.11` will be dropped in future releases for compatibility with latest releases of `zarr`.
+- Remove Unnecessary Workflows on push (#1094)
+
+______________________________________________________________________
+
 ## TIAToolbox v2.1.2 (2026-06-12)
 
 ### 🐞 Bug Fixes and Other Changes
