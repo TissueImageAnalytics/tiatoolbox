@@ -1,6 +1,6 @@
 [project]
 name = "tiatoolbox"
-version = "2.1.2"
+version = "2.1.3"
 description = "Computational pathology toolbox developed by TIA Centre."
 readme = "README.md"
 license = { text = "BSD-3-Clause" }
