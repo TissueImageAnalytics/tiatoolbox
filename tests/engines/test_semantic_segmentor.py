@@ -12,6 +12,7 @@ from unittest import mock
 
 import dask.array as da
 import numpy as np
+import psutil
 import pytest
 import torch
 import zarr
@@ -666,6 +667,246 @@ def test_store_probabilities_accumulates_dask_arrays() -> None:
         probabilities_da.compute(),
         probabilities,
     )
+
+
+def test_infer_wsi_spills_to_disk_and_wraps_zarr(  # noqa: PLR0915
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test infer_wsi memory spill path."""
+    segmentor = SemanticSegmentor(
+        model="fcn-tissue_mask",
+        batch_size=1,
+        verbose=False,
+        device=device,
+    )
+
+    save_path = track_tmp_path / "spill.zarr"
+
+    batch = {
+        "image": torch.randn(1, 3, 4, 4),
+        "output_locs": torch.tensor([[0, 0, 4, 4]]),
+        "coords": np.array([[0, 0, 4, 4]]),
+    }
+
+    dataloader = mock.MagicMock()
+    dataloader.__iter__.return_value = iter([batch])
+    dataloader.__len__.return_value = 1
+
+    dataset = mock.MagicMock()
+    dataset.outputs = np.array([[0, 0, 4, 4]])
+    dataset.full_outputs = np.array([[0, 0, 4, 4]])
+    dataloader.dataset = dataset
+
+    monkeypatch.setattr(
+        semantic_segmentor,
+        "get_wsi_output_shape",
+        lambda _: (4, 4),
+    )
+
+    monkeypatch.setattr(
+        semantic_segmentor,
+        "get_full_output_locs_inside_mask",
+        lambda **kwargs: (
+            kwargs["full_output_locs"],
+            (0, 0, 4, 4),
+            (4, 4),
+        ),
+    )
+
+    def _fake_infer_batch(
+        model: object,
+        image: object,
+        device: str | None = None,
+    ) -> np.ndarray:
+        """Fake infer_batch."""
+        _ = model, image, device
+        return np.ones((1, 4, 4, 2), dtype=np.float32)
+
+    def _fake_get_model_attr(name: str) -> object:
+        """Return fake model attribute."""
+        assert name == "infer_batch"
+        return _fake_infer_batch
+
+    monkeypatch.setattr(
+        segmentor,
+        "_get_model_attr",
+        _fake_get_model_attr,
+    )
+
+    def _fake_prepare_full_batch(
+        batch_output: np.ndarray,
+        batch_locs: np.ndarray,
+        full_output_locs: np.ndarray,
+        output_locs: np.ndarray,
+        canvas_np: np.ndarray | zarr.Array | None = None,
+        save_path: Path | str = "tmp",
+        memory_threshold: int = 80,
+        *,
+        is_last: bool,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Fake prepare_full_batch."""
+        _ = (
+            batch_output,
+            batch_locs,
+            full_output_locs,
+            output_locs,
+            canvas_np,
+            save_path,
+            memory_threshold,
+            is_last,
+        )
+
+        locs = np.array(
+            [
+                [0, 0, 4, 4],
+                [0, 1, 4, 5],
+            ]
+        )
+
+        return (
+            np.ones((2, 4, 4, 2), dtype=np.float32),
+            locs,
+            locs,
+        )
+
+    monkeypatch.setattr(
+        semantic_segmentor,
+        "prepare_full_batch",
+        _fake_prepare_full_batch,
+    )
+
+    def fake_merge_horizontal(
+        **kwargs: object,
+    ) -> tuple[
+        da.Array,
+        da.Array,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+    ]:
+        """Fake merge_horizontal."""
+        _ = kwargs
+
+        canvas = da.from_array(
+            np.ones((4, 4, 2), dtype=np.float32),
+            chunks=(4, 4, 2),
+        )
+
+        count = da.from_array(
+            np.ones((4, 4, 2), dtype=np.uint8),
+            chunks=(4, 4, 2),
+        )
+
+        output_locs = np.array(
+            [
+                [0, 0, 4, 4],
+                [0, 1, 4, 5],
+            ]
+        )
+
+        output_locs_y = np.array([[0, 4]])
+
+        return (
+            canvas,
+            count,
+            np.empty((0, 4, 4, 2)),
+            output_locs,
+            output_locs_y,
+        )
+
+    monkeypatch.setattr(
+        semantic_segmentor,
+        "merge_horizontal",
+        fake_merge_horizontal,
+    )
+
+    vm = mock.MagicMock()
+    vm.percent = 99
+    vm.available = 1
+
+    monkeypatch.setattr(
+        psutil,
+        "virtual_memory",
+        lambda: vm,
+    )
+
+    cache_calls = []
+
+    def fake_save_to_cache(
+        canvas: object,
+        count: object,
+        canvas_zarr: zarr.Array | None,
+        count_zarr: zarr.Array | None,
+        **kwargs: object,
+    ) -> tuple[zarr.Array, zarr.Array]:
+        """Fake save_to_cache."""
+        _ = canvas, count, count_zarr, kwargs
+
+        cache_calls.append(True)
+
+        store = zarr.open_group(save_path, mode="a")
+
+        if canvas_zarr is None:
+            canvas_zarr = store.create_array(
+                "canvas",
+                shape=(4, 4, 2),
+                dtype=np.float32,
+            )
+            count_zarr = store.create_array(
+                "count",
+                shape=(4, 4, 2),
+                dtype=np.uint8,
+            )
+
+        assert count_zarr is not None
+
+        return canvas_zarr, count_zarr
+
+    monkeypatch.setattr(
+        semantic_segmentor,
+        "save_to_cache",
+        fake_save_to_cache,
+    )
+
+    def _fake_merge_vertical_chunkwise(
+        canvas: object,
+        count: object,
+        output_locs_y: object,
+        zarr_group: object,
+        save_path_: object,
+        **kwargs: object,
+    ) -> da.Array:
+        """Fake merge_vertical_chunkwise."""
+        _ = (
+            canvas,
+            count,
+            output_locs_y,
+            zarr_group,
+            save_path_,
+            kwargs,
+        )
+
+        return da.from_array(
+            np.ones((4, 4, 2), dtype=np.float32),
+            chunks=(4, 4, 2),
+        )
+
+    monkeypatch.setattr(
+        semantic_segmentor,
+        "merge_vertical_chunkwise",
+        _fake_merge_vertical_chunkwise,
+    )
+
+    result = segmentor.infer_wsi(
+        dataloader=dataloader,
+        save_path=save_path,
+        memory_threshold=1,
+    )
+
+    assert "probabilities" in result
+
+    assert len(cache_calls) >= 2
 
 
 @pytest.mark.skipif(
