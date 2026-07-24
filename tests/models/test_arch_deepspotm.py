@@ -146,6 +146,15 @@ def test_float_batch_is_coerced() -> None:
     assert output[0].shape == (2, 1)
 
 
+@pytest.mark.usefixtures("fake_deepspotm")
+def test_tensor_batch() -> None:
+    """A torch.Tensor NHWC batch is converted to numpy before preprocessing."""
+    model = DeepSpotM(genes=["EPCAM"])
+    tiles = torch.from_numpy(_tiles(2))  # NHWC uint8 tensor, not numpy
+    output = DeepSpotM.infer_batch(model, tiles, device="cpu")
+    assert output[0].shape == (2, 1)
+
+
 def test_missing_dependency(monkeypatch: pytest.MonkeyPatch) -> None:
     """A helpful ImportError is raised when ``deepspotm`` is not installed."""
     monkeypatch.setitem(sys.modules, "deepspotm", None)
