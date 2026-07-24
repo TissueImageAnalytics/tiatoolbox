@@ -6,10 +6,10 @@ from pathlib import Path
 
 from setuptools import find_packages, setup
 
-with Path("README.md").open() as readme_file:
+with Path("README.md").open(encoding="utf-8") as readme_file:
     readme = readme_file.read()
 
-with Path("HISTORY.md").open() as history_file:
+with Path("HISTORY.md").open(encoding="utf-8") as history_file:
     history = history_file.read()
 
 import tomllib
