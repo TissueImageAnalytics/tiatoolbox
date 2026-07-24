@@ -43,6 +43,7 @@ if TYPE_CHECKING:
 
 OutputType = dict[str, Any] | Any
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
+_RUNNING_ON_CI = toolbox_env.running_on_ci()
 
 
 def test_mtsegmentor_init() -> None:
@@ -53,6 +54,10 @@ def test_mtsegmentor_init() -> None:
     assert isinstance(segmentor.model, torch.nn.Module)
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Tests MultiTaskSegmentor on image patches."""
     mtsegmentor = MultiTaskSegmentor(
@@ -211,6 +216,10 @@ def test_mtsegmentor_patches(remote_sample: Callable, track_tmp_path: Path) -> N
         )
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_mtsegmentor_tiles_no_metadata(track_tmp_path: Path) -> None:
     """Tests MultiTaskSegmentor on a tile with no metadata."""
     img_file_name = track_tmp_path / "tcga_hnscc.png"
@@ -249,6 +258,10 @@ def test_mtsegmentor_tiles_no_metadata(track_tmp_path: Path) -> None:
     assert len(output_zarr["nuclei_segmentation"]["contours"][:]) == 1299
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_single_task_mtsegmentor(
     remote_sample: Callable,
     track_tmp_path: Path,
@@ -422,6 +435,10 @@ def test_single_task_mtsegmentor(
     assert "Probability maps cannot be saved as AnnotationStore or JSON" in caplog.text
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_wsi_mtsegmentor_correct_nonsquare_shape(
     remote_sample: Callable,
     track_tmp_path: Path,
@@ -523,6 +540,10 @@ def test_wsi_mtsegmentor_correct_nonsquare_shape(
     )
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_wsi_mtsegmentor_zarr(
     remote_sample: Callable,
     track_tmp_path: Path,
@@ -611,6 +632,10 @@ def test_wsi_mtsegmentor_zarr(
     )
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_multi_input_wsi_mtsegmentor_zarr(
     remote_sample: Callable,
     track_tmp_path: Path,
@@ -660,6 +685,10 @@ def test_multi_input_wsi_mtsegmentor_zarr(
     assert "count" not in output_
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_wsi_segmentor_annotationstore(
     remote_sample: Callable, track_tmp_path: Path
 ) -> None:
@@ -698,6 +727,10 @@ def test_wsi_segmentor_annotationstore(
     assert store_file_path == output[wsi4_512_512_svs][0]
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_wsi_segmentor_qupath(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test MultiTaskSegmentor for WSIs with AnnotationStore output."""
     wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
@@ -739,6 +772,10 @@ def test_wsi_segmentor_qupath(remote_sample: Callable, track_tmp_path: Path) -> 
     weights_path.unlink()
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_wsi_segmentor_annotationstore_probabilities(
     remote_sample: Callable, track_tmp_path: Path, caplog: pytest.CaptureFixture
 ) -> None:
@@ -773,6 +810,10 @@ def test_wsi_segmentor_annotationstore_probabilities(
         assert task_name not in zarr_group
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_raise_value_error_return_labels_wsi(
     remote_sample: Callable,
     track_tmp_path: Path,
@@ -1564,6 +1605,10 @@ def convert_to_dask_single_task(
 # -------------------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test semantic segmentor CLI single file."""
     wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
