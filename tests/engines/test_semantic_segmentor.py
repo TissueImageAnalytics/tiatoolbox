@@ -551,6 +551,123 @@ def test_raise_value_error_return_labels_wsi(
         )
 
 
+def test_get_probabilities_da_from_zarr_removes_intermediate_arrays(
+    track_tmp_path: Path,
+) -> None:
+    """Test removal of canvas/count arrays before returning dask array."""
+    zarr_group = zarr.open_group(track_tmp_path / "test.zarr", mode="w")
+
+    zarr_group.create_array(
+        "canvas",
+        data=np.ones((2, 2, 1), dtype=np.float32),
+    )
+    zarr_group.create_array(
+        "count",
+        data=np.ones((2, 2, 1), dtype=np.uint8),
+    )
+
+    probabilities_zarr = zarr_group.create_array(
+        "probabilities",
+        data=np.ones((3, 2, 2), dtype=np.float32),
+    )
+
+    result = semantic_segmentor._get_probabilities_da_from_zarr(
+        zarr_group=zarr_group,
+        probabilities_zarr=probabilities_zarr,
+        chunk_shape=(1, 2, 2),
+        probabilities=np.ones((3, 2, 2), dtype=np.float32),
+    )
+
+    assert isinstance(result, da.Array)
+    assert "canvas" not in zarr_group
+    assert "count" not in zarr_group
+
+    np.testing.assert_array_equal(
+        result.compute(),
+        probabilities_zarr[:],
+    )
+
+
+def test_store_probabilities_creates_zarr_dataset(
+    track_tmp_path: Path,
+) -> None:
+    """Test storing probabilities into a zarr group."""
+    zarr_group = zarr.open_group(track_tmp_path / "prob.zarr", mode="w")
+
+    probabilities = np.ones((2, 4, 4, 3), dtype=np.float32)
+
+    probabilities_zarr, probabilities_da = semantic_segmentor.store_probabilities(
+        probabilities=probabilities,
+        chunk_shape=(1, 4, 4, 3),
+        probabilities_zarr=None,
+        probabilities_da=None,
+        zarr_group=zarr_group,
+    )
+
+    assert probabilities_da is None
+    assert probabilities_zarr is not None
+    assert probabilities_zarr.shape == probabilities.shape
+
+    np.testing.assert_array_equal(
+        probabilities_zarr[:],
+        probabilities,
+    )
+
+
+def test_store_probabilities_appends_to_existing_zarr(
+    track_tmp_path: Path,
+) -> None:
+    """Test appending probabilities to an existing zarr dataset."""
+    zarr_group = zarr.open_group(track_tmp_path / "prob.zarr", mode="w")
+
+    first = np.ones((2, 2, 2, 1), dtype=np.float32)
+    second = np.full((1, 2, 2, 1), 5.0, dtype=np.float32)
+
+    probabilities_zarr, _ = semantic_segmentor.store_probabilities(
+        probabilities=first,
+        chunk_shape=(1, 2, 2, 1),
+        probabilities_zarr=None,
+        probabilities_da=None,
+        zarr_group=zarr_group,
+    )
+
+    probabilities_zarr, _ = semantic_segmentor.store_probabilities(
+        probabilities=second,
+        chunk_shape=(1, 2, 2, 1),
+        probabilities_zarr=probabilities_zarr,
+        probabilities_da=None,
+        zarr_group=zarr_group,
+    )
+
+    assert probabilities_zarr.shape[0] == 3
+
+    np.testing.assert_array_equal(
+        probabilities_zarr[2],
+        second[0],
+    )
+
+
+def test_store_probabilities_accumulates_dask_arrays() -> None:
+    """Test in-memory probability accumulation."""
+    probabilities = np.ones((2, 3, 3, 1), dtype=np.float32)
+
+    probabilities_zarr, probabilities_da = semantic_segmentor.store_probabilities(
+        probabilities=probabilities,
+        chunk_shape=(1, 3, 3, 1),
+        probabilities_zarr=None,
+        probabilities_da=None,
+        zarr_group=None,
+    )
+
+    assert probabilities_zarr is None
+    assert isinstance(probabilities_da, da.Array)
+
+    np.testing.assert_array_equal(
+        probabilities_da.compute(),
+        probabilities,
+    )
+
+
 @pytest.mark.skipif(
     _RUNNING_ON_CI,
     reason="Local test only.",
