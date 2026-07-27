@@ -108,6 +108,7 @@ Prepare a computer as a convenient platform for further development of the Pytho
 ```sh
     $ conda create -n tiatoolbox-dev python=3.12
     $ conda activate tiatoolbox-dev
+    $ conda install -c conda-forge openjpeg sqlite
     $ pip install -e ".[dev]"
 ```
 
