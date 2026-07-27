@@ -14,7 +14,7 @@ accept the terms and authenticate (``huggingface-cli login``) before use. The
 ``deepspotm`` package is an optional dependency and is imported lazily, so it is
 only required when this model is instantiated::
 
-    pip install git+https://github.com/ratschlab/DeepSpotM.git
+    pip install tiatoolbox[deepspotm]
 
 Example:
     >>> from tiatoolbox.models.architecture.deepspotm import DeepSpotM
@@ -121,7 +121,7 @@ class DeepSpotM(ModelABC):
             msg = (
                 "DeepSpot-M requires the `deepspotm` package, which is not "
                 "installed. Install it with `pip install "
-                "git+https://github.com/ratschlab/DeepSpotM.git`."
+                "tiatoolbox[deepspotm]` or `pip install deepspotm`."
             )
             raise ImportError(msg) from err
 
