@@ -21,6 +21,7 @@ openslide-python>=1.4.0
 pandas>=2.0.0
 pillow>=9.3.0
 pydicom>=2.3.1 # Used by wsidicom
+pysqlite3>=0.6.0
 pyyaml>=6.0
 requests>=2.28.1
 s3fs>=2024.12.0
