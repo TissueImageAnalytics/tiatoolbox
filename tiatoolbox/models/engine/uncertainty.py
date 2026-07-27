@@ -1,11 +1,14 @@
-"""
-Uncertainty Quantification with Monte Carlo (MC Dropout).
+"""Uncertainty Quantification with Monte Carlo (MC Dropout).
+
 Gal & Ghahramani (2015), used by Policastro (2020) WSI analysis project.
 """
 
 from __future__ import annotations
 
-import torch
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover
+    import torch
 
 
 def decompose_uncertainty(
@@ -20,9 +23,10 @@ def decompose_uncertainty(
 
     Returns:
         dict: mean_probs, epistemic, aleatoric, total uncertainty.
+
     """
-    mean_probs = mc_probs.mean(dim=0)          # [..., C]
-    var_probs = mc_probs.var(dim=0)            # [..., C]
+    mean_probs = mc_probs.mean(dim=0)  # [..., C]
+    var_probs = mc_probs.var(dim=0)  # [..., C]
 
     epistemic = var_probs.mean(dim=class_dim)  # variance across T passes
     aleatoric = (mean_probs * (1 - mean_probs)).mean(dim=class_dim)

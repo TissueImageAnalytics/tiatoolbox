@@ -12,9 +12,8 @@ with the `coordinates` / `probabilities` arrays written by the engine.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
-import numpy as np
 import torch
 
 from tiatoolbox.models.engine.mc_dropout import (
@@ -23,6 +22,9 @@ from tiatoolbox.models.engine.mc_dropout import (
     mc_dropout_mode,
 )
 from tiatoolbox.models.engine.uncertainty import decompose_uncertainty
+
+if TYPE_CHECKING:  # pragma: no cover
+    import numpy as np
 
 
 class BayesianModelWrapper(torch.nn.Module):
@@ -45,9 +47,33 @@ class BayesianModelWrapper(torch.nn.Module):
         base_model: torch.nn.Module,
         n_samples: int = 30,
         class_dim: int = -1,
+        *,
         inject_dropout: bool = True,
         dropout_p: float = 0.2,
     ) -> None:
+        """Initialize :class:`BayesianModelWrapper`.
+
+        Args:
+            base_model (torch.nn.Module):
+                TIAToolbox model to wrap. Must expose an ``infer_batch`` static
+                method matching ``(model, images, device)``.
+            n_samples (int):
+                Number of Monte Carlo forward passes per batch.
+            class_dim (int):
+                Class axis in the per-sample probabilities (excluding T).
+            inject_dropout (bool):
+                If True and the model has no Dropout layers, insert one before
+                the linear classifier automatically.
+            dropout_p (float):
+                Dropout probability used by ``inject_dropout``.
+
+        Raises:
+            ValueError:
+                If the model has no Dropout layers and ``inject_dropout`` is False.
+            RuntimeError:
+                If dropout injection was requested but failed.
+
+        """
         super().__init__()
         if not has_dropout_layers(base_model):
             if not inject_dropout:
@@ -72,11 +98,28 @@ class BayesianModelWrapper(torch.nn.Module):
         # `coordinates` / `probabilities` outputs.
         self.uncertainty_stats: list[dict[str, np.ndarray]] = []
 
-    def __getattr__(self, name: str) -> Any:
-        # Delegate undefined attributes to the wrapped model (e.g. preproc_func,
-        # postproc_func, class_dict) so the engine finds them via _get_model_attr.
-        # `__getattr__` is invoked only when normal lookup fails, so by the time
-        # we reach here `self.base_model` is already accessible normally.
+    def __getattr__(self, name: str) -> object:
+        """Delegate undefined attributes to the wrapped model.
+
+        This lets the engine find attributes such as ``preproc_func``,
+        ``postproc_func``, and ``class_dict`` on the wrapped model through
+        ``_get_model_attr``. ``__getattr__`` is invoked only when normal
+        lookup fails, so by the time we reach here ``self.base_model`` is
+        already accessible normally.
+
+        Args:
+            name (str):
+                Attribute name to look up.
+
+        Returns:
+            object:
+                The attribute found on the wrapped model.
+
+        Raises:
+            AttributeError:
+                If the attribute is not found on the wrapper or the model.
+
+        """
         try:
             return super().__getattr__(name)
         except AttributeError:
@@ -89,7 +132,7 @@ class BayesianModelWrapper(torch.nn.Module):
 
     @staticmethod
     def infer_batch(
-        model: "BayesianModelWrapper",
+        model: BayesianModelWrapper,
         batch_data: torch.Tensor,
         device: str = "cpu",
     ) -> np.ndarray:
@@ -120,6 +163,9 @@ class BayesianModelWrapper(torch.nn.Module):
             }
         )
 
-        return stats["mean_probs"].to(
-            next(wrapper.base_model.parameters()).device
-        ).cpu().numpy()
+        return (
+            stats["mean_probs"]
+            .to(next(wrapper.base_model.parameters()).device)
+            .cpu()
+            .numpy()
+        )
