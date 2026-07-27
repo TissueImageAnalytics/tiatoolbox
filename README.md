@@ -71,21 +71,7 @@ The [bash](https://www.gnu.org/software/bash) shell is available on all commonly
 
 ### Install Python package
 
-#### Using `pip`
-
 If you wish to use our programs, perhaps without developing them further, run the command `pip install tiatoolbox` or `pip install --ignore-installed --upgrade tiatoolbox` to upgrade from an existing installation.
-
-#### Using `uv`
-
-Alternatively, you can install the latest stable release with [uv](https://docs.astral.sh/uv/):
-
-```sh
-    $ uv venv
-    $ source .venv/bin/activate   # Linux/macOS
-    $ .venv\Scripts\activate      # Windows
-    $ uv pip install tiatoolbox
-```
-
 Detailed installation instructions can be found in the [documentation](https://tia-toolbox.readthedocs.io/en/latest/installation.html).
 
 To understand better how the programs work, study the jupyter notebooks referred to under the heading **Examples Taster**.
@@ -119,22 +105,6 @@ Prepare a computer as a convenient platform for further development of the Pytho
 
 5. Create a virtual environment and install dependencies.
 
-   **Using [uv](https://docs.astral.sh/uv/):**
-
-```sh
-    $ uv sync --extra dev
-    $ source .venv/bin/activate   # Linux/macOS
-    $ .venv\Scripts\activate      # Windows
-```
-
-For CPU-only machines (no CUDA GPU):
-
-```sh
-    $ uv sync --extra dev --index pytorch-cpu=https://download.pytorch.org/whl/cpu
-```
-
-**Using conda:**
-
 ```sh
     $ conda create -n tiatoolbox-dev python=3.12
     $ conda activate tiatoolbox-dev
@@ -144,8 +114,7 @@ For CPU-only machines (no CUDA GPU):
 6. To re-enter the environment in a new terminal:
 
 ```sh
-    $ source .venv/bin/activate   # uv (Linux/macOS)
-    $ conda activate tiatoolbox-dev  # conda
+    $ conda activate tiatoolbox-dev
 ```
 
 ### License
