@@ -119,3 +119,13 @@ ENV/
 
 # output zarr generated
 *.zarr
+
+.opencode/
+graphify-out/
+AGENTS.md
+outputs/
+
+# Local scratch / interview artifacts (not part of the feature)
+/tiny.svs
+/main.py
+/uv.lock
