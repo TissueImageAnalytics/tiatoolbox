@@ -946,7 +946,7 @@ hovernet_fast-monusac:
             - breast
             - kidney
             - lung
-            - prostate]
+            - prostate
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -1024,7 +1024,7 @@ hovernet_original-kumar:
             - breast
             - stomach
             - colon
-            - bladder]
+            - bladder
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -1460,7 +1460,7 @@ KongNet_PUMA_T1_3:
             - brain
             - gastrointestinal tract
             - soft tissue
-            - lymph node]
+            - lymph node
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1501,7 +1501,7 @@ KongNet_PUMA_T2_3:
             - brain
             - gastrointestinal tract
             - soft tissue
-            - lymph node]
+            - lymph node
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1548,7 +1548,7 @@ KongNet_Det_MIDOG_1:
             - lymph node
             - neuroendocrine
             - skin
-            - subcutaneous tissue]
+            - subcutaneous tissue
     architecture:
         class: kongnet.KongNet
         kwargs:
