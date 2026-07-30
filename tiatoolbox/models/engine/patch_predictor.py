@@ -20,9 +20,7 @@ Example:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from typing_extensions import Unpack
+from typing import TYPE_CHECKING, Unpack
 
 from tiatoolbox.utils.misc import cast_to_min_dtype
 

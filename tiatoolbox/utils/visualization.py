@@ -16,6 +16,7 @@ from shapely.geometry import Polygon
 
 from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.enums import GeometryType
+from tiatoolbox.utils.misc import remove_padded_values_in_contours
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable
@@ -567,6 +568,7 @@ def overlay_prediction_contours(
 
     inst_colours_array = inst_colours_array.astype(np.uint8)
 
+    inst_dict = remove_padded_values_in_contours(inst_dict)
     for idx, [_, inst_info] in enumerate(inst_dict.items()):
         inst_contour: np.ndarray = inst_info["contour"]
         if "type" in inst_info and type_colours is not None:

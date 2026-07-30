@@ -54,7 +54,7 @@ import gc
 import shutil
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Unpack
 
 import dask.array as da
 import numpy as np
@@ -62,7 +62,6 @@ import psutil
 import torch
 import zarr
 from tqdm.auto import tqdm
-from typing_extensions import Unpack
 
 from tiatoolbox import logger
 from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset

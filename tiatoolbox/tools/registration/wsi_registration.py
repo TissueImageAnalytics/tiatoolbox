@@ -1708,5 +1708,5 @@ class AffineWSITransformer:
             img=transformed_patch,
             scale_factor=post_read_scale,
             output_size=size,
-            interpolation="optimise",
+            interpolation="optimize",
         )
