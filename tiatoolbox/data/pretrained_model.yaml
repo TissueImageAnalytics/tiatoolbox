@@ -345,7 +345,7 @@ alexnet-pcam:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         primary_site: breast
-        supported_sites: 
+        supported_sites:
             - breast
     architecture:
         class: vanilla.CNNModel
