@@ -79,9 +79,7 @@ class TileServer(Flask):
         """Initialize :class:`TileServer`."""
         super().__init__(
             __name__,
-            template_folder=data._local_sample_path(  # noqa: SLF001
-                Path("visualization") / "templates",
-            ),
+            template_folder=Path(__file__).parent / "openlayers" / "templates",
             static_url_path="",
             static_folder=data._local_sample_path(  # noqa: SLF001
                 Path("visualization") / "static",

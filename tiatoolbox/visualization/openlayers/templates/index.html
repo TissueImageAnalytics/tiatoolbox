@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <!-- Openlayers -->
+    <link rel="stylesheet" href="/css/ol.css" />
+    <script type="text/javascript" src="/js/ol.js"></script>
+    <script src="/js/polyfill.min.js"></script>
+
+    <!-- ol-ext -->
+    <link rel="stylesheet" href="/css/ol-ext.min.css" />
+    <script src="/js/ol-ext.min.js"></script>
+
+    <!--Font Awesome-->
+    <link rel="stylesheet" href="/css/fontawesome-all.min.css" />
+
+    <!-- Main Style -->
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+
+            display: flex;
+            flex-direction: column;
+        }
+
+        .map {
+            flex: 1;
+            width: 100%;
+            min-height: 512px;
+        }
+
+        .map .ol-custom-overviewmap,
+        .map .ol-custom-overviewmap.ol-uncollapsible {
+            bottom: auto;
+            left: auto;
+            right: 6pt;
+            top: 6pt;
+        }
+
+        .ol-scale-bar {
+            bottom: 6pt;
+            left: 6pt;
+            font-family: 'Calibri', 'sans-serif';
+        }
+
+        .ol-mouse-position {
+            position: absolute;
+            bottom: 6pt;
+            left: auto;
+            top: auto;
+            right: 6pt;
+            z-index: 100;
+            background-color: rgba(255, 255, 255, 0.5);
+            padding: 1pt;
+            border-radius: 3pt;
+            font-family: 'Calibri', 'sans-serif';
+        }
+
+        .ol-layerswitcher,
+        .ol-control.ol-layerswitcher {
+            top: 6pt;
+            left: 30pt;
+            right: auto;
+        }
+
+        .ol-layerswitcher button {
+            float: left;
+        }
+
+        .ol-rotate {
+            position: absolute;
+            right: auto;
+            top: 47pt;
+            left: 6pt;
+        }
+
+        .ol-full-screen {
+            position: absolute;
+            right: auto;
+            left: 6pt;
+            top: 70pt;
+        }
+
+        .ol-screen-space-graticule {
+            position: absolute;
+            right: auto;
+            left: 6pt;
+            top: 93pt;
+        }
+
+        .ol-graticule {
+            position: absolute;
+            right: auto;
+            left: 6pt;
+            top: 116pt;
+        }
+    </style>
+    <title>{{ title }}</title>
+</head>
+
+<body>
+    <div id="map" class="map" data-layers="{{ layers }}"></div>
+    <script type="text/javascript">
+        layersData = JSON.parse(document.getElementById('map').dataset.layers);
+        var layers = layersData.map(function (layer) {
+            var source = new ol.source.Zoomify({
+                url: layer.url,
+                size: layer.size,
+                crossOrigin: 'anonymous',
+                zDirection: -1,
+            });
+            return new ol.layer.Tile({
+                title: layer.name,
+                source: source
+
+            });
+        });
+        var resolutions = layers[0].getSource().getTileGrid().getResolutions();
+        var extent = layers[0].getSource().getTileGrid().getExtent();
+        var projection = new ol.proj.Projection({
+            code: 'ZoomifyProjection',
+            units: 'pixels',
+            extent: extent,
+            metersPerUnit: layersData[0].mpp * 1e-6,
+            getPointResolution: function (resolution) {
+                return resolution;
+            }
+        });
+        var view = new ol.View({
+            projection: projection,
+            resolutions: resolutions,
+            constrainOnlyCenter: true,
+        });
+        map = new ol.Map({
+            target: 'map',
+            layers: layers,
+            view: view,
+        });
+        // Controls
+
+        // Scale bar
+        scaleLineControl = new ol.control.ScaleLine({
+            units: "metric",
+            bar: true,
+            steps: 10,
+            minWidth: 256,
+        });
+        map.addControl(scaleLineControl);
+
+        // Overview map
+        var overviewMapControl = new ol.control.OverviewMap({
+            className: 'ol-overviewmap ol-custom-overviewmap',
+            layers: [
+                new ol.layer.Tile({
+                    source: layers[0].getSource(),
+                }),
+            ],
+        });
+        map.addControl(overviewMapControl);
+
+        // Mouse position
+        var coordinateFormat = function (coordinate) {
+            coordinate = [coordinate[0], -coordinate[1]];
+            return ol.coordinate.format(coordinate, '{x}, {y}', 0);
+        };
+        var mousePositionControl = new ol.control.MousePosition({
+            coordinateFormat: coordinateFormat,
+            projection: projection,
+            className: 'ol-mouse-position',
+            undefinedHTML: '&nbsp;',
+        });
+        map.addControl(mousePositionControl);
+
+        // Rotate reset
+        var rotate = new ol.control.Rotate({
+            autoHide: false,
+            className: 'ol-rotate',
+        });
+        map.addControl(rotate);
+
+        // Fullscreen
+        var fullscreen = new ol.control.FullScreen();
+        map.addControl(fullscreen);
+
+        // Layer switcher
+        var layerSwitcher = new ol.control.LayerSwitcher({
+            // collapsed: false,
+            // mouseover: true
+        });
+        map.addControl(layerSwitcher);
+        // Graticule
+        var graticuleSpacing = 64;
+        var graticuleMargin = 64;
+        var graticuleStyle = new ol.style.Style({
+            stroke: new ol.style.Stroke({
+                color: 'rgba(0, 0, 0, 0.5)',
+                width: 1,
+            }),
+            text: new ol.style.Text({
+                font: '12px Calibri,sans-serif',
+                fill: new ol.style.Fill({
+                    color: 'rgba(0, 0, 0, 1)',
+                }),
+                stroke: new ol.style.Stroke({
+                    color: 'rgba(255, 255, 255, 1)',
+                    width: 3,
+                }),
+            }),
+        });
+        var graticule = new ol.control.Graticule({
+            projection: projection,
+            margin: graticuleMargin,
+            style: graticuleStyle,
+            spacing: graticuleSpacing,
+            formatCoord: function (coordinate, position) {
+                if (position === 'left' || position === 'right') {
+                    coordinate = -Math.floor(coordinate);
+                } else {
+                    coordinate = Math.floor(coordinate);
+                }
+                if (coordinate >= 1e6) {
+                    coordinate = coordinate.toExponential(3);
+                    coordinate = coordinate.replace("+", "");
+                }
+                return coordinate;
+            },
+        });
+        var graticuleToggle = new ol.control.Toggle({
+            html: '<i class="fas fa-ruler-combined"></i>',
+            className: 'ol-graticule',
+            title: 'Toggle Graticule',
+            onToggle: function (toggle) {
+                if (toggle) {
+                    screenSpaceGraticuleToggle.setActive(false);
+                    screenSpaceGraticule.setMap(null);
+                    graticule.setMap(map);
+                } else {
+                    graticule.setMap(null);
+                }
+            }
+        });
+        map.addControl(graticuleToggle);
+        // Screen space graticule
+        var screenSpaceGraticuleSpacing = graticuleSpacing;
+        var screenSpaceGraticuleMargin = graticuleMargin;
+        var screenSpaceGraticule = new ol.control.Graticule({
+            projection: projection,
+            spacing: screenSpaceGraticuleSpacing,
+            margin: screenSpaceGraticuleMargin,
+            style: graticuleStyle,
+            formatCoord: function (coordinate, position) {
+                // Find the coordinate in screen space
+                var mapExtent = map.getView().calculateExtent(map.getSize());
+                var resolution = map.getView().getResolution();
+                var x0 = mapExtent[0] + (resolution * screenSpaceGraticuleMargin);
+                var y0 = mapExtent[3] - (resolution * screenSpaceGraticuleMargin);
+
+
+                if (position === 'left' || position === 'right') {
+                    coordinate = -(coordinate - y0);
+                } else {
+                    coordinate = coordinate - x0;
+                }
+                // For vertical grid lines, return consecutive
+                // integers i.e. 1,2,3... To do this, we need to
+                // divide coordinate by the grid spacing and round down.
+                coordinate = Math.floor(coordinate / resolution / screenSpaceGraticuleSpacing);
+                // For horizontal grid lines, transform the coordinate
+                // to a string i.e. A - Z, AA, AB, ...
+                if (position === 'left' || position === 'right') {
+                    var string = "";
+                    do {
+                        string += String.fromCharCode(65 + coordinate % 26);
+                        coordinate = Math.floor(coordinate / 26);
+                    } while (coordinate > 0);
+                    // Reverse the string and return
+                    return string.split('').reverse().join('')
+                }
+                return coordinate
+            },
+        });
+        var screenSpaceGraticuleToggle = new ol.control.Toggle({
+            html: '<i class="fas fa-border-all"></i>',
+            className: 'ol-screen-space-graticule',
+            title: 'Toggle Screen Space Graticule',
+            onToggle: function (toggle) {
+                if (toggle) {
+                    graticuleToggle.setActive(false);
+                    graticule.setMap(null);
+                    screenSpaceGraticule.setMap(map);
+                } else {
+                    screenSpaceGraticule.setMap(null);
+                }
+            },
+        });
+        map.addControl(screenSpaceGraticuleToggle);
+        map.getView().fit(extent);
+    </script>
+</body>
+
+</html>
