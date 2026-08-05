@@ -442,7 +442,7 @@ def safe_padded_read(
     )
 
 
-def sub_pixel_read(  # skipcq: PY-R1000  # noqa: C901, PLR0912, PLR0913, PLR0915
+def sub_pixel_read(  # noqa: C901, PLR0912, PLR0913, PLR0915, PLR0917
     image: np.ndarray,
     bounds: IntBounds,
     output_size: tuple[int, int] | np.ndarray,
@@ -598,7 +598,7 @@ def sub_pixel_read(  # skipcq: PY-R1000  # noqa: C901, PLR0912, PLR0913, PLR0915
     if pad_mode and pad_mode.lower() == "none":
         pad_mode = None
 
-    # Initialise variables
+    # Initialize variables
     image_size = np.flip(image.shape[:2])
     scaling = np.array([1, 1])
     _, bounds_size = bounds2locsize(bounds)
