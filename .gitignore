@@ -119,3 +119,6 @@ ENV/
 
 # output zarr generated
 *.zarr
+
+# uv lockfile
+uv.lock

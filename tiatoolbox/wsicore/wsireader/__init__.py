@@ -20,13 +20,8 @@ from .base import (
     WSIReader,
     _handle_tiff_wsi,
     _handle_virtual_wsi,
-    fix_mangled_url_by_pathlib,
-    is_dicom,
-    is_ngff,
-    is_tiled_tiff,
-    is_url,
-    is_zarr,
 )
+from .detection import is_dicom, is_ngff, is_tiled_tiff, is_url, is_zarr
 
 __all__ = [
     "AnnotationStoreReader",
@@ -44,7 +39,6 @@ __all__ = [
     "WSIReader",
     "_handle_tiff_wsi",
     "_handle_virtual_wsi",
-    "fix_mangled_url_by_pathlib",
     "is_dicom",
     "is_ngff",
     "is_tiled_tiff",
