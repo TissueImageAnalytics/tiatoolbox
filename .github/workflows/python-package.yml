@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.12", "3.13", "3.14"]
 
     steps:
     - uses: actions/checkout@v4
@@ -33,10 +33,10 @@ jobs:
         sudo apt update
         sudo apt-get install -y libopenjp2-7 libopenjp2-tools
         python -m pip install --upgrade pip
-        python -m pip install ruff==0.15.15 pytest pytest-cov pytest-runner
+        python -m pip install ruff==0.16.1 pytest pytest-cov pytest-runner
         pip install uv
         uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
-        uv pip install --system -r requirements/requirements.txt
+        uv pip install --system -e .
     - name: Cache tiatoolbox static assets
       uses: actions/cache@v4
       with:
@@ -102,10 +102,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python 3.11
+    - name: Set up Python 3.12
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.12'
         cache: 'pip'
 
     - name: Install dependencies
@@ -114,7 +114,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install uv
         uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
-        uv pip install --system -r requirements/requirements.txt
+        uv pip install --system -e .
         uv pip install --system build
     - name: Build package
       run: python -m build

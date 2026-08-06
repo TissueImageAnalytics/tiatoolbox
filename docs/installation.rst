@@ -59,7 +59,7 @@ MacPorts
 Installing Stable Release
 =========================
 
-Please note that TIAToolbox is tested for Python versions 3.11, 3.12, 3.13 and 3.14. For the full range of supported Python versions, please refer to the package metadata (for example, the ``python_requires`` setting in ``setup.py`` or ``pyproject.toml``)
+Please note that TIAToolbox is tested for Python versions 3.12, 3.13 and 3.14. For the full range of supported Python versions, please refer to the package metadata (for example, the ``python_requires`` setting in ``setup.py`` or ``pyproject.toml``)
 
 Recommended
 -----------
@@ -118,12 +118,42 @@ An alternate way to install using conda on Windows could be to install it in `WS
 Using uv
 --------
 
-To install using `uv <https://docs.astral.sh/uv/>`_, a fast Python package and project manager, written in Rust.
+`uv <https://docs.astral.sh/uv/>`_ is a Python package and project manager. First, install uv by following the `official installation guide <https://docs.astral.sh/uv/getting-started/installation/#installing-uv>`_ for your platform (macOS, Linux, and Windows).
+
+**End-user installation**
+
+Create a virtual environment and install the latest stable release from PyPI:
 
 .. code-block:: console
 
-    $ pip install uv
+    $ uv venv
+    $ source .venv/bin/activate   # Linux/macOS
+    $ .venv\Scripts\activate      # Windows
     $ uv pip install tiatoolbox
+
+To upgrade an existing installation to the latest stable release:
+
+.. code-block:: console
+
+    $ uv pip install --upgrade tiatoolbox
+
+**Development setup (from source)**
+
+Clone the repository and create a virtual environment with all development dependencies:
+
+.. code-block:: console
+
+    $ git clone https://github.com/TissueImageAnalytics/tiatoolbox.git
+    $ cd tiatoolbox
+    $ uv sync --extra dev
+    $ source .venv/bin/activate   # Linux/macOS
+    $ .venv\Scripts\activate      # Windows
+
+On CPU-only machines (no CUDA GPU):
+
+.. code-block:: console
+
+    $ uv sync --extra dev --index pytorch-cpu=https://download.pytorch.org/whl/cpu
 
 From Sources
 ------------

@@ -103,22 +103,16 @@ Prepare a computer as a convenient platform for further development of the Pytho
     $ cd tiatoolbox
 ```
 
-5. Create virtual environment for TIAToolbox using
+5. Create a virtual environment and install dependencies.
 
 ```sh
-    $ conda create -n tiatoolbox-dev python=3.11 # select version of your choice
+    $ conda create -n tiatoolbox-dev python=3.12
     $ conda activate tiatoolbox-dev
-    $ pip install -r requirements/requirements_dev.txt
+    $ conda install -c conda-forge openjpeg sqlite
+    $ pip install -e ".[dev]"
 ```
 
-or
-
-```sh
-    $ conda env create -f requirements/requirements.dev.conda.yml # for linux/mac only.
-    $ conda activate tiatoolbox-dev
-```
-
-6. To use the packages installed in the environment, run the command:
+6. To re-enter the environment in a new terminal:
 
 ```sh
     $ conda activate tiatoolbox-dev

@@ -74,7 +74,7 @@ if TYPE_CHECKING:  # pragma: no cover
 @cli_auto_get_mask(default=True)
 @cli_overwrite(default=False)
 @cli_verbose(default=True)
-def nucleus_instance_segment(
+def nucleus_instance_segment(  # noqa: PLR0917
     model: str,
     weights: str,
     img_input: str,
@@ -110,6 +110,7 @@ def nucleus_instance_segment(
     )
 
     class_dict = dict(class_dict) if class_dict else None
+    return_predictions = return_predictions or (False,)
     files_all, masks_all, output_path = prepare_model_cli(
         img_input=img_input,
         output_path=output_path,

@@ -54,7 +54,7 @@ import gc
 import shutil
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Unpack
 
 import dask.array as da
 import numpy as np
@@ -62,7 +62,6 @@ import psutil
 import torch
 import zarr
 from tqdm.auto import tqdm
-from typing_extensions import Unpack
 
 from tiatoolbox import logger
 from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
@@ -1184,8 +1183,8 @@ def merge_batch_to_canvas(
 
 
 def merge_horizontal(
-    canvas: None | da.Array,
-    count: None | da.Array,
+    canvas: da.Array | None,
+    count: da.Array | None,
     output_locs_y: np.ndarray,
     canvas_np: np.ndarray,
     output_locs: np.ndarray,

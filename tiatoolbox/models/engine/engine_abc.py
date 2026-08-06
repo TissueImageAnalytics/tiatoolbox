@@ -39,7 +39,7 @@ import gc
 import shutil
 from abc import ABC
 from pathlib import Path
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, TypedDict, Unpack
 
 import dask
 import dask.array as da
@@ -49,7 +49,6 @@ import zarr
 from dask import compute
 from torch import nn
 from tqdm.auto import tqdm
-from typing_extensions import Unpack
 
 from tiatoolbox import DuplicateFilter, logger, rcParam
 from tiatoolbox.models.architecture import get_pretrained_model

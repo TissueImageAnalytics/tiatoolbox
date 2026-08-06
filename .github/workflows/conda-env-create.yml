@@ -7,15 +7,13 @@ permissions:
 
 on:
   push:
-    paths:
-      - "requirements/requirements*.txt"
-      - "requirements/generate_conda_env.py"
-      - ".github/workflows/conda-env-create.yml"
+    paths: [ "requirements/generate_conda_env.py", "conda-env-create.yml", "pyproject.toml"]
+    branches: [ develop, master, main ]
   pull_request:
-    paths:
-      - "requirements/requirements*.txt"
-      - "requirements/generate_conda_env.py"
-      - ".github/workflows/conda-env-create.yml"
+    paths: [ "requirements/generate_conda_env.py", "conda-env-create.yml", "pyproject.toml"]
+    branches: [ develop, pre-release, master, main ]
+  schedule: # Run on the 1st of every month at midnight
+    - cron: "0 0 1 * *"
 
 jobs:
   conda_solve:
@@ -23,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.12", "3.13", "3.14"]
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30

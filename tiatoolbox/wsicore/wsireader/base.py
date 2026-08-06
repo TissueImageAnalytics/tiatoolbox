@@ -13,10 +13,8 @@ from datetime import UTC, datetime
 from numbers import Number
 from pathlib import Path
 from typing import TYPE_CHECKING, Unpack
-from urllib.parse import urlparse
 
 import cv2
-import fsspec
 import matplotlib.colors as mcolors
 import numpy as np
 import openslide
@@ -29,10 +27,8 @@ from fsspec.implementations.reference import ReferenceFileSystem
 from imagecodecs.numcodecs import Delta, Jpeg, Jpeg2k, Lzw
 from numcodecs import register_codec
 from numpy.linalg import inv
-from packaging.version import Version
 from PIL import Image
 from tifffile import TiffPages
-from upath import UPath
 from zarr.experimental.cache_store import CacheStore
 from zarr.storage import FsspecStore, MemoryStore
 
@@ -43,6 +39,8 @@ from tiatoolbox.utils.env_detection import pixman_warning
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsimeta import WSIMeta
+
+from .detection import is_tiled_tiff, is_url
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterable
@@ -57,178 +55,10 @@ if TYPE_CHECKING:  # pragma: no cover
         Resolution,
         Units,
     )
-    from tiatoolbox.wsicore import WSIReaderParams
-    from tiatoolbox.wsicore.metadata.ngff import Multiscales
-    from tiatoolbox.wsicore.wsireader import DICOMWSIReader
+
+    from .types import WSIReaderParams
 
 pixman_warning()
-
-MIN_NGFF_VERSION = Version("0.4")
-MAX_NGFF_VERSION = Version("0.4")
-
-
-def is_dicom(path: Path) -> bool:
-    """Check if the input is a DICOM file.
-
-    Args:
-        path (Path): Path to the file to check.
-
-    Returns:
-        bool: True if the file is a DICOM file.
-
-    """
-    path = Path(path)
-    is_dcm = path.suffix.lower() == ".dcm"
-    is_dcm_dir = path.is_dir() and any(
-        p.suffix.lower() == ".dcm" for p in path.iterdir()
-    )
-    return is_dcm or is_dcm_dir
-
-
-def is_tiled_tiff(path: Path) -> bool:
-    """Check if the input is a tiled TIFF file.
-
-    Args:
-        path (Path):
-            Path to the file to check.
-
-    Returns:
-        bool:
-            True if the file is a tiled TIFF file.
-
-    """
-    path = Path(path)
-    try:
-        tif = tifffile.TiffFile(path)
-    except tifffile.TiffFileError:
-        return False
-    return tif.pages[0].is_tiled
-
-
-def is_zarr(path: Path, **kwargs: Unpack[WSIReaderParams]) -> bool:
-    """Check if the input is a Zarr file.
-
-    Args:
-        path (Path):
-            Path to the file to check.
-
-    Returns:
-        bool:
-            True if the file is a Zarr file.
-
-    """
-    try:
-        _ = zarr.open(path, **kwargs, mode="r")
-    except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
-        return False
-
-    return True
-
-
-def is_ngff(  # skipcq: PY-R1000  # noqa: PLR0911
-    path: str | Path,
-    min_version: Version = MIN_NGFF_VERSION,
-    max_version: Version = MAX_NGFF_VERSION,
-    **kwargs: Unpack[WSIReaderParams],
-) -> bool:
-    """Check if the input is an NGFF file.
-
-    This should return True for a zarr groups stored in a directory, zip
-    file, or SQLite database.
-
-    Args:
-        path (Path):
-            Path to the file to check.
-        min_version (Tuple[int, ...]):
-            Minimum version of the NGFF file to be considered valid.
-        max_version (Tuple[int, ...]):
-            Maximum version of the NGFF file to be considered valid.
-
-    Returns:
-        bool:
-            True if the file is an NGFF file.
-
-    """
-    zarr_kwargs = {k: v for k, v in kwargs.items() if k in ["storage_options"]}
-    try:
-        zarr_group = zarr.open(path, mode="r", **zarr_kwargs)
-    except Exception:  # skipcq: PYL-W0703  # noqa: BLE001
-        return False
-    if not isinstance(zarr_group, zarr.Group):
-        return False
-    group_attrs = zarr_group.attrs.asdict()
-    try:
-        multiscales: Multiscales = group_attrs.get("multiscales", [None])
-        omero = group_attrs.get("omero")
-        if not all(
-            [
-                isinstance(multiscales, list),
-                isinstance(omero, dict),
-                all(isinstance(m, dict) for m in multiscales),
-            ],
-        ):
-            logger.warning(
-                "The NGFF file is not valid. "
-                "The multiscales and omero attributes "
-                "must be present and of the correct type.",
-            )
-            return False
-    except KeyError:
-        return False
-    multiscales_versions = {
-        Version(scale["version"]) for scale in multiscales if "version" in scale
-    }
-    omero_version: str | None = omero.get("version")
-    if omero_version:
-        omero_version: Version = Version(omero_version)
-        if omero_version < min_version:
-            logger.warning(
-                "The minimum supported version of the NGFF file is %s. "
-                "But the versions of the multiscales in the file are %s.",
-                min_version,
-                multiscales_versions,
-            )
-            return False
-        if omero_version > max_version:
-            logger.warning(
-                "The maximum supported version of the NGFF file is %s. "
-                "But the versions of the multiscales in the file are %s.",
-                max_version,
-                multiscales_versions,
-            )
-            return True
-
-    if len(multiscales_versions) > 1:
-        logger.warning(
-            "Found multiple versions for NGFF multiscales: %s",
-            multiscales_versions,
-        )
-
-    if any(version < min_version for version in multiscales_versions):
-        logger.warning(
-            "The minimum supported version of the NGFF file is %s. "
-            "But the versions of the multiscales in the file are %s.",
-            min_version,
-            multiscales_versions,
-        )
-        return False
-
-    if any(version > max_version for version in multiscales_versions):
-        logger.warning(
-            "The maximum supported version of the NGFF file is %s. "
-            "But the versions of the multiscales in the file are %s.",
-            max_version,
-            multiscales_versions,
-        )
-        return True
-
-    return is_zarr(path, **zarr_kwargs)
-
-
-def is_url(path_or_url: str | Path) -> bool:
-    """Returns True if input is a URL else False."""
-    parsed = urlparse(str(path_or_url))
-    return parsed.scheme in {"s3", "http", "https", "ftp", "file"}
 
 
 def _handle_virtual_wsi(
@@ -322,12 +152,6 @@ def _handle_tiff_wsi(
     return None
 
 
-def fix_mangled_url_by_pathlib(input_path: str | Path) -> str:
-    """Fix URl mangled by Path."""
-    # Fix Mangled URL
-    return re.sub(r"^(s3|http|https|ftp|file):/(?!/)", r"\1://", str(input_path))
-
-
 class WSIReader:
     """Base whole slide image (WSI) reader class.
 
@@ -409,259 +233,9 @@ class WSIReader:
             (100, 100, 5)  # raw channel outputs
 
         """
-        WSIReader._validate_input(input_img)
+        from .factory import open_wsi  # skipcq: PYL-R0401  # noqa: PLC0415
 
-        if isinstance(input_img, np.ndarray):
-            return VirtualWSIReader(
-                input_img, mpp=mpp, power=power, post_proc=post_proc
-            )
-
-        if isinstance(input_img, WSIReader):
-            return input_img
-
-        # Input is a string or Path, normalize to Path
-        # UPath preserves s3 paths on Windows
-        input_path = UPath(input_img)
-        WSIReader.verify_supported_wsi(input_path, **kwargs)
-
-        # Handle special cases first (DICOM, Zarr/NGFF, OME-TIFF)
-        special_reader = WSIReader._handle_special_cases(
-            input_path, input_img, mpp, power, post_proc, **kwargs
-        )
-        if special_reader is not None:
-            return special_reader
-
-        # Try openslide last
-        return OpenSlideWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
-
-    @staticmethod
-    def _validate_input(input_img: str | Path | np.ndarray) -> None:
-        """Validate the input image type.
-
-        Args:
-            input_img (str | Path | np.ndarray): The input image, which
-            must be a path, string, numpy array, or WSIReader.
-
-        Raises:
-            TypeError: If the input is not one of the accepted types.
-
-        """
-        if not isinstance(input_img, (WSIReader, np.ndarray, str, Path)):
-            msg = "Invalid input: Must be a WSIReader, numpy array, string or Path"
-            raise TypeError(msg)
-
-    @staticmethod
-    def verify_supported_wsi(
-        input_path: Path, **kwargs: Unpack[WSIReaderParams]
-    ) -> None:
-        """Verify that an input image is supported.
-
-        Args:
-            input_path (:class:`Path`):
-                Input path to WSI.
-
-        Raises:
-            FileNotSupportedError:
-                If the input image is not supported.
-
-        """
-        if is_ngff(fix_mangled_url_by_pathlib(input_path), **kwargs) or is_dicom(
-            input_path
-        ):
-            return
-
-        _, _, suffixes = utils.misc.split_path_name_ext(input_path)
-
-        if suffixes and suffixes[-1] not in [
-            ".svs",
-            ".npy",
-            ".ndpi",
-            ".mrxs",
-            ".tif",
-            ".tiff",
-            ".jp2",
-            ".png",
-            ".jpg",
-            ".jpeg",
-            ".zarr",
-            ".db",
-            ".qptiff",
-            ".json",
-        ]:
-            msg = f"File {input_path} is not a supported file format."
-            raise FileNotSupportedError(
-                msg,
-            )
-
-    @staticmethod
-    def _handle_special_cases(
-        input_path: Path,
-        input_img: str | Path | np.ndarray,
-        mpp: tuple[Number, Number] | None = None,
-        power: Number | None = None,
-        post_proc: str | callable | None = "auto",
-        **kwargs: Unpack[WSIReaderParams],
-    ) -> WSIReader | None:
-        """Handle special cases for selecting the appropriate WSIReader.
-
-        Args:
-            input_path (Path): Path to the input image file.
-            input_img (str | Path | np.ndarray): The input image or path.
-            mpp (tuple[Number, Number] | None, optional): Microns per pixel resolution.
-            power (Number | None, optional): Objective power.
-            post_proc (str | callable | None, optional): Post-processing method
-            or identifier.
-            **kwargs (dict): Additional keyword arguments for specific reader types.
-
-        Returns:
-            WSIReader | None: An appropriate WSIReader instance if a match is found,
-            otherwise None.
-
-        Raises:
-            FileNotSupportedError: If the file format is not supported for NGFF Zarr.
-
-        """
-        _, _, suffixes = utils.misc.split_path_name_ext(input_path)
-        last_suffix = suffixes[-1]
-
-        reader = (
-            WSIReader.try_dicom(input_path, mpp, power, post_proc)
-            or WSIReader.try_fsspec(input_img, mpp, power)
-            or WSIReader.try_annotation_store(
-                input_path, last_suffix, post_proc, kwargs
-            )
-            or WSIReader.try_ngff(
-                fix_mangled_url_by_pathlib(input_path),
-                last_suffix,
-                mpp,
-                power,
-                **kwargs,
-            )
-            or WSIReader.try_ome_tiff(
-                input_path, suffixes, last_suffix, mpp, power, post_proc
-            )
-            or WSIReader.try_tiff(input_path, last_suffix, mpp, power, post_proc)
-            or WSIReader.try_openslide(input_path, last_suffix, mpp, power)
-        )
-
-        if reader is None:
-            reader = _handle_virtual_wsi(last_suffix, input_path, mpp, power)
-
-        return reader
-
-    @staticmethod
-    def try_openslide(
-        input_path: Path,
-        last_suffix: str,
-        mpp: tuple[Number, Number] | None,
-        power: Number | None,
-    ) -> OpenSlideWSIReader | None:
-        """Try to create an OpenSlideWSIReader if the input is a TIFF file."""
-        if last_suffix in (".tif", ".tiff"):
-            try:
-                return OpenSlideWSIReader(input_path, mpp=mpp, power=power)
-            except (
-                openslide.OpenSlideUnsupportedFormatError,
-                openslide.OpenSlideError,
-            ):
-                return None
-        return None
-
-    @staticmethod
-    def try_dicom(
-        input_path: Path,
-        mpp: tuple[Number, Number] | None,
-        power: Number | None,
-        post_proc: str | callable | None,
-    ) -> DICOMWSIReader | None:
-        """Try to create a DICOMWSIReader if the input is a DICOM file."""
-        if is_dicom(input_path):
-            from .dicom import DICOMWSIReader  # noqa: PLC0415
-
-            return DICOMWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
-        return None
-
-    @staticmethod
-    def try_fsspec(
-        input_img: str | Path | np.ndarray,
-        mpp: tuple[Number, Number] | None,
-        power: Number | None,
-    ) -> FsspecJsonWSIReader | None:
-        """Try to create a FsspecJsonWSIReader if the input is a valid Zarr fsspec."""
-        if FsspecJsonWSIReader.is_valid_zarr_fsspec(input_img):
-            return FsspecJsonWSIReader(input_img, mpp=mpp, power=power)
-        return None
-
-    @staticmethod
-    def try_annotation_store(
-        input_path: Path,
-        last_suffix: str,
-        post_proc: str | callable | None,
-        kwargs: dict,
-    ) -> AnnotationStoreReader | None:
-        """Try to create an AnnotationStoreReader if the file is a .db."""
-        if last_suffix == ".db":
-            kwargs["post_proc"] = post_proc
-            return AnnotationStoreReader(input_path, **kwargs)
-        return None
-
-    @staticmethod
-    def try_ngff(
-        input_path: str | Path,
-        last_suffix: str,
-        mpp: tuple[Number, Number] | None,
-        power: Number | None,
-        **kwargs: Unpack[WSIReaderParams],
-    ) -> NGFFWSIReader | None:
-        """Try to create an NGFFWSIReader if the file is a valid NGFF Zarr."""
-        if last_suffix == ".zarr":
-            if not is_ngff(input_path, **kwargs):
-                msg = f"File {input_path} does not appear to be a v0.4 NGFF zarr."
-                raise FileNotSupportedError(msg)
-            return NGFFWSIReader(input_path, mpp=mpp, power=power, **kwargs)
-        return None
-
-    @staticmethod
-    def try_ome_tiff(
-        input_path: Path,
-        suffixes: list[str],
-        last_suffix: str,
-        mpp: tuple[Number, Number] | None,
-        power: Number | None,
-        post_proc: str | callable | None,
-    ) -> TIFFWSIReader | None:
-        """Try to create a TIFFWSIReader for OME-TIFF or QPTIFF formats."""
-        if (
-            suffixes[-2:] in ([".ome", ".tiff"], [".ome", ".tif"])
-            or last_suffix == ".qptiff"
-        ):
-            return TIFFWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
-        return None
-
-    @staticmethod
-    def try_tiff(
-        input_path: Path,
-        last_suffix: str,
-        mpp: tuple[Number, Number] | None,
-        power: Number | None,
-        post_proc: str | callable | None,
-    ) -> TIFFWSIReader | None:
-        """Try to create a TIFFWSIReader.
-
-        Try to create a TIFFWSIReader for standard TIFF formats,
-        or fallback to virtual WSI.
-
-        """
-        if last_suffix in (".tif", ".tiff"):
-            try:
-                return TIFFWSIReader(
-                    input_path, mpp=mpp, power=power, post_proc=post_proc
-                )
-            except ValueError as e:
-                if "Unsupported TIFF WSI format" in str(e):
-                    return _handle_virtual_wsi(last_suffix, input_path, mpp, power)
-                raise
-        return None
+        return open_wsi(input_img, mpp, power, post_proc, **kwargs)
 
     def __init__(
         self: WSIReader,
@@ -1316,7 +890,7 @@ class WSIReader:
         if not rescale.is_integer():
             msg = (
                 "Tile objective value must be an integer multiple of the "
-                "objective power of the slide.",
+                "objective power of the slide."
             )
             raise ValueError(
                 msg,
@@ -4520,42 +4094,6 @@ class FsspecJsonWSIReader(WSIReader):
             else:
                 msg = "'_ARRAY_DIMENSIONS' does not exist in the root .zattrs."
                 raise ValueError(msg)
-
-    @staticmethod
-    def is_valid_zarr_fsspec(file_path: str) -> bool:
-        """Check if the input path is a valid Zarr fsspec JSON file.
-
-        Checks if the file_path is a valid Zarr fsspec JSON file generated by:
-        tiatoolbox/utils/tiff_to_fsspec.py
-
-        Args:
-            file_path: str Path to the file to check.
-
-        Returns:
-            bool: True if the file is a valid Zarr fsspec JSON file
-        """
-        path = Path(file_path)
-
-        if path.suffix.lower() != ".json":
-            return False
-
-        try:
-            with fsspec.open(file_path, "r") as file:
-                data = json.load(file)
-
-            # Basic validation for fsspec Zarr JSON structure
-            if ".zattrs" not in data:
-                logger.error("Field .zattrs missing in '%s'.", file_path)
-                return False
-
-            return True  # noqa: TRY300
-
-        except json.JSONDecodeError as e:
-            logger.error("Invalid JSON file: %s", e)
-            return False
-        except (OSError, ValueError) as e:
-            logger.error("An error occurred: %s", e)
-            return False
 
     def _info(self: FsspecJsonWSIReader) -> WSIMeta:
         """TIFF metadata constructor.

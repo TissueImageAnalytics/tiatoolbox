@@ -6,7 +6,7 @@ permissions:
 
 on:
   push:
-    branches: [ develop, pre-release, master, main ]
+    branches: [ develop, master, main ]
   pull_request:
     branches: [ develop, pre-release, master, main ]
 
@@ -18,7 +18,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.12", "3.13", "3.14"]
 
     steps:
 
@@ -37,7 +37,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install uv
         uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
-        uv pip install --system -r requirements/requirements_dev.txt
+        uv pip install --system -e ".[dev]"
 
     - name: Debug typing environment
       run: |
