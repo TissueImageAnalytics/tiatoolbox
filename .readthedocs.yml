@@ -13,15 +13,19 @@ build:
   apt_packages:
     - libopenjp2-7-dev
     - libopenjp2-tools
+  jobs:
+    pre_install:
+      # Install CPU-only PyTorch before the package so pip doesn't pull in CUDA wheels
+      - pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
   configuration: docs/conf.py
 
-# Optionally set the version of Python and requirements required to build your docs
+# Install tiatoolbox with docs extras (pyproject.toml is the single source of truth)
 python:
   install:
-      # Install PyTorch CPU version first
-      - requirements: requirements/requirements_cpu.txt
-      - requirements: docs/requirements.txt
-      - requirements: requirements/requirements.txt
+    - method: pip
+      path: .
+      extra_requirements:
+        - docs
