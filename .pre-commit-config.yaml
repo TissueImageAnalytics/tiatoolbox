@@ -45,7 +45,6 @@ repos:
       - id: detect-private-key      # Detects the presence of private keys.
       - id: end-of-file-fixer       # Ensures that a file is either empty, or ends with one newline.
       - id: mixed-line-ending       # Replaces or checks mixed line endings.
-      - id: requirements-txt-fixer  # Sorts entries in requirements.txt.
       - id: trailing-whitespace     # Trims trailing whitespace.
       - id: file-contents-sorter    # Sorts the lines in specified files (defaults to alphabetical).
         files: whitelist.txt
