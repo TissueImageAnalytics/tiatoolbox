@@ -36,11 +36,12 @@ def is_dicom(path: Path) -> bool:
 
     """
     path = Path(path)
-    is_dcm = path.suffix.lower() == ".dcm"
+    dicom_suffixes = {".dcm", ".dicom"}
+    is_dcm_file = path.is_file() and path.suffix.lower() in dicom_suffixes
     is_dcm_dir = path.is_dir() and any(
-        p.suffix.lower() == ".dcm" for p in path.iterdir()
+        p.is_file() and p.suffix.lower() in dicom_suffixes for p in path.iterdir()
     )
-    return is_dcm or is_dcm_dir
+    return is_dcm_file or is_dcm_dir
 
 
 def is_tiled_tiff(path: Path) -> bool:
