@@ -12,7 +12,7 @@ from copy import deepcopy
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import cv2
 import glymur
@@ -29,6 +29,7 @@ from skimage.filters import threshold_otsu
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from skimage.morphology import binary_dilation, disk, remove_small_objects
 from skimage.registration import phase_cross_correlation
+from wsidicom import WsiDicom
 
 from tiatoolbox import cli, utils
 from tiatoolbox.annotation import SQLiteStore
@@ -3740,19 +3741,20 @@ def test_wsireader_read_region_edge_cases(sample_svs: Path) -> None:
         assert region.shape == (25, 25, 3)
 
 
+def test_is_dicom(monkeypatch: pytest.MonkeyPatch, track_tmp_path: Path) -> None:
+    """Test is_dicom function."""
+    path = track_tmp_path / "test.dcm"
+    path.touch()
+
+    mock_open = Mock(return_value=object())
+    monkeypatch.setattr(WsiDicom, "open", mock_open)
+
+    assert is_dicom(path)
+    mock_open.assert_called_once_with(path)
+
+
 def test_is_dicom_edge_cases(track_tmp_path: Path) -> None:
     """Test is_dicom function with edge cases."""
-    # Test with .dcm file
-    dcm_file = track_tmp_path / "test.dcm"
-    dcm_file.touch()
-    assert is_dicom(dcm_file)
-
-    # Test with directory containing .dcm files
-    dcm_dir = track_tmp_path / "dcm_dir"
-    dcm_dir.mkdir()
-    (dcm_dir / "test.dcm").touch()
-    assert is_dicom(dcm_dir)
-
     # Test with non-dcm file
     txt_file = track_tmp_path / "test.txt"
     txt_file.touch()
@@ -3762,6 +3764,11 @@ def test_is_dicom_edge_cases(track_tmp_path: Path) -> None:
     empty_dir = track_tmp_path / "empty_dir"
     empty_dir.mkdir()
     assert not is_dicom(empty_dir)
+
+    fake_dcm_dir = track_tmp_path / "fake.dcm"
+    fake_dcm_dir.mkdir()
+
+    assert not is_dicom(fake_dcm_dir)
 
 
 def test_tiffwsireader_color_parsing_edge_cases(sample_ome_tiff: Path) -> None:
