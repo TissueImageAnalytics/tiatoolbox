@@ -128,4 +128,6 @@ outputs/
 # Local scratch / interview artifacts (not part of the feature)
 /tiny.svs
 /main.py
+
+# uv lockfile
 /uv.lock

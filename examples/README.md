@@ -132,3 +132,9 @@ Demonstrates how to use TIAToolbox to reproduce the ["SlideGraph+ method" ("Slid
 - Example notebook on using SlideGraph model for WSI inference: [slide-graph for inference](./inference-pipelines/slide-graph.ipynb)
 
 [![image](../docs/images/her2-prediction-example.png)](./inference-pipelines/slide-graph.ipynb)
+
+### 3. Prediction of Spatial Gene Expression from H&E Stained Whole Slide Images
+
+Demonstrates how to use [DeepSpot-M](https://huggingface.co/ratschlab/DeepSpotM) (["A multimodal foundation model for transcriptome-wide virtual spatial transcriptomics from histology" by Nonchev et al. (2026)](https://www.medrxiv.org/content/10.64898/2026.06.19.26356060v1)) to predict spatial gene expression across a whole slide image. DeepSpot-M maps each 224x224 H&E tile to transcriptome-wide expression with a LoRA-adapted Midnight backbone and a cross-attention gene decoder. Genes are represented as queryable embeddings rather than fixed output units, so one model covers a panel of about 19,000 genes and can be asked for genes it did not see during training. The notebook runs the model through the `DeepFeatureExtractor` engine, which writes an `(n_tiles, n_genes)` expression matrix together with the matching tile coordinates, and overlays the predicted expression of three marker genes back onto the slide. The weights are gated and released for non-commercial research use.
+
+[![image](../docs/images/deepspotm.png)](./inference-pipelines/deepspotm.ipynb)

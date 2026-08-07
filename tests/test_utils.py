@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import platform
 import re
 import shutil
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 from unittest.mock import patch
@@ -1536,6 +1538,16 @@ def test_detect_gpu() -> None:
 
     """
     _ = utils.env_detection.has_gpu()
+
+
+@pytest.mark.skipif(
+    sys.platform != "darwin" or platform.machine() != "arm64",
+    reason="MPS is only available on Apple Silicon (macOS arm64).",
+)
+def test_mps_available_on_apple_silicon() -> None:
+    """Ensure the uv-installed torch wheel supports MPS on Apple Silicon."""
+    assert torch.backends.mps.is_built()
+    assert torch.backends.mps.is_available()
 
 
 def make_simple_dat(centroids: tuple[tuple, tuple] = ((0, 0), (100, 100))) -> dict:
