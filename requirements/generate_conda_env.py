@@ -1,4 +1,4 @@
-"""Generate a conda environment YAML from requirements.txt.
+"""Generate a conda environment YAML from pyproject.toml.
 
 Converts pip-style dependencies into conda-forge compatible dependencies.
 
@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import os
 import re
+import tomllib
 from pathlib import Path
 
 # ================================
 # Config
 # ================================
-REQ_FILE = "requirements/requirements.txt"
+PYPROJECT_FILE = "pyproject.toml"
 OUT_FILE = "requirements/requirements.conda.generated.yml"
 
 PYTHON_VERSION = os.environ.get("PYTHON_VERSION", "3.15")
@@ -39,7 +40,7 @@ PIP_TO_CONDA = {
 # Helpers
 # ================================
 def parse_line(line: str) -> tuple[str, str] | None:
-    """Parse a requirements.txt line into (name, version)."""
+    """Parse requirement string into (name, version)."""
     line = line.split("#", 1)[0].strip()
     if not line:
         return None
@@ -89,15 +90,20 @@ def to_yaml(env: dict) -> str:
 # ================================
 def main() -> None:
     """Generate conda environment YAML."""
-    req_path = Path(REQ_FILE)
+    pyproject_path = Path(PYPROJECT_FILE)
 
-    if not req_path.exists():
-        msg = f"{REQ_FILE} not found"
+    if not pyproject_path.exists():
+        msg = f"{PYPROJECT_FILE} not found"
         raise FileNotFoundError(msg)
+
+    with pyproject_path.open("rb") as f:
+        pyproject = tomllib.load(f)
+
+    raw_deps = pyproject["project"]["dependencies"]
 
     deps: dict[str, str] = {}
 
-    for raw_line in req_path.read_text().splitlines():
+    for raw_line in raw_deps:
         parsed = parse_line(raw_line)
         if not parsed:
             continue

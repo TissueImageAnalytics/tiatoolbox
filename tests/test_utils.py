@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import platform
 import re
 import shutil
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 from unittest.mock import patch
@@ -44,6 +46,7 @@ from tiatoolbox.utils.misc import (
     cast_to_min_dtype,
     create_smart_array,
     dict_to_store_patch_predictions,
+    get_zarr_array,
     imread,
     pad_contours,
     remove_padded_values_in_contours,
@@ -1537,6 +1540,16 @@ def test_detect_gpu() -> None:
     _ = utils.env_detection.has_gpu()
 
 
+@pytest.mark.skipif(
+    sys.platform != "darwin" or platform.machine() != "arm64",
+    reason="MPS is only available on Apple Silicon (macOS arm64).",
+)
+def test_mps_available_on_apple_silicon() -> None:
+    """Ensure the uv-installed torch wheel supports MPS on Apple Silicon."""
+    assert torch.backends.mps.is_built()
+    assert torch.backends.mps.is_available()
+
+
 def make_simple_dat(centroids: tuple[tuple, tuple] = ((0, 0), (100, 100))) -> dict:
     """Make a simple dat file with cells at provided centroids."""
     polys = [cell_polygon(cent) for cent in centroids]
@@ -2547,6 +2560,38 @@ def test_create_smart_array_chunks_auto(track_tmp_path: Path) -> None:
 
     # The key assertion: chunks must equal shape_tuple
     assert arr.chunks == shape
+
+
+def test_get_zarr_array_from_zarr_array(track_tmp_path: Path) -> None:
+    """Test conversion of a zarr.Array to a NumPy array.
+
+    This test covers the branch where the input is a ``zarr.Array``.
+    The returned value should contain the same data as the zarr array
+    and be converted to a NumPy array.
+
+    Args:
+        track_tmp_path (Path):
+            Temporary directory supplied by pytest.
+
+    Returns:
+        None:
+            Assertions verify the expected behavior.
+
+    """
+    zarr_path = track_tmp_path / "test.zarr"
+
+    zarr_array = zarr.open(
+        str(zarr_path),
+        mode="w",
+        shape=(3,),
+        dtype="int32",
+    )
+    zarr_array[:] = [1, 2, 3]
+
+    output = get_zarr_array(zarr_array)
+
+    assert isinstance(output, np.ndarray)
+    np.testing.assert_array_equal(output, np.asarray([1, 2, 3]))
 
 
 def test_removes_padded_rows() -> None:

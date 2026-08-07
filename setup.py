@@ -1,22 +1,30 @@
 #!/usr/bin/env python
 
 """The setup script."""
+
 import sys
 from pathlib import Path
 
 from setuptools import find_packages, setup
 
-with Path("README.md").open() as readme_file:
+with Path("README.md").open(encoding="utf-8") as readme_file:
     readme = readme_file.read()
 
-with Path("HISTORY.md").open() as history_file:
+with Path("HISTORY.md").open(encoding="utf-8") as history_file:
     history = history_file.read()
 
-install_requires = [
-    line
-    for line in Path("requirements/requirements.txt").read_text().splitlines()
-    if line and line[0] not in ("-", "#")
-]
+import tomllib
+
+with Path("pyproject.toml").open("rb") as _f:
+    _pyproject = tomllib.load(_f)
+install_requires = _pyproject["project"]["dependencies"]
+
+# Optional model dependencies, imported lazily by the architecture that needs them.
+# DeepSpot-M is packaged separately because it ships its own gene vocabulary assets
+# and its weights are gated, so it is not pulled in for every install.
+extras_require = {
+    "deepspotm": ["deepspotm>=1.0.0"],
+}
 
 dependency_links = []
 
@@ -53,6 +61,7 @@ setup(
         ],
     },
     install_requires=install_requires,
+    extras_require=extras_require,
     long_description=readme + "\n\n" + history,
     long_description_content_type="text/markdown",
     include_package_data=True,

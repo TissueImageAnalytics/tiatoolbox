@@ -3,9 +3,7 @@ name: pip Install
 on:
   push:
     paths:
-      - "requirements*.yml"
       - "conda-env-create.yml"
-      - "requirements/requirement*.txt"
       - "setup*py"
       - "setup*cfg"
       - "pyproject*toml"
@@ -14,9 +12,7 @@ on:
     branches: [ develop, master, main ]
   pull_request:
     paths:
-      - "requirements*.yml"
       - "conda-env-create.yml"
-      - "requirements/requirement*.txt"
       - "setup*py"
       - "setup*cfg"
       - "pyproject*toml"

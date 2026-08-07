@@ -744,7 +744,7 @@ class AnnotationRenderer:
 
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913, PLR0917
         self: AnnotationRenderer,
         score_prop: str | None = None,
         mapper: str | dict | list | None = None,
