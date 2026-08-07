@@ -39,11 +39,10 @@ def is_dicom(path: Path) -> bool:
     """
     try:
         WsiDicom.open(path)
-        return True
     except WsiDicomNotFoundError:
         return False
     else:
-        return False
+        return True
 
 
 def is_tiled_tiff(path: Path) -> bool:
