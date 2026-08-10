@@ -15,3 +15,9 @@ recursive-include tiatoolbox/data *
 
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
+
+include tiatoolbox/visualization/openlayers/README.md
+include tiatoolbox/visualization/openlayers/package.json
+include tiatoolbox/visualization/openlayers/package-lock.json
+include tiatoolbox/visualization/openlayers/vite.config.js
+recursive-include tiatoolbox/visualization/openlayers/src *.js *.css
