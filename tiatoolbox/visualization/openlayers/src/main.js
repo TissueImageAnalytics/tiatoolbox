@@ -23,16 +23,71 @@ import Graticule from "ol-ext/control/Graticule.js";
 import LayerSwitcher from "ol-ext/control/LayerSwitcher.js";
 import Toggle from "ol-ext/control/Toggle.js";
 
+async function createSession() {
+  const response = await fetch("/tileserver/session_id");
+
+  if (!response.ok) {
+    throw new Error("Failed to create TileServer session.");
+  }
+
+  const data = await response.json();
+
+  return data.session_id;
+}
+
+async function loadSlide(slidePath) {
+  const formData = new FormData();
+  formData.append("slide_path", slidePath);
+
+  const loadResponse = await fetch("/tileserver/slide", {
+    method: "PUT",
+    body: formData,
+  });
+
+  if (!loadResponse.ok) {
+    throw new Error(`Failed to load slide: ${slidePath}`);
+  }
+
+  const metadataResponse = await fetch("/tileserver/slide");
+
+  if (!metadataResponse.ok) {
+    throw new Error("Failed to retrieve slide metadata.");
+  }
+
+  return metadataResponse.json();
+}
+
 const mapElement = document.getElementById("map");
 
 if (mapElement === null) {
   throw new Error("The OpenLayers map element could not be found.");
 }
 
-const layersData = JSON.parse(mapElement.dataset.layers ?? "[]");
+let layersData = JSON.parse(mapElement.dataset.layers ?? "[]");
 
 if (layersData.length === 0) {
-  throw new Error("No layers were supplied to the OpenLayers viewer.");
+  const params = new URLSearchParams(window.location.search);
+  const slidePath = params.get("slide");
+
+  if (slidePath === null) {
+    throw new Error(
+      "No preloaded layers were supplied and no slide was selected.",
+    );
+  }
+
+  const sessionId = await createSession();
+  const slideInfo = await loadSlide(slidePath);
+
+  layersData = [
+    {
+      name: "slide",
+      url:
+        `/tileserver/layer/slide/${sessionId}/zoomify/` +
+        "{TileGroup}/{z}-{x}-{y}@1x.jpg",
+      size: slideInfo.slide_dimensions,
+      mpp: slideInfo.mpp[0],
+    },
+  ];
 }
 
 const layers = layersData.map((layer) => {

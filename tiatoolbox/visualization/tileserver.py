@@ -351,7 +351,7 @@ class TileServer(Flask):
         msg = "No annotation layer found."
         raise ValueError(msg)
 
-    def index(self: TileServer) -> str:
+    def index(self: TileServer) -> Response:
         """Serve the index page.
 
         Returns:
@@ -360,10 +360,16 @@ class TileServer(Flask):
 
         """
         session_id = self._get_session_id()
+        new_session = False
+
+        if session_id is None or session_id not in self.layers:
+            session_id = self._create_session()
+            new_session = True
+
         layers = [
             {
                 "name": name,
-                "url": f"/tileserver/layer/{name}/default/zoomify/"
+                "url": f"/tileserver/layer/{name}/{session_id}/zoomify/"
                 "{TileGroup}/{z}-{x}-{y}@1x.jpg",
                 "size": [int(x) for x in layer.info.slide_dimensions],
                 "mpp": float(np.mean(layer.info.mpp)),
@@ -371,11 +377,20 @@ class TileServer(Flask):
             for name, layer in self.layers[session_id].items()
         ]
 
-        return render_template(
-            "index.html",
-            title=self.title,
-            layers=json.dumps(layers),
+        response = make_response(
+            render_template(
+                "index.html",
+                title=self.title,
+                layers=json.dumps(layers),
+            ),
         )
+
+        if new_session:
+            response.set_cookie(
+                "session_id", session_id, httponly=True
+            )  # skipcq: PTC-W6003
+
+        return response
 
     def change_prop(self: TileServer) -> str:
         """Change the property to colour annotations by."""
@@ -385,16 +400,27 @@ class TileServer(Flask):
 
         return "done"
 
-    def session_id(self: TileServer) -> Response:
-        """Set up a new session."""
-        # respond with a random cookie to disambiguate sessions
-        resp = make_response("done")
+    def _create_session(self: TileServer) -> str:
+        """Create and initialise a TileServer session."""
         session_id = "default" if self.default_session_id else secrets.token_urlsafe(16)
-        resp.set_cookie("session_id", session_id, httponly=True)  # skipcq: PTC-W6003
+
         self.renderers[session_id] = copy.deepcopy(self.renderer)
         self.overlaps[session_id] = 0
         self.layers[session_id] = {}
         self.pyramids[session_id] = {}
+
+        return session_id
+
+    def session_id(self: TileServer) -> Response:
+        """Get or set up a TileServer session."""
+        session_id = self._get_session_id()
+
+        if session_id is None or session_id not in self.layers:
+            session_id = self._create_session()
+
+        resp = jsonify({"session_id": session_id})
+        resp.set_cookie("session_id", session_id, httponly=True)
+
         return resp
 
     def reset(self: TileServer, session_id: str) -> str:
