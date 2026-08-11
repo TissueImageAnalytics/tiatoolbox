@@ -11166,21 +11166,30 @@ async function _d(e) {
 	if (!n.ok) throw Error("Failed to retrieve slide metadata.");
 	return n.json();
 }
-var vd = document.getElementById("map");
-if (vd === null) throw Error("The OpenLayers map element could not be found.");
-var yd = JSON.parse(vd.dataset.layers ?? "[]");
-if (yd.length === 0) {
+function vd(e, t, n) {
+	return new ru({
+		url: `/tileserver/layer/slide/${e}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${n}`,
+		size: t.slide_dimensions,
+		crossOrigin: "anonymous",
+		zDirection: -1
+	});
+}
+var yd = document.getElementById("map");
+if (yd === null) throw Error("The OpenLayers map element could not be found.");
+var bd = JSON.parse(yd.dataset.layers ?? "[]"), xd = null, Sd = 0;
+if (bd.length === 0) {
 	let e = new URLSearchParams(window.location.search).get("slide");
 	if (e === null) throw Error("No preloaded layers were supplied and no slide was selected.");
-	let t = await gd(), n = await _d(e);
-	yd = [{
+	xd = await gd();
+	let t = await _d(e);
+	bd = [{
 		name: "slide",
-		url: `/tileserver/layer/slide/${t}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg`,
-		size: n.slide_dimensions,
-		mpp: n.mpp[0]
+		url: `/tileserver/layer/slide/${xd}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg`,
+		size: t.slide_dimensions,
+		mpp: t.mpp[0]
 	}];
 }
-var bd = yd.map((e) => {
+var Cd = bd.map((e) => {
 	let t = new ru({
 		url: e.url,
 		size: e.size,
@@ -11191,53 +11200,53 @@ var bd = yd.map((e) => {
 		title: e.name,
 		source: t
 	});
-}), xd = bd[0].getSource(), Sd = xd.getTileGrid(), Cd = Sd.getResolutions(), wd = Sd.getExtent(), Td = new He({
+}), wd = Cd[0], Td = wd.getSource(), Ed = Td.getTileGrid(), Dd = Ed.getResolutions(), Od = Ed.getExtent(), kd = new He({
 	code: "ZoomifyProjection",
 	units: "pixels",
-	extent: wd,
-	metersPerUnit: yd[0].mpp * 1e-6,
+	extent: Od,
+	metersPerUnit: bd[0].mpp * 1e-6,
 	getPointResolution(e) {
 		return e;
 	}
 });
-hn(Td);
-var Ed = new Aa({
-	projection: Td,
-	resolutions: Cd,
+hn(kd);
+var Ad = new Aa({
+	projection: kd,
+	resolutions: Dd,
 	constrainOnlyCenter: !0
-}), Dd = new rl({
-	target: vd,
-	layers: bd,
-	view: Ed
-}), Od = new to({
+}), jd = new rl({
+	target: yd,
+	layers: Cd,
+	view: Ad
+}), Md = new to({
 	units: "metric",
 	bar: !0,
 	steps: 10,
 	minWidth: 256
 });
-Dd.addControl(Od);
-var kd = new qa({
+jd.addControl(Md);
+var Nd = new qa({
 	className: "ol-overviewmap ol-custom-overviewmap",
-	layers: [new ho({ source: xd })]
+	layers: [new ho({ source: Td })]
 });
-Dd.addControl(kd);
-var Ad = new Ln({
+jd.addControl(Nd);
+var Pd = new Ln({
 	coordinateFormat: (e) => sn([e[0], -e[1]], "{x}, {y}", 0),
-	projection: Td,
+	projection: kd,
 	className: "ol-mouse-position",
 	placeholder: "\xA0"
 });
-Dd.addControl(Ad);
-var jd = new Ya({
+jd.addControl(Pd);
+var Fd = new Ya({
 	autoHide: !1,
 	className: "ol-rotate"
 });
-Dd.addControl(jd);
-var Md = new Pe();
-Dd.addControl(Md);
-var Nd = new $();
-Dd.addControl(Nd);
-var Pd = 64, Fd = 64, Id = new ws({
+jd.addControl(Fd);
+var Id = new Pe();
+jd.addControl(Id);
+var Ld = new $();
+jd.addControl(Ld);
+var Rd = 64, zd = 64, Bd = new ws({
 	stroke: new Cs({
 		color: "rgba(0, 0, 0, 0.5)",
 		width: 1
@@ -11250,23 +11259,23 @@ var Pd = 64, Fd = 64, Id = new ws({
 			width: 3
 		})
 	})
-}), Ld = new su({
-	projection: Td.getCode(),
-	margin: Fd,
-	style: Id,
-	spacing: Pd,
+}), Vd = new su({
+	projection: kd.getCode(),
+	margin: zd,
+	style: Bd,
+	spacing: Rd,
 	formatCoord(e, t) {
 		let n;
 		return n = t === "left" || t === "right" ? -Math.floor(e) : Math.floor(e), n >= 1e6 && (n = n.toExponential(3), n = n.replace("+", "")), n;
 	}
-}), Rd = Pd, zd = Fd, Bd = new su({
-	projection: Td.getCode(),
-	spacing: Rd,
-	margin: zd,
-	style: Id,
+}), Hd = Rd, Ud = zd, Wd = new su({
+	projection: kd.getCode(),
+	spacing: Hd,
+	margin: Ud,
+	style: Bd,
 	formatCoord(e, t) {
-		let n = Dd.getView().calculateExtent(Dd.getSize()), r = Dd.getView().getResolution(), i = n[0] + r * zd, a = n[3] - r * zd, o;
-		if (o = t === "left" || t === "right" ? -(e - a) : e - i, o = Math.floor(o / r / Rd), t === "left" || t === "right") {
+		let n = jd.getView().calculateExtent(jd.getSize()), r = jd.getView().getResolution(), i = n[0] + r * Ud, a = n[3] - r * Ud, o;
+		if (o = t === "left" || t === "right" ? -(e - a) : e - i, o = Math.floor(o / r / Hd), t === "left" || t === "right") {
 			let e = "";
 			do
 				e += String.fromCharCode(65 + o % 26), o = Math.floor(o / 26);
@@ -11275,38 +11284,57 @@ var Pd = 64, Fd = 64, Id = new ws({
 		}
 		return o;
 	}
-}), Vd = new hd({
+}), Gd = new hd({
 	html: "<i class=\"fas fa-ruler-combined\"></i>",
 	className: "ol-graticule",
 	title: "Toggle Graticule",
 	onToggle(e) {
-		e ? (Hd.setActive(!1), Bd.setMap(null), Ld.setMap(Dd)) : Ld.setMap(null);
+		e ? (Kd.setActive(!1), Wd.setMap(null), Vd.setMap(jd)) : Vd.setMap(null);
 	}
-}), Hd;
-Dd.addControl(Vd), Hd = new hd({
+}), Kd;
+jd.addControl(Gd), Kd = new hd({
 	html: "<i class=\"fas fa-border-all\"></i>",
 	className: "ol-screen-space-graticule",
 	title: "Toggle Screen Space Graticule",
 	onToggle(e) {
-		e ? (Vd.setActive(!1), Ld.setMap(null), Bd.setMap(Dd)) : Bd.setMap(null);
+		e ? (Gd.setActive(!1), Vd.setMap(null), Wd.setMap(jd)) : Wd.setMap(null);
 	}
-}), Dd.addControl(Hd), Dd.getView().fit(wd), Object.assign(window, {
-	extent: wd,
-	fullscreen: Md,
-	graticule: Ld,
-	graticuleToggle: Vd,
-	layerSwitcher: Nd,
-	layers: bd,
-	layersData: yd,
-	map: Dd,
-	mousePositionControl: Ad,
-	overviewMapControl: kd,
-	projection: Td,
-	resolutions: Cd,
-	rotate: jd,
-	scaleLineControl: Od,
-	screenSpaceGraticule: Bd,
-	screenSpaceGraticuleToggle: Hd,
-	view: Ed
+}), jd.addControl(Kd), jd.getView().fit(Od);
+async function qd(e) {
+	if (xd === null) throw Error("Dynamic slide switching requires a TileServer session.");
+	let t = await _d(e);
+	Sd += 1;
+	let n = vd(xd, t, Sd), r = n.getTileGrid(), i = r.getExtent(), a = r.getResolutions(), o = new He({
+		code: "zoomify",
+		units: "pixels",
+		extent: i,
+		metersPerUnit: t.mpp[0] * 1e-6
+	});
+	hn(o), wd.setSource(n), jd.setView(new Aa({
+		projection: o,
+		resolutions: a,
+		extent: i,
+		constrainOnlyCenter: !0
+	})), jd.getView().fit(i);
+}
+Object.assign(window, {
+	extent: Od,
+	fullscreen: Id,
+	graticule: Vd,
+	graticuleToggle: Gd,
+	layerSwitcher: Ld,
+	layers: Cd,
+	layersData: bd,
+	map: jd,
+	mousePositionControl: Pd,
+	overviewMapControl: Nd,
+	projection: kd,
+	resolutions: Dd,
+	rotate: Fd,
+	scaleLineControl: Md,
+	screenSpaceGraticule: Wd,
+	screenSpaceGraticuleToggle: Kd,
+	switchSlide: qd,
+	view: Ad
 });
 //#endregion

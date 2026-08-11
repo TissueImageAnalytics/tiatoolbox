@@ -57,6 +57,17 @@ async function loadSlide(slidePath) {
   return metadataResponse.json();
 }
 
+function createSlideSource(sessionId, slideInfo, version) {
+  return new Zoomify({
+    url:
+      `/tileserver/layer/slide/${sessionId}/zoomify/` +
+      `{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${version}`,
+    size: slideInfo.slide_dimensions,
+    crossOrigin: "anonymous",
+    zDirection: -1,
+  });
+}
+
 const mapElement = document.getElementById("map");
 
 if (mapElement === null) {
@@ -64,6 +75,8 @@ if (mapElement === null) {
 }
 
 let layersData = JSON.parse(mapElement.dataset.layers ?? "[]");
+let sessionId = null;
+let slideVersion = 0;
 
 if (layersData.length === 0) {
   const params = new URLSearchParams(window.location.search);
@@ -75,7 +88,7 @@ if (layersData.length === 0) {
     );
   }
 
-  const sessionId = await createSession();
+  sessionId = await createSession();
   const slideInfo = await loadSlide(slidePath);
 
   layersData = [
@@ -104,7 +117,9 @@ const layers = layersData.map((layer) => {
   });
 });
 
-const baseSource = layers[0].getSource();
+const slideLayer = layers[0];
+
+const baseSource = slideLayer.getSource();
 const tileGrid = baseSource.getTileGrid();
 const resolutions = tileGrid.getResolutions();
 const extent = tileGrid.getExtent();
@@ -325,6 +340,48 @@ map.addControl(screenSpaceGraticuleToggle);
 
 map.getView().fit(extent);
 
+async function switchSlide(slidePath) {
+  if (sessionId === null) {
+    throw new Error("Dynamic slide switching requires a TileServer session.");
+  }
+
+  const slideInfo = await loadSlide(slidePath);
+
+  slideVersion += 1;
+
+  const source = createSlideSource(
+    sessionId,
+    slideInfo,
+    slideVersion,
+  );
+
+  const newTileGrid = source.getTileGrid();
+  const newExtent = newTileGrid.getExtent();
+  const newResolutions = newTileGrid.getResolutions();
+
+  const newProjection = new Projection({
+    code: "zoomify",
+    units: "pixels",
+    extent: newExtent,
+    metersPerUnit: slideInfo.mpp[0] * 1e-6,
+  });
+
+  addProjection(newProjection);
+
+  slideLayer.setSource(source);
+
+  map.setView(
+    new View({
+      projection: newProjection,
+      resolutions: newResolutions,
+      extent: newExtent,
+      constrainOnlyCenter: true,
+    }),
+  );
+
+  map.getView().fit(newExtent);
+}
+
 // Preserve variables exposed by the original inline viewer.
 Object.assign(window, {
   extent,
@@ -343,5 +400,6 @@ Object.assign(window, {
   scaleLineControl,
   screenSpaceGraticule,
   screenSpaceGraticuleToggle,
+  switchSlide,
   view,
 });
