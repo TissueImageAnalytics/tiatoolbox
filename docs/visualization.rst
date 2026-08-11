@@ -489,3 +489,10 @@ and the ability to toggle on or off specific UI elements:
     }
 
 This .json filename should end in 'config.json' to be picked up by the interface.
+
+
+For Developers
+==============
+
+.. include:: ../tiatoolbox/visualization/openlayers/README.md
+   :parser: myst_parser.sphinx_
