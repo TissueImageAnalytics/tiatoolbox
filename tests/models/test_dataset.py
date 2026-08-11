@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from types import SimpleNamespace
 
 import cv2
 import numpy as np
@@ -22,6 +23,7 @@ from tiatoolbox.models.dataset import (
 from tiatoolbox.utils import imread, imwrite, unzip_data
 from tiatoolbox.utils.exceptions import DimensionMismatchError
 from tiatoolbox.wsicore import WSIReader
+from tiatoolbox.wsicore.wsireader import VirtualWSIReader
 
 RNG = np.random.default_rng()  # Numpy Random Generator
 
@@ -563,3 +565,35 @@ def test_patch_dataset_abc() -> None:
     # test assign uncallable to preproc_func/postproc_func
     with pytest.raises(ValueError, match=r".*callable*"):
         ds.preproc_func = 1  # skipcq: PYL-W0201
+
+
+def test_setup_mask_reader_numpy_array() -> None:
+    """Test _setup_mask_reader when input_mask is a NumPy array.
+
+    This covers the branch where a NumPy mask is wrapped in a
+    VirtualWSIReader and the reader metadata is propagated.
+
+    """
+    dataset = WSIPatchDataset.__new__(WSIPatchDataset)
+
+    reader_info = SimpleNamespace(
+        mpp=(0.25, 0.25),
+        objective_power=40,
+    )
+    dataset.reader_info = reader_info
+
+    mask = np.ones((32, 32), dtype=np.uint8)
+
+    result = dataset._setup_mask_reader(
+        input_mask=mask,
+        reader=None,  # unused in this branch
+        auto_get_mask=False,
+    )
+
+    assert isinstance(result, VirtualWSIReader)
+    assert result.info is reader_info
+
+    np.testing.assert_array_equal(
+        result.img,
+        mask,
+    )
