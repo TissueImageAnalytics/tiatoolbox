@@ -159,14 +159,14 @@ const scaleLineControl = new ScaleLine({
 
 map.addControl(scaleLineControl);
 
+const overviewLayer = new TileLayer({
+  source: baseSource,
+});
+
 // Overview map
 const overviewMapControl = new OverviewMap({
   className: "ol-overviewmap ol-custom-overviewmap",
-  layers: [
-    new TileLayer({
-      source: baseSource,
-    }),
-  ],
+  layers: [overviewLayer],
 });
 
 map.addControl(overviewMapControl);
@@ -226,85 +226,89 @@ const graticuleStyle = new Style({
   }),
 });
 
-const graticule = new Graticule({
-  projection: projection.getCode(),
-  margin: graticuleMargin,
-  style: graticuleStyle,
-  spacing: graticuleSpacing,
-  formatCoord(coordinate, position) {
-    let displayedCoordinate;
+// Graticule
+function createGraticule(graticuleProjection) {
+  return new Graticule({
+    projection: graticuleProjection,
+    margin: graticuleMargin,
+    style: graticuleStyle,
+    spacing: graticuleSpacing,
+    formatCoord: (coordinate, position) => {
+      if (position === "left" || position === "right") {
+        coordinate = -Math.floor(coordinate);
+      } else {
+        coordinate = Math.floor(coordinate);
+      }
 
-    if (position === "left" || position === "right") {
-      displayedCoordinate = -Math.floor(coordinate);
-    } else {
-      displayedCoordinate = Math.floor(coordinate);
-    }
+      if (coordinate >= 1e6) {
+        coordinate = coordinate.toExponential(3);
+        coordinate = coordinate.replace("+", "");
+      }
 
-    if (displayedCoordinate >= 1e6) {
-      displayedCoordinate = displayedCoordinate.toExponential(3);
-      displayedCoordinate = displayedCoordinate.replace("+", "");
-    }
+      return coordinate;
+    },
+  });
+}
 
-    return displayedCoordinate;
-  },
-});
+let graticule = createGraticule(projection);
 
 // Screen-space graticule
 const screenSpaceGraticuleSpacing = graticuleSpacing;
 const screenSpaceGraticuleMargin = graticuleMargin;
 
-const screenSpaceGraticule = new Graticule({
-  projection: projection.getCode(),
-  spacing: screenSpaceGraticuleSpacing,
-  margin: screenSpaceGraticuleMargin,
-  style: graticuleStyle,
-  formatCoord(coordinate, position) {
-    const mapExtent = map.getView().calculateExtent(map.getSize());
-    const resolution = map.getView().getResolution();
+function createScreenSpaceGraticule(graticuleProjection) {
+  return new Graticule({
+    projection: graticuleProjection.getCode(),
+    spacing: screenSpaceGraticuleSpacing,
+    margin: screenSpaceGraticuleMargin,
+    style: graticuleStyle,
+    formatCoord(coordinate, position) {
+      const mapExtent = map.getView().calculateExtent(map.getSize());
+      const resolution = map.getView().getResolution();
 
-    const xOrigin =
-      mapExtent[0] + resolution * screenSpaceGraticuleMargin;
-    const yOrigin =
-      mapExtent[3] - resolution * screenSpaceGraticuleMargin;
+      const xOrigin =
+        mapExtent[0] + resolution * screenSpaceGraticuleMargin;
+      const yOrigin =
+        mapExtent[3] - resolution * screenSpaceGraticuleMargin;
 
-    let displayedCoordinate;
+      let displayedCoordinate;
 
-    if (position === "left" || position === "right") {
-      displayedCoordinate = -(coordinate - yOrigin);
-    } else {
-      displayedCoordinate = coordinate - xOrigin;
-    }
+      if (position === "left" || position === "right") {
+        displayedCoordinate = -(coordinate - yOrigin);
+      } else {
+        displayedCoordinate = coordinate - xOrigin;
+      }
 
-    displayedCoordinate = Math.floor(
-      displayedCoordinate /
-        resolution /
-        screenSpaceGraticuleSpacing,
-    );
+      displayedCoordinate = Math.floor(
+        displayedCoordinate /
+          resolution /
+          screenSpaceGraticuleSpacing,
+      );
 
-    if (position === "left" || position === "right") {
-      let label = "";
+      if (position === "left" || position === "right") {
+        let string = "";
 
-      do {
-        label += String.fromCharCode(
-          65 + (displayedCoordinate % 26),
-        );
+        do {
+          string += String.fromCharCode(
+            65 + (displayedCoordinate % 26),
+          );
+          displayedCoordinate = Math.floor(
+            displayedCoordinate / 26,
+          );
+        } while (displayedCoordinate > 0);
 
-        displayedCoordinate = Math.floor(
-          displayedCoordinate / 26,
-        );
-      } while (displayedCoordinate > 0);
+        return string.split("").reverse().join("");
+      }
 
-      return label.split("").reverse().join("");
-    }
+      return displayedCoordinate;
+    },
+  });
+}
 
-    return displayedCoordinate;
-  },
-});
+let screenSpaceGraticule =
+  createScreenSpaceGraticule(projection);
 
-let graticuleToggle;
-let screenSpaceGraticuleToggle;
-
-graticuleToggle = new Toggle({
+const graticuleToggle = new Toggle({
   html: '<i class="fas fa-ruler-combined"></i>',
   className: "ol-graticule",
   title: "Toggle Graticule",
@@ -321,7 +325,7 @@ graticuleToggle = new Toggle({
 
 map.addControl(graticuleToggle);
 
-screenSpaceGraticuleToggle = new Toggle({
+const screenSpaceGraticuleToggle = new Toggle({
   html: '<i class="fas fa-border-all"></i>',
   className: "ol-screen-space-graticule",
   title: "Toggle Screen Space Graticule",
@@ -368,18 +372,64 @@ async function switchSlide(slidePath) {
 
   addProjection(newProjection);
 
-  slideLayer.setSource(source);
+  const newCenter = [
+    (newExtent[0] + newExtent[2]) / 2,
+    (newExtent[1] + newExtent[3]) / 2,
+  ];
 
-  map.setView(
+  const newView = new View({
+    projection: newProjection,
+    resolutions: newResolutions,
+    extent: newExtent,
+    constrainOnlyCenter: true,
+    center: newCenter,
+    resolution: newResolutions[0],
+  });
+
+  newView.fit(newExtent, {
+    size: map.getSize(),
+  });
+
+  map.setView(newView);
+
+  const overviewMap = overviewMapControl.getOverviewMap();
+
+  overviewMap.setView(
     new View({
       projection: newProjection,
       resolutions: newResolutions,
       extent: newExtent,
       constrainOnlyCenter: true,
+      center: newCenter,
+      resolution: newResolutions[0],
     }),
   );
 
-  map.getView().fit(newExtent);
+  const graticuleWasActive = graticuleToggle.getActive();
+  const screenSpaceGraticuleWasActive =
+    screenSpaceGraticuleToggle.getActive();
+
+  graticule.setMap(null);
+  screenSpaceGraticule.setMap(null);
+
+  graticule = createGraticule(newProjection);
+
+  screenSpaceGraticule =
+    createScreenSpaceGraticule(newProjection);
+
+  if (graticuleWasActive) {
+    graticule.setMap(map);
+  }
+
+  if (screenSpaceGraticuleWasActive) {
+    screenSpaceGraticule.setMap(map);
+  }
+
+  slideLayer.setSource(source);
+  overviewLayer.setSource(source);
+
+  window.graticule = graticule;
+  window.screenSpaceGraticule = screenSpaceGraticule;
 }
 
 // Preserve variables exposed by the original inline viewer.
