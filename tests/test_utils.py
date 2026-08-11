@@ -2709,3 +2709,42 @@ def test_returns_new_dict_without_modifying_input() -> None:
 
     # cleaned result differs
     assert result["inst1"]["contour"].shape == (1, 2)
+
+
+def test_create_smart_array_with_explicit_chunks(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test Zarr allocation when explicit chunks are provided."""
+
+    class FakeVirtualMemory:
+        """Minimal stand-in for psutil.virtual_memory()."""
+
+        available = 1
+
+    fake_vm = FakeVirtualMemory()
+
+    def _fake_virtual_memory() -> FakeVirtualMemory:
+        """Return fake virtual-memory statistics."""
+        return fake_vm
+
+    monkeypatch.setattr(
+        psutil,
+        "virtual_memory",
+        _fake_virtual_memory(),
+    )
+
+    zarr_path = track_tmp_path / "test.zarr"
+
+    result = create_smart_array(
+        shape=(10, 20),
+        dtype=np.float32,
+        memory_threshold=100.0,
+        name="predictions",
+        zarr_path=zarr_path,
+        chunks=(5, 10),
+    )
+
+    assert isinstance(result, zarr.Array)
+    assert result.shape == (10, 20)
+    assert result.chunks == (5, 10)
