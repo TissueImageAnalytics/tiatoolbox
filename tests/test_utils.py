@@ -2731,7 +2731,7 @@ def test_create_smart_array_with_explicit_chunks(
     monkeypatch.setattr(
         psutil,
         "virtual_memory",
-        _fake_virtual_memory(),
+        _fake_virtual_memory,
     )
 
     zarr_path = track_tmp_path / "test.zarr"
