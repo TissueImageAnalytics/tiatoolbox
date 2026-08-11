@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import shutil
 from pathlib import Path
@@ -52,6 +53,110 @@ def test_mtsegmentor_init() -> None:
 
     assert isinstance(segmentor, MultiTaskSegmentor)
     assert isinstance(segmentor.model, torch.nn.Module)
+
+
+def test_multitask_segmentor_cli_uses_yaml_config(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test that the multitask-segmentor CLI forwards the prepared IO config."""
+    img_input = track_tmp_path / "input"
+    img_input.mkdir()
+
+    sample_image = img_input / "sample.png"
+    sample_image.write_bytes(b"image")
+
+    yaml_path = track_tmp_path / "config.yaml"
+    yaml_path.write_text(
+        "patch_input_shape: [224, 224]\n",
+        encoding="utf-8",
+    )
+
+    fake_ioconfig = object()
+    run_calls: list[dict[str, object]] = []
+
+    def _fake_prepare_model_cli(
+        img_input: str | Path,
+        output_path: str | Path,
+        masks: str | Path | None,
+        file_types: str,
+    ) -> tuple[list[Path], list[Path] | None, Path]:
+        del img_input, masks, file_types
+        return [sample_image], None, Path(output_path)
+
+    def _fake_prepare_ioconfig(
+        config_class: type[object],
+        pretrained_weights: str | Path | None,
+        yaml_config_path: str | Path,
+    ) -> object:
+        del config_class, pretrained_weights
+
+        assert Path(yaml_config_path) == yaml_path
+
+        return fake_ioconfig
+
+    class _FakeMultiTaskSegmentor:
+        """Minimal stand-in for MultiTaskSegmentor."""
+
+        def __init__(
+            self,
+            model: str,
+            weights: str | None,
+            batch_size: int,
+            num_workers: int,
+            *,
+            verbose: bool,
+        ) -> None:
+            del model, weights, batch_size, num_workers, verbose
+
+        def run(self, **kwargs: object) -> None:
+            """Record run arguments."""
+            run_calls.append(kwargs)
+
+    #
+    # IMPORTANT:
+    # Patch where the CLI command uses these names.
+    #
+    cli_module = importlib.import_module(
+        "tiatoolbox.cli.multitask_segmentor",
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "prepare_model_cli",
+        _fake_prepare_model_cli,
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "prepare_ioconfig",
+        _fake_prepare_ioconfig,
+    )
+
+    monkeypatch.setattr(
+        "tiatoolbox.models.MultiTaskSegmentor",
+        _FakeMultiTaskSegmentor,
+    )
+
+    runner = CliRunner()
+
+    result = runner.invoke(
+        cli.main,
+        [
+            "multitask-segmentor",
+            "--img-input",
+            str(img_input),
+            "--output-path",
+            str(track_tmp_path / "output"),
+            "--yaml-config-path",
+            str(yaml_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+
+    assert len(run_calls) == 1
+    assert run_calls[0]["ioconfig"] is fake_ioconfig
 
 
 @pytest.mark.skipif(
