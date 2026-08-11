@@ -23,6 +23,7 @@ import Graticule from "ol-ext/control/Graticule.js";
 import LayerSwitcher from "ol-ext/control/LayerSwitcher.js";
 import Toggle from "ol-ext/control/Toggle.js";
 
+// Initialise the TileServer session used for dynamic slide loading.
 async function createSession() {
   const response = await fetch("/tileserver/session_id");
 
@@ -35,6 +36,7 @@ async function createSession() {
   return data.session_id;
 }
 
+// Load a slide into the current TileServer session and return its metadata.
 async function loadSlide(slidePath) {
   const formData = new FormData();
   formData.append("slide_path", slidePath);
@@ -57,6 +59,7 @@ async function loadSlide(slidePath) {
   return metadataResponse.json();
 }
 
+// Create a Zoomify source with versions to avoid reusing tiles from an old slide.
 function createSlideSource(sessionId, slideInfo, version) {
   return new Zoomify({
     url:
@@ -77,7 +80,11 @@ if (mapElement === null) {
 let layersData = JSON.parse(mapElement.dataset.layers ?? "[]");
 let sessionId = null;
 let slideVersion = 0;
+let overlayVersion = 0;
+let currentSlideInfo = null;
+const overlayLayers = {};
 
+// Dynamic slide loading
 if (layersData.length === 0) {
   const params = new URLSearchParams(window.location.search);
   const slidePath = params.get("slide");
@@ -90,6 +97,8 @@ if (layersData.length === 0) {
 
   sessionId = await createSession();
   const slideInfo = await loadSlide(slidePath);
+
+  currentSlideInfo = slideInfo;
 
   layersData = [
     {
@@ -226,7 +235,7 @@ const graticuleStyle = new Style({
   }),
 });
 
-// Graticule
+// Create graticules for the active slide projection.
 function createGraticule(graticuleProjection) {
   return new Graticule({
     projection: graticuleProjection,
@@ -344,6 +353,23 @@ map.addControl(screenSpaceGraticuleToggle);
 
 map.getView().fit(extent);
 
+function clearOverlayLayers() {
+  for (const overlayLayer of Object.values(overlayLayers)) {
+    map.removeLayer(overlayLayer);
+
+    const layerIndex = layers.indexOf(overlayLayer);
+
+    if (layerIndex !== -1) {
+      layers.splice(layerIndex, 1);
+    }
+  }
+
+  for (const layerName of Object.keys(overlayLayers)) {
+    delete overlayLayers[layerName];
+  }
+}
+
+// Slide switching
 async function switchSlide(slidePath) {
   if (sessionId === null) {
     throw new Error("Dynamic slide switching requires a TileServer session.");
@@ -351,7 +377,8 @@ async function switchSlide(slidePath) {
 
   const slideInfo = await loadSlide(slidePath);
 
-  slideVersion += 1;
+  clearOverlayLayers();
+  currentSlideInfo = slideInfo;
 
   const source = createSlideSource(
     sessionId,
@@ -372,6 +399,7 @@ async function switchSlide(slidePath) {
 
   addProjection(newProjection);
 
+  // View
   const newCenter = [
     (newExtent[0] + newExtent[2]) / 2,
     (newExtent[1] + newExtent[3]) / 2,
@@ -432,6 +460,112 @@ async function switchSlide(slidePath) {
   window.screenSpaceGraticule = screenSpaceGraticule;
 }
 
+async function loadOverlay(overlayPath) {
+  if (sessionId === null || currentSlideInfo === null) {
+    throw new Error(
+      "Dynamic overlay loading requires a loaded slide.",
+    );
+  }
+
+  const extension = overlayPath
+    .split(".")
+    .pop()
+    .toLowerCase();
+
+  if (extension === "npy" || extension === "mha") {
+    throw new Error(
+      "Registration overlays are not supported yet.",
+    );
+  }
+
+  const formData = new FormData();
+  formData.append("overlay_path", overlayPath);
+
+  const response = await fetch("/tileserver/overlay", {
+    method: "PUT",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load overlay: ${overlayPath}`);
+  }
+
+  const result = await response.json();
+
+  const isAnnotation = ["db", "dat", "geojson"].includes(
+    extension,
+  );
+
+  const layerName = isAnnotation ? "overlay" : result;
+
+  overlayVersion += 1;
+
+  const source = new Zoomify({
+    url:
+      `/tileserver/layer/${encodeURIComponent(layerName)}/` +
+      `${sessionId}/zoomify/` +
+      `{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${overlayVersion}`,
+    size: currentSlideInfo.slide_dimensions,
+    crossOrigin: "anonymous",
+    zDirection: -1,
+  });
+
+  if (overlayLayers[layerName] !== undefined) {
+    overlayLayers[layerName].setSource(source);
+    overlayLayers[layerName].setVisible(true);
+  } else {
+    const overlayLayer = new TileLayer({
+      title: layerName,
+      source,
+      opacity: 0.75,
+    });
+
+    overlayLayers[layerName] = overlayLayer;
+
+    map.addLayer(overlayLayer);
+    layers.push(overlayLayer);
+  }
+
+  return result;
+}
+
+async function setAnnotationColors(colorMap) {
+  if (overlayLayers.overlay === undefined) {
+    throw new Error("No annotation overlay is loaded.");
+  }
+
+  const formData = new FormData();
+  formData.append(
+    "cmap",
+    JSON.stringify({
+      keys: Object.keys(colorMap),
+      values: Object.values(colorMap),
+    }),
+  );
+
+  const response = await fetch("/tileserver/cmap", {
+    method: "PUT",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update annotation colours.");
+  }
+
+  overlayVersion += 1;
+
+  const source = new Zoomify({
+    url:
+      `/tileserver/layer/overlay/${sessionId}/zoomify/` +
+      `{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${overlayVersion}`,
+    size: currentSlideInfo.slide_dimensions,
+    crossOrigin: "anonymous",
+    zDirection: -1,
+  });
+
+  overlayLayers.overlay.setSource(source);
+}
+
 // Preserve variables exposed by the original inline viewer.
 Object.assign(window, {
   extent,
@@ -441,8 +575,10 @@ Object.assign(window, {
   layerSwitcher,
   layers,
   layersData,
+  loadOverlay,
   map,
   mousePositionControl,
+  overlayLayers,
   overviewMapControl,
   projection,
   resolutions,
@@ -450,6 +586,7 @@ Object.assign(window, {
   scaleLineControl,
   screenSpaceGraticule,
   screenSpaceGraticuleToggle,
+  setAnnotationColors,
   switchSlide,
   view,
 });
