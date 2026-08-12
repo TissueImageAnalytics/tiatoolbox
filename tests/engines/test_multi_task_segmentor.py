@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import logging
 import shutil
 from pathlib import Path
 from types import SimpleNamespace
@@ -158,6 +159,110 @@ def test_multitask_segmentor_cli_uses_yaml_config(
 
     assert len(run_calls) == 1
     assert run_calls[0]["ioconfig"] is fake_ioconfig
+
+
+def test_post_save_json_store_removes_keys() -> None:
+    """Test removal of computed prediction keys."""
+    processed_predictions = {
+        "probabilities": np.array([1]),
+        "predictions": np.array([2]),
+    }
+
+    _post_save_json_store(
+        keys_to_compute=["probabilities"],
+        processed_predictions=processed_predictions,
+        save_path=None,
+    )
+
+    assert "probabilities" not in processed_predictions
+    assert "predictions" in processed_predictions
+
+
+def test_post_save_json_store_logs_probability_message(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test probability-map warning message is logged."""
+    with caplog.at_level(logging.INFO):
+        _post_save_json_store(
+            keys_to_compute=[],
+            processed_predictions={},
+            save_path=Path("output.zarr"),
+            return_probabilities=True,
+        )
+
+    assert "Probability maps cannot be saved as AnnotationStore or JSON" in caplog.text
+
+
+def test_post_save_json_store_removes_empty_root_store(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test deletion of an empty root Zarr store."""
+    root_path = track_tmp_path / "root.zarr"
+
+    root = zarr.open_group(root_path, mode="w")
+
+    class GroupProxy:
+        """Minimal object behaving like a zarr.Group."""
+
+        def __init__(self, group: zarr.Group) -> None:
+            self._group = group
+            self.store = group.store
+            self.path = "nested"
+
+        @property
+        def __class__(self) -> type[zarr.Group]:
+            return zarr.Group
+
+        def keys(self) -> list[str]:
+            """Return a non-empty key list."""
+            return ["dummy"]
+
+    removed_paths: list[Path | str] = []
+
+    def _fake_rmtree(
+        path: Path | str,
+        *,
+        ignore_errors: bool,
+    ) -> None:
+        """Record removed paths."""
+        _ = ignore_errors
+        removed_paths.append(path)
+
+    class FakeEmptyStore:
+        """Fake root store containing no datasets."""
+
+        def keys(self) -> list:
+            """Return an empty key list."""
+            return []
+
+    def _fake_open(
+        store_root: Path | str,
+        mode: str = "r",
+    ) -> FakeEmptyStore:
+        """Return an empty Zarr store."""
+        del store_root, mode
+        return FakeEmptyStore()
+
+    monkeypatch.setattr(
+        shutil,
+        "rmtree",
+        _fake_rmtree,
+    )
+
+    monkeypatch.setattr(
+        zarr,
+        "open",
+        _fake_open,
+    )
+
+    _post_save_json_store(
+        keys_to_compute=[],
+        processed_predictions=GroupProxy(root),
+        save_path=None,
+    )
+
+    assert root_path in removed_paths
 
 
 @pytest.mark.skipif(
