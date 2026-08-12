@@ -81,7 +81,8 @@ def test_multitask_segmentor_cli_uses_yaml_config(
         masks: str | Path | None,
         file_types: str,
     ) -> tuple[list[Path], list[Path] | None, Path]:
-        del img_input, masks, file_types
+        """Fake prepare model cli."""
+        _ = img_input, masks, file_types
         return [sample_image], None, Path(output_path)
 
     def _fake_prepare_ioconfig(
@@ -89,7 +90,8 @@ def test_multitask_segmentor_cli_uses_yaml_config(
         pretrained_weights: str | Path | None,
         yaml_config_path: str | Path,
     ) -> object:
-        del config_class, pretrained_weights
+        """Fake prepare ioconfig."""
+        _ = config_class, pretrained_weights
 
         assert Path(yaml_config_path) == yaml_path
 
@@ -107,16 +109,15 @@ def test_multitask_segmentor_cli_uses_yaml_config(
             *,
             verbose: bool,
         ) -> None:
-            del model, weights, batch_size, num_workers, verbose
+            _ = model, weights, batch_size, num_workers, verbose
 
         def run(self, **kwargs: object) -> None:
             """Record run arguments."""
+            _ = self  # fix PYL-R0201
             run_calls.append(kwargs)
 
-    #
-    # IMPORTANT:
     # Patch where the CLI command uses these names.
-    #
+
     cli_module = importlib.import_module(
         "tiatoolbox.cli.multitask_segmentor",
     )
