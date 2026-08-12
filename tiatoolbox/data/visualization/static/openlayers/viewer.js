@@ -11176,7 +11176,7 @@ function yd(e, t, n) {
 }
 var bd = document.getElementById("map");
 if (bd === null) throw Error("The OpenLayers map element could not be found.");
-var xd = JSON.parse(bd.dataset.layers ?? "[]"), Sd = null, Cd = Date.now(), wd = 0, Td = null, Ed = null, Dd = {}, Od = new URLSearchParams(window.location.search).get("slide");
+var xd = JSON.parse(bd.dataset.layers ?? "[]"), Sd = null, Cd = Date.now(), wd = Date.now(), Td = null, Ed = null, Dd = {}, Od = new URLSearchParams(window.location.search).get("slide");
 if (Od !== null) {
 	Ed = Od, Sd = await _d();
 	let e = await vd(Od);
@@ -11305,9 +11305,9 @@ var ef = new gd({
 	}
 });
 $.addControl(ef), $.getView().fit(Pd);
-var tf = rf();
+var tf = af();
 tf !== null && ($.getView().setCenter(tf.center), $.getView().setZoom(tf.zoom)), $.on("moveend", () => {
-	af();
+	of();
 });
 function nf() {
 	for (let e of Object.values(Dd)) {
@@ -11317,20 +11317,24 @@ function nf() {
 	}
 	for (let e of Object.keys(Dd)) delete Dd[e];
 }
-function rf() {
+async function rf() {
+	if (!(await fetch("/tileserver/clear_overlays", { method: "PUT" })).ok) throw Error("Failed to clear overlays.");
+	nf();
+}
+function af() {
 	let e = new URLSearchParams(window.location.search), t = Number(e.get("x")), n = Number(e.get("y")), r = Number(e.get("zoom"));
 	return e.get("x") === null || e.get("y") === null || e.get("zoom") === null || !Number.isFinite(t) || !Number.isFinite(n) || !Number.isFinite(r) ? null : {
 		center: [t, n],
 		zoom: r
 	};
 }
-function af() {
+function of() {
 	let e = $.getView(), t = e.getCenter(), n = e.getZoom();
 	if (t === void 0 || n === void 0) return;
 	let r = new URL(window.location.href);
 	Ed !== null && r.searchParams.set("slide", Ed), r.searchParams.set("x", t[0].toFixed(2)), r.searchParams.set("y", t[1].toFixed(2)), r.searchParams.set("zoom", n.toString()), window.history.replaceState({}, "", r);
 }
-async function of(e) {
+async function sf(e) {
 	if (Sd === null) throw Error("Dynamic slide switching requires a TileServer session.");
 	let t = await vd(e);
 	Ed = e, nf(), Td = t, Cd += 1;
@@ -11358,9 +11362,9 @@ async function of(e) {
 		resolution: a[0]
 	}));
 	let l = $d.getActive(), u = ef.getActive();
-	Jd.setMap(null), Qd.setMap(null), Jd = qd(o), Qd = Zd(o), l && Jd.setMap($), u && Qd.setMap($), Ad.setSource(n), Rd.setSource(n), window.graticule = Jd, window.screenSpaceGraticule = Qd, af();
+	Jd.setMap(null), Qd.setMap(null), Jd = qd(o), Qd = Zd(o), l && Jd.setMap($), u && Qd.setMap($), Ad.setSource(n), Rd.setSource(n), window.graticule = Jd, window.screenSpaceGraticule = Qd, of();
 }
-async function sf(e) {
+async function cf(e) {
 	if (Sd === null || Td === null) throw Error("Dynamic overlay loading requires a loaded slide.");
 	let t = e.split(".").pop().toLowerCase();
 	if (t === "npy" || t === "mha") throw Error("Registration overlays are not supported yet.");
@@ -11394,7 +11398,15 @@ async function sf(e) {
 	}
 	return i;
 }
-async function cf(e) {
+async function lf(e) {
+	let t = Dd[e];
+	if (t === void 0) throw Error(`Overlay is not loaded: ${e}`);
+	if (!(await fetch(`/tileserver/overlay/${encodeURIComponent(e)}`, { method: "DELETE" })).ok) throw Error(`Failed to remove overlay: ${e}`);
+	$.removeLayer(t);
+	let n = kd.indexOf(t);
+	n !== -1 && kd.splice(n, 1), delete Dd[e];
+}
+async function uf(e) {
 	if (Dd.overlay === void 0) throw Error("No annotation overlay is loaded.");
 	let t = new FormData();
 	if (t.append("cmap", JSON.stringify({
@@ -11414,6 +11426,7 @@ async function cf(e) {
 	Dd.overlay.setSource(n);
 }
 Object.assign(window, {
+	clearOverlays: rf,
 	extent: Pd,
 	fullscreen: Hd,
 	graticule: Jd,
@@ -11421,19 +11434,20 @@ Object.assign(window, {
 	layerSwitcher: Ud,
 	layers: kd,
 	layersData: xd,
-	loadOverlay: sf,
+	loadOverlay: cf,
 	map: $,
 	mousePositionControl: Bd,
 	overlayLayers: Dd,
 	overviewMapControl: zd,
 	projection: Fd,
+	removeOverlay: lf,
 	resolutions: Nd,
 	rotate: Vd,
 	scaleLineControl: Ld,
 	screenSpaceGraticule: Qd,
 	screenSpaceGraticuleToggle: ef,
-	setAnnotationColors: cf,
-	switchSlide: of,
+	setAnnotationColors: uf,
+	switchSlide: sf,
 	view: Id
 });
 //#endregion

@@ -80,7 +80,7 @@ if (mapElement === null) {
 let layersData = JSON.parse(mapElement.dataset.layers ?? "[]");
 let sessionId = null;
 let slideVersion = Date.now();
-let overlayVersion = 0;
+let overlayVersion = Date.now();
 let currentSlideInfo = null;
 let currentSlidePath = null;
 const overlayLayers = {};
@@ -379,6 +379,18 @@ function clearOverlayLayers() {
   }
 }
 
+async function clearOverlays() {
+  const response = await fetch("/tileserver/clear_overlays", {
+    method: "PUT",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to clear overlays.");
+  }
+
+  clearOverlayLayers();
+}
+
 function getUrlViewState() {
   const params = new URLSearchParams(window.location.search);
 
@@ -593,6 +605,35 @@ async function loadOverlay(overlayPath) {
   return result;
 }
 
+async function removeOverlay(layerName) {
+  const overlayLayer = overlayLayers[layerName];
+
+  if (overlayLayer === undefined) {
+    throw new Error(`Overlay is not loaded: ${layerName}`);
+  }
+
+  const response = await fetch(
+    `/tileserver/overlay/${encodeURIComponent(layerName)}`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to remove overlay: ${layerName}`);
+  }
+
+  map.removeLayer(overlayLayer);
+
+  const layerIndex = layers.indexOf(overlayLayer);
+
+  if (layerIndex !== -1) {
+    layers.splice(layerIndex, 1);
+  }
+
+  delete overlayLayers[layerName];
+}
+
 async function setAnnotationColors(colorMap) {
   if (overlayLayers.overlay === undefined) {
     throw new Error("No annotation overlay is loaded.");
@@ -632,6 +673,7 @@ async function setAnnotationColors(colorMap) {
 
 // Preserve variables exposed by the original inline viewer.
 Object.assign(window, {
+  clearOverlays,
   extent,
   fullscreen,
   graticule,
@@ -645,6 +687,7 @@ Object.assign(window, {
   overlayLayers,
   overviewMapControl,
   projection,
+  removeOverlay,
   resolutions,
   rotate,
   scaleLineControl,

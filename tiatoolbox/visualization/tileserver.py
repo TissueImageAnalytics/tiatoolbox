@@ -151,6 +151,10 @@ class TileServer(Flask):
             methods=["PUT"],
         )(self.load_annotations)
         self.route("/tileserver/overlay", methods=["PUT"])(self.change_overlay)
+        self.route(
+            "/tileserver/overlay/<layer>",
+            methods=["DELETE"],
+        )(self.remove_overlay)
         self.route("/tileserver/commit", methods=["POST"])(self.commit_db)
         self.route("/tileserver/renderer/<prop>", methods=["PUT"])(self.update_renderer)
         self.route("/tileserver/reset/<session_id>", methods=["PUT"])(self.reset)
@@ -457,6 +461,21 @@ class TileServer(Flask):
             "slide": ZoomifyGenerator(slide_layer, tile_size=256),
         }
         return "done"
+
+    def remove_overlay(self: TileServer, layer: str) -> Response:
+        """Remove an overlay layer."""
+        session_id = self._get_session_id()
+
+        if layer == "slide":
+            return Response("Cannot remove the slide.", status=400)
+
+        if layer not in self.layers[session_id]:
+            return Response("Layer not found.", status=404)
+
+        self.layers[session_id].pop(layer)
+        self.pyramids[session_id].pop(layer, None)
+
+        return Response("done", status=200)
 
     def change_mapper(self: TileServer) -> str:
         """Change the colour mapper for the overlay."""
