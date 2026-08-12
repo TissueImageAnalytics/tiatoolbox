@@ -285,6 +285,7 @@ class FakeHoVerNetNoTp(nn.Module):
 
     def forward(self, x: torch.Tensor) -> OrderedDict[str, torch.Tensor]:
         """Return fake outputs."""
+        _ = self
         batch_size = x.shape[0]
 
         return OrderedDict(
@@ -306,6 +307,7 @@ class FakeHoVerNetWithTp(nn.Module):
 
     def forward(self, x: torch.Tensor) -> OrderedDict[str, torch.Tensor]:
         """Return fake outputs."""
+        _ = self
         batch_size = x.shape[0]
 
         return OrderedDict(

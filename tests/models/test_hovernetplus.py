@@ -141,6 +141,7 @@ def test_hovernetplus_postproc_populated_outputs(
         hv_map: np.ndarray,
         scale_factor: float = 0.5,
     ) -> np.ndarray:
+        """Fake proc_np_hv."""
         _ = np_map, hv_map, scale_factor
 
         return np.array(
@@ -152,6 +153,7 @@ def test_hovernetplus_postproc_populated_outputs(
         )
 
     def _fake_proc_ls(ls_map: np.ndarray) -> np.ndarray:
+        """Fake proc_ls."""
         _ = ls_map
 
         return np.array(
@@ -167,6 +169,7 @@ def test_hovernetplus_postproc_populated_outputs(
         pred_type: np.ndarray | None = None,
         offset: tuple[int, int] = (0, 0),
     ) -> dict[int, dict[str, np.ndarray | float | int]]:
+        """Fake get_instance_info."""
         _ = pred_inst, pred_type, offset
 
         return {
@@ -183,6 +186,7 @@ def test_hovernetplus_postproc_populated_outputs(
         pred_layer: np.ndarray,
         offset: tuple[int, int] = (0, 0),
     ) -> dict[int, dict[str, np.ndarray | int]]:
+        """Fake get_layer_info."""
         _ = pred_layer, offset
 
         return {

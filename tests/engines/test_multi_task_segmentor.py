@@ -216,6 +216,7 @@ def test_post_save_json_store_removes_empty_root_store(
 
         def keys(self) -> list[str]:
             """Return a non-empty key list."""
+            _ = self
             return ["dummy"]
 
     removed_paths: list[Path | str] = []
@@ -234,6 +235,7 @@ def test_post_save_json_store_removes_empty_root_store(
 
         def keys(self) -> list:
             """Return an empty key list."""
+            _ = self
             return []
 
     def _fake_open(
@@ -241,7 +243,7 @@ def test_post_save_json_store_removes_empty_root_store(
         mode: str = "r",
     ) -> FakeEmptyStore:
         """Return an empty Zarr store."""
-        del store_root, mode
+        _ = store_root, mode
         return FakeEmptyStore()
 
     monkeypatch.setattr(
