@@ -79,21 +79,18 @@ if (mapElement === null) {
 
 let layersData = JSON.parse(mapElement.dataset.layers ?? "[]");
 let sessionId = null;
-let slideVersion = 0;
+let slideVersion = Date.now();
 let overlayVersion = 0;
 let currentSlideInfo = null;
+let currentSlidePath = null;
 const overlayLayers = {};
 
 // Dynamic slide loading
-if (layersData.length === 0) {
-  const params = new URLSearchParams(window.location.search);
-  const slidePath = params.get("slide");
+const params = new URLSearchParams(window.location.search);
+const slidePath = params.get("slide");
 
-  if (slidePath === null) {
-    throw new Error(
-      "No preloaded layers were supplied and no slide was selected.",
-    );
-  }
+if (slidePath !== null) {
+  currentSlidePath = slidePath;
 
   sessionId = await createSession();
   const slideInfo = await loadSlide(slidePath);
@@ -105,11 +102,13 @@ if (layersData.length === 0) {
       name: "slide",
       url:
         `/tileserver/layer/slide/${sessionId}/zoomify/` +
-        "{TileGroup}/{z}-{x}-{y}@1x.jpg",
+        `{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${slideVersion}`,
       size: slideInfo.slide_dimensions,
       mpp: slideInfo.mpp[0],
     },
   ];
+} else if (layersData.length === 0) {
+  throw new Error("No slide was provided.");
 }
 
 const layers = layersData.map((layer) => {
@@ -353,6 +352,17 @@ map.addControl(screenSpaceGraticuleToggle);
 
 map.getView().fit(extent);
 
+const urlViewState = getUrlViewState();
+
+if (urlViewState !== null) {
+  map.getView().setCenter(urlViewState.center);
+  map.getView().setZoom(urlViewState.zoom);
+}
+
+map.on("moveend", () => {
+  updateUrlState();
+});
+
 function clearOverlayLayers() {
   for (const overlayLayer of Object.values(overlayLayers)) {
     map.removeLayer(overlayLayer);
@@ -369,6 +379,55 @@ function clearOverlayLayers() {
   }
 }
 
+function getUrlViewState() {
+  const params = new URLSearchParams(window.location.search);
+
+  const x = Number(params.get("x"));
+  const y = Number(params.get("y"));
+  const zoom = Number(params.get("zoom"));
+
+  if (
+    params.get("x") === null ||
+    params.get("y") === null ||
+    params.get("zoom") === null ||
+    !Number.isFinite(x) ||
+    !Number.isFinite(y) ||
+    !Number.isFinite(zoom)
+  ) {
+    return null;
+  }
+
+  return {
+    center: [x, y],
+    zoom,
+  };
+}
+
+function updateUrlState() {
+  const view = map.getView();
+  const center = view.getCenter();
+  const zoom = view.getZoom();
+
+  if (
+    center === undefined ||
+    zoom === undefined
+  ) {
+    return;
+  }
+
+  const url = new URL(window.location.href);
+
+  if (currentSlidePath !== null) {
+    url.searchParams.set("slide", currentSlidePath);
+  }
+
+  url.searchParams.set("x", center[0].toFixed(2));
+  url.searchParams.set("y", center[1].toFixed(2));
+  url.searchParams.set("zoom", zoom.toString());
+
+  window.history.replaceState({}, "", url);
+}
+
 // Slide switching
 async function switchSlide(slidePath) {
   if (sessionId === null) {
@@ -377,8 +436,11 @@ async function switchSlide(slidePath) {
 
   const slideInfo = await loadSlide(slidePath);
 
+  currentSlidePath = slidePath;
   clearOverlayLayers();
   currentSlideInfo = slideInfo;
+
+  slideVersion += 1;
 
   const source = createSlideSource(
     sessionId,
@@ -458,6 +520,8 @@ async function switchSlide(slidePath) {
 
   window.graticule = graticule;
   window.screenSpaceGraticule = screenSpaceGraticule;
+
+  updateUrlState();
 }
 
 async function loadOverlay(overlayPath) {
