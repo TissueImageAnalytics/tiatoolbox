@@ -1,5 +1,6 @@
 """Unit test package for HoVerNet."""
 
+from collections import OrderedDict
 from collections.abc import Callable
 
 import numpy as np
@@ -277,3 +278,93 @@ def test_hovernet_postproc_with_type_map(
 
     assert len(output) == 1
     assert called["has_type_map"] is True
+
+
+class FakeHoVerNetNoTp(nn.Module):
+    """Fake HoVerNet returning only np and hv heads."""
+
+    def forward(self, x: torch.Tensor) -> OrderedDict[str, torch.Tensor]:
+        """Return fake outputs."""
+        batch_size = x.shape[0]
+
+        return OrderedDict(
+            {
+                "np": torch.zeros(
+                    (batch_size, 2, 8, 8),
+                    dtype=torch.float32,
+                ),
+                "hv": torch.zeros(
+                    (batch_size, 2, 8, 8),
+                    dtype=torch.float32,
+                ),
+            },
+        )
+
+
+class FakeHoVerNetWithTp(nn.Module):
+    """Fake HoVerNet returning np, hv and tp heads."""
+
+    def forward(self, x: torch.Tensor) -> OrderedDict[str, torch.Tensor]:
+        """Return fake outputs."""
+        batch_size = x.shape[0]
+
+        return OrderedDict(
+            {
+                "np": torch.zeros(
+                    (batch_size, 2, 8, 8),
+                    dtype=torch.float32,
+                ),
+                "hv": torch.zeros(
+                    (batch_size, 2, 8, 8),
+                    dtype=torch.float32,
+                ),
+                "tp": torch.zeros(
+                    (batch_size, 3, 8, 8),
+                    dtype=torch.float32,
+                ),
+            },
+        )
+
+
+@pytest.mark.parametrize(
+    ("model_cls", "expected_heads"),
+    [
+        (FakeHoVerNetNoTp, 2),
+        (FakeHoVerNetWithTp, 3),
+    ],
+)
+def test_hovernet_infer_batch_return_heads(
+    model_cls: type[nn.Module],
+    expected_heads: int,
+) -> None:
+    """Test infer_batch returns the correct number of output heads."""
+    model = model_cls()
+
+    batch_data = torch.zeros(
+        (2, 8, 8, 3),
+        dtype=torch.float32,
+    )
+
+    output = HoVerNet.infer_batch(
+        model=model,
+        batch_data=batch_data,
+        device="cpu",
+    )
+
+    assert isinstance(output, tuple)
+    assert len(output) == expected_heads
+
+    np_map = output[0]
+    hv_map = output[1]
+
+    assert isinstance(np_map, np.ndarray)
+    assert isinstance(hv_map, np.ndarray)
+
+    assert np_map.shape == (2, 8, 8, 1)
+    assert hv_map.shape == (2, 8, 8, 2)
+
+    if expected_heads == 3:
+        tp_map = output[2]
+
+        assert isinstance(tp_map, np.ndarray)
+        assert tp_map.shape == (2, 8, 8, 1)
