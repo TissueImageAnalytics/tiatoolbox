@@ -480,6 +480,89 @@ def test_post_save_json_store_keeps_non_empty_root_store(
     assert removed_paths == []
 
 
+def test_dict_to_json_store_qupath(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test dict_to_json_store with QuPath output."""
+    contours = np.array(
+        [
+            np.array(
+                [
+                    [0, 0],
+                    [10, 0],
+                    [10, 10],
+                ],
+                dtype=np.int32,
+            ),
+        ],
+        dtype=object,
+    )
+
+    processed_predictions = {
+        "contours": contours,
+        "type": np.array([1], dtype=np.int32),
+    }
+
+    output_path = track_tmp_path / "output.db"
+
+    expected_output = output_path.with_suffix(".json")
+
+    called: dict[str, object] = {}
+
+    class FakeDaskDelayedJSONStore:
+        """Minimal stand-in for DaskDelayedJSONStore."""
+
+        def __init__(
+            self,
+            contours: np.ndarray,
+            processed_predictions: dict,
+        ) -> None:
+            called["contours"] = contours
+            called["processed_predictions"] = processed_predictions
+
+        def compute_qupath_json(
+            self,
+            class_dict: dict[int, str] | None,
+            origin: tuple[float, float],
+            scale_factor: tuple[float, float],
+            batch_size: int,
+            num_workers: int,
+            *,
+            verbose: bool,
+            save_path: Path,
+        ) -> Path:
+            """Return the expected JSON path."""
+            called["class_dict"] = class_dict
+            called["origin"] = origin
+            called["scale_factor"] = scale_factor
+            called["batch_size"] = batch_size
+            called["num_workers"] = num_workers
+            called["verbose"] = verbose
+            called["save_path"] = save_path
+
+            return save_path
+
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.multi_task_segmentor.DaskDelayedJSONStore",
+        FakeDaskDelayedJSONStore,
+    )
+
+    result = multi_task_segmentor.dict_to_json_store(
+        processed_predictions=processed_predictions,
+        output_path=output_path,
+        output_type="qupath",
+        class_dict={1: "tumour"},
+        verbose=False,
+    )
+
+    assert result == expected_output
+
+    assert called["save_path"] == expected_output
+    assert called["batch_size"] == 100
+    assert called["class_dict"] == {1: "tumour"}
+
+
 @pytest.mark.skipif(
     _RUNNING_ON_CI,
     reason="Local test only.",
