@@ -298,6 +298,76 @@ def test_compute_info_dict_for_merge_tile_mode_three(
     assert len(ref_inst_rtree.geometries) == 2
 
 
+def test_create_wsi_info_dict_with_return_predictions(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test _create_wsi_info_dict when return_predictions is provided."""
+    fake_array = np.zeros((8, 8), dtype=np.uint8)
+
+    post_process_output = (
+        {
+            "task_type": "nuclei_segmentation",
+            "predictions": fake_array,
+        },
+    )
+
+    created_arrays: list[dict[str, object]] = []
+
+    def _fake_create_smart_array(
+        shape: tuple[int, ...],
+        dtype: np.dtype | str,
+        memory_threshold: float,
+        name: str,
+        zarr_path: str | Path,
+        chunks: tuple[int, ...] | str = "auto",
+    ) -> np.ndarray:
+        """Record array creation requests."""
+        created_arrays.append(
+            {
+                "shape": shape,
+                "dtype": dtype,
+                "memory_threshold": memory_threshold,
+                "name": name,
+                "zarr_path": zarr_path,
+                "chunks": chunks,
+            },
+        )
+
+        return np.zeros(shape, dtype=dtype)
+
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.multi_task_segmentor.create_smart_array",
+        _fake_create_smart_array,
+    )
+
+    result = multi_task_segmentor._create_wsi_info_dict(
+        post_process_output=post_process_output,
+        wsi_info_dict=None,
+        wsi_proc_shape=(16, 32),
+        save_path=track_tmp_path / "output.zarr",
+        return_predictions=(True,),
+        memory_threshold=80,
+    )
+
+    assert len(result) == 1
+
+    assert result[0]["task_type"] == "nuclei_segmentation"
+
+    assert isinstance(
+        result[0]["predictions"],
+        np.ndarray,
+    )
+
+    assert result[0]["predictions"].shape == (32, 16)
+
+    assert result[0]["info_dict"] == {}
+
+    assert len(created_arrays) == 1
+
+    assert created_arrays[0]["name"] == "nuclei_segmentation/predictions"
+
+
 def test_multitask_segmentor_cli_uses_yaml_config(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
