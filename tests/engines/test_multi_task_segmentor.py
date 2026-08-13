@@ -260,6 +260,43 @@ def test_apply_coordinate_offset_zero_offset_returns_input() -> None:
     assert result is data_array
 
 
+def test_build_single_qupath_feature_non_type_property() -> None:
+    """Test non-type properties are written to QuPath feature properties."""
+    store = DaskDelayedJSONStore.__new__(DaskDelayedJSONStore)
+
+    store._contours = [
+        np.array(
+            [
+                [0, 0],
+                [10, 0],
+                [10, 10],
+            ],
+            dtype=float,
+        ),
+    ]
+
+    store._processed_predictions = {
+        "type": np.array([1], dtype=object),
+        "prob": np.array([0.95], dtype=np.float32),
+    }
+
+    result = store._build_single_qupath_feature(
+        i=0,
+        class_dict={1: "Tumour"},
+        origin=(0.0, 0.0),
+        scale_factor=(1.0, 1.0),
+        class_colors={1: [255, 0, 0]},
+    )
+
+    props = result["properties"]
+
+    assert props["type"] == "Tumour"
+    assert props["prob"] == 0.95
+
+    assert props["classification"]["name"] == "Tumour"
+    assert props["class_value"] == 1
+
+
 def test_post_save_json_store_removes_keys() -> None:
     """Test removal of computed prediction keys."""
     processed_predictions = {
