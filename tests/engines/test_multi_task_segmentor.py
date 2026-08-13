@@ -57,6 +57,83 @@ def test_mtsegmentor_init() -> None:
     assert isinstance(segmentor.model, torch.nn.Module)
 
 
+def test_compute_info_dict_for_merge_tile_mode_three(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test STRtree construction when tile_mode is 3."""
+    inst_dict: dict[int, dict[str, object]] = {}
+
+    ref_inst_info_dict = {
+        1: {
+            "box": np.array(
+                [0, 0, 10, 10],
+                dtype=np.int32,
+            ),
+        },
+        2: {
+            "box": np.array(
+                [20, 20, 30, 30],
+                dtype=np.int32,
+            ),
+        },
+    }
+
+    captured: dict[str, object] = {}
+
+    def _fake_process_instance_predictions(
+        inst_dict: dict,
+        ioconfig: IOSegmentorConfig,
+        tile_shape: tuple[int, int],
+        tile_flag: tuple[int, int, int, int],
+        tile_mode: int,
+        tile_tl: tuple[int, int],
+        ref_inst_dict: dict,
+        ref_inst_rtree: STRtree,
+    ) -> tuple[dict, list]:
+        """Capture arguments passed into the merge helper."""
+        _ = ioconfig, tile_shape, tile_flag, tile_tl
+        captured["inst_dict"] = inst_dict
+        captured["tile_mode"] = tile_mode
+        captured["ref_inst_dict"] = ref_inst_dict
+        captured["ref_inst_rtree"] = ref_inst_rtree
+
+        return {}, []
+
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.multi_task_segmentor._process_instance_predictions",
+        _fake_process_instance_predictions,
+    )
+
+    ioconfig = IOSegmentorConfig(
+        input_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        output_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        patch_input_shape=(256, 256),
+        patch_output_shape=(256, 256),
+        stride_shape=(128, 128),
+    )
+
+    result = multi_task_segmentor._compute_info_dict_for_merge(
+        inst_dict=inst_dict,
+        tile_mode=3,
+        ref_inst_info_dict=ref_inst_info_dict,
+        ioconfig=ioconfig,
+        tile_shape=(256, 256),
+        tile_tl=(0, 0),
+        tile_flag=(0, 0, 0, 0),
+    )
+
+    assert result == ({}, [])
+
+    assert captured["tile_mode"] == 3
+    assert captured["ref_inst_dict"] == ref_inst_info_dict
+
+    ref_inst_rtree = captured["ref_inst_rtree"]
+    assert isinstance(ref_inst_rtree, STRtree)
+
+    # Verify two geometries were inserted into the tree.
+    assert len(ref_inst_rtree.geometries) == 2
+
+
 def test_multitask_segmentor_cli_uses_yaml_config(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
