@@ -79,6 +79,13 @@ Ready to contribute? Here's how to set up ``tiatoolbox`` for local development.
 
     $ uv sync --extra dev --index pytorch-cpu=https://download.pytorch.org/whl/cpu
 
+   Some models depend on optional packages that are not installed by default
+   and thus are imported lazily. Please add the ``deepspotm`` extra if you are working on
+   (or running the tests for) DeepSpot-M::
+
+    $ pip install -e ".[dev,deepspotm]"
+    $ uv sync --extra dev --extra deepspotm
+
 4. Create a branch for local development::
 
     $ git checkout -b name-of-your-bugfix-or-feature
