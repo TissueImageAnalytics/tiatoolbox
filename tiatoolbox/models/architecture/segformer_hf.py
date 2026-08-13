@@ -1,6 +1,6 @@
 """Hugging Face SegFormer helpers: MiT configs and legacy checkpoint remapping.
 
-Architecture weights are loaded into ``transformers.SegformerForSemanticSegmentation``. 
+Architecture weights are loaded into ``transformers.SegformerForSemanticSegmentation``.
 This module remaps older SMP-style SegFormer state dicts.
 """
 

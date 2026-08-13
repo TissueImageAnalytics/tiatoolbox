@@ -173,7 +173,9 @@ def test_segformer_infer_batch_probability_output() -> None:
 def test_remap_kv_split_and_decoder_reverse() -> None:
     """Remapper should split fused kv weights and reverse decoder MLP indices."""
     legacy = {
-        "encoder.block1.0.attn.kv.weight": torch.arange(32, dtype=torch.float32).reshape(
+        "encoder.block1.0.attn.kv.weight": torch.arange(
+            32, dtype=torch.float32
+        ).reshape(
             8,
             4,
         ),
@@ -231,7 +233,9 @@ def test_legacy_checkpoint_load_for_variable_classes(num_classes: int) -> None:
 
 def test_native_hf_state_dict_still_loads() -> None:
     """Native Hugging Face-shaped state dicts should load without remapping."""
-    model = Segformer(encoder_name="mit_b0", classes=3, decoder_segmentation_channels=32)
+    model = Segformer(
+        encoder_name="mit_b0", classes=3, decoder_segmentation_channels=32
+    )
     state = model.state_dict()
     assert not is_legacy_segformer_state_dict(state)
 

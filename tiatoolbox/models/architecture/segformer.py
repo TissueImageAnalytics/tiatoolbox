@@ -112,9 +112,7 @@ class Segformer(ModelABC):
         # Remapped / native HF keys are ``segformer.*`` / ``decode_head.*``.
         # This wrapper stores the HF module under ``self.model``.
         if mapped and not any(key.startswith("model.") for key in mapped):
-            if any(
-                key.startswith(("segformer.", "decode_head.")) for key in mapped
-            ):
+            if any(key.startswith(("segformer.", "decode_head.")) for key in mapped):
                 mapped = {f"model.{key}": value for key, value in mapped.items()}
 
         return super().load_state_dict(mapped, strict=strict, assign=assign)
