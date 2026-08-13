@@ -1,7 +1,13 @@
-"""SegFormer architecture components used for semantic segmentation."""
+"""SegFormer semantic segmentation via Hugging Face Transformers (Apache-2.0).
+
+This module wraps ``transformers.SegformerForSemanticSegmentation`` and keeps the
+TIAToolbox ``ModelABC`` inference API. Legacy SMP-format checkpoints are
+auto-remapped on ``load_state_dict``.
+"""
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 import cv2
@@ -9,117 +15,36 @@ import dask.array as da
 import numpy as np
 import torch
 from torch import nn
+from torch.nn.modules.module import _IncompatibleKeys
+from transformers import SegformerConfig, SegformerForSemanticSegmentation
 
-from tiatoolbox.models.architecture.mix_transformer import (
-    MixVisionTransformerEncoder,
-    mix_transformer_encoders,
+from tiatoolbox.models.architecture.segformer_hf import (
+    MIT_ENCODER_CONFIGS,
+    is_legacy_segformer_state_dict,
+    remap_legacy_segformer_state_dict,
 )
-from tiatoolbox.models.architecture.utils import Conv2dReLU, SegmentationHead
 from tiatoolbox.models.models_abc import ModelABC
-
-MIN_SEGFORMER_DECODER_DEPTH = 3
-
-
-class MLP(nn.Module):
-    """Linear projection block used in the SegFormer decoder."""
-
-    def __init__(self, skip_channels: int, segmentation_channels: int) -> None:
-        """Initializes the MLP module for Segformer decoder."""
-        super().__init__()
-
-        self.linear = nn.Linear(skip_channels, segmentation_channels)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Project encoder features into the decoder channel space."""
-        batch, _, height, width = x.shape
-        x = x.flatten(2).transpose(1, 2)
-        x = self.linear(x)
-        return x.transpose(1, 2).reshape(batch, -1, height, width)
-
-
-class SegformerDecoder(nn.Module):
-    """Decoder head that fuses multi-scale transformer features."""
-
-    def __init__(
-        self,
-        encoder_channels: list[int],
-        encoder_depth: int = 5,
-        segmentation_channels: int = 256,
-    ) -> None:
-        """Initializes the Segformer decoder module."""
-        super().__init__()
-
-        if encoder_depth < MIN_SEGFORMER_DECODER_DEPTH:
-            msg = (
-                "Encoder depth for Segformer decoder cannot be less than "
-                f"{MIN_SEGFORMER_DECODER_DEPTH}, got {encoder_depth}."
-            )
-            raise ValueError(msg)
-
-        if encoder_channels[1] == 0:
-            encoder_channels = [
-                channel for index, channel in enumerate(encoder_channels) if index != 1
-            ]
-        encoder_channels = encoder_channels[::-1]
-
-        self.mlp_stage = nn.ModuleList(
-            [MLP(channel, segmentation_channels) for channel in encoder_channels[:-1]]
-        )
-
-        self.fuse_stage = Conv2dReLU(
-            in_channels=(len(encoder_channels) - 1) * segmentation_channels,
-            out_channels=segmentation_channels,
-            kernel_size=1,
-        )
-
-    def forward(self, features: list[torch.Tensor]) -> torch.Tensor:
-        """Forward pass for the Segformer decoder."""
-        # Resize all features to the size of the largest feature
-        target_size: list[int] = [dim // 4 for dim in features[0].shape[2:]]
-
-        features = features[2:] if features[1].size(1) == 0 else features[1:]
-        features = features[::-1]  # reverse channels to start from head of encoder
-
-        resized_features_arr: list[torch.Tensor] = []
-        for i, mlp_layer in enumerate(self.mlp_stage):
-            feature = mlp_layer(features[i])
-            resized_feature = torch.nn.functional.interpolate(
-                feature, size=target_size, mode="bilinear", align_corners=False
-            )
-            resized_features_arr.append(resized_feature)
-
-        resized_features = torch.cat(resized_features_arr, dim=1)
-        return self.fuse_stage(resized_features)
 
 
 class Segformer(ModelABC):
-    """Segformer is a simple and efficient transformer for semantic segmentation.
+    """SegFormer semantic segmentation model (Hugging Face Transformers).
 
     Args:
-        encoder_name: Name of the classification model used as an encoder
-            (a.k.a. backbone)
-            to extract features of different spatial resolution
-        encoder_depth: A number of stages used in encoder in range [3, 5].
-            Each stage generates features two times smaller in spatial
-            dimensions than the previous one. For depth 0 we will have
-            features with shapes [(N, C, H, W),], for depth 1
-            [(N, C, H, W), (N, C, H // 2, W // 2)], and so on.
-            Default is 5
-        decoder_segmentation_channels: A number of convolution filters in
-            segmentation blocks, default is 256
-        in_channels: A number of input channels for the model, default is 3
-            (RGB images)
-        classes: A number of classes for output mask, or the number of
-            output mask channels
-        activation: An activation function to apply after the final
-            convolution layer.
-        upsampling: A number to upsample the output of the model,
-            default is 4 (same size as input)
+        encoder_name:
+            Mix Transformer backbone name: ``mit_b0`` … ``mit_b5``.
+        decoder_segmentation_channels:
+            Channel width of the all-MLP decoder (HF ``decoder_hidden_size``).
+        in_channels:
+            Number of input image channels (default RGB = 3).
+        classes:
+            Number of output segmentation classes (``num_labels``).
+        activation:
+            Optional activation applied after the classifier / upsample.
+        upsampling:
+            Spatial upsample factor applied to HF logits (HF outputs at 1/4
+            resolution; default ``4`` restores input size).
 
-    Returns:
-        ``torch.nn.Module``: **Segformer**
-
-    .. _Segformer:
+    .. _SegFormer:
         https://arxiv.org/abs/2105.15203
 
     """
@@ -127,38 +52,35 @@ class Segformer(ModelABC):
     def __init__(
         self,
         encoder_name: str = "mit_b5",
-        encoder_depth: int = 5,
         decoder_segmentation_channels: int = 256,
         in_channels: int = 3,
         classes: int = 1,
         activation: nn.Module | None = None,
         upsampling: int = 4,
     ) -> None:
-        """Initializes the Segformer model."""
+        """Initializes the SegFormer model."""
         super().__init__()
         self.requires_divisible_input_shape = True
 
-        self.encoder_params = mix_transformer_encoders[encoder_name]["params"]
+        if encoder_name not in MIT_ENCODER_CONFIGS:
+            supported = ", ".join(sorted(MIT_ENCODER_CONFIGS))
+            msg = f"Unknown encoder_name={encoder_name!r}. Supported: {supported}."
+            raise ValueError(msg)
 
-        self.encoder = MixVisionTransformerEncoder(
-            **self.encoder_params,
+        config = SegformerConfig(
+            num_labels=classes,
+            num_channels=in_channels,
+            decoder_hidden_size=decoder_segmentation_channels,
+            reshape_last_stage=True,
+            **MIT_ENCODER_CONFIGS[encoder_name],
         )
-        self.encoder.set_in_channels(in_channels=in_channels, pretrained=False)
-
-        self.decoder = SegformerDecoder(
-            encoder_channels=self.encoder.out_channels,
-            encoder_depth=encoder_depth,
-            segmentation_channels=decoder_segmentation_channels,
+        self.model = SegformerForSemanticSegmentation(config)
+        self.upsampling = (
+            nn.UpsamplingBilinear2d(scale_factor=upsampling)
+            if upsampling > 1
+            else nn.Identity()
         )
-
-        self.segmentation_head = SegmentationHead(
-            in_channels=decoder_segmentation_channels,
-            out_channels=classes,
-            activation=activation,
-            kernel_size=1,
-            upsampling=upsampling,
-        )
-
+        self.activation = activation if activation is not None else nn.Identity()
         self.name = f"segformer-{encoder_name}"
 
     def forward(
@@ -167,10 +89,35 @@ class Segformer(ModelABC):
         *args: tuple[Any, ...],  # noqa: ARG002
         **kwargs: dict,  # noqa: ARG002
     ) -> torch.Tensor:
-        """Sequentially pass `x` through encoder, decoder, and head."""
-        encoder_features = self.encoder(x)
-        decoder_output = self.decoder(encoder_features)
-        return self.segmentation_head(decoder_output)
+        """Run encoder–decoder and upsample logits to the input resolution."""
+        logits = self.model(pixel_values=x).logits
+        return self.activation(self.upsampling(logits))
+
+    def load_state_dict(
+        self,
+        state_dict: Mapping[str, torch.Tensor],
+        strict: bool = True,  # noqa: FBT001, FBT002
+        assign: bool = False,  # noqa: FBT001, FBT002
+    ) -> _IncompatibleKeys:
+        """Load HF or legacy SMP SegFormer weights.
+
+        Legacy checkpoints (keys like ``encoder.patch_embed1``) are remapped to
+        Hugging Face names. Classifier tensors keep their shapes, so checkpoints
+        that only differ by output class count load when ``classes`` matches.
+        """
+        mapped: dict[str, torch.Tensor] = dict(state_dict)
+        if is_legacy_segformer_state_dict(mapped):
+            mapped = remap_legacy_segformer_state_dict(mapped)
+
+        # Remapped / native HF keys are ``segformer.*`` / ``decode_head.*``.
+        # This wrapper stores the HF module under ``self.model``.
+        if mapped and not any(key.startswith("model.") for key in mapped):
+            if any(
+                key.startswith(("segformer.", "decode_head.")) for key in mapped
+            ):
+                mapped = {f"model.{key}": value for key, value in mapped.items()}
+
+        return super().load_state_dict(mapped, strict=strict, assign=assign)
 
     @staticmethod
     def preproc(image: np.ndarray) -> np.ndarray:
@@ -200,7 +147,7 @@ class Segformer(ModelABC):
     def postproc(  # skipcq: PYL-W0221
         self: Segformer, image: np.ndarray
     ) -> np.ndarray:
-        """Postprocess model output to generate tissue mask.
+        """Postprocess model output to generate a class mask.
 
         Applies argmax and morphological operations to classify pixels.
 
@@ -213,7 +160,7 @@ class Segformer(ModelABC):
                 Tissue mask
 
         Example:
-            >>> model = Segformer(num_classes=1, threshold=0.95)
+            >>> model = Segformer(classes=2)
             >>> mask = model.postproc(probs)
             >>> mask.shape
             (448, 448)
