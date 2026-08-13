@@ -267,6 +267,81 @@ def test_post_save_json_store_removes_empty_root_store(
     assert root_path in removed_paths
 
 
+def test_post_save_json_store_keeps_non_empty_root_store(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test that a non-empty root store is not deleted."""
+    root_path = track_tmp_path / "root.zarr"
+
+    root = zarr.open_group(root_path, mode="w")
+
+    class GroupProxy:
+        """Minimal object behaving like a zarr.Group."""
+
+        def __init__(self, group: zarr.Group) -> None:
+            self.store = group.store
+            self.path = "nested"
+
+        @property
+        def __class__(self) -> type[zarr.Group]:
+            return zarr.Group
+
+        def keys(self) -> list:
+            """Return a non-empty list.
+
+            Prevent the first cleanup branch from executing.
+
+            """
+            return ["dummy"]
+
+    removed_paths: list[Path | str] = []
+
+    def _fake_rmtree(
+        path: Path | str,
+        *,
+        ignore_errors: bool,
+    ) -> None:
+        """Record removed paths."""
+        _ = ignore_errors
+        removed_paths.append(path)
+
+    class FakeNonEmptyStore:
+        """Fake root store containing at least one dataset."""
+
+        def keys(self) -> list:
+            """Return a non-empty key list."""
+            return ["predictions"]
+
+    def _fake_open(
+        store_root: Path | str,
+        mode: str = "r",
+    ) -> FakeNonEmptyStore:
+        """Return a non-empty Zarr store."""
+        del store_root, mode
+        return FakeNonEmptyStore()
+
+    monkeypatch.setattr(
+        shutil,
+        "rmtree",
+        _fake_rmtree,
+    )
+
+    monkeypatch.setattr(
+        zarr,
+        "open",
+        _fake_open,
+    )
+
+    _post_save_json_store(
+        keys_to_compute=[],
+        processed_predictions=GroupProxy(root),
+        save_path=None,
+    )
+
+    assert removed_paths == []
+
+
 @pytest.mark.skipif(
     _RUNNING_ON_CI,
     reason="Local test only.",
