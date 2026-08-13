@@ -13,6 +13,113 @@ from tiatoolbox.models.architecture.segformer_hf import (
     remap_legacy_segformer_state_dict,
 )
 
+_BLOCK_REST_RULES: tuple[tuple[str, str, int], ...] = (
+    ("layer_norm_1.", "norm1.", 1),
+    ("layer_norm_2.", "norm2.", 1),
+    ("attention.self.query.", "attn.q.", 3),
+    ("attention.self.sr.", "attn.sr.", 3),
+    ("attention.self.layer_norm.", "attn.norm.", 3),
+    ("attention.output.dense.", "attn.proj.", 3),
+    ("mlp.dense1.", "mlp.fc1.", 2),
+    ("mlp.dense2.", "mlp.fc2.", 2),
+    ("mlp.dwconv.dwconv.", "mlp.dwconv.dwconv.", 3),
+)
+
+
+def _strip_model_prefix(key: str) -> str:
+    """Remove optional ``model.`` prefix from a wrapped HF state-dict key."""
+    if key.startswith("model."):
+        return key[len("model.") :]
+    return key
+
+
+def _invert_encoder_block_rest(
+    base: str,
+    rest: str,
+    value: torch.Tensor,
+    legacy: dict[str, torch.Tensor],
+    pending_kv: dict[tuple[str, str, str], dict[str, torch.Tensor]],
+    stage: str,
+    block_idx: str,
+) -> None:
+    """Map one HF encoder-block parameter back to legacy naming."""
+    if rest.startswith("attention.self.key."):
+        wb = rest.split(".", 3)[3]
+        pending_kv[(stage, block_idx, wb)] = {
+            **pending_kv.get((stage, block_idx, wb), {}),
+            "key": value,
+        }
+        return
+    if rest.startswith("attention.self.value."):
+        wb = rest.split(".", 3)[3]
+        pending_kv[(stage, block_idx, wb)] = {
+            **pending_kv.get((stage, block_idx, wb), {}),
+            "value": value,
+        }
+        return
+
+    for prefix, legacy_prefix, split_at in _BLOCK_REST_RULES:
+        if rest.startswith(prefix):
+            tail = rest.split(".", split_at)[split_at]
+            legacy[base + legacy_prefix + tail] = value
+            return
+
+
+def _invert_hf_key(
+    key: str,
+    value: torch.Tensor,
+    legacy: dict[str, torch.Tensor],
+    pending_kv: dict[tuple[str, str, str], dict[str, torch.Tensor]],
+) -> None:
+    """Map a single HF state-dict entry into ``legacy`` / ``pending_kv``."""
+    if key.startswith("segformer.encoder.patch_embeddings."):
+        parts = key.split(".")
+        stage = int(parts[3]) + 1
+        which = "proj" if parts[4] == "proj" else "norm"
+        legacy[f"encoder.patch_embed{stage}.{which}.{parts[5]}"] = value
+        return
+
+    if key.startswith("segformer.encoder.layer_norm."):
+        parts = key.split(".")
+        stage = int(parts[3]) + 1
+        legacy[f"encoder.norm{stage}.{parts[4]}"] = value
+        return
+
+    if key.startswith("segformer.encoder.block."):
+        parts = key.split(".")
+        stage = str(int(parts[3]) + 1)
+        block_idx = parts[4]
+        rest = ".".join(parts[5:])
+        base = f"encoder.block{stage}.{block_idx}."
+        _invert_encoder_block_rest(
+            base,
+            rest,
+            value,
+            legacy,
+            pending_kv,
+            stage,
+            block_idx,
+        )
+        return
+
+    if key.startswith("decode_head.linear_c."):
+        parts = key.split(".")
+        hf_i = int(parts[2])
+        tia_i = 3 - hf_i
+        legacy[f"decoder.mlp_stage.{tia_i}.linear.{parts[4]}"] = value
+        return
+
+    if key == "decode_head.linear_fuse.weight":
+        legacy["decoder.fuse_stage.0.weight"] = value
+        return
+
+    if key.startswith("decode_head.batch_norm."):
+        legacy["decoder.fuse_stage.1." + key.split(".", 2)[2]] = value
+        return
+
+    if key.startswith("decode_head.classifier."):
+        legacy["segmentation_head.0." + key.split(".", 2)[2]] = value
+
 
 def _hf_to_legacy_state_dict(
     hf_state: dict[str, torch.Tensor],
@@ -21,82 +128,8 @@ def _hf_to_legacy_state_dict(
     legacy: dict[str, torch.Tensor] = {}
     pending_kv: dict[tuple[str, str, str], dict[str, torch.Tensor]] = {}
 
-    for key, value in hf_state.items():
-        if key.startswith("model."):
-            key = key[len("model.") :]
-
-        if key.startswith("segformer.encoder.patch_embeddings."):
-            # segformer.encoder.patch_embeddings.{s}.{proj|layer_norm}.{wb}
-            parts = key.split(".")
-            stage = int(parts[3]) + 1
-            which = "proj" if parts[4] == "proj" else "norm"
-            legacy[f"encoder.patch_embed{stage}.{which}.{parts[5]}"] = value
-            continue
-
-        if key.startswith("segformer.encoder.layer_norm."):
-            parts = key.split(".")
-            stage = int(parts[3]) + 1
-            legacy[f"encoder.norm{stage}.{parts[4]}"] = value
-            continue
-
-        if key.startswith("segformer.encoder.block."):
-            parts = key.split(".")
-            stage = int(parts[3]) + 1
-            block_idx = parts[4]
-            rest = ".".join(parts[5:])
-            base = f"encoder.block{stage}.{block_idx}."
-
-            if rest.startswith("layer_norm_1."):
-                legacy[base + "norm1." + rest.split(".", 1)[1]] = value
-            elif rest.startswith("layer_norm_2."):
-                legacy[base + "norm2." + rest.split(".", 1)[1]] = value
-            elif rest.startswith("attention.self.query."):
-                legacy[base + "attn.q." + rest.split(".", 3)[3]] = value
-            elif rest.startswith("attention.self.key."):
-                wb = rest.split(".", 3)[3]
-                pending_kv[(str(stage), block_idx, wb)] = {
-                    **pending_kv.get((str(stage), block_idx, wb), {}),
-                    "key": value,
-                }
-            elif rest.startswith("attention.self.value."):
-                wb = rest.split(".", 3)[3]
-                pending_kv[(str(stage), block_idx, wb)] = {
-                    **pending_kv.get((str(stage), block_idx, wb), {}),
-                    "value": value,
-                }
-            elif rest.startswith("attention.self.sr."):
-                legacy[base + "attn.sr." + rest.split(".", 3)[3]] = value
-            elif rest.startswith("attention.self.layer_norm."):
-                legacy[base + "attn.norm." + rest.split(".", 3)[3]] = value
-            elif rest.startswith("attention.output.dense."):
-                legacy[base + "attn.proj." + rest.split(".", 3)[3]] = value
-            elif rest.startswith("mlp.dense1."):
-                legacy[base + "mlp.fc1." + rest.split(".", 2)[2]] = value
-            elif rest.startswith("mlp.dense2."):
-                legacy[base + "mlp.fc2." + rest.split(".", 2)[2]] = value
-            elif rest.startswith("mlp.dwconv.dwconv."):
-                legacy[base + "mlp.dwconv.dwconv." + rest.split(".", 3)[3]] = value
-            continue
-
-        if key.startswith("decode_head.linear_c."):
-            # decode_head.linear_c.{hf_i}.proj.{wb} -> decoder.mlp_stage.{3-hf_i}
-            parts = key.split(".")
-            hf_i = int(parts[2])
-            tia_i = 3 - hf_i
-            legacy[f"decoder.mlp_stage.{tia_i}.linear.{parts[4]}"] = value
-            continue
-
-        if key == "decode_head.linear_fuse.weight":
-            legacy["decoder.fuse_stage.0.weight"] = value
-            continue
-
-        if key.startswith("decode_head.batch_norm."):
-            legacy["decoder.fuse_stage.1." + key.split(".", 2)[2]] = value
-            continue
-
-        if key.startswith("decode_head.classifier."):
-            legacy["segmentation_head.0." + key.split(".", 2)[2]] = value
-            continue
+    for raw_key, value in hf_state.items():
+        _invert_hf_key(_strip_model_prefix(raw_key), value, legacy, pending_kv)
 
     for (stage, block_idx, wb), parts in pending_kv.items():
         legacy[f"encoder.block{stage}.{block_idx}.attn.kv.{wb}"] = torch.cat(

@@ -7,9 +7,12 @@ This module remaps older SMP-style SegFormer state dicts.
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, MutableMapping
+from typing import TYPE_CHECKING
 
-import torch
+if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Mapping, MutableMapping
+
+    import torch
 
 # Number of hierarchical MiT encoder / decoder projection stages.
 NUM_SEGFORMER_STAGES = 4
@@ -71,13 +74,26 @@ MIT_ENCODER_CONFIGS: dict[str, dict[str, object]] = {
     },
 }
 
+# Legacy block suffix -> (HF suffix template with ``{tail}``, dots to split for tail).
+_BLOCK_SUFFIX_RULES: tuple[tuple[str, str, int], ...] = (
+    ("norm1.", "layer_norm_1.{tail}", 1),
+    ("norm2.", "layer_norm_2.{tail}", 1),
+    ("attn.q.", "attention.self.query.{tail}", 2),
+    ("attn.proj.", "attention.output.dense.{tail}", 2),
+    ("attn.sr.", "attention.self.sr.{tail}", 2),
+    ("attn.norm.", "attention.self.layer_norm.{tail}", 2),
+    ("mlp.fc1.", "mlp.dense1.{tail}", 2),
+    ("mlp.fc2.", "mlp.dense2.{tail}", 2),
+    ("mlp.dwconv.dwconv.", "mlp.dwconv.dwconv.{tail}", 3),
+)
+
 
 def is_legacy_segformer_state_dict(state_dict: Mapping[str, torch.Tensor]) -> bool:
     """Return True if ``state_dict`` uses TIA/SMP SegFormer key names."""
     return any(
-        key.startswith("encoder.patch_embed")
-        or key.startswith("decoder.mlp_stage")
-        or key.startswith("segmentation_head.")
+        key.startswith(
+            ("encoder.patch_embed", "decoder.mlp_stage", "segmentation_head.")
+        )
         for key in state_dict
     )
 
@@ -162,39 +178,18 @@ def _remap_encoder_block_param(
     out: MutableMapping[str, torch.Tensor],
 ) -> None:
     """Map one encoder block parameter from legacy naming into ``out``."""
-    if rest.startswith("norm1."):
-        out[base + "layer_norm_1." + rest.split(".", 1)[1]] = value
-        return
-    if rest.startswith("norm2."):
-        out[base + "layer_norm_2." + rest.split(".", 1)[1]] = value
-        return
-    if rest.startswith("attn.q."):
-        out[base + "attention.self.query." + rest.split(".", 2)[2]] = value
-        return
     if rest.startswith("attn.kv."):
         weight_or_bias = rest.split(".", 2)[2]
         half = value.shape[0] // 2
         out[base + f"attention.self.key.{weight_or_bias}"] = value[:half].clone()
         out[base + f"attention.self.value.{weight_or_bias}"] = value[half:].clone()
         return
-    if rest.startswith("attn.proj."):
-        out[base + "attention.output.dense." + rest.split(".", 2)[2]] = value
-        return
-    if rest.startswith("attn.sr."):
-        out[base + "attention.self.sr." + rest.split(".", 2)[2]] = value
-        return
-    if rest.startswith("attn.norm."):
-        out[base + "attention.self.layer_norm." + rest.split(".", 2)[2]] = value
-        return
-    if rest.startswith("mlp.fc1."):
-        out[base + "mlp.dense1." + rest.split(".", 2)[2]] = value
-        return
-    if rest.startswith("mlp.fc2."):
-        out[base + "mlp.dense2." + rest.split(".", 2)[2]] = value
-        return
-    if rest.startswith("mlp.dwconv.dwconv."):
-        out[base + "mlp.dwconv.dwconv." + rest.split(".", 3)[3]] = value
-        return
+
+    for prefix, template, split_at in _BLOCK_SUFFIX_RULES:
+        if rest.startswith(prefix):
+            tail = rest.split(".", split_at)[split_at]
+            out[base + template.format(tail=tail)] = value
+            return
 
     msg = f"Unhandled legacy SegFormer block parameter: {rest}"
     raise KeyError(msg)

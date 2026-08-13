@@ -7,15 +7,13 @@ auto-remapped on ``load_state_dict``.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import cv2
 import dask.array as da
 import numpy as np
 import torch
 from torch import nn
-from torch.nn.modules.module import _IncompatibleKeys
 from transformers import SegformerConfig, SegformerForSemanticSegmentation
 
 from tiatoolbox.models.architecture.segformer_hf import (
@@ -25,13 +23,18 @@ from tiatoolbox.models.architecture.segformer_hf import (
 )
 from tiatoolbox.models.models_abc import ModelABC
 
+if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Mapping
+
+    from torch.nn.modules.module import _IncompatibleKeys
+
 
 class Segformer(ModelABC):
     """SegFormer semantic segmentation model (Hugging Face Transformers).
 
     Args:
         encoder_name:
-            Mix Transformer backbone name: ``mit_b0`` … ``mit_b5``.
+            Mix Transformer backbone name: ``mit_b0`` ... ``mit_b5``.
         decoder_segmentation_channels:
             Channel width of the all-MLP decoder (HF ``decoder_hidden_size``).
         in_channels:
@@ -89,7 +92,7 @@ class Segformer(ModelABC):
         *args: tuple[Any, ...],  # noqa: ARG002
         **kwargs: dict,  # noqa: ARG002
     ) -> torch.Tensor:
-        """Run encoder–decoder and upsample logits to the input resolution."""
+        """Run encoder-decoder and upsample logits to the input resolution."""
         logits = self.model(pixel_values=x).logits
         return self.activation(self.upsampling(logits))
 
@@ -111,9 +114,13 @@ class Segformer(ModelABC):
 
         # Remapped / native HF keys are ``segformer.*`` / ``decode_head.*``.
         # This wrapper stores the HF module under ``self.model``.
-        if mapped and not any(key.startswith("model.") for key in mapped):
-            if any(key.startswith(("segformer.", "decode_head.")) for key in mapped):
-                mapped = {f"model.{key}": value for key, value in mapped.items()}
+        needs_model_prefix = (
+            bool(mapped)
+            and not any(key.startswith("model.") for key in mapped)
+            and any(key.startswith(("segformer.", "decode_head.")) for key in mapped)
+        )
+        if needs_model_prefix:
+            mapped = {f"model.{key}": value for key, value in mapped.items()}
 
         return super().load_state_dict(mapped, strict=strict, assign=assign)
 
