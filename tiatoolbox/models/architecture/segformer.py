@@ -1,8 +1,8 @@
 """SegFormer semantic segmentation via Hugging Face Transformers (Apache-2.0).
 
 This module wraps ``transformers.SegformerForSemanticSegmentation`` and keeps the
-TIAToolbox ``ModelABC`` inference API. Legacy SMP-format checkpoints are
-auto-remapped on ``load_state_dict``.
+TIAToolbox ``ModelABC`` inference API. SMP-format checkpoints are auto-remapped on
+``load_state_dict``.
 """
 
 from __future__ import annotations
@@ -18,8 +18,8 @@ from transformers import SegformerConfig, SegformerForSemanticSegmentation
 
 from tiatoolbox.models.architecture.segformer_hf import (
     MIT_ENCODER_CONFIGS,
-    is_legacy_segformer_state_dict,
-    remap_legacy_segformer_state_dict,
+    is_smp_segformer_state_dict,
+    remap_smp_segformer_state_dict,
 )
 from tiatoolbox.models.models_abc import ModelABC
 
@@ -102,15 +102,15 @@ class Segformer(ModelABC):
         strict: bool = True,  # noqa: FBT001, FBT002
         assign: bool = False,  # noqa: FBT001, FBT002
     ) -> _IncompatibleKeys:
-        """Load HF or legacy SMP SegFormer weights.
+        """Load HF or SMP SegFormer weights.
 
-        Legacy checkpoints (keys like ``encoder.patch_embed1``) are remapped to
-        Hugging Face names. Classifier tensors keep their shapes, so checkpoints
-        that only differ by output class count load when ``classes`` matches.
+        SMP checkpoints (keys like ``encoder.patch_embed1``) are remapped to Hugging
+        Face names. Classifier tensors keep their shapes, so checkpoints that only
+        differ by output class count load when ``classes`` matches.
         """
         mapped: dict[str, torch.Tensor] = dict(state_dict)
-        if is_legacy_segformer_state_dict(mapped):
-            mapped = remap_legacy_segformer_state_dict(mapped)
+        if is_smp_segformer_state_dict(mapped):
+            mapped = remap_smp_segformer_state_dict(mapped)
 
         # Remapped / native HF keys are ``segformer.*`` / ``decode_head.*``.
         # This wrapper stores the HF module under ``self.model``.

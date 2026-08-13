@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import dask.array as da
 import numpy as np
 import pytest
@@ -9,19 +11,19 @@ import torch
 
 from tiatoolbox.models.architecture.segformer import Segformer
 from tiatoolbox.models.architecture.segformer_hf import (
-    is_legacy_segformer_state_dict,
-    remap_legacy_segformer_state_dict,
+    is_smp_segformer_state_dict,
+    remap_smp_segformer_state_dict,
 )
 
 _BLOCK_REST_RULES: tuple[tuple[str, str, int], ...] = (
-    ("layer_norm_1.", "norm1.", 1),
-    ("layer_norm_2.", "norm2.", 1),
-    ("attention.self.query.", "attn.q.", 3),
-    ("attention.self.sr.", "attn.sr.", 3),
-    ("attention.self.layer_norm.", "attn.norm.", 3),
-    ("attention.output.dense.", "attn.proj.", 3),
-    ("mlp.dense1.", "mlp.fc1.", 2),
-    ("mlp.dense2.", "mlp.fc2.", 2),
+    ("layernorm_before.", "norm1.", 1),
+    ("layernorm_after.", "norm2.", 1),
+    ("attention.q_proj.", "attn.q.", 2),
+    ("attention.sequence_reduction.sequence_reduction.", "attn.sr.", 3),
+    ("attention.sequence_reduction.layer_norm.", "attn.norm.", 3),
+    ("attention.o_proj.", "attn.proj.", 2),
+    ("mlp.fc1.", "mlp.fc1.", 2),
+    ("mlp.fc2.", "mlp.fc2.", 2),
     ("mlp.dwconv.dwconv.", "mlp.dwconv.dwconv.", 3),
 )
 
@@ -37,57 +39,57 @@ def _invert_encoder_block_rest(
     base: str,
     rest: str,
     value: torch.Tensor,
-    legacy: dict[str, torch.Tensor],
+    smp: dict[str, torch.Tensor],
     pending_kv: dict[tuple[str, str, str], dict[str, torch.Tensor]],
     stage: str,
     block_idx: str,
 ) -> None:
-    """Map one HF encoder-block parameter back to legacy naming."""
-    if rest.startswith("attention.self.key."):
-        wb = rest.split(".", 3)[3]
+    """Map one HF encoder-block parameter back to SMP naming."""
+    if rest.startswith("attention.k_proj."):
+        wb = rest.rsplit(".", 1)[-1]
         pending_kv[(stage, block_idx, wb)] = {
             **pending_kv.get((stage, block_idx, wb), {}),
             "key": value,
         }
         return
-    if rest.startswith("attention.self.value."):
-        wb = rest.split(".", 3)[3]
+    if rest.startswith("attention.v_proj."):
+        wb = rest.rsplit(".", 1)[-1]
         pending_kv[(stage, block_idx, wb)] = {
             **pending_kv.get((stage, block_idx, wb), {}),
             "value": value,
         }
         return
 
-    for prefix, legacy_prefix, split_at in _BLOCK_REST_RULES:
+    for prefix, smp_prefix, split_at in _BLOCK_REST_RULES:
         if rest.startswith(prefix):
             tail = rest.split(".", split_at)[split_at]
-            legacy[base + legacy_prefix + tail] = value
+            smp[base + smp_prefix + tail] = value
             return
 
 
 def _invert_hf_key(
     key: str,
     value: torch.Tensor,
-    legacy: dict[str, torch.Tensor],
+    smp: dict[str, torch.Tensor],
     pending_kv: dict[tuple[str, str, str], dict[str, torch.Tensor]],
 ) -> None:
-    """Map a single HF state-dict entry into ``legacy`` / ``pending_kv``."""
-    if key.startswith("segformer.encoder.patch_embeddings."):
+    """Map a single HF state-dict entry into ``smp`` / ``pending_kv``."""
+    if key.startswith("segformer.stages.") and ".patch_embeddings." in key:
         parts = key.split(".")
-        stage = int(parts[3]) + 1
+        stage = int(parts[2]) + 1
         which = "proj" if parts[4] == "proj" else "norm"
-        legacy[f"encoder.patch_embed{stage}.{which}.{parts[5]}"] = value
+        smp[f"encoder.patch_embed{stage}.{which}.{parts[5]}"] = value
         return
 
-    if key.startswith("segformer.encoder.layer_norm."):
-        parts = key.split(".")
-        stage = int(parts[3]) + 1
-        legacy[f"encoder.norm{stage}.{parts[4]}"] = value
+    match = re.match(r"segformer\.stages\.(\d+)\.layer_norm\.(weight|bias)$", key)
+    if match:
+        stage = int(match.group(1)) + 1
+        smp[f"encoder.norm{stage}.{match.group(2)}"] = value
         return
 
-    if key.startswith("segformer.encoder.block."):
+    if key.startswith("segformer.stages.") and ".blocks." in key:
         parts = key.split(".")
-        stage = str(int(parts[3]) + 1)
+        stage = str(int(parts[2]) + 1)
         block_idx = parts[4]
         rest = ".".join(parts[5:])
         base = f"encoder.block{stage}.{block_idx}."
@@ -95,49 +97,49 @@ def _invert_hf_key(
             base,
             rest,
             value,
-            legacy,
+            smp,
             pending_kv,
             stage,
             block_idx,
         )
         return
 
-    if key.startswith("decode_head.linear_c."):
+    if key.startswith("decode_head.linear_projections."):
         parts = key.split(".")
         hf_i = int(parts[2])
         tia_i = 3 - hf_i
-        legacy[f"decoder.mlp_stage.{tia_i}.linear.{parts[4]}"] = value
+        smp[f"decoder.mlp_stage.{tia_i}.linear.{parts[4]}"] = value
         return
 
     if key == "decode_head.linear_fuse.weight":
-        legacy["decoder.fuse_stage.0.weight"] = value
+        smp["decoder.fuse_stage.0.weight"] = value
         return
 
     if key.startswith("decode_head.batch_norm."):
-        legacy["decoder.fuse_stage.1." + key.split(".", 2)[2]] = value
+        smp["decoder.fuse_stage.1." + key.split(".", 2)[2]] = value
         return
 
     if key.startswith("decode_head.classifier."):
-        legacy["segmentation_head.0." + key.split(".", 2)[2]] = value
+        smp["segmentation_head.0." + key.split(".", 2)[2]] = value
 
 
-def _hf_to_legacy_state_dict(
+def _hf_to_smp_state_dict(
     hf_state: dict[str, torch.Tensor],
 ) -> dict[str, torch.Tensor]:
-    """Invert HF keys into a minimal legacy TIA/SMP-style state dict for tests."""
-    legacy: dict[str, torch.Tensor] = {}
+    """Invert HF keys into a minimal SMP-style state dict for tests."""
+    smp: dict[str, torch.Tensor] = {}
     pending_kv: dict[tuple[str, str, str], dict[str, torch.Tensor]] = {}
 
     for raw_key, value in hf_state.items():
-        _invert_hf_key(_strip_model_prefix(raw_key), value, legacy, pending_kv)
+        _invert_hf_key(_strip_model_prefix(raw_key), value, smp, pending_kv)
 
     for (stage, block_idx, wb), parts in pending_kv.items():
-        legacy[f"encoder.block{stage}.{block_idx}.attn.kv.{wb}"] = torch.cat(
+        smp[f"encoder.block{stage}.{block_idx}.attn.kv.{wb}"] = torch.cat(
             [parts["key"], parts["value"]],
             dim=0,
         )
 
-    return legacy
+    return smp
 
 
 def test_unknown_encoder_name_raises() -> None:
@@ -205,7 +207,7 @@ def test_segformer_infer_batch_probability_output() -> None:
 
 def test_remap_kv_split_and_decoder_reverse() -> None:
     """Remapper should split fused kv weights and reverse decoder MLP indices."""
-    legacy = {
+    smp = {
         "encoder.block1.0.attn.kv.weight": torch.arange(
             32, dtype=torch.float32
         ).reshape(
@@ -221,33 +223,33 @@ def test_remap_kv_split_and_decoder_reverse() -> None:
         "segmentation_head.0.bias": torch.zeros(5),
     }
 
-    assert is_legacy_segformer_state_dict(legacy)
-    remapped = remap_legacy_segformer_state_dict(legacy)
+    assert is_smp_segformer_state_dict(smp)
+    remapped = remap_smp_segformer_state_dict(smp)
 
-    key_w = remapped["segformer.encoder.block.0.0.attention.self.key.weight"]
-    val_w = remapped["segformer.encoder.block.0.0.attention.self.value.weight"]
+    key_w = remapped["segformer.stages.0.blocks.0.attention.k_proj.weight"]
+    val_w = remapped["segformer.stages.0.blocks.0.attention.v_proj.weight"]
     assert key_w.shape == (4, 4)
     assert val_w.shape == (4, 4)
-    assert torch.equal(key_w, legacy["encoder.block1.0.attn.kv.weight"][:4])
-    assert torch.equal(val_w, legacy["encoder.block1.0.attn.kv.weight"][4:])
+    assert torch.equal(key_w, smp["encoder.block1.0.attn.kv.weight"][:4])
+    assert torch.equal(val_w, smp["encoder.block1.0.attn.kv.weight"][4:])
 
-    assert remapped["decode_head.linear_c.3.proj.weight"].shape == (16, 32)
-    assert remapped["decode_head.linear_c.0.proj.weight"].shape == (16, 8)
+    assert remapped["decode_head.linear_projections.3.proj.weight"].shape == (16, 32)
+    assert remapped["decode_head.linear_projections.0.proj.weight"].shape == (16, 8)
     assert remapped["decode_head.classifier.weight"].shape == (5, 16, 1, 1)
 
 
 @pytest.mark.parametrize("num_classes", [2, 6])
-def test_legacy_checkpoint_load_for_variable_classes(num_classes: int) -> None:
-    """Legacy remapping should work for checkpoints that only differ by class count."""
+def test_smp_checkpoint_load_for_variable_classes(num_classes: int) -> None:
+    """SMP remapping should work for checkpoints that only differ by class count."""
     model = Segformer(
         encoder_name="mit_b0",
         decoder_segmentation_channels=64,
         classes=num_classes,
         upsampling=4,
     )
-    legacy = _hf_to_legacy_state_dict(model.state_dict())
-    assert is_legacy_segformer_state_dict(legacy)
-    assert legacy["segmentation_head.0.weight"].shape[0] == num_classes
+    smp = _hf_to_smp_state_dict(model.state_dict())
+    assert is_smp_segformer_state_dict(smp)
+    assert smp["segmentation_head.0.weight"].shape[0] == num_classes
 
     fresh = Segformer(
         encoder_name="mit_b0",
@@ -255,7 +257,7 @@ def test_legacy_checkpoint_load_for_variable_classes(num_classes: int) -> None:
         classes=num_classes,
         upsampling=4,
     )
-    incompatible = fresh.load_state_dict(legacy, strict=True)
+    incompatible = fresh.load_state_dict(smp, strict=True)
     assert incompatible.missing_keys == []
     assert incompatible.unexpected_keys == []
 
@@ -270,7 +272,7 @@ def test_native_hf_state_dict_still_loads() -> None:
         encoder_name="mit_b0", classes=3, decoder_segmentation_channels=32
     )
     state = model.state_dict()
-    assert not is_legacy_segformer_state_dict(state)
+    assert not is_smp_segformer_state_dict(state)
 
     other = Segformer(
         encoder_name="mit_b0",

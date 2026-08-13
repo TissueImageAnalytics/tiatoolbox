@@ -1,7 +1,8 @@
-"""Hugging Face SegFormer helpers: MiT configs and legacy checkpoint remapping.
+"""Hugging Face SegFormer helpers: MiT configs and SMP checkpoint remapping.
 
 Architecture weights are loaded into ``transformers.SegformerForSemanticSegmentation``.
-This module remaps older SMP-style SegFormer state dicts.
+This module remaps older SMP-style SegFormer state dicts to HF key names
+(``transformers>=5.15`` layout: ``stages.*``, ``q_proj``, ``linear_projections``).
 """
 
 from __future__ import annotations
@@ -74,21 +75,21 @@ MIT_ENCODER_CONFIGS: dict[str, dict[str, object]] = {
     },
 }
 
-# Legacy block suffix -> (HF suffix template with ``{tail}``, dots to split for tail).
+# SMP block suffix -> (HF suffix template with ``{tail}``, dots to split).
 _BLOCK_SUFFIX_RULES: tuple[tuple[str, str, int], ...] = (
-    ("norm1.", "layer_norm_1.{tail}", 1),
-    ("norm2.", "layer_norm_2.{tail}", 1),
-    ("attn.q.", "attention.self.query.{tail}", 2),
-    ("attn.proj.", "attention.output.dense.{tail}", 2),
-    ("attn.sr.", "attention.self.sr.{tail}", 2),
-    ("attn.norm.", "attention.self.layer_norm.{tail}", 2),
-    ("mlp.fc1.", "mlp.dense1.{tail}", 2),
-    ("mlp.fc2.", "mlp.dense2.{tail}", 2),
+    ("norm1.", "layernorm_before.{tail}", 1),
+    ("norm2.", "layernorm_after.{tail}", 1),
+    ("attn.q.", "attention.q_proj.{tail}", 2),
+    ("attn.proj.", "attention.o_proj.{tail}", 2),
+    ("attn.sr.", "attention.sequence_reduction.sequence_reduction.{tail}", 2),
+    ("attn.norm.", "attention.sequence_reduction.layer_norm.{tail}", 2),
+    ("mlp.fc1.", "mlp.fc1.{tail}", 2),
+    ("mlp.fc2.", "mlp.fc2.{tail}", 2),
     ("mlp.dwconv.dwconv.", "mlp.dwconv.dwconv.{tail}", 3),
 )
 
 
-def is_legacy_segformer_state_dict(state_dict: Mapping[str, torch.Tensor]) -> bool:
+def is_smp_segformer_state_dict(state_dict: Mapping[str, torch.Tensor]) -> bool:
     """Return True if ``state_dict`` uses TIA/SMP SegFormer key names."""
     return any(
         key.startswith(
@@ -98,7 +99,7 @@ def is_legacy_segformer_state_dict(state_dict: Mapping[str, torch.Tensor]) -> bo
     )
 
 
-def remap_legacy_segformer_state_dict(
+def remap_smp_segformer_state_dict(
     state_dict: Mapping[str, torch.Tensor],
 ) -> dict[str, torch.Tensor]:
     """Remap a TIA/SMP SegFormer checkpoint to Hugging Face key names.
@@ -124,14 +125,14 @@ def remap_legacy_segformer_state_dict(
             stage = int(match.group(1)) - 1
             which = "proj" if match.group(2) == "proj" else "layer_norm"
             out[
-                f"segformer.encoder.patch_embeddings.{stage}.{which}.{match.group(3)}"
+                f"segformer.stages.{stage}.patch_embeddings.{which}.{match.group(3)}"
             ] = value
             continue
 
         match = re.match(r"encoder\.norm(\d)\.(weight|bias)$", key)
         if match:
             stage = int(match.group(1)) - 1
-            out[f"segformer.encoder.layer_norm.{stage}.{match.group(2)}"] = value
+            out[f"segformer.stages.{stage}.layer_norm.{match.group(2)}"] = value
             continue
 
         match = re.match(r"encoder\.block(\d)\.(\d+)\.(.*)$", key)
@@ -139,7 +140,7 @@ def remap_legacy_segformer_state_dict(
             stage = int(match.group(1)) - 1
             block_idx = match.group(2)
             rest = match.group(3)
-            base = f"segformer.encoder.block.{stage}.{block_idx}."
+            base = f"segformer.stages.{stage}.blocks.{block_idx}."
             _remap_encoder_block_param(base, rest, value, out)
             continue
 
@@ -150,7 +151,9 @@ def remap_legacy_segformer_state_dict(
         if match:
             tia_index = int(match.group(1))
             hf_index = num_mlp_stages - 1 - tia_index
-            out[f"decode_head.linear_c.{hf_index}.proj.{match.group(2)}"] = value
+            out[f"decode_head.linear_projections.{hf_index}.proj.{match.group(2)}"] = (
+                value
+            )
             continue
 
         if key == "decoder.fuse_stage.0.weight":
@@ -165,7 +168,7 @@ def remap_legacy_segformer_state_dict(
             out["decode_head.classifier." + key.split(".", 2)[2]] = value
             continue
 
-        msg = f"Unhandled legacy SegFormer state dict key: {key}"
+        msg = f"Unhandled SMP SegFormer state dict key: {key}"
         raise KeyError(msg)
 
     return out
@@ -177,12 +180,12 @@ def _remap_encoder_block_param(
     value: torch.Tensor,
     out: MutableMapping[str, torch.Tensor],
 ) -> None:
-    """Map one encoder block parameter from legacy naming into ``out``."""
+    """Map one encoder block parameter from SMP naming into ``out``."""
     if rest.startswith("attn.kv."):
         weight_or_bias = rest.split(".", 2)[2]
         half = value.shape[0] // 2
-        out[base + f"attention.self.key.{weight_or_bias}"] = value[:half].clone()
-        out[base + f"attention.self.value.{weight_or_bias}"] = value[half:].clone()
+        out[base + f"attention.k_proj.{weight_or_bias}"] = value[:half].clone()
+        out[base + f"attention.v_proj.{weight_or_bias}"] = value[half:].clone()
         return
 
     for prefix, template, split_at in _BLOCK_SUFFIX_RULES:
@@ -191,5 +194,5 @@ def _remap_encoder_block_param(
             out[base + template.format(tail=tail)] = value
             return
 
-    msg = f"Unhandled legacy SegFormer block parameter: {rest}"
+    msg = f"Unhandled SMP SegFormer block parameter: {rest}"
     raise KeyError(msg)
