@@ -72,10 +72,26 @@ function createSlideSource(sessionId, slideInfo, version) {
 }
 
 const mapElement = document.getElementById("map");
+const viewerApp = document.querySelector(".viewer-app");
 
-if (mapElement === null) {
-  throw new Error("The OpenLayers map element could not be found.");
+const viewerPanel = document.getElementById("viewer-panel");
+const viewerPanelToggle = document.getElementById(
+  "viewer-panel-toggle",
+);
+
+if (mapElement === null || viewerApp === null) {
+  throw new Error("The OpenLayers viewer could not be found.");
 }
+
+if (viewerPanel === null || viewerPanelToggle === null) {
+  throw new Error("The OpenLayers viewer panel could not be found.");
+}
+
+viewerPanelToggle.addEventListener("click", () => {
+  const isHidden = viewerPanel.classList.toggle("hidden");
+
+  viewerPanelToggle.classList.toggle("active", !isHidden);
+});
 
 let layersData = JSON.parse(mapElement.dataset.layers ?? "[]");
 let sessionId = null;
@@ -89,10 +105,13 @@ const overlayLayers = {};
 const params = new URLSearchParams(window.location.search);
 const slidePath = params.get("slide");
 
-if (slidePath !== null) {
-  currentSlidePath = slidePath;
-
+if (slidePath === null) {
+  layersData = [];
   sessionId = await createSession();
+} else {
+  currentSlidePath = slidePath;
+  sessionId = await createSession();
+
   const slideInfo = await loadSlide(slidePath);
 
   currentSlideInfo = slideInfo;
@@ -107,8 +126,6 @@ if (slidePath !== null) {
       mpp: slideInfo.mpp[0],
     },
   ];
-} else if (layersData.length === 0) {
-  throw new Error("No slide was provided.");
 }
 
 const layers = layersData.map((layer) => {
@@ -125,22 +142,51 @@ const layers = layersData.map((layer) => {
   });
 });
 
-const slideLayer = layers[0];
+let slideLayer = layers[0];
+
+if (slideLayer === undefined) {
+  slideLayer = new TileLayer({
+    title: "slide",
+  });
+
+  layers.push(slideLayer);
+}
 
 const baseSource = slideLayer.getSource();
-const tileGrid = baseSource.getTileGrid();
-const resolutions = tileGrid.getResolutions();
-const extent = tileGrid.getExtent();
 
-const projection = new Projection({
-  code: "ZoomifyProjection",
-  units: "pixels",
-  extent,
-  metersPerUnit: layersData[0].mpp * 1e-6,
-  getPointResolution(resolution) {
-    return resolution;
-  },
-});
+let resolutions;
+let extent;
+let projection;
+
+if (baseSource !== null) {
+  const tileGrid = baseSource.getTileGrid();
+
+  resolutions = tileGrid.getResolutions();
+  extent = tileGrid.getExtent();
+
+  projection = new Projection({
+    code: "ZoomifyProjection",
+    units: "pixels",
+    extent,
+    metersPerUnit: layersData[0].mpp * 1e-6,
+    getPointResolution(resolution) {
+      return resolution;
+    },
+  });
+} else {
+  resolutions = [1];
+  extent = [0, -1, 1, 0];
+
+  projection = new Projection({
+    code: "ZoomifyProjection",
+    units: "pixels",
+    extent,
+    metersPerUnit: 1,
+    getPointResolution(resolution) {
+      return resolution;
+    },
+  });
+}
 
 // Register the projection for the mouse position and graticule controls.
 addProjection(projection);
@@ -149,6 +195,8 @@ const view = new View({
   projection,
   resolutions,
   constrainOnlyCenter: true,
+  center: [0.5, -0.5],
+  resolution: resolutions[0],
 });
 
 const map = new Map({
@@ -156,6 +204,35 @@ const map = new Map({
   layers,
   view,
 });
+
+// Zoom level
+const zoomControl = mapElement.querySelector(".ol-zoom");
+const zoomOutButton = mapElement.querySelector(".ol-zoom-out");
+
+if (zoomControl === null || zoomOutButton === null) {
+  throw new Error("The OpenLayers zoom control could not be found.");
+}
+
+const zoomLevel = document.createElement("div");
+zoomLevel.className = "ol-zoom-level";
+
+zoomControl.insertBefore(zoomLevel, zoomOutButton);
+
+function updateZoomLevel() {
+  const zoom = map.getView().getZoom();
+
+  if (zoom === undefined) {
+    return;
+  }
+
+  const displayedZoom = Number.isInteger(zoom)
+    ? zoom.toString()
+    : zoom.toFixed(1);
+
+  zoomLevel.textContent = `${displayedZoom}x`;
+}
+
+updateZoomLevel();
 
 // Scale bar
 const scaleLineControl = new ScaleLine({
@@ -167,10 +244,11 @@ const scaleLineControl = new ScaleLine({
 
 map.addControl(scaleLineControl);
 
-const overviewLayer = new TileLayer({
-  source: baseSource,
-});
+const overviewLayer = new TileLayer();
 
+if (baseSource !== null) {
+  overviewLayer.setSource(baseSource);
+}
 // Overview map
 const overviewMapControl = new OverviewMap({
   className: "ol-overviewmap ol-custom-overviewmap",
@@ -204,7 +282,9 @@ const rotate = new Rotate({
 map.addControl(rotate);
 
 // Fullscreen
-const fullscreen = new FullScreen();
+const fullscreen = new FullScreen({
+  source: viewerApp,
+});
 
 map.addControl(fullscreen);
 
@@ -321,8 +401,11 @@ const graticuleToggle = new Toggle({
   className: "ol-graticule",
   title: "Toggle Graticule",
   onToggle(active) {
+    graticuleToggle.element.classList.toggle("active", active);
+
     if (active) {
       screenSpaceGraticuleToggle.setActive(false);
+      screenSpaceGraticuleToggle.element.classList.remove("active");
       screenSpaceGraticule.setMap(null);
       graticule.setMap(map);
     } else {
@@ -338,8 +421,14 @@ const screenSpaceGraticuleToggle = new Toggle({
   className: "ol-screen-space-graticule",
   title: "Toggle Screen Space Graticule",
   onToggle(active) {
+    screenSpaceGraticuleToggle.element.classList.toggle(
+      "active",
+      active,
+    );
+
     if (active) {
       graticuleToggle.setActive(false);
+      graticuleToggle.element.classList.remove("active");
       graticule.setMap(null);
       screenSpaceGraticule.setMap(map);
     } else {
@@ -350,17 +439,20 @@ const screenSpaceGraticuleToggle = new Toggle({
 
 map.addControl(screenSpaceGraticuleToggle);
 
-map.getView().fit(extent);
+if (baseSource !== null) {
+  map.getView().fit(extent);
 
-const urlViewState = getUrlViewState();
+  const urlViewState = getUrlViewState();
 
-if (urlViewState !== null) {
-  map.getView().setCenter(urlViewState.center);
-  map.getView().setZoom(urlViewState.zoom);
+  if (urlViewState !== null) {
+    map.getView().setCenter(urlViewState.center);
+    map.getView().setZoom(urlViewState.zoom);
+  }
 }
 
 map.on("moveend", () => {
   updateUrlState();
+  updateZoomLevel();
 });
 
 function clearOverlayLayers() {
@@ -416,6 +508,10 @@ function getUrlViewState() {
 }
 
 function updateUrlState() {
+  if (currentSlidePath === null) {
+    return;
+  }
+
   const view = map.getView();
   const center = view.getCenter();
   const zoom = view.getZoom();
@@ -429,10 +525,7 @@ function updateUrlState() {
 
   const url = new URL(window.location.href);
 
-  if (currentSlidePath !== null) {
-    url.searchParams.set("slide", currentSlidePath);
-  }
-
+  url.searchParams.set("slide", currentSlidePath);
   url.searchParams.set("x", center[0].toFixed(2));
   url.searchParams.set("y", center[1].toFixed(2));
   url.searchParams.set("zoom", zoom.toString());
@@ -472,6 +565,7 @@ async function switchSlide(slidePath) {
   });
 
   addProjection(newProjection);
+  mousePositionControl.setProjection(newProjection);
 
   // View
   const newCenter = [
@@ -534,6 +628,7 @@ async function switchSlide(slidePath) {
   window.screenSpaceGraticule = screenSpaceGraticule;
 
   updateUrlState();
+  updateZoomLevel();
 }
 
 async function loadOverlay(overlayPath) {
