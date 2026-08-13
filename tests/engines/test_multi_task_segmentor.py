@@ -116,6 +116,111 @@ def test_update_tile_based_predictions_array_updates_predictions() -> None:
     assert max_inst_value is None
 
 
+def test_update_tile_based_predictions_array_instance_overlap() -> None:
+    """Test merging instance predictions with overlapping nuclei."""
+    existing_predictions = np.array(
+        [
+            [1, 1, 0],
+            [1, 1, 0],
+            [0, 0, 0],
+        ],
+        dtype=np.int32,
+    )
+
+    new_predictions = np.array(
+        [
+            [2, 2],
+            [2, 2],
+        ],
+        dtype=np.int32,
+    )
+
+    post_process_output = (
+        {
+            "predictions": new_predictions,
+            "seg_type": "instance",
+        },
+    )
+
+    wsi_info_dict = (
+        {
+            "predictions": existing_predictions.copy(),
+        },
+    )
+
+    updated_wsi_info_dict, max_inst_value = (
+        multi_task_segmentor._update_tile_based_predictions_array(
+            post_process_output=post_process_output,
+            wsi_info_dict=wsi_info_dict,
+            bounds=(0, 0, 2, 2),
+            offset=(0, 0),
+            max_inst_value=10,
+        )
+    )
+
+    np.testing.assert_array_equal(
+        updated_wsi_info_dict[0]["predictions"],
+        existing_predictions,
+    )
+
+    assert max_inst_value == 10
+
+
+def test_update_tile_based_predictions_array_instance_no_overlap() -> None:
+    """Test merging instance predictions when there is no overlap."""
+    existing_predictions = np.zeros(
+        (3, 3),
+        dtype=np.int32,
+    )
+
+    new_predictions = np.array(
+        [
+            [1, 1],
+            [1, 1],
+        ],
+        dtype=np.int32,
+    )
+
+    post_process_output = (
+        {
+            "predictions": new_predictions,
+            "seg_type": "instance",
+        },
+    )
+
+    wsi_info_dict = (
+        {
+            "predictions": existing_predictions.copy(),
+        },
+    )
+
+    updated_wsi_info_dict, max_inst_value = (
+        multi_task_segmentor._update_tile_based_predictions_array(
+            post_process_output=post_process_output,
+            wsi_info_dict=wsi_info_dict,
+            bounds=(0, 0, 2, 2),
+            offset=(0, 0),
+            max_inst_value=10,
+        )
+    )
+
+    expected = np.array(
+        [
+            [11, 11, 0],
+            [11, 11, 0],
+            [0, 0, 0],
+        ],
+        dtype=np.int32,
+    )
+
+    np.testing.assert_array_equal(
+        updated_wsi_info_dict[0]["predictions"],
+        expected,
+    )
+
+    assert max_inst_value == 21
+
+
 def test_compute_info_dict_for_merge_tile_mode_three(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
