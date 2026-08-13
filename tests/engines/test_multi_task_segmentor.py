@@ -485,18 +485,18 @@ def test_dict_to_json_store_qupath(
     track_tmp_path: Path,
 ) -> None:
     """Test dict_to_json_store with QuPath output."""
+    pad_value = np.iinfo(np.int32).min
+
     contours = np.array(
         [
-            np.array(
-                [
-                    [0, 0],
-                    [10, 0],
-                    [10, 10],
-                ],
-                dtype=np.int32,
-            ),
+            [
+                [0, 0],
+                [10, 0],
+                [10, 10],
+                [pad_value, pad_value],
+            ],
         ],
-        dtype=object,
+        dtype=np.int32,
     )
 
     processed_predictions = {
