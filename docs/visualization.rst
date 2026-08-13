@@ -490,9 +490,9 @@ and the ability to toggle on or off specific UI elements:
 
 This .json filename should end in 'config.json' to be picked up by the interface.
 
-
-For Developers
-==============
+6. OpenLayers frontend
+----------------------
 
 .. include:: ../tiatoolbox/visualization/openlayers/README.md
    :parser: myst_parser.sphinx_
+   :start-line: 2
