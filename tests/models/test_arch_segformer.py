@@ -238,6 +238,34 @@ def test_remap_kv_split_and_decoder_reverse() -> None:
     assert remapped["decode_head.classifier.weight"].shape == (5, 16, 1, 1)
 
 
+def test_remap_without_mlp_stages_uses_default_stage_count() -> None:
+    """Missing decoder MLP keys should fall back to ``NUM_SEGFORMER_STAGES``."""
+    remapped = remap_smp_segformer_state_dict(
+        {
+            "encoder.patch_embed1.proj.weight": torch.zeros(32, 3, 7, 7),
+            "encoder.patch_embed1.norm.weight": torch.ones(32),
+            "encoder.norm1.weight": torch.ones(32),
+            "encoder.block1.0.attn.q.weight": torch.zeros(32, 32),
+        }
+    )
+
+    assert "segformer.stages.0.patch_embeddings.proj.weight" in remapped
+    assert "segformer.stages.0.patch_embeddings.layer_norm.weight" in remapped
+    assert "segformer.stages.0.layer_norm.weight" in remapped
+    assert "segformer.stages.0.blocks.0.attention.q_proj.weight" in remapped
+
+
+def test_remap_unhandled_keys_raise_keyerror() -> None:
+    """Unknown SMP keys and block parameters should raise KeyError."""
+    with pytest.raises(KeyError, match="Unhandled SMP SegFormer state dict key"):
+        remap_smp_segformer_state_dict({"not.a.valid.key": torch.zeros(1)})
+
+    with pytest.raises(KeyError, match="Unhandled SMP SegFormer block parameter"):
+        remap_smp_segformer_state_dict(
+            {"encoder.block1.0.attn.unknown.weight": torch.zeros(4, 4)}
+        )
+
+
 @pytest.mark.parametrize("num_classes", [2, 6])
 def test_smp_checkpoint_load_for_variable_classes(num_classes: int) -> None:
     """SMP remapping should work for checkpoints that only differ by class count."""
