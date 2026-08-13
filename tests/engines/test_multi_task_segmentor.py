@@ -26,6 +26,7 @@ from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.models import IOSegmentorConfig
 from tiatoolbox.models.architecture import fetch_pretrained_weights
+from tiatoolbox.models.engine import multi_task_segmentor
 from tiatoolbox.models.engine.multi_task_segmentor import (
     DaskDelayedJSONStore,
     MultiTaskSegmentor,
@@ -236,6 +237,27 @@ def test_compute_qupath_json_with_explicit_class_dict(
 
     assert result["type"] == "FeatureCollection"
     assert len(result["features"]) == 1
+
+
+def test_apply_coordinate_offset_zero_offset_returns_input() -> None:
+    """Test early return when offset is zero."""
+    data_array = np.array(
+        [
+            np.array([1, 2], dtype=np.int32),
+            np.array([3, 4], dtype=np.int32),
+        ],
+        dtype=object,
+    )
+
+    result = multi_task_segmentor.apply_coordinate_offset(
+        data_array=data_array,
+        offset=(0, 0),
+        key="centroid",
+        verbose=False,
+    )
+
+    np.testing.assert_array_equal(result, data_array)
+    assert result is data_array
 
 
 def test_post_save_json_store_removes_keys() -> None:
