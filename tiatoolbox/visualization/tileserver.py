@@ -144,6 +144,7 @@ class TileServer(Flask):
         self.route("/tileserver/session_id")(self.session_id)
         self.route("/tileserver/color_prop", methods=["PUT"])(self.change_prop)
         self.route("/tileserver/slide", methods=["PUT"])(self.change_slide)
+        self.route("/tileserver/slide", methods=["DELETE"])(self.remove_slide)
         self.route("/tileserver/clear_overlays", methods=["PUT"])(self.clear_overlays)
         self.route("/tileserver/cmap", methods=["PUT"])(self.change_mapper)
         self.route(
@@ -451,6 +452,19 @@ class TileServer(Flask):
         self.slide_mpps[session_id] = self.layers[session_id]["slide"].info.mpp
 
         return "done"
+
+    def remove_slide(self: TileServer) -> Response:
+        """Remove the current slide and its overlays."""
+        session_id = self._get_session_id()
+
+        if session_id is None or session_id not in self.layers:
+            return Response("Session not found.", status=404)
+
+        self.layers[session_id] = {}
+        self.pyramids[session_id] = {}
+        self.slide_mpps.pop(session_id, None)
+
+        return Response("done", status=200)
 
     def clear_overlays(self: TileServer) -> str:
         """Clear all overlays."""

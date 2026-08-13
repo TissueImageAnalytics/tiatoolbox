@@ -44,7 +44,8 @@ body {
 .ol-full-screen,
 .ol-graticule,
 .ol-screen-space-graticule,
-.viewer-panel-control {
+.viewer-panel-control,
+.layer-editor-control {
     padding: 0;
     background: #111111;
     border-radius: 9px;
@@ -58,7 +59,8 @@ body {
 .ol-full-screen button,
 .ol-graticule button,
 .ol-screen-space-graticule button,
-.viewer-panel-control button {
+.viewer-panel-control button,
+.layer-editor-control button {
     width: 32px;
     height: 32px;
     margin: 0;
@@ -74,7 +76,8 @@ body {
 .ol-full-screen button:hover,
 .ol-graticule button:hover,
 .ol-screen-space-graticule button:hover,
-.viewer-panel-control button:hover {
+.viewer-panel-control button:hover,
+.layer-editor-control button:hover {
     background: #333333;
 }
 
@@ -84,7 +87,8 @@ body {
 .ol-full-screen button:active,
 .ol-graticule button:active,
 .ol-screen-space-graticule button:active,
-.viewer-panel-control button:active {
+.viewer-panel-control button:active,
+.layer-editor-control button:active {
     background: #555555;
 }
 
@@ -94,7 +98,8 @@ body {
 .ol-full-screen button:focus-visible,
 .ol-graticule button:focus-visible,
 .ol-screen-space-graticule button:focus-visible,
-.viewer-panel-control button:focus-visible {
+.viewer-panel-control button:focus-visible,
+.layer-editor-control button:focus-visible {
     outline: 2px solid #888888;
     outline-offset: -2px;
 }
@@ -143,6 +148,194 @@ body {
 }
 
 
+/* Layer editor control */
+
+.layer-editor-control {
+    top: 8px;
+    left: 50px;
+    right: auto;
+}
+
+
+.layer-editor-control button {
+    border-radius: 9px;
+}
+
+
+/* Layer editor */
+
+.layer-editor {
+    position: absolute;
+    top: 50px;
+    left: 50px;
+    z-index: 1000;
+    width: 230px;
+    box-sizing: border-box;
+    overflow: hidden;
+
+    background: #111111;
+    color: #ffffff;
+
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+}
+
+
+.layer-editor.hidden {
+    display: none;
+}
+
+
+.layer-editor-header {
+    padding: 12px 14px;
+    border-bottom: 1px solid #333333;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+
+.layer-editor-list {
+    padding: 12px 14px;
+}
+
+
+.layer-editor-empty {
+    color: #999999;
+    font-size: 12px;
+}
+
+
+.layer-editor-item {
+    margin-bottom: 14px;
+}
+
+
+.layer-editor-item:last-child {
+    margin-bottom: 0;
+}
+
+
+.layer-editor-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+
+.layer-editor-visibility {
+    flex-shrink: 0;
+    margin: 0;
+    accent-color: #1f5278;
+    cursor: pointer;
+}
+
+
+.layer-editor-name {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+
+    color: #ffffff;
+
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+.layer-editor-order {
+    display: flex;
+    flex-shrink: 0;
+    gap: 3px;
+}
+
+
+.layer-editor-order button {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+
+    border: 0;
+    border-radius: 5px;
+
+    background: #222222;
+    color: #ffffff;
+
+    font-size: 9px;
+    cursor: pointer;
+}
+
+
+.layer-editor-order button:hover:not(:disabled) {
+    background: #333333;
+}
+
+
+.layer-editor-order button:active:not(:disabled) {
+    background: #555555;
+}
+
+
+.layer-editor-order button:disabled {
+    color: #555555;
+    cursor: default;
+}
+
+
+.layer-editor-opacity {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+
+.layer-editor-slider {
+    min-width: 0;
+    flex: 1;
+    margin: 0;
+
+    accent-color: #1f5278;
+    cursor: pointer;
+}
+
+
+.layer-editor-value {
+    width: 32px;
+    flex-shrink: 0;
+
+    color: #aaaaaa;
+
+    font-size: 11px;
+    text-align: right;
+}
+
+
+.layer-editor-name {
+    min-width: 0;
+    overflow: hidden;
+    color: #ffffff;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+.layer-editor-value {
+    flex-shrink: 0;
+    color: #aaaaaa;
+    font-size: 11px;
+}
+
+
+.layer-editor-slider {
+    width: 100%;
+    margin: 0;
+    accent-color: #1f5278;
+    cursor: pointer;
+}
+
+
 /* Viewer tools */
 
 .ol-rotate,
@@ -156,23 +349,23 @@ body {
 
 
 .ol-rotate {
-    top: 112px;
+    top: 108px;
     border-radius: 9px 9px 0 0;
 }
 
 
 .ol-full-screen {
-    top: 144px;
+    top: 140px;
 }
 
 
 .ol-graticule {
-    top: 176px;
+    top: 172px;
 }
 
 
 .ol-screen-space-graticule {
-    top: 208px;
+    top: 204px;
     border-radius: 0 0 9px 9px;
 }
 
@@ -198,8 +391,9 @@ body {
 /* Viewer panel control */
 
 .viewer-panel-control {
-    top: 250px;
+    top: 246px;
     left: 8px;
+    right: auto;
 }
 
 
@@ -212,7 +406,7 @@ body {
 
 .viewer-panel {
     position: absolute;
-    top: 290px;
+    top: 288px;
     left: 8px;
     z-index: 1000;
     width: 240px;
@@ -379,7 +573,8 @@ body {
 .ol-full-screen button:focus,
 .ol-graticule button:focus,
 .ol-screen-space-graticule button:focus,
-.viewer-panel-control button:focus {
+.viewer-panel-control button:focus,
+.layer-editor-control button:focus {
     background: #111111;
 }
 
@@ -389,7 +584,8 @@ body {
 .ol-graticule.active button,
 .ol-screen-space-graticule.active button,
 .ol-full-screen button.ol-full-screen-true,
-.viewer-panel-control button.active {
+.viewer-panel-control button.active,
+.layer-editor-control button.active {
     background: #163a59;
 }
 
@@ -397,7 +593,8 @@ body {
 .ol-graticule.active button:hover,
 .ol-screen-space-graticule.active button:hover,
 .ol-full-screen button.ol-full-screen-true:hover,
-.viewer-panel-control button.active:hover {
+.viewer-panel-control button.active:hover,
+.layer-editor-control button.active:hover {
     background: #1f5278;
 }
 
@@ -405,7 +602,8 @@ body {
 .ol-graticule.active button:active,
 .ol-screen-space-graticule.active button:active,
 .ol-full-screen button.ol-full-screen-true:active,
-.viewer-panel-control button.active:active {
+.viewer-panel-control button.active:active,
+.layer-editor-control button.active:active {
     background: #555555;
 }
 

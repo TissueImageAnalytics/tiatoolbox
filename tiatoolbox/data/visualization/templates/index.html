@@ -23,6 +23,28 @@
             data-layers="{{ layers }}"
         ></div>
 
+        <div class="layer-editor-control ol-unselectable ol-control">
+            <button
+                id="layer-editor-toggle"
+                type="button"
+                title="Toggle layer editor"
+            >
+                <i class="fas fa-sliders-h"></i>
+            </button>
+        </div>
+
+        <aside id="layer-editor" class="layer-editor hidden">
+            <div class="layer-editor-header">
+                Layers
+            </div>
+
+            <div id="layer-editor-list" class="layer-editor-list">
+                <div class="layer-editor-empty">
+                    No overlays loaded
+                </div>
+            </div>
+        </aside>
+
         <div class="viewer-panel-control ol-unselectable ol-control">
             <button
                 id="viewer-panel-toggle"

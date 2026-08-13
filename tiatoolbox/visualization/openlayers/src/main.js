@@ -79,18 +79,38 @@ const viewerPanelToggle = document.getElementById(
   "viewer-panel-toggle",
 );
 
+const layerEditor = document.getElementById("layer-editor");
+const layerEditorToggle = document.getElementById(
+  "layer-editor-toggle",
+);
+const layerEditorList = document.getElementById(
+  "layer-editor-list",
+);
+
 if (mapElement === null || viewerApp === null) {
   throw new Error("The OpenLayers viewer could not be found.");
 }
 
-if (viewerPanel === null || viewerPanelToggle === null) {
-  throw new Error("The OpenLayers viewer panel could not be found.");
+if (
+  viewerPanel === null ||
+  viewerPanelToggle === null ||
+  layerEditor === null ||
+  layerEditorToggle === null ||
+  layerEditorList === null
+) {
+  throw new Error("The OpenLayers viewer controls could not be found.");
 }
 
 viewerPanelToggle.addEventListener("click", () => {
   const isHidden = viewerPanel.classList.toggle("hidden");
 
   viewerPanelToggle.classList.toggle("active", !isHidden);
+});
+
+layerEditorToggle.addEventListener("click", () => {
+  const isHidden = layerEditor.classList.toggle("hidden");
+
+  layerEditorToggle.classList.toggle("active", !isHidden);
 });
 
 let layersData = JSON.parse(mapElement.dataset.layers ?? "[]");
@@ -151,6 +171,8 @@ if (slideLayer === undefined) {
 
   layers.push(slideLayer);
 }
+
+slideLayer.setZIndex(0);
 
 const baseSource = slideLayer.getSource();
 
@@ -469,6 +491,8 @@ function clearOverlayLayers() {
   for (const layerName of Object.keys(overlayLayers)) {
     delete overlayLayers[layerName];
   }
+
+  updateLayerEditor();
 }
 
 async function clearOverlays() {
@@ -531,6 +555,96 @@ function updateUrlState() {
   url.searchParams.set("zoom", zoom.toString());
 
   window.history.replaceState({}, "", url);
+}
+
+async function removeSlide() {
+  if (sessionId === null) {
+    throw new Error("No TileServer session is available.");
+  }
+
+  const response = await fetch("/tileserver/slide", {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to remove the current slide.");
+  }
+
+  clearOverlayLayers();
+
+  currentSlidePath = null;
+  currentSlideInfo = null;
+
+  slideVersion += 1;
+  overlayVersion += 1;
+
+  slideLayer.setSource(null);
+  overviewLayer.setSource(null);
+
+  updateLayerEditor();
+
+  const emptyExtent = [0, -1, 1, 0];
+  const emptyResolutions = [1];
+
+  const emptyProjection = new Projection({
+    code: "ZoomifyProjectionEmpty",
+    units: "pixels",
+    extent: emptyExtent,
+    metersPerUnit: 1,
+    getPointResolution(resolution) {
+      return resolution;
+    },
+  });
+
+  addProjection(emptyProjection);
+
+  const emptyView = new View({
+    projection: emptyProjection,
+    resolutions: emptyResolutions,
+    constrainOnlyCenter: true,
+    center: [0.5, -0.5],
+    resolution: emptyResolutions[0],
+  });
+
+  map.setView(emptyView);
+
+  const overviewMap = overviewMapControl.getOverviewMap();
+
+  overviewMap.setView(
+    new View({
+      projection: emptyProjection,
+      resolutions: emptyResolutions,
+      constrainOnlyCenter: true,
+      center: [0.5, -0.5],
+      resolution: emptyResolutions[0],
+    }),
+  );
+
+  mousePositionControl.setProjection(emptyProjection);
+
+  graticuleToggle.setActive(false);
+  screenSpaceGraticuleToggle.setActive(false);
+
+  graticuleToggle.element.classList.remove("active");
+  screenSpaceGraticuleToggle.element.classList.remove("active");
+
+  graticule.setMap(null);
+  screenSpaceGraticule.setMap(null);
+
+  graticule = createGraticule(emptyProjection);
+  screenSpaceGraticule =
+    createScreenSpaceGraticule(emptyProjection);
+
+  window.graticule = graticule;
+  window.screenSpaceGraticule = screenSpaceGraticule;
+
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+
+  window.history.replaceState({}, "", url);
+
+  updateZoomLevel();
 }
 
 // Slide switching
@@ -624,11 +738,172 @@ async function switchSlide(slidePath) {
   slideLayer.setSource(source);
   overviewLayer.setSource(source);
 
+  updateLayerEditor();
+
   window.graticule = graticule;
   window.screenSpaceGraticule = screenSpaceGraticule;
 
   updateUrlState();
   updateZoomLevel();
+}
+
+function getLayerEditorEntries() {
+  const entries = [];
+
+  if (slideLayer.getSource() !== null) {
+    entries.push({
+      name: "slide",
+      layer: slideLayer,
+    });
+  }
+
+  for (const [layerName, layer] of Object.entries(overlayLayers)) {
+    entries.push({
+      name: layerName,
+      layer,
+    });
+  }
+
+  return entries.sort(
+    (a, b) =>
+      (b.layer.getZIndex() ?? 0) -
+      (a.layer.getZIndex() ?? 0),
+  );
+}
+
+
+function moveLayer(layerName, direction) {
+  const entries = getLayerEditorEntries();
+
+  const index = entries.findIndex(
+    (entry) => entry.name === layerName,
+  );
+
+  if (index === -1) {
+    return;
+  }
+
+  const targetIndex =
+    direction === "up" ? index - 1 : index + 1;
+
+  if (
+    targetIndex < 0 ||
+    targetIndex >= entries.length
+  ) {
+    return;
+  }
+
+  const currentLayer = entries[index].layer;
+  const targetLayer = entries[targetIndex].layer;
+
+  const currentZIndex = currentLayer.getZIndex() ?? 0;
+  const targetZIndex = targetLayer.getZIndex() ?? 0;
+
+  currentLayer.setZIndex(targetZIndex);
+  targetLayer.setZIndex(currentZIndex);
+
+  updateLayerEditor();
+}
+
+function updateLayerEditor() {
+  layerEditorList.replaceChildren();
+
+  const entries = getLayerEditorEntries();
+
+  if (entries.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "layer-editor-empty";
+    empty.textContent = "No layers loaded";
+
+    layerEditorList.appendChild(empty);
+
+    return;
+  }
+
+  entries.forEach(({ name: layerName, layer }, index) => {
+    const item = document.createElement("div");
+    item.className = "layer-editor-item";
+
+    const header = document.createElement("div");
+    header.className = "layer-editor-item-header";
+
+    const visibility = document.createElement("input");
+    visibility.className = "layer-editor-visibility";
+    visibility.type = "checkbox";
+    visibility.checked = layer.getVisible();
+    visibility.title = `Toggle ${layerName}`;
+
+    visibility.addEventListener("change", () => {
+      layer.setVisible(visibility.checked);
+    });
+
+    const name = document.createElement("span");
+    name.className = "layer-editor-name";
+    name.textContent = layerName;
+
+    const order = document.createElement("div");
+    order.className = "layer-editor-order";
+
+    const moveUp = document.createElement("button");
+    moveUp.type = "button";
+    moveUp.title = "Move layer up";
+    moveUp.innerHTML =
+      '<i class="fas fa-chevron-up"></i>';
+    moveUp.disabled = index === 0;
+
+    moveUp.addEventListener("click", () => {
+      moveLayer(layerName, "up");
+    });
+
+    const moveDown = document.createElement("button");
+    moveDown.type = "button";
+    moveDown.title = "Move layer down";
+    moveDown.innerHTML =
+      '<i class="fas fa-chevron-down"></i>';
+    moveDown.disabled = index === entries.length - 1;
+
+    moveDown.addEventListener("click", () => {
+      moveLayer(layerName, "down");
+    });
+
+    order.append(moveUp, moveDown);
+
+    header.append(
+      visibility,
+      name,
+      order,
+    );
+
+    const opacityRow = document.createElement("div");
+    opacityRow.className = "layer-editor-opacity";
+
+    const slider = document.createElement("input");
+    slider.className = "layer-editor-slider";
+    slider.type = "range";
+    slider.min = "0";
+    slider.max = "1";
+    slider.step = "0.05";
+    slider.value = layer.getOpacity().toString();
+
+    const value = document.createElement("span");
+    value.className = "layer-editor-value";
+    value.textContent =
+      `${Math.round(layer.getOpacity() * 100)}%`;
+
+    slider.addEventListener("input", () => {
+      const opacity = Number(slider.value);
+
+      layer.setOpacity(opacity);
+
+      value.textContent =
+        `${Math.round(opacity * 100)}%`;
+    });
+
+    opacityRow.append(slider, value);
+
+    item.append(header, opacityRow);
+    layerEditorList.appendChild(item);
+  });
 }
 
 async function loadOverlay(overlayPath) {
@@ -685,17 +960,32 @@ async function loadOverlay(overlayPath) {
     overlayLayers[layerName].setSource(source);
     overlayLayers[layerName].setVisible(true);
   } else {
+    const currentLayers = [
+      slideLayer,
+      ...Object.values(overlayLayers),
+    ];
+
+    const highestZIndex = Math.max(
+      ...currentLayers.map(
+        (layer) => layer.getZIndex() ?? 0,
+      ),
+    );
+
     const overlayLayer = new TileLayer({
       title: layerName,
       source,
       opacity: 0.75,
     });
 
+    overlayLayer.setZIndex(highestZIndex + 1);
+
     overlayLayers[layerName] = overlayLayer;
 
     map.addLayer(overlayLayer);
     layers.push(overlayLayer);
   }
+
+  updateLayerEditor();
 
   return result;
 }
@@ -727,6 +1017,8 @@ async function removeOverlay(layerName) {
   }
 
   delete overlayLayers[layerName];
+
+  updateLayerEditor();
 }
 
 async function setAnnotationColors(colorMap) {
@@ -783,6 +1075,7 @@ Object.assign(window, {
   overviewMapControl,
   projection,
   removeOverlay,
+  removeSlide,
   resolutions,
   rotate,
   scaleLineControl,
