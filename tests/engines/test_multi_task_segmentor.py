@@ -844,6 +844,7 @@ def test_dict_to_json_store_qupath(
             save_path: Path,
         ) -> Path:
             """Return the expected JSON path."""
+            _ = self
             called["class_dict"] = class_dict
             called["origin"] = origin
             called["scale_factor"] = scale_factor
