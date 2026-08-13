@@ -429,6 +429,7 @@ def test_post_save_json_store_keeps_non_empty_root_store(
             Prevent the first cleanup branch from executing.
 
             """
+            _ = self
             return ["dummy"]
 
     removed_paths: list[Path | str] = []
@@ -447,6 +448,7 @@ def test_post_save_json_store_keeps_non_empty_root_store(
 
         def keys(self) -> list:
             """Return a non-empty key list."""
+            _ = self
             return ["predictions"]
 
     def _fake_open(
@@ -454,7 +456,7 @@ def test_post_save_json_store_keeps_non_empty_root_store(
         mode: str = "r",
     ) -> FakeNonEmptyStore:
         """Return a non-empty Zarr store."""
-        del store_root, mode
+        _ = store_root, mode
         return FakeNonEmptyStore()
 
     monkeypatch.setattr(
