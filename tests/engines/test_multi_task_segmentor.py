@@ -161,6 +161,83 @@ def test_multitask_segmentor_cli_uses_yaml_config(
     assert run_calls[0]["ioconfig"] is fake_ioconfig
 
 
+def test_compute_qupath_json_with_explicit_class_dict(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test compute_qupath_json when class_dict is explicitly provided."""
+    store = DaskDelayedJSONStore.__new__(DaskDelayedJSONStore)
+
+    store._contours = [
+        np.array(
+            [
+                [0, 0],
+                [10, 0],
+                [10, 10],
+            ],
+            dtype=float,
+        ),
+    ]
+
+    store._processed_predictions = {
+        "type": np.array([1], dtype=object),
+    }
+
+    class_dict = {
+        0: "background",
+        1: "tumour",
+    }
+
+    def _fake_build_single_qupath_feature(
+        i: int,
+        class_dict_in: dict[int, str],
+        origin: tuple[float, float],
+        scale_factor: tuple[float, float],
+        class_colors: dict[int, list[int]],
+    ) -> dict[str, object]:
+        """Return a simple fake feature."""
+        _ = i, origin, scale_factor
+
+        assert class_dict_in is class_dict
+        assert 0 in class_colors
+        assert 1 in class_colors
+
+        return {
+            "type": "Feature",
+            "properties": {
+                "type": "tumour",
+            },
+        }
+
+    def _fake_save_qupath_json(
+        save_path: Path | None,
+        qupath_json: dict[str, object],
+    ) -> dict[str, object]:
+        """Return JSON rather than touching disk."""
+        assert save_path == track_tmp_path / "output.json"
+        return qupath_json
+
+    monkeypatch.setattr(
+        store,
+        "_build_single_qupath_feature",
+        _fake_build_single_qupath_feature,
+    )
+
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.multi_task_segmentor.save_qupath_json",
+        _fake_save_qupath_json,
+    )
+
+    result = store.compute_qupath_json(
+        class_dict=class_dict,
+        save_path=track_tmp_path / "output.json",
+        verbose=False,
+    )
+
+    assert result["type"] == "FeatureCollection"
+    assert len(result["features"]) == 1
+
+
 def test_post_save_json_store_removes_keys() -> None:
     """Test removal of computed prediction keys."""
     processed_predictions = {
