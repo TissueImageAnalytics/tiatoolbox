@@ -57,6 +57,65 @@ def test_mtsegmentor_init() -> None:
     assert isinstance(segmentor.model, torch.nn.Module)
 
 
+def test_update_tile_based_predictions_array_updates_predictions() -> None:
+    """Test updating predictions when prediction array is present.
+
+    Covers:
+
+        if wsi_info_dict[idx]["predictions"] is None:
+
+    evaluating to False.
+
+    """
+    post_process_output = (
+        {
+            "predictions": np.array(
+                [
+                    [1, 2],
+                    [3, 4],
+                ],
+                dtype=np.uint8,
+            ),
+            "seg_type": "semantic",
+        },
+    )
+
+    wsi_info_dict = (
+        {
+            "predictions": np.zeros(
+                (4, 4),
+                dtype=np.uint8,
+            ),
+        },
+    )
+
+    updated_wsi_info_dict, max_inst_value = (
+        multi_task_segmentor._update_tile_based_predictions_array(
+            post_process_output=post_process_output,
+            wsi_info_dict=wsi_info_dict,
+            bounds=(0, 0, 2, 2),
+            offset=(0, 0),
+        )
+    )
+
+    expected = np.array(
+        [
+            [1, 2, 0, 0],
+            [3, 4, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+        ],
+        dtype=np.uint8,
+    )
+
+    np.testing.assert_array_equal(
+        updated_wsi_info_dict[0]["predictions"],
+        expected,
+    )
+
+    assert max_inst_value is None
+
+
 def test_compute_info_dict_for_merge_tile_mode_three(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
