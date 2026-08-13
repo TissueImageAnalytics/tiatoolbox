@@ -291,7 +291,7 @@ def test_build_single_qupath_feature_non_type_property() -> None:
     props = result["properties"]
 
     assert props["type"] == "Tumour"
-    assert props["prob"] == 0.95
+    assert np.isclose(props["prob"], 0.95)
 
     assert props["classification"]["name"] == "Tumour"
     assert props["class_value"] == 1
