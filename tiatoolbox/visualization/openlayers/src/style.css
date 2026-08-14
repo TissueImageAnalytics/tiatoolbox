@@ -311,31 +311,6 @@ body {
 }
 
 
-.layer-editor-name {
-    min-width: 0;
-    overflow: hidden;
-    color: #ffffff;
-    font-size: 12px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-
-.layer-editor-value {
-    flex-shrink: 0;
-    color: #aaaaaa;
-    font-size: 11px;
-}
-
-
-.layer-editor-slider {
-    width: 100%;
-    margin: 0;
-    accent-color: #1f5278;
-    cursor: pointer;
-}
-
-
 /* Viewer tools */
 
 .ol-rotate,
@@ -530,6 +505,11 @@ body {
     border-radius: 7px;
 
     overflow: hidden;
+}
+
+
+.map .ol-custom-overviewmap .ol-overviewmap-box {
+    border-width: 3px;
 }
 
 

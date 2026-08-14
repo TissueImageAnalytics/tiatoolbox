@@ -275,6 +275,9 @@ if (baseSource !== null) {
 const overviewMapControl = new OverviewMap({
   className: "ol-overviewmap ol-custom-overviewmap",
   layers: [overviewLayer],
+  collapsed: false,
+  collapseLabel: "›",
+  label: "‹",
 });
 
 map.addControl(overviewMapControl);
@@ -905,6 +908,8 @@ function updateLayerEditor() {
     layerEditorList.appendChild(item);
   });
 }
+
+updateLayerEditor();
 
 async function loadOverlay(overlayPath) {
   if (sessionId === null || currentSlideInfo === null) {

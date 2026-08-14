@@ -11266,7 +11266,10 @@ var qd = new go();
 Ld !== null && qd.setSource(Ld);
 var Jd = new Ja({
 	className: "ol-overviewmap ol-custom-overviewmap",
-	layers: [qd]
+	layers: [qd],
+	collapsed: !1,
+	collapseLabel: "›",
+	label: "‹"
 });
 $.addControl(Jd);
 var Yd = new Ln({
@@ -11506,6 +11509,7 @@ function yf() {
 		}), d.append(f, p), i.append(a, d), Ed.appendChild(i);
 	});
 }
+yf();
 async function bf(e) {
 	if (Od === null || jd === null) throw Error("Dynamic overlay loading requires a loaded slide.");
 	let t = e.split(".").pop().toLowerCase();
