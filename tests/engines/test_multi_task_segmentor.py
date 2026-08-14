@@ -57,6 +57,98 @@ def test_mtsegmentor_init() -> None:
     assert isinstance(segmentor.model, torch.nn.Module)
 
 
+def test_check_and_update_for_memory_overload(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test spilling intermediate results to disk when memory threshold is exceeded."""
+
+    class FakeMemory:
+        """Fake virtual memory statistics."""
+
+        percent = 90
+        available = 1024 * 1024 * 1024
+
+    fake_canvas = [
+        SimpleNamespace(nbytes=1024),
+    ]
+    fake_count = [
+        SimpleNamespace(),
+    ]
+
+    fake_canvas_zarr = [None]
+    fake_count_zarr = [None]
+
+    captured: dict[str, object] = {}
+
+    def _fake_update_tqdm_desc(
+        tqdm_loop: object,
+        desc: str,
+    ) -> None:
+        """Capture progress-bar descriptions."""
+        _ = tqdm_loop
+        captured.setdefault("descriptions", []).append(desc)
+
+    def _fake_save_multitask_to_cache(
+        canvas: list,
+        count: list,
+        canvas_zarr: list,
+        count_zarr: list,
+        save_path: Path,
+        *,
+        verbose: bool = True,
+    ) -> tuple[list, list]:
+        """Return synthetic cached arrays."""
+        _ = canvas, count, save_path, verbose
+
+        captured["cache_called"] = True
+
+        return canvas_zarr, count_zarr
+
+    def _fake_virtual_memory() -> FakeMemory:
+        """Return fake memory statistics."""
+        return FakeMemory()
+
+    monkeypatch.setattr(
+        psutil,
+        "virtual_memory",
+        _fake_virtual_memory,
+    )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "update_tqdm_desc",
+        _fake_update_tqdm_desc,
+    )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "save_multitask_to_cache",
+        _fake_save_multitask_to_cache,
+    )
+
+    canvas, count, _, _, _ = multi_task_segmentor._check_and_update_for_memory_overload(
+        canvas=fake_canvas,
+        count=fake_count,
+        canvas_zarr=fake_canvas_zarr,
+        count_zarr=fake_count_zarr,
+        memory_threshold=80,
+        tqdm_loop=object(),
+        save_path=track_tmp_path / "cache.zarr",
+        num_expected_output=1,
+        verbose=False,
+    )
+
+    assert captured["cache_called"] is True
+
+    assert canvas == [None]
+    assert count == [None]
+
+    assert len(captured["descriptions"]) == 2
+    assert "Current Memory usage" in captured["descriptions"][0]
+    assert captured["descriptions"][1] == "Inferring patches"
+
+
 def test_save_annotation_json_store_without_image_path(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
