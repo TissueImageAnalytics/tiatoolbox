@@ -57,6 +57,69 @@ def test_mtsegmentor_init() -> None:
     assert isinstance(segmentor.model, torch.nn.Module)
 
 
+def test_save_annotation_json_store_without_image_path(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test save annotation store when curr_image is not a Path."""
+    captured: dict[str, object] = {}
+
+    def _fake_dict_to_json_store(
+        processed_predictions: dict,
+        output_path: Path,
+        output_type: str,
+        class_dict: dict | None = None,
+        origin: tuple[float, float] = (0, 0),
+        scale_factor: tuple[float, float] = (1, 1),
+        num_workers: int = 0,
+        *,
+        verbose: bool = True,
+    ) -> Path:
+        """Capture arguments and return output path."""
+        captured["processed_predictions"] = processed_predictions
+        captured["output_path"] = output_path
+        captured["output_type"] = output_type
+        captured["class_dict"] = class_dict
+        captured["origin"] = origin
+        captured["scale_factor"] = scale_factor
+        captured["num_workers"] = num_workers
+        captured["verbose"] = verbose
+
+        return output_path
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "dict_to_json_store",
+        _fake_dict_to_json_store,
+    )
+
+    predictions = {
+        "coordinates": np.array([[0, 0]]),
+        "type": np.array([1]),
+    }
+
+    result = multi_task_segmentor._save_annotation_json_store(
+        curr_image=None,
+        predictions=predictions,
+        task_name="nuclei",
+        idx=5,
+        save_path=track_tmp_path / "output.db",
+        output_type="annotationstore",
+        class_dict={1: "tumour"},
+        scale_factor=(1.0, 1.0),
+        num_workers=1,
+        verbose=False,
+    )
+
+    expected_path = track_tmp_path / "5_nuclei.db"
+
+    assert result == expected_path
+    assert captured["output_path"] == expected_path
+
+    # Covers removal of coordinates field
+    assert "coordinates" not in captured["processed_predictions"]
+
+
 def test_update_tile_based_predictions_array_updates_predictions() -> None:
     """Test updating predictions when prediction array is present.
 
