@@ -57,6 +57,61 @@ def test_mtsegmentor_init() -> None:
     assert isinstance(segmentor.model, torch.nn.Module)
 
 
+def test_clear_zarr_removes_canvas_and_count_entries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test cached canvas/count arrays are removed from Zarr."""
+    probabilities_zarr = object()
+
+    canvas_group = {
+        "0": "canvas_data",
+    }
+
+    count_group = {
+        "0": "count_data",
+    }
+
+    zarr_group = {
+        "canvas": canvas_group,
+        "count": count_group,
+    }
+
+    captured: dict[str, object] = {}
+
+    def _fake_from_zarr(
+        array: object,
+        chunks: tuple[int, ...],
+    ) -> str:
+        """Return synthetic dask array."""
+        captured["array"] = array
+        captured["chunks"] = chunks
+
+        return "fake_dask_array"
+
+    monkeypatch.setattr(
+        da,
+        "from_zarr",
+        _fake_from_zarr,
+    )
+
+    result = _clear_zarr(
+        probabilities_zarr=probabilities_zarr,
+        probabilities_da=None,
+        zarr_group=zarr_group,
+        idx=0,
+        chunk_shape=(128,),
+        probabilities_shape=(256, 3),
+    )
+
+    assert result == "fake_dask_array"
+
+    assert "0" not in canvas_group
+    assert "0" not in count_group
+
+    assert captured["array"] is probabilities_zarr
+    assert captured["chunks"] == (128, 256, 3)
+
+
 def test_calculate_probabilities_with_zarr_cache(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
