@@ -57,6 +57,97 @@ def test_mtsegmentor_init() -> None:
     assert isinstance(segmentor.model, torch.nn.Module)
 
 
+def test_save_multitask_vertical_to_cache_existing_zarr_group(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test caching with an existing Zarr group."""
+
+    class FakeMemory:
+        """Fake memory information."""
+
+        available = 1
+
+    class FakeArray:
+        """Minimal Dask-like array."""
+
+        nbytes = 1000
+        shape = (4, 4)
+
+        def compute(self) -> np.ndarray:
+            """Return computed array."""
+            _ = self
+            return np.ones((4, 4), dtype=np.float32)
+
+    class FakeZarrArray:
+        """Minimal Zarr array."""
+
+        def __setitem__(
+            self,
+            key: slice,
+            value: np.ndarray,
+        ) -> None:
+            _ = key, value
+
+    class FakeZarrGroup:
+        """Minimal Zarr group."""
+
+        def create_array(
+            self,
+            name: str,
+            shape: tuple[int, ...],
+            chunks: tuple[int, ...],
+            dtype: np.dtype,
+            *,
+            overwrite: bool,
+        ) -> FakeZarrArray:
+            _ = self, name, shape, chunks, dtype, overwrite
+
+            return FakeZarrArray()
+
+    def _fake_virtual_memory() -> FakeMemory:
+        """Return fake memory statistics."""
+        return FakeMemory()
+
+    monkeypatch.setattr(
+        psutil,
+        "virtual_memory",
+        _fake_virtual_memory,
+    )
+
+    def _fake_update_tqdm_desc(
+        tqdm_loop: object,
+        desc: str,
+    ) -> None:
+        """Mock progress-bar description update."""
+        _ = tqdm_loop, desc
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "update_tqdm_desc",
+        _fake_update_tqdm_desc,
+    )
+
+    probabilities_zarr = [None]
+    probabilities_da = [FakeArray()]
+    existing_group = FakeZarrGroup()
+
+    returned_zarr, returned_da, returned_group = _save_multitask_vertical_to_cache(
+        probabilities_zarr=probabilities_zarr,
+        probabilities_da=probabilities_da,
+        zarr_group=existing_group,
+        probabilities=np.ones((4, 4), dtype=np.float32),
+        idx=0,
+        tqdm_loop=SimpleNamespace(desc="test"),
+        save_path=Path("cache.zarr"),
+        chunk_shape=(2,),
+        memory_threshold=80,
+    )
+
+    assert returned_group is existing_group
+    assert returned_zarr[0] is not None
+    assert returned_da[0] is None
+
+
 def test_clear_zarr_removes_canvas_and_count_entries(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
