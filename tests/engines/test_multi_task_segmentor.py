@@ -791,6 +791,53 @@ def test_post_save_json_store_keeps_non_empty_root_store(
     assert removed_paths == []
 
 
+def test_move_tile_space_to_wsi_space_without_centroid() -> None:
+    """Test moving instance data when centroid is absent."""
+    contours = np.array(
+        [
+            [1, 1],
+            [2, 2],
+            [3, 3],
+        ],
+        dtype=np.int32,
+    )
+
+    inst_dict = {
+        1: {
+            "box": np.array(
+                [0, 0, 10, 10],
+                dtype=np.int32,
+            ),
+            "contours": contours.copy(),
+        },
+    }
+
+    result = multi_task_segmentor._move_tile_space_to_wsi_space(
+        inst_dict=inst_dict,
+        tile_tl=np.array([0, 0]),
+        remove_insts_in_tile=[],
+    )
+
+    assert len(result) == 1
+
+    inst_info = next(iter(result.values()))
+
+    np.testing.assert_array_equal(
+        inst_info["box"],
+        np.array(
+            [0, 0, 10, 10],
+            dtype=np.int32,
+        ),
+    )
+
+    np.testing.assert_array_equal(
+        inst_info["contours"],
+        contours,
+    )
+
+    assert "centroid" not in inst_info
+
+
 def test_dict_to_json_store_qupath(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
