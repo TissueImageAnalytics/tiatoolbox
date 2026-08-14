@@ -57,6 +57,77 @@ def test_mtsegmentor_init() -> None:
     assert isinstance(segmentor.model, torch.nn.Module)
 
 
+def test_save_multitask_to_cache(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test spilling multitask outputs to cache."""
+    canvas = [
+        "canvas_0",
+        "canvas_1",
+    ]
+
+    count = [
+        "count_0",
+        "count_1",
+    ]
+
+    canvas_zarr = [None, None]
+    count_zarr = [None, None]
+
+    calls: list[tuple[object, object]] = []
+
+    def _fake_save_to_cache(
+        canvas: object,
+        count: object,
+        canvas_zarr: object,
+        count_zarr: object,
+        save_path: str | Path,
+        zarr_dataset_name: tuple[str, str],
+        *,
+        verbose: bool,
+    ) -> tuple[str, str]:
+        """Return synthetic cached arrays."""
+        _ = canvas_zarr, count_zarr, save_path, verbose
+
+        calls.append((canvas, count))
+
+        return (
+            f"{zarr_dataset_name[0]}_cached",
+            f"{zarr_dataset_name[1]}_cached",
+        )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "save_to_cache",
+        _fake_save_to_cache,
+    )
+
+    returned_canvas_zarr, returned_count_zarr = (
+        multi_task_segmentor.save_multitask_to_cache(
+            canvas=canvas,
+            count=count,
+            canvas_zarr=canvas_zarr,
+            count_zarr=count_zarr,
+            verbose=False,
+        )
+    )
+
+    assert calls == [
+        ("canvas_0", "count_0"),
+        ("canvas_1", "count_1"),
+    ]
+
+    assert returned_canvas_zarr == [
+        "canvas/0_cached",
+        "canvas/1_cached",
+    ]
+
+    assert returned_count_zarr == [
+        "count/0_cached",
+        "count/1_cached",
+    ]
+
+
 def test_save_multitask_vertical_to_cache_existing_zarr_group(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
