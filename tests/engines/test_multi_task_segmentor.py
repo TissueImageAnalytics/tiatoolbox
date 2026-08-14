@@ -116,6 +116,43 @@ def test_update_tile_based_predictions_array_updates_predictions() -> None:
     assert max_inst_value is None
 
 
+def test_retrieve_sel_uids_empty_indices() -> None:
+    """Test retrieve_sel_uids with no selected indices."""
+    result = multi_task_segmentor.retrieve_sel_uids(
+        sel_indices_=[],
+        inst_dict_={
+            "uid_1": {},
+            "uid_2": {},
+        },
+    )
+
+    assert result == []
+
+
+def test_get_sel_indices_margin_lines_invalid_tile_mode() -> None:
+    """Test invalid tile mode raises ValueError."""
+    ioconfig = IOSegmentorConfig(
+        input_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        output_resolutions=[{"units": "baseline", "resolution": 1.0}],
+        patch_input_shape=(256, 256),
+        patch_output_shape=(256, 256),
+        stride_shape=(128, 128),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Unknown tile mode 4",
+    ):
+        _get_sel_indices_margin_lines(
+            ioconfig=ioconfig,
+            tile_shape=(256, 256),
+            tile_flag=(0, 0, 0, 0),
+            tile_mode=4,
+            tile_tl=(0, 0),
+            inst_dict={},
+        )
+
+
 def test_update_tile_based_predictions_array_instance_overlap() -> None:
     """Test merging instance predictions with overlapping nuclei."""
     existing_predictions = np.array(
