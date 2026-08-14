@@ -116,6 +116,114 @@ def test_update_tile_based_predictions_array_updates_predictions() -> None:
     assert max_inst_value is None
 
 
+def test_process_instance_predictions_tile_mode_three(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test processing predictions for tile_mode 3."""
+    new_inst_dict = {
+        "new_uuid": {
+            "box": np.array([0, 0, 10, 10]),
+        },
+    }
+
+    def _fake_get_sel_indices_margin_lines(
+        ioconfig: IOSegmentorConfig,
+        tile_shape: tuple[int, int],
+        inst_dict: dict,
+        tile_tl: tuple[int, int],
+        tile_mode: int,
+        tile_flag: tuple[int, int, int, int],
+    ) -> tuple[list[int], list[str]]:
+        """Return synthetic indices and margin lines."""
+        _ = (
+            ioconfig,
+            tile_shape,
+            inst_dict,
+            tile_tl,
+            tile_mode,
+            tile_flag,
+        )
+
+        return [0], ["margin_line"]
+
+    call_count = 0
+
+    def _fake_retrieve_sel_uids(
+        sel_indices_: list[int],
+        inst_dict_: dict,
+    ) -> list:
+        """Return different values for successive calls."""
+        nonlocal call_count
+        _ = sel_indices_, inst_dict_
+
+        call_count += 1
+
+        if call_count == 1:
+            return ["remove_from_tile"]
+
+        return ["remove_from_original"]
+
+    new_inst_dict = {
+        "new_uuid": {
+            "box": np.array([0, 0, 10, 10]),
+        },
+    }
+
+    def _fake_move_tile_space_to_wsi_space(
+        inst_dict: dict,
+        tile_tl: tuple[int, int],
+        remove_insts_in_tile: list[str],
+    ) -> dict:
+        """Return synthetic merged instances."""
+        _ = inst_dict, tile_tl
+
+        assert remove_insts_in_tile == ["remove_from_tile"]
+
+        return new_inst_dict
+
+    class FakeSTRtree:
+        """Minimal STRtree stand-in."""
+
+        def query(self, bounds: object) -> list:
+            """Return one matching geometry."""
+            _ = bounds
+            return [0]
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "_get_sel_indices_margin_lines",
+        _fake_get_sel_indices_margin_lines,
+    )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "retrieve_sel_uids",
+        _fake_retrieve_sel_uids,
+    )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "_move_tile_space_to_wsi_space",
+        _fake_move_tile_space_to_wsi_space,
+    )
+
+    result = multi_task_segmentor._process_instance_predictions(
+        inst_dict={1: {"box": np.array([0, 0, 10, 10])}},
+        ioconfig=SimpleNamespace(margin=None),
+        tile_shape=(256, 256),
+        tile_flag=(0, 0, 0, 0),
+        tile_mode=3,
+        tile_tl=(0, 0),
+        ref_inst_dict={"ref_uuid": {}},
+        ref_inst_rtree=FakeSTRtree(),
+    )
+
+    assert result == (
+        new_inst_dict,
+        ["remove_from_original"],
+    )
+
+
 def test_retrieve_sel_uids_empty_indices() -> None:
     """Test retrieve_sel_uids with no selected indices."""
     result = multi_task_segmentor.retrieve_sel_uids(
