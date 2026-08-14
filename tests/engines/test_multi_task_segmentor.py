@@ -57,6 +57,122 @@ def test_mtsegmentor_init() -> None:
     assert isinstance(segmentor.model, torch.nn.Module)
 
 
+def test_calculate_probabilities_with_zarr_cache(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test probability calculation when cached Zarr arrays exist."""
+    created_dask_arrays = []
+    merge_kwargs: dict[str, object] = {}
+
+    class FakeZarrArray:
+        """Minimal Zarr array stand-in."""
+
+        chunks = (4, 4)
+
+        store = SimpleNamespace(
+            root=str(track_tmp_path / "cache.zarr"),
+        )
+
+    fake_canvas_zarr = [FakeZarrArray()]
+    fake_count_zarr = [FakeZarrArray()]
+
+    def _fake_save_multitask_to_cache(
+        canvas: list,
+        count: list,
+        canvas_zarr: list,
+        count_zarr: list,
+        *,
+        verbose: bool,
+        save_path: Path | None = None,
+    ) -> tuple[list, list]:
+        """Return cached arrays unchanged."""
+        _ = canvas, count, verbose, save_path
+
+        return canvas_zarr, count_zarr
+
+    def _fake_from_zarr(
+        array: FakeZarrArray,
+        chunks: tuple[int, int],
+    ) -> str:
+        """Return synthetic Dask array."""
+        created_dask_arrays.append((array, chunks))
+        return "fake_dask_array"
+
+    def _fake_zarr_open(
+        path: str,
+        mode: str = "a",
+    ) -> str:
+        """Return fake Zarr group."""
+        _ = mode
+
+        assert path == str(track_tmp_path / "cache.zarr")
+
+        return "fake_zarr_group"
+
+    def _fake_merge_multitask_vertical_chunkwise(
+        *,
+        canvas: list,
+        count: list,
+        output_locs_y_: np.ndarray,
+        zarr_group: object,
+        save_path: Path,
+        memory_threshold: int,
+        output_shape: tuple[int, int],
+    ) -> list:
+        """Capture arguments and return synthetic output."""
+        _ = output_locs_y_, save_path, memory_threshold, output_shape
+        merge_kwargs["canvas"] = canvas
+        merge_kwargs["count"] = count
+        merge_kwargs["zarr_group"] = zarr_group
+
+        return ["probabilities"]
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "save_multitask_to_cache",
+        _fake_save_multitask_to_cache,
+    )
+
+    monkeypatch.setattr(
+        da,
+        "from_zarr",
+        _fake_from_zarr,
+    )
+
+    monkeypatch.setattr(
+        zarr,
+        "open",
+        _fake_zarr_open,
+    )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "merge_multitask_vertical_chunkwise",
+        _fake_merge_multitask_vertical_chunkwise,
+    )
+
+    result = multi_task_segmentor._calculate_probabilities(
+        canvas_zarr=fake_canvas_zarr,
+        count_zarr=fake_count_zarr,
+        canvas=[None],
+        count=[None],
+        output_locs_y_=np.array([0, 100]),
+        save_path=track_tmp_path / "output.zarr",
+        memory_threshold=80,
+        output_shape=(100, 100),
+        verbose=False,
+    )
+
+    assert result == ["probabilities"]
+
+    assert len(created_dask_arrays) == 2
+
+    assert merge_kwargs["canvas"] == ["fake_dask_array"]
+    assert merge_kwargs["count"] == ["fake_dask_array"]
+    assert merge_kwargs["zarr_group"] == "fake_zarr_group"
+
+
 def test_check_and_update_for_memory_overload(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
