@@ -512,7 +512,7 @@ def test_process_instance_predictions_tile_mode_three(
 
         def query(self, bounds: object) -> list:
             """Return one matching geometry."""
-            _ = bounds
+            _ = self, bounds
             return [0]
 
     monkeypatch.setattr(
