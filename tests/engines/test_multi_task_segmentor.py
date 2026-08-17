@@ -71,6 +71,125 @@ def test_run_raises_when_return_labels_true() -> None:
         )
 
 
+def test_save_predictions_annotationstore_path_branch(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Test annotationstore saving for multitask outputs."""
+    segmentor = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+
+    segmentor.tasks = {"semantic", "instance"}
+
+    segmentor.return_predictions_dict = {
+        "semantic": False,
+        "instance": True,
+    }
+
+    segmentor.model = SimpleNamespace(
+        class_dict={
+            "semantic": {"0": "bg"},
+            "instance": {"0": "cell"},
+        },
+    )
+
+    zarr_path = tmp_path / "predictions.zarr"
+
+    def _fake_save_predictions_as_dict_zarr(
+        *_args: object,
+        **_kwargs: object,
+    ) -> Path:
+        return zarr_path
+
+    monkeypatch.setattr(
+        segmentor,
+        "_save_predictions_as_dict_zarr",
+        _fake_save_predictions_as_dict_zarr,
+    )
+
+    opened_zarr = {
+        "semantic": {"predictions": np.array([1])},
+        "instance": {"predictions": np.array([2])},
+    }
+
+    def _fake_zarr_open(
+        *_args: object,
+        **_kwargs: object,
+    ) -> dict[str, object]:
+        return opened_zarr
+
+    monkeypatch.setattr(zarr, "open", _fake_zarr_open)
+
+    saved_tasks: list[str] = []
+
+    def _fake_save_predictions_as_json_store(
+        processed_predictions: dict[str, object],
+        task_name: str,
+        save_path: Path,
+        output_type: str,
+        **kwargs: object,
+    ) -> list:
+        _ = processed_predictions, output_type, kwargs
+        saved_tasks.append(task_name)
+        return [save_path.with_name(f"{task_name}.db")]
+
+    monkeypatch.setattr(
+        segmentor,
+        "_save_predictions_as_json_store",
+        _fake_save_predictions_as_json_store,
+    )
+
+    result = segmentor.save_predictions(
+        processed_predictions={"ignored": True},
+        output_type="annotationstore",
+        save_path=tmp_path / "output",
+        class_dict={
+            "semantic": {"0": "bg"},
+            "instance": {"0": "cell"},
+        },
+        return_probabilities=True,
+    )
+
+    assert set(saved_tasks) == {"semantic", "instance"}
+
+    assert result[0] == zarr_path
+
+    assert set(result[1:]) == {
+        tmp_path / "semantic.db",
+        tmp_path / "instance.db",
+    }
+
+    assert "semantic" not in opened_zarr
+    assert "instance" in opened_zarr
+
+
+def test_save_predictions_dict_delegates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test dict output delegates to dict/zarr saving."""
+    segmentor = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+
+    expected = {"result": 1}
+
+    def _fake_save_predictions_as_dict_zarr(
+        **kwargs: object,
+    ) -> dict[str, int]:
+        _ = kwargs
+        return expected
+
+    monkeypatch.setattr(
+        segmentor,
+        "_save_predictions_as_dict_zarr",
+        _fake_save_predictions_as_dict_zarr,
+    )
+
+    result = segmentor.save_predictions(
+        processed_predictions={},
+        output_type="dict",
+    )
+
+    assert result is expected
+
+
 def test_merge_multitask_vertical_chunkwise_overlap(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
