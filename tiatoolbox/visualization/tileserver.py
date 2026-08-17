@@ -365,11 +365,11 @@ class TileServer(Flask):
 
         """
         session_id = self._get_session_id()
-        new_session = False
+        new_session_id = None
 
         if session_id is None or session_id not in self.layers:
-            session_id = self._create_session()
-            new_session = True
+            new_session_id = self._create_session()
+            session_id = new_session_id
 
         layers = [
             {
@@ -390,9 +390,12 @@ class TileServer(Flask):
             ),
         )
 
-        if new_session:
+        if new_session_id is not None:
             response.set_cookie(
-                "session_id", session_id, httponly=True
+                "session_id",
+                new_session_id,
+                httponly=True,
+                samesite="Lax",
             )  # skipcq: PTC-W6003
 
         return response
@@ -419,12 +422,21 @@ class TileServer(Flask):
     def session_id(self: TileServer) -> Response:
         """Get or set up a TileServer session."""
         session_id = self._get_session_id()
+        new_session_id = None
 
         if session_id is None or session_id not in self.layers:
-            session_id = self._create_session()
+            new_session_id = self._create_session()
+            session_id = new_session_id
 
         resp = jsonify({"session_id": session_id})
-        resp.set_cookie("session_id", session_id, httponly=True)
+
+        if new_session_id is not None:
+            resp.set_cookie(
+                "session_id",
+                new_session_id,
+                httponly=True,
+                samesite="Lax",
+            )
 
         return resp
 
