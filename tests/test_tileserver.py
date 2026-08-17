@@ -22,6 +22,7 @@ from tiatoolbox.cli.common import cli_name
 from tiatoolbox.utils import imread, imwrite
 from tiatoolbox.utils.misc import store_from_dat
 from tiatoolbox.visualization import TileServer
+from tiatoolbox.visualization.visualize_beta_tileserver import VisualizeBetaTileServer
 from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
@@ -254,6 +255,125 @@ def test_get_session_id(app: TileServer) -> None:
         response = client.get("/tileserver/session_id")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
+
+
+def test_visualize_beta_session_id() -> None:
+    """Test creating a session for the experimental viewer."""
+    app = VisualizeBetaTileServer(
+        title="Testing beta TileServer",
+        layers={},
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/session_id")
+
+        assert response.status_code == 200
+        assert response.content_type == "application/json"
+
+        session_id = response.get_json()["session_id"]
+
+        assert session_id in app.layers
+        assert session_id in app.pyramids
+        assert client.get_cookie("session_id").value == session_id
+
+
+def test_visualize_beta_reuses_session() -> None:
+    """Test that the experimental viewer reuses its session."""
+    app = VisualizeBetaTileServer(
+        title="Testing beta TileServer",
+        layers={},
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/session_id")
+        session_id = response.get_json()["session_id"]
+
+        response = client.get("/tileserver/session_id")
+
+        assert response.get_json()["session_id"] == session_id
+        assert len(app.layers) == 1
+
+
+def test_visualize_beta_index() -> None:
+    """Test the experimental viewer starts with an empty viewer."""
+    app = VisualizeBetaTileServer(
+        title="Testing beta TileServer",
+        layers={},
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/")
+
+        assert response.status_code == 200
+        assert response.content_type == "text/html; charset=utf-8"
+        assert b"/openlayers/visualize_beta_viewer.js" in response.data
+        assert b"/openlayers/visualize_beta_viewer.css" in response.data
+
+
+def test_remove_slide_missing_session(empty_app: TileServer) -> None:
+    """Test removing a slide without an active session."""
+    with empty_app.test_client() as client:
+        response = client.delete("/tileserver/slide")
+
+        assert response.status_code == 404
+        assert response.get_data(as_text=True) == "Session not found."
+
+
+def test_remove_slide(
+    empty_app: TileServer,
+    remote_sample: Callable,
+) -> None:
+    """Test removing the current slide."""
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+
+        assert response.status_code == 200
+        assert "slide" in empty_app.layers[session_id]
+        assert "slide" in empty_app.pyramids[session_id]
+
+        response = client.delete("/tileserver/slide")
+
+        assert response.status_code == 200
+        assert response.get_data(as_text=True) == "done"
+        assert empty_app.layers[session_id] == {}
+        assert empty_app.pyramids[session_id] == {}
+        assert session_id not in empty_app.slide_mpps
+
+
+def test_change_slide_after_remove(
+    empty_app: TileServer,
+    remote_sample: Callable,
+) -> None:
+    """Test loading a new slide after removing the current slide."""
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        response = client.delete("/tileserver/slide")
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("wsi2_4k_4k_jpg"))},
+        )
+
+        assert response.status_code == 200
+        assert "slide" in empty_app.layers[session_id]
+        assert "slide" in empty_app.pyramids[session_id]
+        assert session_id in empty_app.slide_mpps
 
 
 def test_color_prop(app: TileServer) -> None:
