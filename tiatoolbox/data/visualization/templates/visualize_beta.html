@@ -16,7 +16,73 @@
 </head>
 
 <body>
-    <div id="map" class="map" data-layers="{{ layers }}"></div>
+    <div class="viewer-app">
+        <div
+            id="map"
+            class="map"
+            data-layers="{{ layers }}"
+        ></div>
+
+        <div class="layer-editor-control ol-unselectable ol-control">
+            <button
+                id="layer-editor-toggle"
+                type="button"
+                title="Toggle layer editor"
+            >
+                <i class="fas fa-sliders-h"></i>
+            </button>
+        </div>
+
+        <aside id="layer-editor" class="layer-editor hidden">
+            <div class="layer-editor-header">
+                Layers
+            </div>
+
+            <div id="layer-editor-list" class="layer-editor-list">
+                <div class="layer-editor-empty">
+                    No layers loaded
+                </div>
+            </div>
+        </aside>
+
+        <div class="viewer-panel-control ol-unselectable ol-control">
+            <button
+                id="viewer-panel-toggle"
+                type="button"
+                title="Toggle viewer panel"
+            >
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+
+        <aside id="viewer-panel" class="viewer-panel hidden">
+            <div class="viewer-panel-header">
+                <span>TIAToolbox</span>
+            </div>
+
+            <div class="viewer-panel-section">
+                <h2>Slide</h2>
+
+                <div id="current-slide" class="current-slide">
+                    No slide selected
+                </div>
+
+                <button id="load-slide" type="button">
+                    Load slide
+                </button>
+            </div>
+
+            <div class="viewer-panel-section">
+                <h2>Layers</h2>
+
+                <div id="layer-list" class="layer-list"></div>
+
+                <button id="add-overlay" type="button">
+                    Add overlay
+                </button>
+            </div>
+        </aside>
+    </div>
 
     <script type="module" src="/openlayers/visualize_beta_viewer.js"></script>
 </body>

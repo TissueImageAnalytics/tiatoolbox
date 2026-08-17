@@ -72,10 +72,46 @@ function createSlideSource(sessionId, slideInfo, version) {
 }
 
 const mapElement = document.getElementById("map");
+const viewerApp = document.querySelector(".viewer-app");
 
-if (mapElement === null) {
-  throw new Error("The OpenLayers map element could not be found.");
+const viewerPanel = document.getElementById("viewer-panel");
+const viewerPanelToggle = document.getElementById(
+  "viewer-panel-toggle",
+);
+
+const layerEditor = document.getElementById("layer-editor");
+const layerEditorToggle = document.getElementById(
+  "layer-editor-toggle",
+);
+const layerEditorList = document.getElementById(
+  "layer-editor-list",
+);
+
+if (mapElement === null || viewerApp === null) {
+  throw new Error("The OpenLayers viewer could not be found.");
 }
+
+if (
+  viewerPanel === null ||
+  viewerPanelToggle === null ||
+  layerEditor === null ||
+  layerEditorToggle === null ||
+  layerEditorList === null
+) {
+  throw new Error("The OpenLayers viewer controls could not be found.");
+}
+
+viewerPanelToggle.addEventListener("click", () => {
+  const isHidden = viewerPanel.classList.toggle("hidden");
+
+  viewerPanelToggle.classList.toggle("active", !isHidden);
+});
+
+layerEditorToggle.addEventListener("click", () => {
+  const isHidden = layerEditor.classList.toggle("hidden");
+
+  layerEditorToggle.classList.toggle("active", !isHidden);
+});
 
 let layersData = JSON.parse(mapElement.dataset.layers ?? "[]");
 let sessionId = null;
@@ -89,10 +125,13 @@ const overlayLayers = {};
 const params = new URLSearchParams(window.location.search);
 const slidePath = params.get("slide");
 
-if (slidePath !== null) {
-  currentSlidePath = slidePath;
-
+if (slidePath === null) {
+  layersData = [];
   sessionId = await createSession();
+} else {
+  currentSlidePath = slidePath;
+  sessionId = await createSession();
+
   const slideInfo = await loadSlide(slidePath);
 
   currentSlideInfo = slideInfo;
@@ -107,8 +146,6 @@ if (slidePath !== null) {
       mpp: slideInfo.mpp[0],
     },
   ];
-} else if (layersData.length === 0) {
-  sessionId = await createSession();
 }
 
 const layers = layersData.map((layer) => {
@@ -131,8 +168,11 @@ if (slideLayer === undefined) {
   slideLayer = new TileLayer({
     title: "slide",
   });
+
   layers.push(slideLayer);
 }
+
+slideLayer.setZIndex(0);
 
 const baseSource = slideLayer.getSource();
 
@@ -187,6 +227,35 @@ const map = new Map({
   view,
 });
 
+// Zoom level
+const zoomControl = mapElement.querySelector(".ol-zoom");
+const zoomOutButton = mapElement.querySelector(".ol-zoom-out");
+
+if (zoomControl === null || zoomOutButton === null) {
+  throw new Error("The OpenLayers zoom control could not be found.");
+}
+
+const zoomLevel = document.createElement("div");
+zoomLevel.className = "ol-zoom-level";
+
+zoomControl.insertBefore(zoomLevel, zoomOutButton);
+
+function updateZoomLevel() {
+  const zoom = map.getView().getZoom();
+
+  if (zoom === undefined) {
+    return;
+  }
+
+  const displayedZoom = Number.isInteger(zoom)
+    ? zoom.toString()
+    : zoom.toFixed(1);
+
+  zoomLevel.textContent = `${displayedZoom}x`;
+}
+
+updateZoomLevel();
+
 // Scale bar
 const scaleLineControl = new ScaleLine({
   units: "metric",
@@ -202,11 +271,13 @@ const overviewLayer = new TileLayer();
 if (baseSource !== null) {
   overviewLayer.setSource(baseSource);
 }
-
 // Overview map
 const overviewMapControl = new OverviewMap({
   className: "ol-overviewmap ol-custom-overviewmap",
   layers: [overviewLayer],
+  collapsed: false,
+  collapseLabel: "›",
+  label: "‹",
 });
 
 map.addControl(overviewMapControl);
@@ -236,7 +307,9 @@ const rotate = new Rotate({
 map.addControl(rotate);
 
 // Fullscreen
-const fullscreen = new FullScreen();
+const fullscreen = new FullScreen({
+  source: viewerApp,
+});
 
 map.addControl(fullscreen);
 
@@ -353,8 +426,11 @@ const graticuleToggle = new Toggle({
   className: "ol-graticule",
   title: "Toggle Graticule",
   onToggle(active) {
+    graticuleToggle.element.classList.toggle("active", active);
+
     if (active) {
       screenSpaceGraticuleToggle.setActive(false);
+      screenSpaceGraticuleToggle.element.classList.remove("active");
       screenSpaceGraticule.setMap(null);
       graticule.setMap(map);
     } else {
@@ -370,8 +446,14 @@ const screenSpaceGraticuleToggle = new Toggle({
   className: "ol-screen-space-graticule",
   title: "Toggle Screen Space Graticule",
   onToggle(active) {
+    screenSpaceGraticuleToggle.element.classList.toggle(
+      "active",
+      active,
+    );
+
     if (active) {
       graticuleToggle.setActive(false);
+      graticuleToggle.element.classList.remove("active");
       graticule.setMap(null);
       screenSpaceGraticule.setMap(map);
     } else {
@@ -384,17 +466,18 @@ map.addControl(screenSpaceGraticuleToggle);
 
 if (baseSource !== null) {
   map.getView().fit(extent);
-}
 
-const urlViewState = getUrlViewState();
+  const urlViewState = getUrlViewState();
 
-if (urlViewState !== null) {
-  map.getView().setCenter(urlViewState.center);
-  map.getView().setZoom(urlViewState.zoom);
+  if (urlViewState !== null) {
+    map.getView().setCenter(urlViewState.center);
+    map.getView().setZoom(urlViewState.zoom);
+  }
 }
 
 map.on("moveend", () => {
   updateUrlState();
+  updateZoomLevel();
 });
 
 function clearOverlayLayers() {
@@ -411,6 +494,8 @@ function clearOverlayLayers() {
   for (const layerName of Object.keys(overlayLayers)) {
     delete overlayLayers[layerName];
   }
+
+  updateLayerEditor();
 }
 
 async function clearOverlays() {
@@ -467,10 +552,7 @@ function updateUrlState() {
 
   const url = new URL(window.location.href);
 
-  if (currentSlidePath !== null) {
-    url.searchParams.set("slide", currentSlidePath);
-  }
-
+  url.searchParams.set("slide", currentSlidePath);
   url.searchParams.set("x", center[0].toFixed(2));
   url.searchParams.set("y", center[1].toFixed(2));
   url.searchParams.set("zoom", zoom.toString());
@@ -480,7 +562,7 @@ function updateUrlState() {
 
 async function removeSlide() {
   if (sessionId === null) {
-    throw new Error("Removing a slide requires a TileServer session.");
+    throw new Error("No TileServer session is available.");
   }
 
   const response = await fetch("/tileserver/slide", {
@@ -493,20 +575,22 @@ async function removeSlide() {
 
   clearOverlayLayers();
 
-  currentSlideInfo = null;
   currentSlidePath = null;
-  layersData.length = 0;
+  currentSlideInfo = null;
 
   slideVersion += 1;
+  overlayVersion += 1;
 
   slideLayer.setSource(null);
   overviewLayer.setSource(null);
 
-  const emptyResolutions = [1];
+  updateLayerEditor();
+
   const emptyExtent = [0, -1, 1, 0];
+  const emptyResolutions = [1];
 
   const emptyProjection = new Projection({
-    code: "ZoomifyProjection",
+    code: "ZoomifyProjectionEmpty",
     units: "pixels",
     extent: emptyExtent,
     metersPerUnit: 1,
@@ -544,6 +628,9 @@ async function removeSlide() {
   graticuleToggle.setActive(false);
   screenSpaceGraticuleToggle.setActive(false);
 
+  graticuleToggle.element.classList.remove("active");
+  screenSpaceGraticuleToggle.element.classList.remove("active");
+
   graticule.setMap(null);
   screenSpaceGraticule.setMap(null);
 
@@ -553,15 +640,14 @@ async function removeSlide() {
 
   window.graticule = graticule;
   window.screenSpaceGraticule = screenSpaceGraticule;
-  window.projection = emptyProjection;
-  window.resolutions = emptyResolutions;
-  window.extent = emptyExtent;
-  window.view = emptyView;
 
   const url = new URL(window.location.href);
   url.search = "";
+  url.hash = "";
 
   window.history.replaceState({}, "", url);
+
+  updateZoomLevel();
 }
 
 // Slide switching
@@ -596,6 +682,7 @@ async function switchSlide(slidePath) {
   });
 
   addProjection(newProjection);
+  mousePositionControl.setProjection(newProjection);
 
   // View
   const newCenter = [
@@ -654,11 +741,175 @@ async function switchSlide(slidePath) {
   slideLayer.setSource(source);
   overviewLayer.setSource(source);
 
+  updateLayerEditor();
+
   window.graticule = graticule;
   window.screenSpaceGraticule = screenSpaceGraticule;
 
   updateUrlState();
+  updateZoomLevel();
 }
+
+function getLayerEditorEntries() {
+  const entries = [];
+
+  if (slideLayer.getSource() !== null) {
+    entries.push({
+      name: "slide",
+      layer: slideLayer,
+    });
+  }
+
+  for (const [layerName, layer] of Object.entries(overlayLayers)) {
+    entries.push({
+      name: layerName,
+      layer,
+    });
+  }
+
+  return entries.sort(
+    (a, b) =>
+      (b.layer.getZIndex() ?? 0) -
+      (a.layer.getZIndex() ?? 0),
+  );
+}
+
+
+function moveLayer(layerName, direction) {
+  const entries = getLayerEditorEntries();
+
+  const index = entries.findIndex(
+    (entry) => entry.name === layerName,
+  );
+
+  if (index === -1) {
+    return;
+  }
+
+  const targetIndex =
+    direction === "up" ? index - 1 : index + 1;
+
+  if (
+    targetIndex < 0 ||
+    targetIndex >= entries.length
+  ) {
+    return;
+  }
+
+  const currentLayer = entries[index].layer;
+  const targetLayer = entries[targetIndex].layer;
+
+  const currentZIndex = currentLayer.getZIndex() ?? 0;
+  const targetZIndex = targetLayer.getZIndex() ?? 0;
+
+  currentLayer.setZIndex(targetZIndex);
+  targetLayer.setZIndex(currentZIndex);
+
+  updateLayerEditor();
+}
+
+function updateLayerEditor() {
+  layerEditorList.replaceChildren();
+
+  const entries = getLayerEditorEntries();
+
+  if (entries.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "layer-editor-empty";
+    empty.textContent = "No layers loaded";
+
+    layerEditorList.appendChild(empty);
+
+    return;
+  }
+
+  entries.forEach(({ name: layerName, layer }, index) => {
+    const item = document.createElement("div");
+    item.className = "layer-editor-item";
+
+    const header = document.createElement("div");
+    header.className = "layer-editor-item-header";
+
+    const visibility = document.createElement("input");
+    visibility.className = "layer-editor-visibility";
+    visibility.type = "checkbox";
+    visibility.checked = layer.getVisible();
+    visibility.title = `Toggle ${layerName}`;
+
+    visibility.addEventListener("change", () => {
+      layer.setVisible(visibility.checked);
+    });
+
+    const name = document.createElement("span");
+    name.className = "layer-editor-name";
+    name.textContent = layerName;
+
+    const order = document.createElement("div");
+    order.className = "layer-editor-order";
+
+    const moveUp = document.createElement("button");
+    moveUp.type = "button";
+    moveUp.title = "Move layer up";
+    moveUp.innerHTML =
+      '<i class="fas fa-chevron-up"></i>';
+    moveUp.disabled = index === 0;
+
+    moveUp.addEventListener("click", () => {
+      moveLayer(layerName, "up");
+    });
+
+    const moveDown = document.createElement("button");
+    moveDown.type = "button";
+    moveDown.title = "Move layer down";
+    moveDown.innerHTML =
+      '<i class="fas fa-chevron-down"></i>';
+    moveDown.disabled = index === entries.length - 1;
+
+    moveDown.addEventListener("click", () => {
+      moveLayer(layerName, "down");
+    });
+
+    order.append(moveUp, moveDown);
+
+    header.append(
+      visibility,
+      name,
+      order,
+    );
+
+    const opacityRow = document.createElement("div");
+    opacityRow.className = "layer-editor-opacity";
+
+    const slider = document.createElement("input");
+    slider.className = "layer-editor-slider";
+    slider.type = "range";
+    slider.min = "0";
+    slider.max = "1";
+    slider.step = "0.05";
+    slider.value = layer.getOpacity().toString();
+
+    const value = document.createElement("span");
+    value.className = "layer-editor-value";
+    value.textContent =
+      `${Math.round(layer.getOpacity() * 100)}%`;
+
+    slider.addEventListener("input", () => {
+      const opacity = Number(slider.value);
+
+      layer.setOpacity(opacity);
+
+      value.textContent =
+        `${Math.round(opacity * 100)}%`;
+    });
+
+    opacityRow.append(slider, value);
+
+    item.append(header, opacityRow);
+    layerEditorList.appendChild(item);
+  });
+}
+
+updateLayerEditor();
 
 async function loadOverlay(overlayPath) {
   if (sessionId === null || currentSlideInfo === null) {
@@ -714,17 +965,32 @@ async function loadOverlay(overlayPath) {
     overlayLayers[layerName].setSource(source);
     overlayLayers[layerName].setVisible(true);
   } else {
+    const currentLayers = [
+      slideLayer,
+      ...Object.values(overlayLayers),
+    ];
+
+    const highestZIndex = Math.max(
+      ...currentLayers.map(
+        (layer) => layer.getZIndex() ?? 0,
+      ),
+    );
+
     const overlayLayer = new TileLayer({
       title: layerName,
       source,
       opacity: 0.75,
     });
 
+    overlayLayer.setZIndex(highestZIndex + 1);
+
     overlayLayers[layerName] = overlayLayer;
 
     map.addLayer(overlayLayer);
     layers.push(overlayLayer);
   }
+
+  updateLayerEditor();
 
   return result;
 }
@@ -756,6 +1022,8 @@ async function removeOverlay(layerName) {
   }
 
   delete overlayLayers[layerName];
+
+  updateLayerEditor();
 }
 
 async function setAnnotationColors(colorMap) {
