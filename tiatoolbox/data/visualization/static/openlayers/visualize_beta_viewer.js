@@ -11257,9 +11257,7 @@ function Gd() {
 Gd();
 var Kd = new no({
 	units: "metric",
-	bar: !0,
-	steps: 10,
-	minWidth: 256
+	minWidth: 100
 });
 $.addControl(Kd);
 var qd = new go();
@@ -11348,45 +11346,60 @@ var uf = new gd({
 		uf.element.classList.toggle("active", e), e ? (lf.setActive(!1), lf.element.classList.remove("active"), rf.setMap(null), cf.setMap($)) : cf.setMap(null);
 	}
 });
-if ($.addControl(uf), Ld !== null) {
+$.addControl(uf);
+function df(e) {
+	let t = bd.querySelector(".ol-zoom-in"), n = bd.querySelector(".ol-zoom-out"), r = Xd.element.querySelector("button"), i = lf.element.querySelector("button"), a = uf.element.querySelector("button");
+	for (let o of [
+		t,
+		n,
+		r,
+		i,
+		a
+	]) o !== null && (o.disabled = !e);
+	Kd.element.classList.toggle("viewer-control-hidden", !e), Yd.element.classList.toggle("viewer-control-hidden", !e), Jd.element.classList.toggle("viewer-control-hidden", !e), e || (lf.setActive(!1), uf.setActive(!1), lf.element.classList.remove("active"), uf.element.classList.remove("active"), rf.setMap(null), cf.setMap(null)), e && requestAnimationFrame(() => {
+		let e = Jd.getOverviewMap();
+		e.updateSize(), e.renderSync();
+	});
+}
+if (df(Ld !== null), Ld !== null) {
 	$.getView().fit(zd);
-	let e = pf();
+	let e = mf();
 	e !== null && ($.getView().setCenter(e.center), $.getView().setZoom(e.zoom));
 }
 $.on("moveend", () => {
-	mf(), Gd();
+	hf(), Gd();
 });
-function df() {
+function ff() {
 	for (let e of Object.values(Nd)) {
 		$.removeLayer(e);
 		let t = Fd.indexOf(e);
 		t !== -1 && Fd.splice(t, 1);
 	}
 	for (let e of Object.keys(Nd)) delete Nd[e];
-	yf();
+	bf();
 }
-async function ff() {
+async function pf() {
 	if (!(await fetch("/tileserver/clear_overlays", { method: "PUT" })).ok) throw Error("Failed to clear overlays.");
-	df();
+	ff();
 }
-function pf() {
+function mf() {
 	let e = new URLSearchParams(window.location.search), t = Number(e.get("x")), n = Number(e.get("y")), r = Number(e.get("zoom"));
 	return e.get("x") === null || e.get("y") === null || e.get("zoom") === null || !Number.isFinite(t) || !Number.isFinite(n) || !Number.isFinite(r) ? null : {
 		center: [t, n],
 		zoom: r
 	};
 }
-function mf() {
+function hf() {
 	if (Md === null) return;
 	let e = $.getView(), t = e.getCenter(), n = e.getZoom();
 	if (t === void 0 || n === void 0) return;
 	let r = new URL(window.location.href);
 	r.searchParams.set("slide", Md), r.searchParams.set("x", t[0].toFixed(2)), r.searchParams.set("y", t[1].toFixed(2)), r.searchParams.set("zoom", n.toString()), window.history.replaceState({}, "", r);
 }
-async function hf() {
+async function gf() {
 	if (Od === null) throw Error("No TileServer session is available.");
 	if (!(await fetch("/tileserver/slide", { method: "DELETE" })).ok) throw Error("Failed to remove the current slide.");
-	df(), Md = null, jd = null, kd += 1, Ad += 1, Id.setSource(null), qd.setSource(null), yf();
+	ff(), Md = null, jd = null, kd += 1, Ad += 1, Id.setSource(null), qd.setSource(null), bf();
 	let e = [
 		0,
 		-1,
@@ -11417,12 +11430,12 @@ async function hf() {
 		resolution: t[0]
 	})), Yd.setProjection(n), lf.setActive(!1), uf.setActive(!1), lf.element.classList.remove("active"), uf.element.classList.remove("active"), rf.setMap(null), cf.setMap(null), rf = nf(n), cf = sf(n), window.graticule = rf, window.screenSpaceGraticule = cf;
 	let i = new URL(window.location.href);
-	i.search = "", i.hash = "", window.history.replaceState({}, "", i), Gd();
+	i.search = "", i.hash = "", window.history.replaceState({}, "", i), df(!1), Gd();
 }
-async function gf(e) {
+async function _f(e) {
 	if (Od === null) throw Error("Dynamic slide switching requires a TileServer session.");
 	let t = await vd(e);
-	Md = e, df(), jd = t, kd += 1;
+	Md = e, ff(), jd = t, kd += 1;
 	let n = yd(Od, t, kd), r = n.getTileGrid(), i = r.getExtent(), a = r.getResolutions(), o = new He({
 		code: "zoomify",
 		units: "pixels",
@@ -11447,9 +11460,9 @@ async function gf(e) {
 		resolution: a[0]
 	}));
 	let l = lf.getActive(), u = uf.getActive();
-	rf.setMap(null), cf.setMap(null), rf = nf(o), cf = sf(o), l && rf.setMap($), u && cf.setMap($), Id.setSource(n), qd.setSource(n), yf(), window.graticule = rf, window.screenSpaceGraticule = cf, mf(), Gd();
+	rf.setMap(null), cf.setMap(null), rf = nf(o), cf = sf(o), l && rf.setMap($), u && cf.setMap($), Id.setSource(n), qd.setSource(n), bf(), window.graticule = rf, window.screenSpaceGraticule = cf, df(!0), hf(), Gd();
 }
-function _f() {
+function vf() {
 	let e = [];
 	Id.getSource() !== null && e.push({
 		name: "slide",
@@ -11461,17 +11474,17 @@ function _f() {
 	});
 	return e.sort((e, t) => (t.layer.getZIndex() ?? 0) - (e.layer.getZIndex() ?? 0));
 }
-function vf(e, t) {
-	let n = _f(), r = n.findIndex((t) => t.name === e);
+function yf(e, t) {
+	let n = vf(), r = n.findIndex((t) => t.name === e);
 	if (r === -1) return;
 	let i = t === "up" ? r - 1 : r + 1;
 	if (i < 0 || i >= n.length) return;
 	let a = n[r].layer, o = n[i].layer, s = a.getZIndex() ?? 0, c = o.getZIndex() ?? 0;
-	a.setZIndex(c), o.setZIndex(s), yf();
+	a.setZIndex(c), o.setZIndex(s), bf();
 }
-function yf() {
+function bf() {
 	Ed.replaceChildren();
-	let e = _f();
+	let e = vf();
 	if (e.length === 0) {
 		let e = document.createElement("div");
 		e.className = "layer-editor-empty", e.textContent = "No layers loaded", Ed.appendChild(e);
@@ -11492,11 +11505,11 @@ function yf() {
 		c.className = "layer-editor-order";
 		let l = document.createElement("button");
 		l.type = "button", l.title = "Move layer up", l.innerHTML = "<i class=\"fas fa-chevron-up\"></i>", l.disabled = r === 0, l.addEventListener("click", () => {
-			vf(t, "up");
+			yf(t, "up");
 		});
 		let u = document.createElement("button");
 		u.type = "button", u.title = "Move layer down", u.innerHTML = "<i class=\"fas fa-chevron-down\"></i>", u.disabled = r === e.length - 1, u.addEventListener("click", () => {
-			vf(t, "down");
+			yf(t, "down");
 		}), c.append(l, u), a.append(o, s, c);
 		let d = document.createElement("div");
 		d.className = "layer-editor-opacity";
@@ -11509,8 +11522,8 @@ function yf() {
 		}), d.append(f, p), i.append(a, d), Ed.appendChild(i);
 	});
 }
-yf();
-async function bf(e) {
+bf();
+async function xf(e) {
 	if (Od === null || jd === null) throw Error("Dynamic overlay loading requires a loaded slide.");
 	let t = e.split(".").pop().toLowerCase();
 	if (t === "npy" || t === "mha") throw Error("Registration overlays are not supported yet.");
@@ -11542,17 +11555,17 @@ async function bf(e) {
 		});
 		n.setZIndex(t + 1), Nd[a] = n, $.addLayer(n), Fd.push(n);
 	}
-	return yf(), i;
+	return bf(), i;
 }
-async function xf(e) {
+async function Sf(e) {
 	let t = Nd[e];
 	if (t === void 0) throw Error(`Overlay is not loaded: ${e}`);
 	if (!(await fetch(`/tileserver/overlay/${encodeURIComponent(e)}`, { method: "DELETE" })).ok) throw Error(`Failed to remove overlay: ${e}`);
 	$.removeLayer(t);
 	let n = Fd.indexOf(t);
-	n !== -1 && Fd.splice(n, 1), delete Nd[e], yf();
+	n !== -1 && Fd.splice(n, 1), delete Nd[e], bf();
 }
-async function Sf(e) {
+async function Cf(e) {
 	if (Nd.overlay === void 0) throw Error("No annotation overlay is loaded.");
 	let t = new FormData();
 	if (t.append("cmap", JSON.stringify({
@@ -11572,7 +11585,7 @@ async function Sf(e) {
 	Nd.overlay.setSource(n);
 }
 Object.assign(window, {
-	clearOverlays: ff,
+	clearOverlays: pf,
 	extent: zd,
 	fullscreen: Zd,
 	graticule: rf,
@@ -11580,21 +11593,21 @@ Object.assign(window, {
 	layerSwitcher: Qd,
 	layers: Fd,
 	layersData: Dd,
-	loadOverlay: bf,
+	loadOverlay: xf,
 	map: $,
 	mousePositionControl: Yd,
 	overlayLayers: Nd,
 	overviewMapControl: Jd,
 	projection: Bd,
-	removeOverlay: xf,
-	removeSlide: hf,
+	removeOverlay: Sf,
+	removeSlide: gf,
 	resolutions: Rd,
 	rotate: Xd,
 	scaleLineControl: Kd,
 	screenSpaceGraticule: cf,
 	screenSpaceGraticuleToggle: uf,
-	setAnnotationColors: Sf,
-	switchSlide: gf,
+	setAnnotationColors: Cf,
+	switchSlide: _f,
 	view: Vd
 });
 //#endregion

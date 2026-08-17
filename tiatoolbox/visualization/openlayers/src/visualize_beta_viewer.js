@@ -256,12 +256,10 @@ function updateZoomLevel() {
 
 updateZoomLevel();
 
-// Scale bar
+// Scalebar
 const scaleLineControl = new ScaleLine({
   units: "metric",
-  bar: true,
-  steps: 10,
-  minWidth: 256,
+  minWidth: 100,
 });
 
 map.addControl(scaleLineControl);
@@ -464,6 +462,65 @@ const screenSpaceGraticuleToggle = new Toggle({
 
 map.addControl(screenSpaceGraticuleToggle);
 
+// Enable or hide controls that require a loaded slide.
+function setViewerEnabled(enabled) {
+  const zoomInButton = mapElement.querySelector(".ol-zoom-in");
+  const zoomOutButton = mapElement.querySelector(".ol-zoom-out");
+  const rotateButton = rotate.element.querySelector("button");
+  const graticuleButton =
+    graticuleToggle.element.querySelector("button");
+  const screenSpaceGraticuleButton =
+    screenSpaceGraticuleToggle.element.querySelector("button");
+
+  for (const button of [
+    zoomInButton,
+    zoomOutButton,
+    rotateButton,
+    graticuleButton,
+    screenSpaceGraticuleButton,
+  ]) {
+    if (button !== null) {
+      button.disabled = !enabled;
+    }
+  }
+
+  scaleLineControl.element.classList.toggle(
+    "viewer-control-hidden",
+    !enabled,
+  );
+  mousePositionControl.element.classList.toggle(
+    "viewer-control-hidden",
+    !enabled,
+  );
+  overviewMapControl.element.classList.toggle(
+    "viewer-control-hidden",
+    !enabled,
+  );
+
+  if (!enabled) {
+    graticuleToggle.setActive(false);
+    screenSpaceGraticuleToggle.setActive(false);
+
+    graticuleToggle.element.classList.remove("active");
+    screenSpaceGraticuleToggle.element.classList.remove("active");
+
+    graticule.setMap(null);
+    screenSpaceGraticule.setMap(null);
+  }
+
+
+  if (enabled) {
+    requestAnimationFrame(() => {
+      const overviewMap = overviewMapControl.getOverviewMap();
+
+      overviewMap.updateSize();
+      overviewMap.renderSync();
+    });
+  }
+}
+
+setViewerEnabled(baseSource !== null);
+
 if (baseSource !== null) {
   map.getView().fit(extent);
 
@@ -647,6 +704,7 @@ async function removeSlide() {
 
   window.history.replaceState({}, "", url);
 
+  setViewerEnabled(false);
   updateZoomLevel();
 }
 
@@ -746,6 +804,7 @@ async function switchSlide(slidePath) {
   window.graticule = graticule;
   window.screenSpaceGraticule = screenSpaceGraticule;
 
+  setViewerEnabled(true);
   updateUrlState();
   updateZoomLevel();
 }

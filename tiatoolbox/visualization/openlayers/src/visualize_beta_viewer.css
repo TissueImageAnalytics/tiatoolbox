@@ -54,6 +54,21 @@ body {
 }
 
 
+/* Prevent OpenLayers highlighting the whole control container */
+
+.ol-zoom:hover,
+.ol-rotate:hover,
+.ol-full-screen:hover,
+.ol-graticule:hover,
+.ol-screen-space-graticule:hover,
+.viewer-panel-control:hover,
+.layer-editor-control:hover {
+    background: #111111;
+}
+
+
+/* Buttons */
+
 .ol-zoom button,
 .ol-rotate button,
 .ol-full-screen button,
@@ -71,24 +86,24 @@ body {
 }
 
 
-.ol-zoom button:hover,
-.ol-rotate button:hover,
-.ol-full-screen button:hover,
-.ol-graticule button:hover,
-.ol-screen-space-graticule button:hover,
-.viewer-panel-control button:hover,
-.layer-editor-control button:hover {
+.ol-zoom button:hover:not(:disabled),
+.ol-rotate button:hover:not(:disabled),
+.ol-full-screen button:hover:not(:disabled),
+.ol-graticule button:hover:not(:disabled),
+.ol-screen-space-graticule button:hover:not(:disabled),
+.viewer-panel-control button:hover:not(:disabled),
+.layer-editor-control button:hover:not(:disabled) {
     background: #333333;
 }
 
 
-.ol-zoom button:active,
-.ol-rotate button:active,
-.ol-full-screen button:active,
-.ol-graticule button:active,
-.ol-screen-space-graticule button:active,
-.viewer-panel-control button:active,
-.layer-editor-control button:active {
+.ol-zoom button:active:not(:disabled),
+.ol-rotate button:active:not(:disabled),
+.ol-full-screen button:active:not(:disabled),
+.ol-graticule button:active:not(:disabled),
+.ol-screen-space-graticule button:active:not(:disabled),
+.viewer-panel-control button:active:not(:disabled),
+.layer-editor-control button:active:not(:disabled) {
     background: #555555;
 }
 
@@ -102,6 +117,25 @@ body {
 .layer-editor-control button:focus-visible {
     outline: 2px solid #888888;
     outline-offset: -2px;
+}
+
+
+/* Disabled viewer controls */
+
+.ol-control button:disabled,
+.ol-control button:disabled:hover,
+.ol-control button:disabled:active,
+.ol-control button:disabled:focus {
+    background: #111111;
+    opacity: 0.4;
+    cursor: default;
+}
+
+
+/* Hidden viewer controls */
+
+.viewer-control-hidden {
+    display: none !important;
 }
 
 
@@ -513,14 +547,32 @@ body {
 }
 
 
-/* Scale bar */
+/* Scale line */
 
-.ol-scale-bar {
-    bottom: 6pt;
-    left: 6pt;
+.ol-scale-line {
+    bottom: 8px;
+    left: 8px;
+
+    padding: 4px 6px;
+
+    background: #111111;
+    border-radius: 8px;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.3);
+
     font-family: "Calibri", sans-serif;
 }
 
+
+.ol-scale-line-inner {
+    margin: 0;
+
+    border-color: #ffffff;
+    border-top: 0;
+
+    color: #ffffff;
+
+    font-size: 11px;
+}
 
 /* Mouse position */
 
