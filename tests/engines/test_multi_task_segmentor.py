@@ -57,6 +57,20 @@ def test_mtsegmentor_init() -> None:
     assert isinstance(segmentor.model, torch.nn.Module)
 
 
+def test_run_raises_when_return_labels_true() -> None:
+    """MultiTaskSegmentor does not support return_labels."""
+    segmentor = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+
+    with pytest.raises(
+        ValueError,
+        match=r"`return_labels` is not supported for MultiTaskSegmentor\.",
+    ):
+        segmentor.run(
+            images=np.zeros((1, 256, 256, 3), dtype=np.uint8),
+            return_labels=True,
+        )
+
+
 def test_merge_multitask_vertical_chunkwise_overlap(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
