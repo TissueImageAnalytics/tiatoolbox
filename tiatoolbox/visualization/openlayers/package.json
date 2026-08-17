@@ -13,7 +13,8 @@
   "name": "tiatoolbox-openlayers",
   "private": true,
   "scripts": {
-    "build": "vite build"
+    "build": "vite build",
+    "build:visualize-beta": "vite build --config vite.visualize-beta.config.js"
   },
   "type": "module",
   "version": "0.0.0"

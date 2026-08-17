@@ -23,92 +23,16 @@ import Graticule from "ol-ext/control/Graticule.js";
 import LayerSwitcher from "ol-ext/control/LayerSwitcher.js";
 import Toggle from "ol-ext/control/Toggle.js";
 
-// Initialise the TileServer session used for dynamic slide loading.
-async function createSession() {
-  const response = await fetch("/tileserver/session_id");
-
-  if (!response.ok) {
-    throw new Error("Failed to create TileServer session.");
-  }
-
-  const data = await response.json();
-
-  return data.session_id;
-}
-
-// Load a slide into the current TileServer session and return its metadata.
-async function loadSlide(slidePath) {
-  const formData = new FormData();
-  formData.append("slide_path", slidePath);
-
-  const loadResponse = await fetch("/tileserver/slide", {
-    method: "PUT",
-    body: formData,
-  });
-
-  if (!loadResponse.ok) {
-    throw new Error(`Failed to load slide: ${slidePath}`);
-  }
-
-  const metadataResponse = await fetch("/tileserver/slide");
-
-  if (!metadataResponse.ok) {
-    throw new Error("Failed to retrieve slide metadata.");
-  }
-
-  return metadataResponse.json();
-}
-
-// Create a Zoomify source with versions to avoid reusing tiles from an old slide.
-function createSlideSource(sessionId, slideInfo, version) {
-  return new Zoomify({
-    url:
-      `/tileserver/layer/slide/${sessionId}/zoomify/` +
-      `{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${version}`,
-    size: slideInfo.slide_dimensions,
-    crossOrigin: "anonymous",
-    zDirection: -1,
-  });
-}
-
 const mapElement = document.getElementById("map");
 
 if (mapElement === null) {
   throw new Error("The OpenLayers map element could not be found.");
 }
 
-let layersData = JSON.parse(mapElement.dataset.layers ?? "[]");
-let sessionId = null;
-let slideVersion = Date.now();
-let overlayVersion = Date.now();
-let currentSlideInfo = null;
-let currentSlidePath = null;
-const overlayLayers = {};
+const layersData = JSON.parse(mapElement.dataset.layers ?? "[]");
 
-// Dynamic slide loading
-const params = new URLSearchParams(window.location.search);
-const slidePath = params.get("slide");
-
-if (slidePath !== null) {
-  currentSlidePath = slidePath;
-
-  sessionId = await createSession();
-  const slideInfo = await loadSlide(slidePath);
-
-  currentSlideInfo = slideInfo;
-
-  layersData = [
-    {
-      name: "slide",
-      url:
-        `/tileserver/layer/slide/${sessionId}/zoomify/` +
-        `{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${slideVersion}`,
-      size: slideInfo.slide_dimensions,
-      mpp: slideInfo.mpp[0],
-    },
-  ];
-} else if (layersData.length === 0) {
-  throw new Error("No slide was provided.");
+if (layersData.length === 0) {
+  throw new Error("No layers were supplied to the OpenLayers viewer.");
 }
 
 const layers = layersData.map((layer) => {
@@ -125,9 +49,7 @@ const layers = layersData.map((layer) => {
   });
 });
 
-const slideLayer = layers[0];
-
-const baseSource = slideLayer.getSource();
+const baseSource = layers[0].getSource();
 const tileGrid = baseSource.getTileGrid();
 const resolutions = tileGrid.getResolutions();
 const extent = tileGrid.getExtent();
@@ -167,14 +89,14 @@ const scaleLineControl = new ScaleLine({
 
 map.addControl(scaleLineControl);
 
-const overviewLayer = new TileLayer({
-  source: baseSource,
-});
-
 // Overview map
 const overviewMapControl = new OverviewMap({
   className: "ol-overviewmap ol-custom-overviewmap",
-  layers: [overviewLayer],
+  layers: [
+    new TileLayer({
+      source: baseSource,
+    }),
+  ],
 });
 
 map.addControl(overviewMapControl);
@@ -234,89 +156,85 @@ const graticuleStyle = new Style({
   }),
 });
 
-// Create graticules for the active slide projection.
-function createGraticule(graticuleProjection) {
-  return new Graticule({
-    projection: graticuleProjection,
-    margin: graticuleMargin,
-    style: graticuleStyle,
-    spacing: graticuleSpacing,
-    formatCoord: (coordinate, position) => {
-      if (position === "left" || position === "right") {
-        coordinate = -Math.floor(coordinate);
-      } else {
-        coordinate = Math.floor(coordinate);
-      }
+const graticule = new Graticule({
+  projection: projection.getCode(),
+  margin: graticuleMargin,
+  style: graticuleStyle,
+  spacing: graticuleSpacing,
+  formatCoord(coordinate, position) {
+    let displayedCoordinate;
 
-      if (coordinate >= 1e6) {
-        coordinate = coordinate.toExponential(3);
-        coordinate = coordinate.replace("+", "");
-      }
+    if (position === "left" || position === "right") {
+      displayedCoordinate = -Math.floor(coordinate);
+    } else {
+      displayedCoordinate = Math.floor(coordinate);
+    }
 
-      return coordinate;
-    },
-  });
-}
+    if (displayedCoordinate >= 1e6) {
+      displayedCoordinate = displayedCoordinate.toExponential(3);
+      displayedCoordinate = displayedCoordinate.replace("+", "");
+    }
 
-let graticule = createGraticule(projection);
+    return displayedCoordinate;
+  },
+});
 
 // Screen-space graticule
 const screenSpaceGraticuleSpacing = graticuleSpacing;
 const screenSpaceGraticuleMargin = graticuleMargin;
 
-function createScreenSpaceGraticule(graticuleProjection) {
-  return new Graticule({
-    projection: graticuleProjection.getCode(),
-    spacing: screenSpaceGraticuleSpacing,
-    margin: screenSpaceGraticuleMargin,
-    style: graticuleStyle,
-    formatCoord(coordinate, position) {
-      const mapExtent = map.getView().calculateExtent(map.getSize());
-      const resolution = map.getView().getResolution();
+const screenSpaceGraticule = new Graticule({
+  projection: projection.getCode(),
+  spacing: screenSpaceGraticuleSpacing,
+  margin: screenSpaceGraticuleMargin,
+  style: graticuleStyle,
+  formatCoord(coordinate, position) {
+    const mapExtent = map.getView().calculateExtent(map.getSize());
+    const resolution = map.getView().getResolution();
 
-      const xOrigin =
-        mapExtent[0] + resolution * screenSpaceGraticuleMargin;
-      const yOrigin =
-        mapExtent[3] - resolution * screenSpaceGraticuleMargin;
+    const xOrigin =
+      mapExtent[0] + resolution * screenSpaceGraticuleMargin;
+    const yOrigin =
+      mapExtent[3] - resolution * screenSpaceGraticuleMargin;
 
-      let displayedCoordinate;
+    let displayedCoordinate;
 
-      if (position === "left" || position === "right") {
-        displayedCoordinate = -(coordinate - yOrigin);
-      } else {
-        displayedCoordinate = coordinate - xOrigin;
-      }
+    if (position === "left" || position === "right") {
+      displayedCoordinate = -(coordinate - yOrigin);
+    } else {
+      displayedCoordinate = coordinate - xOrigin;
+    }
 
-      displayedCoordinate = Math.floor(
-        displayedCoordinate /
-          resolution /
-          screenSpaceGraticuleSpacing,
-      );
+    displayedCoordinate = Math.floor(
+      displayedCoordinate /
+        resolution /
+        screenSpaceGraticuleSpacing,
+    );
 
-      if (position === "left" || position === "right") {
-        let string = "";
+    if (position === "left" || position === "right") {
+      let label = "";
 
-        do {
-          string += String.fromCharCode(
-            65 + (displayedCoordinate % 26),
-          );
-          displayedCoordinate = Math.floor(
-            displayedCoordinate / 26,
-          );
-        } while (displayedCoordinate > 0);
+      do {
+        label += String.fromCharCode(
+          65 + (displayedCoordinate % 26),
+        );
 
-        return string.split("").reverse().join("");
-      }
+        displayedCoordinate = Math.floor(
+          displayedCoordinate / 26,
+        );
+      } while (displayedCoordinate > 0);
 
-      return displayedCoordinate;
-    },
-  });
-}
+      return label.split("").reverse().join("");
+    }
 
-let screenSpaceGraticule =
-  createScreenSpaceGraticule(projection);
+    return displayedCoordinate;
+  },
+});
 
-const graticuleToggle = new Toggle({
+let graticuleToggle;
+let screenSpaceGraticuleToggle;
+
+graticuleToggle = new Toggle({
   html: '<i class="fas fa-ruler-combined"></i>',
   className: "ol-graticule",
   title: "Toggle Graticule",
@@ -333,7 +251,7 @@ const graticuleToggle = new Toggle({
 
 map.addControl(graticuleToggle);
 
-const screenSpaceGraticuleToggle = new Toggle({
+screenSpaceGraticuleToggle = new Toggle({
   html: '<i class="fas fa-border-all"></i>',
   className: "ol-screen-space-graticule",
   title: "Toggle Screen Space Graticule",
@@ -352,328 +270,8 @@ map.addControl(screenSpaceGraticuleToggle);
 
 map.getView().fit(extent);
 
-const urlViewState = getUrlViewState();
-
-if (urlViewState !== null) {
-  map.getView().setCenter(urlViewState.center);
-  map.getView().setZoom(urlViewState.zoom);
-}
-
-map.on("moveend", () => {
-  updateUrlState();
-});
-
-function clearOverlayLayers() {
-  for (const overlayLayer of Object.values(overlayLayers)) {
-    map.removeLayer(overlayLayer);
-
-    const layerIndex = layers.indexOf(overlayLayer);
-
-    if (layerIndex !== -1) {
-      layers.splice(layerIndex, 1);
-    }
-  }
-
-  for (const layerName of Object.keys(overlayLayers)) {
-    delete overlayLayers[layerName];
-  }
-}
-
-async function clearOverlays() {
-  const response = await fetch("/tileserver/clear_overlays", {
-    method: "PUT",
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to clear overlays.");
-  }
-
-  clearOverlayLayers();
-}
-
-function getUrlViewState() {
-  const params = new URLSearchParams(window.location.search);
-
-  const x = Number(params.get("x"));
-  const y = Number(params.get("y"));
-  const zoom = Number(params.get("zoom"));
-
-  if (
-    params.get("x") === null ||
-    params.get("y") === null ||
-    params.get("zoom") === null ||
-    !Number.isFinite(x) ||
-    !Number.isFinite(y) ||
-    !Number.isFinite(zoom)
-  ) {
-    return null;
-  }
-
-  return {
-    center: [x, y],
-    zoom,
-  };
-}
-
-function updateUrlState() {
-  const view = map.getView();
-  const center = view.getCenter();
-  const zoom = view.getZoom();
-
-  if (
-    center === undefined ||
-    zoom === undefined
-  ) {
-    return;
-  }
-
-  const url = new URL(window.location.href);
-
-  if (currentSlidePath !== null) {
-    url.searchParams.set("slide", currentSlidePath);
-  }
-
-  url.searchParams.set("x", center[0].toFixed(2));
-  url.searchParams.set("y", center[1].toFixed(2));
-  url.searchParams.set("zoom", zoom.toString());
-
-  window.history.replaceState({}, "", url);
-}
-
-// Slide switching
-async function switchSlide(slidePath) {
-  if (sessionId === null) {
-    throw new Error("Dynamic slide switching requires a TileServer session.");
-  }
-
-  const slideInfo = await loadSlide(slidePath);
-
-  currentSlidePath = slidePath;
-  clearOverlayLayers();
-  currentSlideInfo = slideInfo;
-
-  slideVersion += 1;
-
-  const source = createSlideSource(
-    sessionId,
-    slideInfo,
-    slideVersion,
-  );
-
-  const newTileGrid = source.getTileGrid();
-  const newExtent = newTileGrid.getExtent();
-  const newResolutions = newTileGrid.getResolutions();
-
-  const newProjection = new Projection({
-    code: "zoomify",
-    units: "pixels",
-    extent: newExtent,
-    metersPerUnit: slideInfo.mpp[0] * 1e-6,
-  });
-
-  addProjection(newProjection);
-
-  // View
-  const newCenter = [
-    (newExtent[0] + newExtent[2]) / 2,
-    (newExtent[1] + newExtent[3]) / 2,
-  ];
-
-  const newView = new View({
-    projection: newProjection,
-    resolutions: newResolutions,
-    extent: newExtent,
-    constrainOnlyCenter: true,
-    center: newCenter,
-    resolution: newResolutions[0],
-  });
-
-  newView.fit(newExtent, {
-    size: map.getSize(),
-  });
-
-  map.setView(newView);
-
-  const overviewMap = overviewMapControl.getOverviewMap();
-
-  overviewMap.setView(
-    new View({
-      projection: newProjection,
-      resolutions: newResolutions,
-      extent: newExtent,
-      constrainOnlyCenter: true,
-      center: newCenter,
-      resolution: newResolutions[0],
-    }),
-  );
-
-  const graticuleWasActive = graticuleToggle.getActive();
-  const screenSpaceGraticuleWasActive =
-    screenSpaceGraticuleToggle.getActive();
-
-  graticule.setMap(null);
-  screenSpaceGraticule.setMap(null);
-
-  graticule = createGraticule(newProjection);
-
-  screenSpaceGraticule =
-    createScreenSpaceGraticule(newProjection);
-
-  if (graticuleWasActive) {
-    graticule.setMap(map);
-  }
-
-  if (screenSpaceGraticuleWasActive) {
-    screenSpaceGraticule.setMap(map);
-  }
-
-  slideLayer.setSource(source);
-  overviewLayer.setSource(source);
-
-  window.graticule = graticule;
-  window.screenSpaceGraticule = screenSpaceGraticule;
-
-  updateUrlState();
-}
-
-async function loadOverlay(overlayPath) {
-  if (sessionId === null || currentSlideInfo === null) {
-    throw new Error(
-      "Dynamic overlay loading requires a loaded slide.",
-    );
-  }
-
-  const extension = overlayPath
-    .split(".")
-    .pop()
-    .toLowerCase();
-
-  if (extension === "npy" || extension === "mha") {
-    throw new Error(
-      "Registration overlays are not supported yet.",
-    );
-  }
-
-  const formData = new FormData();
-  formData.append("overlay_path", overlayPath);
-
-  const response = await fetch("/tileserver/overlay", {
-    method: "PUT",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to load overlay: ${overlayPath}`);
-  }
-
-  const result = await response.json();
-
-  const isAnnotation = ["db", "dat", "geojson"].includes(
-    extension,
-  );
-
-  const layerName = isAnnotation ? "overlay" : result;
-
-  overlayVersion += 1;
-
-  const source = new Zoomify({
-    url:
-      `/tileserver/layer/${encodeURIComponent(layerName)}/` +
-      `${sessionId}/zoomify/` +
-      `{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${overlayVersion}`,
-    size: currentSlideInfo.slide_dimensions,
-    crossOrigin: "anonymous",
-    zDirection: -1,
-  });
-
-  if (overlayLayers[layerName] !== undefined) {
-    overlayLayers[layerName].setSource(source);
-    overlayLayers[layerName].setVisible(true);
-  } else {
-    const overlayLayer = new TileLayer({
-      title: layerName,
-      source,
-      opacity: 0.75,
-    });
-
-    overlayLayers[layerName] = overlayLayer;
-
-    map.addLayer(overlayLayer);
-    layers.push(overlayLayer);
-  }
-
-  return result;
-}
-
-async function removeOverlay(layerName) {
-  const overlayLayer = overlayLayers[layerName];
-
-  if (overlayLayer === undefined) {
-    throw new Error(`Overlay is not loaded: ${layerName}`);
-  }
-
-  const response = await fetch(
-    `/tileserver/overlay/${encodeURIComponent(layerName)}`,
-    {
-      method: "DELETE",
-    },
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to remove overlay: ${layerName}`);
-  }
-
-  map.removeLayer(overlayLayer);
-
-  const layerIndex = layers.indexOf(overlayLayer);
-
-  if (layerIndex !== -1) {
-    layers.splice(layerIndex, 1);
-  }
-
-  delete overlayLayers[layerName];
-}
-
-async function setAnnotationColors(colorMap) {
-  if (overlayLayers.overlay === undefined) {
-    throw new Error("No annotation overlay is loaded.");
-  }
-
-  const formData = new FormData();
-  formData.append(
-    "cmap",
-    JSON.stringify({
-      keys: Object.keys(colorMap),
-      values: Object.values(colorMap),
-    }),
-  );
-
-  const response = await fetch("/tileserver/cmap", {
-    method: "PUT",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to update annotation colours.");
-  }
-
-  overlayVersion += 1;
-
-  const source = new Zoomify({
-    url:
-      `/tileserver/layer/overlay/${sessionId}/zoomify/` +
-      `{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${overlayVersion}`,
-    size: currentSlideInfo.slide_dimensions,
-    crossOrigin: "anonymous",
-    zDirection: -1,
-  });
-
-  overlayLayers.overlay.setSource(source);
-}
-
 // Preserve variables exposed by the original inline viewer.
 Object.assign(window, {
-  clearOverlays,
   extent,
   fullscreen,
   graticule,
@@ -681,19 +279,14 @@ Object.assign(window, {
   layerSwitcher,
   layers,
   layersData,
-  loadOverlay,
   map,
   mousePositionControl,
-  overlayLayers,
   overviewMapControl,
   projection,
-  removeOverlay,
   resolutions,
   rotate,
   scaleLineControl,
   screenSpaceGraticule,
   screenSpaceGraticuleToggle,
-  setAnnotationColors,
-  switchSlide,
   view,
 });
