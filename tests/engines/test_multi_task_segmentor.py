@@ -57,6 +57,140 @@ def test_mtsegmentor_init() -> None:
     assert isinstance(segmentor.model, torch.nn.Module)
 
 
+def test_merge_multitask_vertical_chunkwise_overlap(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test merging overlapping vertical chunks."""
+    canvas = da.from_array(
+        np.array(
+            [
+                [[1.0]],
+                [[1.0]],
+                [[2.0]],
+                [[2.0]],
+            ],
+            dtype=np.float32,
+        ),
+        chunks=(2, 1, 1),
+    )
+
+    count = da.from_array(
+        np.ones(
+            (4, 1, 1),
+            dtype=np.int32,
+        ),
+        chunks=(2, 1, 1),
+    )
+
+    captured: list[np.ndarray] = []
+
+    def _fake_clip_probabilities_to_shape(
+        probabilities: np.ndarray,
+        output_shape: tuple[int, int] | None,
+        written_height: int,
+    ) -> tuple[np.ndarray, int, bool]:
+        _ = output_shape
+
+        captured.append(probabilities.copy())
+
+        return (
+            probabilities,
+            written_height + probabilities.shape[0],
+            False,
+        )
+
+    def _fake_store_probabilities(
+        probabilities: np.ndarray,
+        chunk_shape: tuple[int, ...],
+        probabilities_zarr: object,
+        probabilities_da: object,
+        zarr_group: object,
+        name: str,
+    ) -> tuple[None, np.ndarray]:
+        """Keep probabilities in memory."""
+        _ = (
+            chunk_shape,
+            probabilities_zarr,
+            probabilities_da,
+            zarr_group,
+            name,
+        )
+
+        return None, probabilities
+
+    def _fake_save_multitask_vertical_to_cache(**kwargs: object) -> tuple:
+        """Do not spill to disk."""
+        return (
+            kwargs["probabilities_zarr"],
+            kwargs["probabilities_da"],
+            kwargs["zarr_group"],
+        )
+
+    def _fake_clear_zarr(
+        probabilities_zarr: object,
+        probabilities_da: object,
+        zarr_group: object,
+        idx: int,
+        chunk_shape: tuple[int, ...],
+        probabilities_shape: tuple[int, ...],
+    ) -> object:
+        """Return probabilities unchanged."""
+        _ = (
+            probabilities_zarr,
+            zarr_group,
+            idx,
+            chunk_shape,
+            probabilities_shape,
+        )
+
+        return probabilities_da
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "clip_probabilities_to_shape",
+        _fake_clip_probabilities_to_shape,
+    )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "store_probabilities",
+        _fake_store_probabilities,
+    )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "_save_multitask_vertical_to_cache",
+        _fake_save_multitask_vertical_to_cache,
+    )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "_clear_zarr",
+        _fake_clear_zarr,
+    )
+
+    output_locs_y_ = np.array(
+        [
+            [0, 2],
+            [1, 3],
+        ],
+    )
+
+    result = multi_task_segmentor.merge_multitask_vertical_chunkwise(
+        canvas=[canvas],
+        count=[count],
+        output_locs_y_=output_locs_y_,
+        zarr_group=None,
+        save_path=track_tmp_path / "cache.zarr",
+        verbose=False,
+    )
+
+    assert len(result) == 1
+    assert len(captured) >= 1
+    assert np.any(captured[0] == 1.5)
+
+
 def test_save_multitask_to_cache(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
