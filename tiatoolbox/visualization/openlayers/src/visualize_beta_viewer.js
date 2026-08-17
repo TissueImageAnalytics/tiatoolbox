@@ -78,6 +78,7 @@ const viewerPanel = document.getElementById("viewer-panel");
 const viewerPanelToggle = document.getElementById(
   "viewer-panel-toggle",
 );
+const currentSlide = document.getElementById("current-slide");
 
 const layerEditor = document.getElementById("layer-editor");
 const layerEditorToggle = document.getElementById(
@@ -96,7 +97,8 @@ if (
   viewerPanelToggle === null ||
   layerEditor === null ||
   layerEditorToggle === null ||
-  layerEditorList === null
+  layerEditorList === null ||
+  currentSlide === null
 ) {
   throw new Error("The OpenLayers viewer controls could not be found.");
 }
@@ -120,6 +122,19 @@ let overlayVersion = Date.now();
 let currentSlideInfo = null;
 let currentSlidePath = null;
 const overlayLayers = {};
+
+function updateCurrentSlide() {
+  if (currentSlidePath === null) {
+    currentSlide.textContent = "No slide selected";
+    currentSlide.removeAttribute("title");
+    return;
+  }
+
+  const slideName = currentSlidePath.split(/[\\/]/).pop();
+
+  currentSlide.textContent = slideName || currentSlidePath;
+  currentSlide.title = currentSlidePath;
+}
 
 // Dynamic slide loading
 const params = new URLSearchParams(window.location.search);
@@ -147,6 +162,8 @@ if (slidePath === null) {
     },
   ];
 }
+
+updateCurrentSlide();
 
 const layers = layersData.map((layer) => {
   const source = new Zoomify({
@@ -279,6 +296,19 @@ const overviewMapControl = new OverviewMap({
 });
 
 map.addControl(overviewMapControl);
+
+const overviewMap = overviewMapControl.getOverviewMap();
+
+overviewMap.on("singleclick", (event) => {
+  if (slideLayer.getSource() === null) {
+    return;
+  }
+
+  map.getView().animate({
+    center: event.coordinate,
+    duration: 200,
+  });
+});
 
 // Mouse position
 const coordinateFormat = (coordinate) => {
@@ -511,8 +541,6 @@ function setViewerEnabled(enabled) {
 
   if (enabled) {
     requestAnimationFrame(() => {
-      const overviewMap = overviewMapControl.getOverviewMap();
-
       overviewMap.updateSize();
       overviewMap.renderSync();
     });
@@ -634,6 +662,7 @@ async function removeSlide() {
 
   currentSlidePath = null;
   currentSlideInfo = null;
+  updateCurrentSlide();
 
   slideVersion += 1;
   overlayVersion += 1;
@@ -667,8 +696,6 @@ async function removeSlide() {
   });
 
   map.setView(emptyView);
-
-  const overviewMap = overviewMapControl.getOverviewMap();
 
   overviewMap.setView(
     new View({
@@ -717,6 +744,7 @@ async function switchSlide(slidePath) {
   const slideInfo = await loadSlide(slidePath);
 
   currentSlidePath = slidePath;
+  updateCurrentSlide();
   clearOverlayLayers();
   currentSlideInfo = slideInfo;
 
@@ -762,8 +790,6 @@ async function switchSlide(slidePath) {
   });
 
   map.setView(newView);
-
-  const overviewMap = overviewMapControl.getOverviewMap();
 
   overviewMap.setView(
     new View({

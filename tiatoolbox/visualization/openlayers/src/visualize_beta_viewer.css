@@ -468,35 +468,6 @@ body {
 }
 
 
-.viewer-panel-section button {
-    width: 100%;
-    padding: 7px 10px;
-
-    border: 1px solid #444444;
-    border-radius: 7px;
-
-    background: #222222;
-    color: #ffffff;
-
-    cursor: pointer;
-}
-
-
-.viewer-panel-section button:hover {
-    background: #333333;
-}
-
-
-.viewer-panel-section button:active {
-    background: #555555;
-}
-
-
-.layer-list {
-    margin-bottom: 10px;
-}
-
-
 /* Overview map */
 
 .map .ol-custom-overviewmap,
@@ -552,12 +523,12 @@ body {
 .ol-scale-line {
     bottom: 8px;
     left: 8px;
+    padding: 5px 8px;
 
-    padding: 4px 6px;
+    background: rgba(17, 17, 17, 0.55);
 
-    background: #111111;
     border-radius: 8px;
-    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.25);
 
     font-family: "Calibri", sans-serif;
 }
@@ -566,13 +537,15 @@ body {
 .ol-scale-line-inner {
     margin: 0;
 
-    border-color: #ffffff;
-    border-top: 0;
+    border: 1px solid #ffffff;
+    border-bottom: 0;
 
     color: #ffffff;
 
-    font-size: 11px;
+    font-size: 14px;
+    line-height: 1.2;
 }
+
 
 /* Mouse position */
 
