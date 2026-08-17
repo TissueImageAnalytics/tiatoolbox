@@ -122,3 +122,8 @@ ENV/
 
 # uv lockfile
 uv.lock
+
+# Node.js
+node_modules/
+.vite/
+TXT
