@@ -163,9 +163,9 @@ class BayesianModelWrapper(torch.nn.Module):
             }
         )
 
-        return (
-            stats["mean_probs"]
-            .to(next(wrapper.base_model.parameters()).device)
-            .cpu()
-            .numpy()
-        )
+        try:
+            target_device = next(wrapper.base_model.parameters()).device
+        except StopIteration:
+            target_device = torch.device("cpu")
+
+        return stats["mean_probs"].to(target_device).cpu().numpy()
