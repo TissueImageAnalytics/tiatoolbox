@@ -137,6 +137,48 @@ def test_mc_dropout_mode_restores_previous_training_state() -> None:
     assert model.bn.training is True
 
 
+def test_inject_dropout_before_classifier_raises_typeerror_no_classifier() -> None:
+    """TypeError if model has no `classifier` attribute."""
+    model = nn.Sequential(nn.Linear(10, 2))
+    with pytest.raises(TypeError, match="classifier"):
+        inject_dropout_before_classifier(model)
+
+
+def test_inject_dropout_before_classifier_raises_typeerror_invalid_head() -> None:
+    """TypeError if classifier is neither Linear nor Sequential with leading Dropout."""
+    model = DummyCNNModel(with_dropout=False)
+    model.classifier = nn.Conv2d(4, 2, 1)
+    with pytest.raises(TypeError, match="nn.Linear"):
+        inject_dropout_before_classifier(model)
+
+
+def test_has_dropout_layers_detects_alpha_dropout() -> None:
+    """has_dropout_layers detects AlphaDropout and FeatureAlphaDropout."""
+    model_alpha = nn.Sequential(nn.Linear(10, 2), nn.AlphaDropout())
+    model_feat_alpha = nn.Sequential(nn.Linear(10, 2), nn.FeatureAlphaDropout())
+    assert has_dropout_layers(model_alpha) is True
+    assert has_dropout_layers(model_feat_alpha) is True
+
+
+def test_mc_dropout_mode_exit_restores_on_exception() -> None:
+    """__exit__ restores training state even when an exception is raised."""
+    model = DummyCNNModel(with_dropout=True)
+    model.eval()
+
+    class TestError(Exception):
+        pass
+
+    try:
+        with mc_dropout_mode(model):
+            raise TestError("boom")
+    except TestError:
+        pass
+
+    assert model.training is False
+    assert model.bn.training is False
+    assert model.classifier[0].training is False
+
+
 # ----------------------------------------------------------------------------
 # uncertainty.py
 # ----------------------------------------------------------------------------
@@ -178,6 +220,39 @@ def test_bayesian_wrapper_raises_without_dropout() -> None:
     model = DummyCNNModel(with_dropout=False)
     with pytest.raises(ValueError, match="Dropout"):
         BayesianModelWrapper(base_model=model, n_samples=5, inject_dropout=False)
+
+
+def test_bayesian_wrapper_raises_runtime_error_if_injection_fails() -> None:
+    """RuntimeError se inject_dropout_before_classifier non aggiunge dropout."""
+    from unittest.mock import patch
+
+    model_without_dropout = DummyCNNModel(with_dropout=False)
+
+    with patch(
+        "tiatoolbox.models.architecture.bayesian_wrapper.inject_dropout_before_classifier",
+        return_value=model_without_dropout,
+    ):
+        with pytest.raises(RuntimeError, match="failed to insert"):
+            BayesianModelWrapper(model_without_dropout, inject_dropout=True)
+
+
+def test_getattr_delegates_to_base_model() -> None:
+    """__getattr__ deve delegare al base_model per attributi non definiti sul wrapper."""
+    base_model = DummyCNNModel(with_dropout=True)
+    base_model.preproc_func = lambda x: x
+
+    wrapper = BayesianModelWrapper(base_model, inject_dropout=False)
+
+    assert wrapper.preproc_func is base_model.preproc_func
+
+
+def test_getattr_raises_if_attribute_missing_everywhere() -> None:
+    """__getattr__ deve sollevare AttributeError se l'attributo non esiste da nessuna parte."""
+    base_model = DummyCNNModel(with_dropout=True)
+    wrapper = BayesianModelWrapper(base_model, inject_dropout=False)
+
+    with pytest.raises(AttributeError, match="has no attribute"):
+        _ = wrapper.this_attribute_does_not_exist_anywhere
 
 
 def test_bayesian_wrapper_infer_batch_populates_uncertainty_stats() -> None:
