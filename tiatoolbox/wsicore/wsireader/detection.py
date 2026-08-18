@@ -139,9 +139,9 @@ def is_ngff(  # skipcq: PY-R1000  # noqa: PLR0911
     multiscales_versions = {
         Version(scale["version"]) for scale in multiscales if "version" in scale
     }
-    omero_version: str | None = omero.get("version")
-    if omero_version:
-        omero_version: Version = Version(omero_version)
+    omero_version_str: str | None = omero.get("version")
+    if omero_version_str:
+        omero_version = Version(omero_version_str)
         if omero_version < min_version:
             logger.warning(
                 "The minimum supported version of the NGFF file is %s. "
@@ -183,7 +183,7 @@ def is_ngff(  # skipcq: PY-R1000  # noqa: PLR0911
         )
         return True
 
-    return is_zarr(path, **zarr_kwargs)
+    return is_zarr(path, **kwargs)
 
 
 def is_url(path_or_url: str | Path) -> bool:
