@@ -1,15 +1,16 @@
 """Command line interface for the experimental OpenLayers viewer."""
 
 from tiatoolbox.cli.common import tiatoolbox_cli
-from tiatoolbox.visualization.visualize_beta_tileserver import VisualizeBetaTileServer
+from tiatoolbox.visualization.tileserver import TileServer
 
 
 @tiatoolbox_cli.command(name="visualize-beta")
 def visualize_beta() -> None:  # pragma: no cover
     """Launch the experimental dynamic OpenLayers viewer."""
-    app = VisualizeBetaTileServer(
+    app = TileServer(
         title="TIAToolbox OpenLayers beta",
         layers={},
+        legacy=False,
     )
 
     app.run(

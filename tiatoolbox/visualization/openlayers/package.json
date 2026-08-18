@@ -14,7 +14,7 @@
   "private": true,
   "scripts": {
     "build": "vite build",
-    "build:visualize-beta": "vite build --config vite.visualize-beta.config.js"
+    "build:legacy": "vite build --config vite.legacy.config.js"
   },
   "type": "module",
   "version": "0.0.0"

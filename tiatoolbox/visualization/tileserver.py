@@ -55,6 +55,9 @@ class TileServer(Flask):
             'layer-2' etc. will be used. First entry in list will be assumed to
             be the base slide. If a layer is a single-channel low-res overlay,
             it will be colourized using the 'viridis' colourmap.
+        legacy (bool):
+            Whether to use the legacy OpenLayers viewer behaviour (show-wsi)
+            or to use the experimental viewer (visualize-beta). Defaults to True.
 
     Examples:
         >>> from tiatoolbox.wsicore.wsireader import WSIReader
@@ -75,6 +78,8 @@ class TileServer(Flask):
         title: str,
         layers: dict[str, WSIReader | str] | list[WSIReader | str],
         renderer: AnnotationRenderer | None = None,
+        *,
+        legacy: bool = True,
     ) -> None:
         """Initialize :class:`TileServer`."""
         super().__init__(
@@ -88,6 +93,7 @@ class TileServer(Flask):
             ),
         )
         self.title = title
+        self.legacy = legacy
         self.layers = {}
         self.pyramids = {}
         self.renderer = renderer
@@ -364,6 +370,15 @@ class TileServer(Flask):
                 The index page.
 
         """
+        if not self.legacy:
+            return make_response(
+                render_template(
+                    "index.html",
+                    title=self.title,
+                    layers="[]",
+                ),
+            )
+
         session_id = self._get_session_id()
         new_session_id = None
 
@@ -384,7 +399,7 @@ class TileServer(Flask):
 
         response = make_response(
             render_template(
-                "index.html",
+                "index_legacy.html",
                 title=self.title,
                 layers=json.dumps(layers),
             ),
@@ -421,22 +436,44 @@ class TileServer(Flask):
 
     def session_id(self: TileServer) -> Response:
         """Set up a new session."""
-        resp = make_response("done")
-        session_id = "default" if self.default_session_id else secrets.token_urlsafe(16)
+        if self.legacy:
+            resp = make_response("done")
+            session_id = (
+                "default" if self.default_session_id else secrets.token_urlsafe(16)
+            )
 
-        resp.set_cookie(
-            "session_id",
-            session_id,
-            httponly=True,
-            samesite="Lax",
-        )
+            resp.set_cookie(
+                "session_id",
+                session_id,
+                httponly=True,
+                samesite="Lax",
+            )
 
-        self.renderers[session_id] = copy.deepcopy(self.renderer)
-        self.overlaps[session_id] = 0
-        self.layers[session_id] = {}
-        self.pyramids[session_id] = {}
+            self.renderers[session_id] = copy.deepcopy(self.renderer)
+            self.overlaps[session_id] = 0
+            self.layers[session_id] = {}
+            self.pyramids[session_id] = {}
 
-        return resp
+            return resp
+
+        session_id = self._get_session_id()
+        new_session_id = None
+
+        if session_id is None or session_id not in self.layers:
+            new_session_id = self._create_session()
+            session_id = new_session_id
+
+        response = jsonify({"session_id": session_id})
+
+        if new_session_id is not None:
+            response.set_cookie(
+                "session_id",
+                new_session_id,
+                httponly=True,
+                samesite="Lax",
+            )
+
+        return response
 
     def reset(self: TileServer, session_id: str) -> str:
         """Reset the tileserver."""
