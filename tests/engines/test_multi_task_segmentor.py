@@ -455,6 +455,71 @@ def test_save_predictions_as_dict_zarr_multitask(
     }
 
 
+def test_save_predictions_as_json_store_keeps_predictions_when_requested(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test predictions are not deleted when return_predictions is True."""
+    segmentor = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+
+    segmentor.patch_mode = False
+    segmentor.verbose = False
+    segmentor.num_workers = 1
+
+    segmentor.return_predictions_dict = {
+        "nuclei": True,
+    }
+
+    def _fake_get_model_attr(attr_name: str) -> dict:
+        """Return fake class dictionary."""
+        _ = attr_name
+        return {}
+
+    def _fake_save_annotation_json_store(
+        **kwargs: object,
+    ) -> Path:
+        """Avoid file writing."""
+        _ = kwargs
+        return track_tmp_path / "output.db"
+
+    def _fake_post_save_json_store(
+        **kwargs: object,
+    ) -> None:
+        """Avoid cleanup."""
+        _ = kwargs
+
+    monkeypatch.setattr(
+        segmentor,
+        "_get_model_attr",
+        _fake_get_model_attr,
+    )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "_save_annotation_json_store",
+        _fake_save_annotation_json_store,
+    )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "_post_save_json_store",
+        _fake_post_save_json_store,
+    )
+
+    processed_predictions = {
+        "predictions": np.array([1]),
+        "contours": np.array([2]),
+    }
+
+    segmentor._save_predictions_as_json_store(
+        processed_predictions=processed_predictions,
+        task_name="nuclei",
+        save_path=track_tmp_path / "output.db",
+    )
+
+    assert "predictions" in processed_predictions
+
+
 def test_save_predictions_as_dict_zarr_probabilities(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
