@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Final
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
 
 import dask.array as da
 import numpy as np
@@ -106,7 +106,7 @@ def test_post_process_patches() -> None:
     segmentor.build_post_process_raw_predictions.assert_called_once()
 
 
-def test_post_process_wsi_tile_mode(tmp_path: Path) -> None:
+def test_post_process_wsi_tile_mode(track_tmp_path: Path) -> None:
     """Test WSI post-processing using tile mode."""
     segmentor = Mock()
 
@@ -132,7 +132,7 @@ def test_post_process_wsi_tile_mode(tmp_path: Path) -> None:
     result = MultiTaskSegmentor.post_process_wsi(
         segmentor,
         raw_predictions,
-        tmp_path / "output",
+        track_tmp_path / "output",
         return_predictions=[True],
         return_probabilities=False,
         num_workers=4,
@@ -145,6 +145,71 @@ def test_post_process_wsi_tile_mode(tmp_path: Path) -> None:
     assert isinstance(result["seg"]["mask"], da.Array)
     assert result["seg"]["dice"] == 0.9
     assert segmentor.tasks == {"seg"}
+
+
+def test_post_process_wsi_full_wsi(track_tmp_path: Path) -> None:
+    """Test WSI post-processing without tile mode."""
+    segmentor = Mock()
+
+    segmentor._ioconfig.tile_shape = (100, 100)
+    segmentor.mask_padding = (0, 0, 0, 0)
+    segmentor.return_predictions_dict = {}
+    segmentor.num_workers = 4
+
+    probabilities = [np.zeros((50, 50))]
+
+    segmentor._process_full_wsi.return_value = [
+        {
+            "task_type": "seg",
+            "mask": da.ones((5, 5)),
+        }
+    ]
+
+    raw_predictions = {
+        "probabilities": probabilities,
+    }
+
+    result = MultiTaskSegmentor.post_process_wsi(
+        segmentor,
+        raw_predictions,
+        track_tmp_path / "output",
+    )
+
+    segmentor._process_full_wsi.assert_called_once()
+    segmentor._process_tile_mode.assert_not_called()
+
+    assert segmentor.return_predictions_dict["seg"] is False
+    assert isinstance(result["seg"]["mask"], da.Array)
+    assert segmentor.tasks == {"seg"}
+
+
+@patch("tiatoolbox.models.engine.multi_task_segmentor.build_da_pad_width")
+def test_post_process_wsi_return_probabilities(
+    mock_build_da_pad_width: Mock,
+    track_tmp_path: Path,
+) -> None:
+    """Test probability padding."""
+    mock_build_da_pad_width.return_value = ((0, 0), (1, 1))
+
+    segmentor = Mock()
+    segmentor._ioconfig.tile_shape = (100, 100)
+    segmentor.mask_padding = (1, 1, 1, 1)
+    segmentor.return_predictions_dict = {}
+
+    prob = da.ones((5, 5))
+
+    segmentor._process_full_wsi.return_value = [{"task_type": "seg"}]
+
+    raw_predictions = {"probabilities": [prob]}
+
+    MultiTaskSegmentor.post_process_wsi(
+        segmentor,
+        raw_predictions,
+        track_tmp_path / "output",
+        return_probabilities=True,
+    )
+
+    mock_build_da_pad_width.assert_called_once()
 
 
 def test_process_full_wsi_mixed_return_predictions(
