@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import Literal, SupportsFloat
+from typing import Any, Literal, SupportsFloat
 
 import numpy as np
 from shapely.geometry import LineString, Point, Polygon  # type: ignore[import-untyped]
@@ -20,6 +20,7 @@ Resolution = SupportsFloat | NumPair | np.ndarray | Sequence[SupportsFloat]
 Units = Literal["mpp", "power", "baseline", "level"]
 Bounds = tuple[SupportsFloat, SupportsFloat, SupportsFloat, SupportsFloat]
 IntBounds = tuple[int, int, int, int]
+WSIPostProc = str | Callable[..., Any] | None
 
 # Annotation Store
 Geometry = Point | LineString | Polygon
