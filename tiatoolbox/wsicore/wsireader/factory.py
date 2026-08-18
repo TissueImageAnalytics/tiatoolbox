@@ -18,6 +18,8 @@ from .detection import is_dicom, is_ngff, is_valid_zarr_fsspec
 if TYPE_CHECKING:  # pragma: no cover
     from numbers import Number
 
+    from tiatoolbox.type_hints import WSIPostProc
+
     from .base import (
         AnnotationStoreReader,
         DICOMWSIReader,
@@ -28,15 +30,15 @@ if TYPE_CHECKING:  # pragma: no cover
         VirtualWSIReader,
         WSIReader,
     )
-    from .types import WSIReaderParams
+    from .types import WSIReaderExtraParams, WSIReaderParams
 
 
 def open_wsi(
     input_img: str | Path | np.ndarray | WSIReader,
     mpp: tuple[Number, Number] | None = None,
     power: Number | None = None,
-    post_proc: str | callable | None = "auto",
-    **kwargs: Unpack[WSIReaderParams],
+    post_proc: WSIPostProc = "auto",
+    **kwargs: Unpack[WSIReaderExtraParams],
 ) -> WSIReader:
     """Open a WSIReader with an appropriate object."""
     from .base import VirtualWSIReader, WSIReader  # noqa: PLC0415
@@ -115,8 +117,8 @@ def _handle_special_cases(
     input_img: str | Path | np.ndarray,
     mpp: tuple[Number, Number] | None = None,
     power: Number | None = None,
-    post_proc: str | callable | None = "auto",
-    **kwargs: Unpack[WSIReaderParams],
+    post_proc: WSIPostProc = "auto",
+    **kwargs: Unpack[WSIReaderExtraParams],
 ) -> WSIReader | None:
     """Handle special cases for selecting the appropriate WSIReader.
 
@@ -131,7 +133,7 @@ def _handle_special_cases(
             Objective power.
         post_proc (str | callable | None, optional):
             Post-processing method or identifier.
-        **kwargs (WSIReaderParams):
+        **kwargs (WSIReaderExtraParams):
             Additional keyword arguments for specific reader types.
 
     Returns:
@@ -175,7 +177,7 @@ def _default_reader(
     input_path: str | Path,
     mpp: tuple[Number, Number] | None = None,
     power: Number | None = None,
-    post_proc: str | callable | None = "auto",
+    post_proc: WSIPostProc = "auto",
 ) -> WSIReader:
     """Fallback reader."""
     from .base import OpenSlideWSIReader  # noqa: PLC0415
@@ -190,7 +192,7 @@ def _default_reader(
 
 def try_openslide(
     input_path: Path,
-    last_suffix: str,
+    last_suffix: str | None,
     mpp: tuple[Number, Number] | None,
     power: Number | None,
 ) -> OpenSlideWSIReader | None:
@@ -212,7 +214,7 @@ def try_dicom(
     input_path: Path,
     mpp: tuple[Number, Number] | None,
     power: Number | None,
-    post_proc: str | callable | None,
+    post_proc: WSIPostProc,
 ) -> DICOMWSIReader | None:
     """Try to create a DICOMWSIReader if the input is a DICOM file."""
     from .base import DICOMWSIReader  # noqa: PLC0415
@@ -237,25 +239,25 @@ def try_fsspec(
 
 def try_annotation_store(
     input_path: Path,
-    last_suffix: str,
-    post_proc: str | callable | None,
-    kwargs: Unpack[WSIReaderParams],
+    last_suffix: str | None,
+    post_proc: WSIPostProc,
+    kwargs: WSIReaderExtraParams,
 ) -> AnnotationStoreReader | None:
     """Try to create an AnnotationStoreReader if the file is a .db."""
     from .base import AnnotationStoreReader  # noqa: PLC0415
 
     if last_suffix == ".db":
-        kwargs["post_proc"] = post_proc
-        return AnnotationStoreReader(input_path, **kwargs)
+        reader_kwargs: WSIReaderParams = {**kwargs, "post_proc": post_proc}
+        return AnnotationStoreReader(input_path, **reader_kwargs)
     return None
 
 
 def try_ngff(
     input_path: str | Path,
-    last_suffix: str,
+    last_suffix: str | None,
     mpp: tuple[Number, Number] | None,
     power: Number | None,
-    **kwargs: Unpack[WSIReaderParams],
+    **kwargs: Unpack[WSIReaderExtraParams],
 ) -> NGFFWSIReader | None:
     """Try to create an NGFFWSIReader if the file is a valid NGFF Zarr."""
     from .base import NGFFWSIReader  # noqa: PLC0415
@@ -271,10 +273,10 @@ def try_ngff(
 def try_ome_tiff(
     input_path: Path,
     suffixes: list[str],
-    last_suffix: str,
+    last_suffix: str | None,
     mpp: tuple[Number, Number] | None,
     power: Number | None,
-    post_proc: str | callable | None,
+    post_proc: WSIPostProc,
 ) -> TIFFWSIReader | None:
     """Try to create a TIFFWSIReader for OME-TIFF or QPTIFF formats."""
     from .base import TIFFWSIReader  # noqa: PLC0415
@@ -289,10 +291,10 @@ def try_ome_tiff(
 
 def try_tiff(
     input_path: Path,
-    last_suffix: str,
+    last_suffix: str | None,
     mpp: tuple[Number, Number] | None,
     power: Number | None,
-    post_proc: str | callable | None,
+    post_proc: WSIPostProc,
 ) -> TIFFWSIReader | OpenSlideWSIReader | VirtualWSIReader | None:
     """Try to create a TIFFWSIReader.
 
