@@ -106,6 +106,47 @@ def test_post_process_patches() -> None:
     segmentor.build_post_process_raw_predictions.assert_called_once()
 
 
+def test_post_process_wsi_tile_mode(tmp_path: Path) -> None:
+    """Test WSI post-processing using tile mode."""
+    segmentor = Mock()
+
+    segmentor._ioconfig.tile_shape = (10, 10)
+    segmentor.num_workers = 0
+    segmentor.mask_padding = (1, 2, 3, 4)
+    segmentor.return_predictions_dict = {}
+
+    probabilities = [np.zeros((20, 20))]
+
+    segmentor._process_tile_mode.return_value = [
+        {
+            "task_type": "seg",
+            "mask": np.ones((5, 5)),
+            "stats": {"dice": 0.9},
+        }
+    ]
+
+    raw_predictions = {
+        "probabilities": probabilities,
+    }
+
+    result = MultiTaskSegmentor.post_process_wsi(
+        segmentor,
+        raw_predictions,
+        tmp_path / "output",
+        return_predictions=[True],
+        return_probabilities=False,
+        num_workers=4,
+    )
+
+    segmentor._process_tile_mode.assert_called_once()
+    segmentor._process_full_wsi.assert_not_called()
+
+    assert segmentor.return_predictions_dict["seg"] is True
+    assert isinstance(result["seg"]["mask"], da.Array)
+    assert result["seg"]["dice"] == 0.9
+    assert segmentor.tasks == {"seg"}
+
+
 def test_process_full_wsi_mixed_return_predictions(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
