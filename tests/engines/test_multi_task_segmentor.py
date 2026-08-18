@@ -238,6 +238,132 @@ def test_save_predictions_as_dict_zarr_coordinates(
     assert "coordinates" in captured["keys_to_compute"]
 
 
+def test_save_predictions_as_json_store_patch_mode(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test patch-mode AnnotationStore saving."""
+    segmentor = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+
+    segmentor.patch_mode = True
+    segmentor.verbose = False
+    segmentor.num_workers = 0
+
+    segmentor.images = [
+        track_tmp_path / "img1.png",
+    ]
+
+    segmentor.return_predictions_dict = {
+        "nuclei": False,
+    }
+
+    save_calls: list[dict[str, object]] = []
+    post_save_called = False
+
+    def _fake_save_annotation_json_store(
+        curr_image: Path | None,
+        predictions: dict,
+        task_name: str | None,
+        idx: int,
+        save_path: Path,
+        output_type: str,
+        class_dict: dict,
+        scale_factor: tuple[float, float],
+        num_workers: int,
+        *,
+        verbose: bool,
+    ) -> Path:
+        """Capture save arguments."""
+        _ = (
+            task_name,
+            output_type,
+            class_dict,
+            scale_factor,
+            num_workers,
+            verbose,
+        )
+
+        save_calls.append(
+            {
+                "curr_image": curr_image,
+                "predictions": predictions,
+                "idx": idx,
+            },
+        )
+
+        return save_path.with_suffix(".db")
+
+    def _fake_post_save_json_store(
+        keys_to_compute: list[str],
+        processed_predictions: dict,
+        save_path: Path | None,
+        **kwargs: object,
+    ) -> None:
+        """Record cleanup call."""
+        nonlocal post_save_called
+
+        _ = (
+            keys_to_compute,
+            processed_predictions,
+            save_path,
+            kwargs,
+        )
+
+        post_save_called = True
+
+    def _fake_get_model_attr(
+        attr_name: str,
+    ) -> dict[int, str]:
+        """Return fake model attributes."""
+        _ = attr_name
+
+        return {1: "Tumour"}
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "_save_annotation_json_store",
+        _fake_save_annotation_json_store,
+    )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "_post_save_json_store",
+        _fake_post_save_json_store,
+    )
+
+    monkeypatch.setattr(
+        segmentor,
+        "_get_model_attr",
+        _fake_get_model_attr,
+    )
+
+    result = segmentor._save_predictions_as_json_store(
+        processed_predictions={
+            "canvas": np.array([1]),
+            "count": np.array([1]),
+            "probabilities": np.array([0.5]),
+            "predictions": np.array([1]),
+            "contours": np.array([1]),
+        },
+        task_name="nuclei",
+        save_path=track_tmp_path / "output.db",
+        output_type="annotationstore",
+    )
+
+    assert len(result) == 1
+
+    assert post_save_called is True
+
+    predictions = save_calls[0]["predictions"]
+
+    assert "predictions" not in predictions
+    assert "probabilities" not in predictions
+    assert "canvas" not in predictions
+    assert "count" not in predictions
+
+    assert "contours" in predictions
+
+
 def test_save_predictions_annotationstore_without_probabilities(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
