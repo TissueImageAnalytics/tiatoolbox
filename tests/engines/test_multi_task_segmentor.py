@@ -71,6 +71,119 @@ def test_run_raises_when_return_labels_true() -> None:
         )
 
 
+def test_save_predictions_annotationstore_without_probabilities(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test AnnotationStore saving without probability outputs."""
+    segmentor = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+
+    segmentor.tasks = {"nuclei_segmentation"}
+
+    segmentor.return_predictions_dict = {
+        "nuclei_segmentation": True,
+    }
+
+    fake_zarr_group = {
+        "nuclei_segmentation": {
+            "contours": np.array([1]),
+        },
+    }
+
+    def _fake_get_model_attr(name: str) -> dict:
+        """Fake get_model_attr."""
+        _ = name
+        return {
+            "nuclei_segmentation": {
+                1: "Tumour",
+            },
+        }
+
+    def _fake_save_predictions_as_dict_zarr(
+        processed_predictions: dict,
+        output_type: str,
+        save_path: Path,
+        **kwargs: object,
+    ) -> Path:
+        """Fake save_predictions_as_dict_zarr."""
+        _ = processed_predictions, output_type, kwargs
+        return save_path
+
+    def _fake_save_predictions_as_json_store(
+        processed_predictions: dict,
+        task_name: str | None,
+        save_path: Path,
+        output_type: str,
+        **kwargs: object,
+    ) -> list:
+        """Fake save_predictions_as_json_store."""
+        _ = (
+            processed_predictions,
+            task_name,
+            output_type,
+            kwargs,
+        )
+
+        return [save_path.with_suffix(".db")]
+
+    monkeypatch.setattr(
+        segmentor,
+        "_get_model_attr",
+        _fake_get_model_attr,
+    )
+
+    monkeypatch.setattr(
+        segmentor,
+        "_save_predictions_as_dict_zarr",
+        _fake_save_predictions_as_dict_zarr,
+    )
+
+    monkeypatch.setattr(
+        segmentor,
+        "_save_predictions_as_json_store",
+        _fake_save_predictions_as_json_store,
+    )
+
+    def _fake_is_zarr(path: Path) -> bool:
+        """Return False for all paths."""
+        _ = path
+
+        return False
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "is_zarr",
+        _fake_is_zarr,
+    )
+
+    def _fake_zarr_open(
+        store: str | Path,
+        mode: str = "r+",
+    ) -> dict:
+        """Return fake zarr group."""
+        _ = store, mode
+
+        return fake_zarr_group
+
+    monkeypatch.setattr(
+        zarr,
+        "open",
+        _fake_zarr_open,
+    )
+
+    result = segmentor.save_predictions(
+        processed_predictions={},
+        output_type="annotationstore",
+        save_path=track_tmp_path / "output.db",
+        return_probabilities=False,
+        return_predictions=(False,),
+    )
+
+    assert result == [
+        track_tmp_path / "output.db",
+    ]
+
+
 def test_save_predictions_annotationstore_path_branch(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
