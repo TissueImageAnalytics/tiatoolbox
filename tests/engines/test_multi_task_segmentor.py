@@ -71,6 +71,132 @@ def test_run_raises_when_return_labels_true() -> None:
         )
 
 
+def test_process_full_wsi_mixed_return_predictions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test _process_full_wsi with and without returned predictions."""
+    segmentor = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+
+    segmentor.mask_padding = (1, 2, 3, 4)
+
+    predictions_0 = da.from_array(
+        np.ones((4, 4), dtype=np.uint8),
+        chunks=(4, 4),
+    )
+
+    predictions_1 = da.from_array(
+        np.ones((4, 4), dtype=np.uint8),
+        chunks=(4, 4),
+    )
+
+    def _fake_postproc_func(
+        probabilities: list[da.Array | np.ndarray],
+        offset: tuple[int, int],
+    ) -> list:
+        """Return two task outputs."""
+        _ = probabilities
+
+        assert offset == (1, 2)
+
+        return [
+            {
+                "task_type": "task_a",
+                "predictions": predictions_0,
+            },
+            {
+                "task_type": "task_b",
+                "predictions": predictions_1,
+            },
+        ]
+
+    def _fake_get_model_attr(
+        attr_name: str,
+    ) -> Callable:
+        """Return fake post-processing function."""
+        _ = attr_name
+
+        return _fake_postproc_func
+
+    monkeypatch.setattr(
+        segmentor,
+        "_get_model_attr",
+        _fake_get_model_attr,
+    )
+
+    result = segmentor._process_full_wsi(
+        probabilities=[
+            da.from_array(
+                np.zeros((4, 4), dtype=np.float32),
+                chunks=(4, 4),
+            ),
+        ],
+        return_predictions=(False, True),
+    )
+
+    #
+    # False branch:
+    # if not return_predictions_:
+    #
+    assert "predictions" not in result[0]
+
+    #
+    # True branch:
+    # else -> build_da_pad_width + da.pad
+    #
+    assert "predictions" in result[1]
+
+    assert result[1]["predictions"].shape == (
+        4 + 2 + 4,  # top + bottom padding
+        4 + 1 + 3,  # left + right padding
+    )
+
+
+def test_process_full_wsi_default_return_predictions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test default return_predictions behaviour."""
+    segmentor = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+
+    segmentor.mask_padding = (0, 0, 0, 0)
+
+    def _fake_postproc_func(
+        probabilities: list[da.Array | np.ndarray],
+        offset: tuple[int, int],
+    ) -> list:
+        """Return one task output."""
+        _ = probabilities, offset
+
+        return [
+            {
+                "task_type": "task_a",
+                "predictions": da.from_array(
+                    np.ones((2, 2)),
+                    chunks=(2, 2),
+                ),
+            },
+        ]
+
+    def _fake_get_model_attr(
+        attr_name: str,
+    ) -> Callable:
+        """Return fake post-processing function."""
+        _ = attr_name
+        return _fake_postproc_func
+
+    monkeypatch.setattr(
+        segmentor,
+        "_get_model_attr",
+        _fake_get_model_attr,
+    )
+
+    result = segmentor._process_full_wsi(
+        probabilities=[],
+        return_predictions=None,
+    )
+
+    assert "predictions" not in result[0]
+
+
 def test_process_tile_mode_removes_instances(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
