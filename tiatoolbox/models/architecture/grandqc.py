@@ -27,7 +27,7 @@ Features:
 
 Example:
     >>> from tiatoolbox.models.engine.semantic_segmentor import SemanticSegmentor
-    >>> segmentor = SemanticSegmentor(model="grandqc_tissue_detection_mpp10")
+    >>> segmentor = SemanticSegmentor(model="grandqc_tissue_detection")
     >>> results = segmentor.run(
     ...     ["/example_wsi.svs"],
     ...     masks=None,
