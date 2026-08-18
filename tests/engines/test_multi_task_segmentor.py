@@ -71,6 +71,38 @@ def test_run_raises_when_return_labels_true() -> None:
         )
 
 
+def test_rearrange_raw_predictions_to_per_task_dict_array_values() -> None:
+    """Test stacking array values into a Dask array."""
+    raw_predictions = {
+        "task_a": {
+            "predictions": [
+                np.array([[1, 2]]),
+                np.array([[3, 4]]),
+            ],
+        },
+    }
+
+    result = MultiTaskSegmentor._rearrange_raw_predictions_to_per_task_dict(
+        tasks={"task_a"},
+        raw_predictions=raw_predictions,
+    )
+
+    assert isinstance(
+        result["task_a"]["predictions"],
+        da.Array,
+    )
+
+    np.testing.assert_array_equal(
+        result["task_a"]["predictions"].compute(),
+        np.array(
+            [
+                [[1, 2]],
+                [[3, 4]],
+            ],
+        ),
+    )
+
+
 def test_save_predictions_as_dict_zarr_multitask(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
