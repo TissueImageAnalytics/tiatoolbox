@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 if TYPE_CHECKING:  # pragma: no cover
+    from collections.abc import Callable
     from numbers import Number
 
     from tiatoolbox.wsicore.wsimeta import WSIMeta
@@ -17,4 +18,11 @@ class WSIReaderParams(TypedDict, total=False):
     mpp: tuple[Number, Number] | Number | None
     power: Number | None
     storage_options: dict  # For FsspecStore
-    post_proc: str | callable | None
+    post_proc: str | Callable[..., Any] | None
+
+
+class WSIReaderExtraParams(TypedDict, total=False):
+    """Extra kwargs when mpp, power, and post_proc are explicit parameters."""
+
+    meta: WSIMeta | None
+    storage_options: dict  # For FsspecStore
