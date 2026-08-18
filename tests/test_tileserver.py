@@ -216,6 +216,25 @@ def test_get_index(app: TileServer) -> None:
         assert response.content_type == "text/html; charset=utf-8"
 
 
+def test_get_index_creates_session(empty_app: TileServer) -> None:
+    """Test index creates a session when one does not exist."""
+    with empty_app.test_client() as client:
+        response = client.get("/")
+
+        assert response.status_code == 200
+
+        session_cookie = client.get_cookie("session_id")
+
+        assert session_cookie is not None
+
+        session_id = session_cookie.value
+
+        assert session_id in empty_app.layers
+        assert session_id in empty_app.pyramids
+        assert session_id in empty_app.renderers
+        assert session_id in empty_app.overlaps
+
+
 def test_create_with_dict(sample_svs: Path) -> None:
     """Test initializing with layers dict."""
     wsi = WSIReader.open(Path(sample_svs))
@@ -237,16 +256,16 @@ def test_cli_name_multiple_flag() -> None:
     """Test cli_name multiple flag."""
 
     @cli_name()
-    def dummy_fn() -> NoReturn:
+    def dummy_fn_single() -> NoReturn:
         """It is empty because it's a dummy function."""
 
-    assert "Multiple" not in dummy_fn.__click_params__[0].help
+    assert "Multiple" not in dummy_fn_single.__click_params__[0].help
 
     @cli_name(multiple=True)
-    def dummy_fn() -> NoReturn:
+    def dummy_fn_multiple() -> NoReturn:
         """It is empty because it's a dummy function."""
 
-    assert "Multiple" in dummy_fn.__click_params__[0].help
+    assert "Multiple" in dummy_fn_multiple.__click_params__[0].help
 
 
 def test_get_session_id(app: TileServer) -> None:
@@ -346,6 +365,31 @@ def test_remove_slide(
         assert empty_app.layers[session_id] == {}
         assert empty_app.pyramids[session_id] == {}
         assert session_id not in empty_app.slide_mpps
+
+
+def test_remove_overlay(app: TileServer) -> None:
+    """Test removing an overlay layer."""
+    with app.test_client() as client:
+        response = client.delete("/tileserver/overlay/slide")
+
+        assert response.status_code == 400
+        assert response.data == b"Cannot remove the slide."
+
+        response = client.delete("/tileserver/overlay/missing")
+
+        assert response.status_code == 404
+        assert response.data == b"Layer not found."
+
+        assert "overlay" in app.layers["default"]
+        assert "overlay" in app.pyramids["default"]
+
+        response = client.delete("/tileserver/overlay/overlay")
+
+        assert response.status_code == 200
+        assert response.data == b"done"
+
+        assert "overlay" not in app.layers["default"]
+        assert "overlay" not in app.pyramids["default"]
 
 
 def test_change_slide_after_remove(
