@@ -71,6 +71,120 @@ def test_run_raises_when_return_labels_true() -> None:
         )
 
 
+@patch(
+    "tiatoolbox.models.engine.multi_task_segmentor.shutil.rmtree",
+)
+@patch(
+    "tiatoolbox.models.engine.multi_task_segmentor._calculate_probabilities",
+)
+@patch(
+    "tiatoolbox.models.engine.multi_task_segmentor.merge_multitask_horizontal",
+)
+@patch(
+    "tiatoolbox.models.engine.multi_task_segmentor.prepare_multitask_full_batch",
+)
+@patch(
+    "tiatoolbox.models.engine.multi_task_segmentor.get_full_output_locs_inside_mask",
+)
+@patch(
+    "tiatoolbox.models.engine.multi_task_segmentor.get_wsi_output_shape",
+)
+def test_infer_wsi_no_change_indices_cleanup(
+    mock_output_shape: MagicMock,
+    mock_mask_locs: MagicMock,
+    mock_prepare: MagicMock,
+    mock_merge: MagicMock,
+    mock_calculate_probabilities: MagicMock,
+    mock_rmtree: MagicMock,
+    track_tmp_path: Path,
+) -> None:
+    """Test infer_wsi when no row changes occur and cleanup is triggered."""
+    tmp_dir = track_tmp_path / "full_batch_tmp"
+    tmp_dir.mkdir()
+
+    mock_output_shape.return_value = (20, 20)
+
+    full_output_locs = np.array(
+        [
+            [0, 0, 10, 10],
+            [10, 0, 20, 10],
+        ],
+    )
+
+    mock_mask_locs.return_value = (
+        full_output_locs,
+        (0, 0, 0, 0),
+        (20, 20),
+    )
+
+    mock_prepare.return_value = (
+        [np.ones((1, 1, 1))],
+        full_output_locs,
+        full_output_locs,
+    )
+
+    mock_merge.return_value = (
+        [None],
+        [None],
+        None,
+        None,
+        None,
+    )
+
+    mock_calculate_probabilities.return_value = [
+        da.ones((20, 20)),
+    ]
+
+    dataset = MagicMock()
+    dataset.full_outputs = full_output_locs
+    dataset.__getitem__.return_value = {
+        "image": np.zeros((3, 32, 32)),
+    }
+
+    dataloader = MagicMock()
+    dataloader.dataset = dataset
+    dataloader.__iter__.return_value = iter(
+        [
+            {
+                "image": torch.zeros((1, 3, 32, 32)),
+                "output_locs": torch.tensor(
+                    [[0, 0, 10, 10]],
+                ),
+            },
+        ],
+    )
+    dataloader.__len__.return_value = 1
+
+    segmentor = MagicMock()
+    segmentor.verbose = False
+    segmentor.device = "cpu"
+    segmentor.model = Mock()
+    segmentor.mask_bounds = (0, 0, 20, 20)
+
+    segmentor._get_model_attr.return_value = Mock(
+        return_value=[np.ones((1, 1, 1))],
+    )
+
+    segmentor._get_coordinates.return_value = np.array(
+        [[0, 0, 10, 10]],
+    )
+
+    result = MultiTaskSegmentor.infer_wsi(
+        segmentor,
+        dataloader,
+        track_tmp_path / "output.zarr",
+    )
+
+    assert "probabilities" in result
+    assert "coordinates" in result
+
+    # tests change_indices.size == 0
+    mock_merge.assert_called_once()
+
+    # cleanup branch
+    mock_rmtree.assert_called_once_with(tmp_dir)
+
+
 def test_post_process_patches() -> None:
     """Test patch-level post-processing."""
     segmentor = Mock()
