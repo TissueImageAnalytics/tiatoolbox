@@ -71,6 +71,173 @@ def test_run_raises_when_return_labels_true() -> None:
         )
 
 
+def test_save_predictions_as_dict_zarr_multitask(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test zarr saving for multiple tasks without probabilities."""
+    segmentor = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+
+    segmentor.tasks = {
+        "task_a",
+        "task_b",
+    }
+
+    segmentor.drop_keys = set()
+
+    calls: list[dict[str, object]] = []
+
+    def _fake_save_predictions_as_zarr(
+        processed_predictions: dict,
+        save_path: Path,
+        keys_to_compute: list[str],
+        task_name: str | None,
+    ) -> Path:
+        """Record save requests."""
+        calls.append(
+            {
+                "processed_predictions": processed_predictions,
+                "keys_to_compute": keys_to_compute,
+                "task_name": task_name,
+            },
+        )
+
+        return save_path
+
+    monkeypatch.setattr(
+        segmentor,
+        "save_predictions_as_zarr",
+        _fake_save_predictions_as_zarr,
+    )
+
+    save_path = track_tmp_path / "output.zarr"
+
+    result = segmentor._save_predictions_as_dict_zarr(
+        processed_predictions={
+            "task_a": {
+                "contours": np.array([1]),
+            },
+            "task_b": {
+                "contours": np.array([2]),
+            },
+        },
+        output_type="zarr",
+        save_path=save_path,
+        return_probabilities=False,
+    )
+
+    assert result == save_path
+
+    assert len(calls) == 2
+
+    assert {call["task_name"] for call in calls} == {
+        "task_a",
+        "task_b",
+    }
+
+
+def test_save_predictions_as_dict_zarr_probabilities(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test probability zarr output."""
+    segmentor = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+
+    segmentor.tasks = {"task_a"}
+    segmentor.drop_keys = set()
+
+    probability_calls: list[dict[str, object]] = []
+
+    def _fake_save_predictions_as_zarr(
+        processed_predictions: dict,
+        save_path: Path,
+        keys_to_compute: list[str],
+        task_name: str | None,
+    ) -> Path:
+        """Record save requests."""
+        probability_calls.append(
+            {
+                "processed_predictions": processed_predictions,
+                "keys_to_compute": keys_to_compute,
+                "task_name": task_name,
+            },
+        )
+
+        return save_path
+
+    monkeypatch.setattr(
+        segmentor,
+        "save_predictions_as_zarr",
+        _fake_save_predictions_as_zarr,
+    )
+
+    segmentor._save_predictions_as_dict_zarr(
+        processed_predictions={
+            "probabilities": np.array([1]),
+            "task_a": {
+                "contours": np.array([1]),
+            },
+        },
+        output_type="zarr",
+        save_path=track_tmp_path / "output.zarr",
+        return_probabilities=True,
+    )
+
+    assert probability_calls[0]["keys_to_compute"] == [
+        "probabilities",
+    ]
+
+    assert probability_calls[0]["task_name"] is None
+
+
+def test_save_predictions_as_dict_zarr_coordinates(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test coordinate propagation to task output."""
+    segmentor = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+
+    segmentor.tasks = {"task_a"}
+    segmentor.drop_keys = set()
+
+    captured: dict[str, object] = {}
+
+    def _fake_save_predictions_as_zarr(
+        processed_predictions: dict,
+        save_path: Path,
+        keys_to_compute: list[str],
+        task_name: str | None,
+    ) -> Path:
+        """Capture arguments."""
+        _ = save_path, task_name
+
+        captured["processed_predictions"] = processed_predictions
+        captured["keys_to_compute"] = keys_to_compute
+
+        return track_tmp_path / "output.zarr"
+
+    monkeypatch.setattr(
+        segmentor,
+        "save_predictions_as_zarr",
+        _fake_save_predictions_as_zarr,
+    )
+
+    segmentor._save_predictions_as_dict_zarr(
+        processed_predictions={
+            "coordinates": np.array([[0, 0]]),
+            "task_a": {
+                "contours": np.array([1]),
+            },
+        },
+        output_type="zarr",
+        save_path=track_tmp_path / "output.zarr",
+    )
+
+    assert "coordinates" in captured["processed_predictions"]
+
+    assert "coordinates" in captured["keys_to_compute"]
+
+
 def test_save_predictions_annotationstore_without_probabilities(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
