@@ -42,7 +42,7 @@ from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Sequence
 
 OutputType = dict[str, Any] | Any
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
@@ -69,6 +69,179 @@ def test_run_raises_when_return_labels_true() -> None:
             images=np.zeros((1, 256, 256, 3), dtype=np.uint8),
             return_labels=True,
         )
+
+
+def test_infer_patches_without_coordinates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test patch inference without coordinates."""
+    segmentor = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+
+    segmentor.verbose = False
+    segmentor.device = "cpu"
+    segmentor.model = object()
+
+    class FakeDataset:
+        """Minimal dataset."""
+
+        def __getitem__(self, idx: int) -> dict[str, np.ndarray]:
+            _ = idx
+
+            return {
+                "image": np.zeros((4, 4, 3), dtype=np.float32),
+            }
+
+    def _fake_infer_batch(
+        model: object,
+        image: torch.Tensor,
+        *,
+        device: str,
+    ) -> tuple[np.ndarray]:
+        """Return fake probabilities."""
+        _ = model, image, device
+
+        return (np.ones((2, 4, 4, 1), dtype=np.float32),)
+
+    def _fake_get_model_attr(attr_name: str) -> Callable:
+        _ = attr_name
+        return _fake_infer_batch
+
+    monkeypatch.setattr(
+        segmentor,
+        "_get_model_attr",
+        _fake_get_model_attr,
+    )
+
+    class FakeDataLoader:
+        """Minimal iterable dataloader."""
+
+        def __init__(self) -> None:
+            self.dataset = FakeDataset()
+
+        def __iter__(self) -> Iterator[dict[str, torch.Tensor]]:
+            """Return batches."""
+            return iter(
+                [
+                    {
+                        "image": torch.zeros((2, 4, 4, 3)),
+                    },
+                ],
+            )
+
+    dataloader = FakeDataLoader()
+
+    result = segmentor.infer_patches(
+        dataloader=dataloader,
+        return_coordinates=False,
+    )
+
+    assert "probabilities" in result
+    assert "coordinates" not in result
+
+    assert len(result["probabilities"]) == 1
+
+    np.testing.assert_array_equal(
+        result["probabilities"][0].compute(),
+        np.ones((2, 4, 4, 1), dtype=np.float32),
+    )
+
+
+def test_infer_patches_with_coordinates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test patch inference with coordinates."""
+    segmentor = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+
+    segmentor.verbose = False
+    segmentor.device = "cpu"
+    segmentor.model = object()
+
+    class FakeDataset:
+        """Minimal dataset."""
+
+        def __getitem__(self, idx: int) -> dict[str, np.ndarray]:
+            _ = idx
+
+            return {
+                "image": np.zeros((4, 4, 3), dtype=np.float32),
+            }
+
+    class FakeDataLoader:
+        """Minimal iterable dataloader."""
+
+        def __init__(self) -> None:
+            self.dataset = FakeDataset()
+
+        def __iter__(self) -> Iterator[dict[str, torch.Tensor]]:
+            """Return batches."""
+            return iter(
+                [
+                    {
+                        "image": torch.zeros((2, 4, 4, 3)),
+                    },
+                ],
+            )
+
+    dataloader = FakeDataLoader()
+
+    def _fake_infer_batch(
+        model: object,
+        image: torch.Tensor,
+        *,
+        device: str,
+    ) -> tuple[np.ndarray]:
+        """Return fake probabilities."""
+        _ = model, image, device
+
+        return (np.ones((1, 4, 4, 1), dtype=np.float32),)
+
+    def _fake_get_model_attr(
+        attr_name: str,
+    ) -> Callable:
+        """Return fake model attribute."""
+        _ = attr_name
+        return _fake_infer_batch
+
+    def _fake_get_coordinates(
+        batch_data: dict[str, torch.Tensor],
+    ) -> np.ndarray:
+        _ = batch_data
+
+        return np.array(
+            [
+                [0, 0, 4, 4],
+            ],
+            dtype=np.int32,
+        )
+
+    monkeypatch.setattr(
+        segmentor,
+        "_get_model_attr",
+        _fake_get_model_attr,
+    )
+
+    monkeypatch.setattr(
+        segmentor,
+        "_get_coordinates",
+        _fake_get_coordinates,
+    )
+
+    result = segmentor.infer_patches(
+        dataloader=dataloader,
+        return_coordinates=True,
+    )
+
+    assert "coordinates" in result
+
+    np.testing.assert_array_equal(
+        result["coordinates"].compute(),
+        np.array(
+            [
+                [0, 0, 4, 4],
+            ],
+            dtype=np.int32,
+        ),
+    )
 
 
 @patch(
