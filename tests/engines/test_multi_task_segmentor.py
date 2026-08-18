@@ -71,6 +71,103 @@ def test_run_raises_when_return_labels_true() -> None:
         )
 
 
+def test_build_post_process_raw_predictions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test building raw predictions from post-processed outputs."""
+    segmentor = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+    segmentor.return_predictions_dict = {}
+    rearrange_called: dict[str, object] = {}
+
+    def _fake_rearrange_raw_predictions_to_per_task_dict(
+        tasks: set[str],
+        raw_predictions: dict,
+    ) -> dict:
+        """Return predictions unchanged and capture arguments."""
+        rearrange_called["tasks"] = tasks
+        rearrange_called["raw_predictions"] = raw_predictions
+
+        return raw_predictions
+
+    monkeypatch.setattr(
+        segmentor,
+        "_rearrange_raw_predictions_to_per_task_dict",
+        _fake_rearrange_raw_predictions_to_per_task_dict,
+    )
+
+    raw_predictions: dict[str, dict] = {}
+
+    post_process_predictions = [
+        (
+            {
+                "task_type": "nuclei",
+                "predictions": np.array([1]),
+                "info_dict": {"a": 1},
+            },
+            {
+                "task_type": "layers",
+                "predictions": np.array([2]),
+                "info_dict": {"b": 2},
+            },
+        ),
+        (
+            {
+                "task_type": "nuclei",
+                "predictions": np.array([3]),
+                "info_dict": {"c": 3},
+            },
+            {
+                "task_type": "layers",
+                "predictions": np.array([4]),
+                "info_dict": {"d": 4},
+            },
+        ),
+    ]
+
+    result = segmentor.build_post_process_raw_predictions(
+        post_process_predictions=post_process_predictions,
+        raw_predictions=raw_predictions,
+        return_predictions=(True, False),
+    )
+
+    assert result is raw_predictions
+
+    assert segmentor.return_predictions_dict == {
+        "nuclei": True,
+        "layers": False,
+    }
+
+    assert segmentor.tasks == {
+        "nuclei",
+        "layers",
+    }
+
+    assert rearrange_called["tasks"] == {
+        "nuclei",
+        "layers",
+    }
+
+    assert raw_predictions["nuclei"]["predictions"] == [
+        np.array([1]),
+        np.array([3]),
+    ]
+
+    assert raw_predictions["layers"]["predictions"] == [
+        np.array([2]),
+        np.array([4]),
+    ]
+
+    assert raw_predictions["nuclei"]["info_dict"] == [
+        {"a": 1},
+        {"c": 3},
+    ]
+
+    assert raw_predictions["layers"]["info_dict"] == [
+        {"b": 2},
+        {"d": 4},
+    ]
+
+
 def test_rearrange_raw_predictions_to_per_task_dict_array_values() -> None:
     """Test stacking array values into a Dask array."""
     raw_predictions = {
