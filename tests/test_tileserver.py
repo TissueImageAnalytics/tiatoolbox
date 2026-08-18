@@ -22,7 +22,6 @@ from tiatoolbox.cli.common import cli_name
 from tiatoolbox.utils import imread, imwrite
 from tiatoolbox.utils.misc import store_from_dat
 from tiatoolbox.visualization import TileServer
-from tiatoolbox.visualization.visualize_beta_tileserver import VisualizeBetaTileServer
 from tiatoolbox.wsicore import WSIReader
 
 if TYPE_CHECKING:
@@ -209,11 +208,14 @@ def test_get_tile_layer_key_error(app: TileServer) -> None:
 
 
 def test_get_index(app: TileServer) -> None:
-    """Get the index page and check that it is HTML."""
+    """Get the legacy index page and check that it is HTML."""
     with app.test_client() as client:
         response = client.get("/")
+
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
+        assert b"/openlayers/viewer_legacy.js" in response.data
+        assert b"/openlayers/viewer_legacy.css" in response.data
 
 
 def test_get_index_creates_session(empty_app: TileServer) -> None:
@@ -269,18 +271,21 @@ def test_cli_name_multiple_flag() -> None:
 
 
 def test_get_session_id(app: TileServer) -> None:
-    """Test session_id endpoint."""
+    """Test legacy session_id endpoint."""
     with app.test_client() as client:
         response = client.get("/tileserver/session_id")
+
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
+        assert response.data == b"done"
 
 
 def test_visualize_beta_session_id() -> None:
     """Test creating a session for the experimental viewer."""
-    app = VisualizeBetaTileServer(
+    app = TileServer(
         title="Testing beta TileServer",
         layers={},
+        legacy=False,
     )
     app.config.from_mapping({"TESTING": True})
 
@@ -299,9 +304,10 @@ def test_visualize_beta_session_id() -> None:
 
 def test_visualize_beta_reuses_session() -> None:
     """Test that the experimental viewer reuses its session."""
-    app = VisualizeBetaTileServer(
+    app = TileServer(
         title="Testing beta TileServer",
         layers={},
+        legacy=False,
     )
     app.config.from_mapping({"TESTING": True})
 
@@ -317,9 +323,10 @@ def test_visualize_beta_reuses_session() -> None:
 
 def test_visualize_beta_index() -> None:
     """Test the experimental viewer starts with an empty viewer."""
-    app = VisualizeBetaTileServer(
+    app = TileServer(
         title="Testing beta TileServer",
         layers={},
+        legacy=False,
     )
     app.config.from_mapping({"TESTING": True})
 
@@ -328,8 +335,10 @@ def test_visualize_beta_index() -> None:
 
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
-        assert b"/openlayers/visualize_beta_viewer.js" in response.data
-        assert b"/openlayers/visualize_beta_viewer.css" in response.data
+        assert b"/openlayers/viewer.js" in response.data
+        assert b"/openlayers/viewer.css" in response.data
+        assert app.layers == {}
+        assert client.get_cookie("session_id") is None
 
 
 def test_remove_slide_missing_session(empty_app: TileServer) -> None:

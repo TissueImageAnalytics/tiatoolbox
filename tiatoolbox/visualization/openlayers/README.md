@@ -4,7 +4,7 @@ TIAToolbox supports an OpenLayers-based frontend viewer.
 
 There are currently two ways to use the OpenLayers frontend:
 
-- `show-wsi` uses the standard OpenLayers viewer and loads the slide when the
+- `show-wsi` uses the legacy OpenLayers viewer and loads the slide when the
   command is started.
 - `visualize-beta` launches the experimental dynamic OpenLayers viewer, where
   slides and overlays can be loaded or changed after the viewer has started.
@@ -24,9 +24,9 @@ through the `show-wsi` and `visualize-beta` commands.
 The npm/Vite setup described below is only required when developing or
 rebuilding the OpenLayers frontend.
 
-## Running the standard viewer
+## Running the legacy viewer
 
-The standard OpenLayers viewer is launched using `show-wsi`.
+The legacy OpenLayers viewer is launched using `show-wsi`.
 
 Run `show-wsi` with the path to a whole slide image:
 
@@ -76,7 +76,7 @@ tiatoolbox show-wsi \
 
 The slide and any additional layers are loaded when the server starts.
 
-This viewer uses the standard OpenLayers frontend files and keeps the existing
+This viewer uses the legacy OpenLayers frontend files and keeps the existing
 `show-wsi` behaviour.
 
 ## Running the experimental dynamic viewer
@@ -141,61 +141,93 @@ node --version
 npm --version
 ```
 
-The standard and experimental viewers use separate frontend source files and
-Vite build configurations so that they can be developed independently.
+The existing `show-wsi` viewer is kept separately as the legacy viewer, while
+the experimental dynamic viewer uses the main OpenLayers frontend files.
 
 The shared frontend files are:
 
 - `package.json` defines the frontend dependencies and build commands.
 - `package-lock.json` records the exact dependency versions installed by npm.
 
-The standard viewer files are:
+### Legacy viewer
 
-- `src/main.js` contains the OpenLayers viewer used by `show-wsi`.
-- `src/style.css` contains the standard viewer styling.
-- `vite.config.js` defines how the standard viewer is built.
+The legacy viewer files are:
+
+- `src/main_legacy.js` contains the OpenLayers viewer used by `show-wsi`.
+- `src/style_legacy.css` contains the legacy viewer styling.
+- `vite.legacy.config.js` defines how the legacy viewer is built.
+
+The generated files for the legacy viewer are:
+
+```text
+tiatoolbox/data/visualization/static/openlayers/viewer_legacy.js
+tiatoolbox/data/visualization/static/openlayers/viewer_legacy.css
+```
+
+These are served when `show-wsi` is used.
+
+The legacy viewer template is:
+
+```text
+tiatoolbox/data/visualization/templates/index_legacy.html
+```
+
+### Experimental viewer
 
 The experimental viewer files are:
 
-- `src/visualize_beta_viewer.js` contains the dynamic OpenLayers viewer used by
+- `src/main.js` contains the dynamic OpenLayers viewer used by
   `visualize-beta`.
-- `src/visualize_beta_viewer.css` contains the experimental viewer styling.
-- `vite.visualize-beta.config.js` defines how the experimental viewer is built.
+- `src/style.css` contains the experimental viewer styling.
+- `vite.config.js` defines how the experimental viewer is built.
 
-The generated files for the standard viewer are:
+The generated files for the experimental viewer are:
 
 ```text
 tiatoolbox/data/visualization/static/openlayers/viewer.js
 tiatoolbox/data/visualization/static/openlayers/viewer.css
 ```
 
-These are served when `show-wsi` is used.
-
-The generated files for the experimental viewer are:
-
-```text
-tiatoolbox/data/visualization/static/openlayers/visualize_beta_viewer.js
-tiatoolbox/data/visualization/static/openlayers/visualize_beta_viewer.css
-```
-
 These are served when `visualize-beta` is used.
 
-The corresponding templates are located at:
+The experimental viewer template is:
 
 ```text
 tiatoolbox/data/visualization/templates/index.html
-tiatoolbox/data/visualization/templates/visualize_beta.html
+```
+
+### TileServer
+
+Both viewers share the same TileServer implementation in:
+
+```text
+tiatoolbox/visualization/tileserver.py
+```
+
+`TileServer` uses its `legacy` option to select the appropriate frontend and
+session behaviour.
+
+`show-wsi` starts the TileServer with:
+
+```python
+legacy = True
+```
+
+`visualize-beta` starts the TileServer with:
+
+```python
+legacy = False
 ```
 
 The experimental viewer also uses:
 
 - `tiatoolbox/cli/visualize_beta.py` to provide the `visualize-beta` command.
-- `tiatoolbox/visualization/visualize_beta_tileserver.py` to serve the
-  experimental viewer template.
 - Dynamic TileServer routes in `tiatoolbox/visualization/tileserver.py` for
   loading and removing slides and overlays while the viewer is running.
 
-Run the following frontend development commands from:
+## Building the frontend
+
+Run the frontend development commands from:
 
 ```text
 tiatoolbox/visualization/openlayers/
@@ -209,10 +241,28 @@ npm ci
 
 This installs the exact versions recorded in `package-lock.json`.
 
-### Building the standard viewer
+### Building the legacy viewer
 
-After changing `src/main.js` or `src/style.css`, rebuild the standard viewer
-with:
+After changing `src/main_legacy.js` or `src/style_legacy.css`, rebuild the
+legacy viewer with:
+
+```bash
+npm run build:legacy
+```
+
+This updates:
+
+```text
+viewer_legacy.js
+viewer_legacy.css
+```
+
+The legacy build does not remove the generated experimental viewer files.
+
+### Building the experimental viewer
+
+After changing `src/main.js` or `src/style.css`, rebuild the experimental
+viewer with:
 
 ```bash
 npm run build
@@ -225,31 +275,13 @@ viewer.js
 viewer.css
 ```
 
-The standard build does not remove the generated experimental viewer files.
-
-### Building the experimental viewer
-
-After changing `src/visualize_beta_viewer.js` or
-`src/visualize_beta_viewer.css`, rebuild the experimental viewer with:
-
-```bash
-npm run build:visualize-beta
-```
-
-This updates:
-
-```text
-visualize_beta_viewer.js
-visualize_beta_viewer.css
-```
-
-The experimental build does not remove the generated standard viewer files.
+The experimental build does not remove the generated legacy viewer files.
 
 If changes affect both viewers, both builds can be run:
 
 ```bash
+npm run build:legacy
 npm run build
-npm run build:visualize-beta
 ```
 
 The generated JavaScript and CSS files should be committed together with their
@@ -258,14 +290,13 @@ source changes.
 Do not edit the generated JavaScript or CSS files directly because they are
 generated by Vite.
 
-After rebuilding the frontend, return to the root of the TIAToolbox repository
-and test the appropriate viewer.
+After rebuilding the frontend, return to the root of the TIAToolbox repository:
 
 ```bash
 cd ../../..
 ```
 
-Test the standard viewer with:
+Test the legacy viewer with:
 
 ```bash
 tiatoolbox show-wsi --img-input /path/to/slide.svs
@@ -283,8 +314,8 @@ and then rebuild both viewers as required. For example:
 ```bash
 cd tiatoolbox/visualization/openlayers/
 npm install --save-exact ol@<version>
+npm run build:legacy
 npm run build
-npm run build:visualize-beta
 ```
 
 This updates the recorded dependency version and rebuilds the generated
