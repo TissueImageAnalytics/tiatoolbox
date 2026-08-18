@@ -71,6 +71,147 @@ def test_run_raises_when_return_labels_true() -> None:
         )
 
 
+def test_process_tile_mode_removes_instances(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test removal of overlapping instances during tile merging."""
+    segmentor = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+
+    segmentor.verbose = False
+    segmentor.num_workers = 0
+
+    segmentor.mask_bounds = np.array([0, 0, 256, 256])
+    segmentor.mask_padding = (0, 0)
+
+    segmentor._ioconfig = SimpleNamespace(
+        highest_input_resolution={},
+        tile_shape=(256, 256),
+        to_baseline=lambda: SimpleNamespace(margin=0),
+    )
+
+    def _fake_slide_dimensions() -> tuple[int, int]:
+        """Return slide dimensions."""
+        return (256, 256)
+
+    segmentor.dataloader = SimpleNamespace(
+        dataset=SimpleNamespace(
+            reader=SimpleNamespace(
+                slide_dimensions=_fake_slide_dimensions,
+            ),
+        ),
+    )
+
+    existing_info_dict = {
+        "remove_me": {"type": 1},
+    }
+
+    fake_wsi_info_dict = (
+        {
+            "task_type": "nuclei",
+            "predictions": None,
+            "info_dict": existing_info_dict,
+        },
+    )
+
+    monkeypatch.setattr(
+        segmentor,
+        "_get_tile_info",
+        lambda image_shape, wsi_proc_shape: [  # noqa: ARG005
+            (
+                np.array([0, 0, 128, 128]),
+                (0, 0, 0, 0),
+                3,
+            ),
+        ],
+    )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "_build_tile_tasks",
+        lambda tile_info_sets, verbose: tile_info_sets,  # noqa: ARG005
+    )
+
+    monkeypatch.setattr(
+        segmentor,
+        "_compute_tile",
+        lambda tile_meta: tile_meta,
+    )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "tqdm_dask_progress_bar",
+        lambda **kwargs: [  # noqa: ARG005
+            (
+                {
+                    "task_type": "nuclei",
+                    "predictions": np.array([[1]], dtype=np.int32),
+                    "info_dict": {},
+                    "seg_type": "instance",
+                },
+            ),
+        ],
+    )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "_create_wsi_info_dict",
+        lambda **kwargs: fake_wsi_info_dict,  # noqa: ARG005
+    )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "_update_tile_based_predictions_array",
+        lambda **kwargs: (fake_wsi_info_dict, None),  # noqa: ARG005
+    )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "_get_inst_info_dicts",
+        lambda **kwargs: [{}],  # noqa: ARG005
+    )
+
+    def _fake_compute_info_dict_for_merge(
+        **kwargs: object,
+    ) -> tuple[dict, list[str]]:
+        """Return an instance and one UUID to remove."""
+        _ = kwargs
+
+        return (
+            {
+                "new_uuid": {
+                    "type": 1,
+                },
+            },
+            ["remove_me"],
+        )
+
+    monkeypatch.setattr(
+        multi_task_segmentor,
+        "_compute_info_dict_for_merge",
+        _fake_compute_info_dict_for_merge,
+    )
+
+    monkeypatch.setattr(
+        segmentor,
+        "_inst_dict_for_dask_processing",
+        lambda wsi_info_dict: wsi_info_dict,
+    )
+
+    probabilities = [
+        np.zeros((1, 1, 1), dtype=np.float32),
+    ]
+
+    result = segmentor._process_tile_mode(
+        probabilities=probabilities,
+        save_path=track_tmp_path / "tmp.zarr",
+        return_predictions=(False,),
+    )
+
+    assert "remove_me" not in result[0]["info_dict"]
+    assert "new_uuid" in result[0]["info_dict"]
+
+
 def test_build_post_process_raw_predictions(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
