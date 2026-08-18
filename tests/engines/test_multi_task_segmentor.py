@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Final
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 
 import dask.array as da
 import numpy as np
@@ -69,6 +69,41 @@ def test_run_raises_when_return_labels_true() -> None:
             images=np.zeros((1, 256, 256, 3), dtype=np.uint8),
             return_labels=True,
         )
+
+
+def test_post_process_patches() -> None:
+    """Test patch-level post-processing."""
+    segmentor = Mock()
+
+    def mock_postproc_func(
+        probs: list[object],
+        offset: tuple[int, int],
+    ) -> dict[str, object]:
+        """Mock post-processing function for testing."""
+        _ = offset
+        return {"task_type": "seg", "data": probs}
+
+    segmentor._get_model_attr.return_value = mock_postproc_func
+    segmentor.build_post_process_raw_predictions.return_value = {
+        "result": "ok",
+    }
+
+    raw_predictions = {
+        "probabilities": [
+            ["a", "b"],
+            ["c", "d"],
+        ],
+    }
+
+    result = MultiTaskSegmentor.post_process_patches(
+        segmentor,
+        raw_predictions,
+        return_predictions=[True],
+    )
+
+    assert result == {"result": "ok"}
+
+    segmentor.build_post_process_raw_predictions.assert_called_once()
 
 
 def test_process_full_wsi_mixed_return_predictions(
