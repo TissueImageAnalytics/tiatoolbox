@@ -12,7 +12,6 @@ import tifffile
 import zarr
 from packaging.version import Version
 from wsidicom import WsiDicom
-from wsidicom.errors import WsiDicomNotFoundError
 
 from tiatoolbox import logger
 
@@ -39,7 +38,7 @@ def is_dicom(path: Path) -> bool:
     """
     try:
         WsiDicom.open(path)
-    except WsiDicomNotFoundError:
+    except Exception:  # noqa: BLE001
         return False
     else:
         return True
