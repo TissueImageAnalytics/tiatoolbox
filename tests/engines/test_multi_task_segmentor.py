@@ -24,7 +24,7 @@ from zarr.storage import LocalStore
 
 from tiatoolbox import cli
 from tiatoolbox.annotation import SQLiteStore
-from tiatoolbox.models import IOSegmentorConfig
+from tiatoolbox.models import IOSegmentorConfig, SemanticSegmentor
 from tiatoolbox.models.architecture import fetch_pretrained_weights
 from tiatoolbox.models.engine import multi_task_segmentor
 from tiatoolbox.models.engine.multi_task_segmentor import (
@@ -339,6 +339,55 @@ def test_rearrange_raw_predictions_to_per_task_dict_array_values() -> None:
             ],
         ),
     )
+
+
+def test_save_predictions_as_dict_multiple_tasks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test dict output does not flatten multi-task predictions."""
+    segmentor = MultiTaskSegmentor.__new__(MultiTaskSegmentor)
+
+    segmentor.tasks = {
+        "task_a",
+        "task_b",
+    }
+
+    captured: dict[str, object] = {}
+
+    captured: dict[str, object] = {}
+
+    def _fake_save_predictions(
+        self: object,
+        processed_predictions: dict,
+        output_type: str,
+        save_path: Path | None = None,
+        **kwargs: object,
+    ) -> dict:
+        """Capture parent save_predictions call."""
+        _ = self, output_type, save_path, kwargs
+        captured["processed_predictions"] = processed_predictions
+
+        return processed_predictions
+
+    monkeypatch.setattr(
+        SemanticSegmentor,
+        "save_predictions",
+        _fake_save_predictions,
+    )
+
+    processed_predictions = {
+        "task_a": {"value": 1},
+        "task_b": {"value": 2},
+    }
+
+    result = segmentor._save_predictions_as_dict_zarr(
+        processed_predictions=processed_predictions,
+        output_type="dict",
+    )
+
+    assert result == processed_predictions
+    assert "task_a" in captured["processed_predictions"]
+    assert "task_b" in captured["processed_predictions"]
 
 
 def test_save_predictions_as_dict_zarr_multitask(
