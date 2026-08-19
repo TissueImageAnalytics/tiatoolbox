@@ -55,6 +55,9 @@ class TileServer(Flask):
             'layer-2' etc. will be used. First entry in list will be assumed to
             be the base slide. If a layer is a single-channel low-res overlay,
             it will be colourized using the 'viridis' colourmap.
+        legacy (bool):
+            Whether to use the legacy OpenLayers viewer behaviour (show-wsi)
+            or to use the experimental viewer (visualize-beta). Defaults to True.
 
     Examples:
         >>> from tiatoolbox.wsicore.wsireader import WSIReader
@@ -75,6 +78,8 @@ class TileServer(Flask):
         title: str,
         layers: dict[str, WSIReader | str] | list[WSIReader | str],
         renderer: AnnotationRenderer | None = None,
+        *,
+        legacy: bool = True,
     ) -> None:
         """Initialize :class:`TileServer`."""
         super().__init__(
@@ -88,6 +93,7 @@ class TileServer(Flask):
             ),
         )
         self.title = title
+        self.legacy = legacy
         self.layers = {}
         self.pyramids = {}
         self.renderer = renderer
@@ -144,6 +150,7 @@ class TileServer(Flask):
         self.route("/tileserver/session_id")(self.session_id)
         self.route("/tileserver/color_prop", methods=["PUT"])(self.change_prop)
         self.route("/tileserver/slide", methods=["PUT"])(self.change_slide)
+        self.route("/tileserver/slide", methods=["DELETE"])(self.remove_slide)
         self.route("/tileserver/clear_overlays", methods=["PUT"])(self.clear_overlays)
         self.route("/tileserver/cmap", methods=["PUT"])(self.change_mapper)
         self.route(
@@ -151,6 +158,10 @@ class TileServer(Flask):
             methods=["PUT"],
         )(self.load_annotations)
         self.route("/tileserver/overlay", methods=["PUT"])(self.change_overlay)
+        self.route(
+            "/tileserver/overlay/<layer>",
+            methods=["DELETE"],
+        )(self.remove_overlay)
         self.route("/tileserver/commit", methods=["POST"])(self.commit_db)
         self.route("/tileserver/renderer/<prop>", methods=["PUT"])(self.update_renderer)
         self.route("/tileserver/reset/<session_id>", methods=["PUT"])(self.reset)
@@ -351,7 +362,7 @@ class TileServer(Flask):
         msg = "No annotation layer found."
         raise ValueError(msg)
 
-    def index(self: TileServer) -> str:
+    def index(self: TileServer) -> Response:
         """Serve the index page.
 
         Returns:
@@ -359,11 +370,26 @@ class TileServer(Flask):
                 The index page.
 
         """
+        if not self.legacy:
+            return make_response(
+                render_template(
+                    "index.html",
+                    title=self.title,
+                    layers="[]",
+                ),
+            )
+
         session_id = self._get_session_id()
+        new_session_id = None
+
+        if session_id is None or session_id not in self.layers:
+            new_session_id = self._create_session()
+            session_id = new_session_id
+
         layers = [
             {
                 "name": name,
-                "url": f"/tileserver/layer/{name}/default/zoomify/"
+                "url": f"/tileserver/layer/{name}/{session_id}/zoomify/"
                 "{TileGroup}/{z}-{x}-{y}@1x.jpg",
                 "size": [int(x) for x in layer.info.slide_dimensions],
                 "mpp": float(np.mean(layer.info.mpp)),
@@ -371,11 +397,23 @@ class TileServer(Flask):
             for name, layer in self.layers[session_id].items()
         ]
 
-        return render_template(
-            "index.html",
-            title=self.title,
-            layers=json.dumps(layers),
+        response = make_response(
+            render_template(
+                "index_legacy.html",
+                title=self.title,
+                layers=json.dumps(layers),
+            ),
         )
+
+        if new_session_id is not None:
+            response.set_cookie(
+                "session_id",
+                new_session_id,
+                httponly=True,
+                samesite="Lax",
+            )  # skipcq: PTC-W6003
+
+        return response
 
     def change_prop(self: TileServer) -> str:
         """Change the property to colour annotations by."""
@@ -385,17 +423,57 @@ class TileServer(Flask):
 
         return "done"
 
-    def session_id(self: TileServer) -> Response:
-        """Set up a new session."""
-        # respond with a random cookie to disambiguate sessions
-        resp = make_response("done")
+    def _create_session(self: TileServer) -> str:
+        """Create and initialise a TileServer session."""
         session_id = "default" if self.default_session_id else secrets.token_urlsafe(16)
-        resp.set_cookie("session_id", session_id, httponly=True)  # skipcq: PTC-W6003
+
         self.renderers[session_id] = copy.deepcopy(self.renderer)
         self.overlaps[session_id] = 0
         self.layers[session_id] = {}
         self.pyramids[session_id] = {}
-        return resp
+
+        return session_id
+
+    def session_id(self: TileServer) -> Response:
+        """Set up a new session."""
+        if self.legacy:
+            resp = make_response("done")
+            session_id = (
+                "default" if self.default_session_id else secrets.token_urlsafe(16)
+            )
+
+            resp.set_cookie(
+                "session_id",
+                session_id,
+                httponly=True,
+                samesite="Lax",
+            )
+
+            self.renderers[session_id] = copy.deepcopy(self.renderer)
+            self.overlaps[session_id] = 0
+            self.layers[session_id] = {}
+            self.pyramids[session_id] = {}
+
+            return resp
+
+        session_id = self._get_session_id()
+        new_session_id = None
+
+        if session_id is None or session_id not in self.layers:
+            new_session_id = self._create_session()
+            session_id = new_session_id
+
+        response = jsonify({"session_id": session_id})
+
+        if new_session_id is not None:
+            response.set_cookie(
+                "session_id",
+                new_session_id,
+                httponly=True,
+                samesite="Lax",
+            )
+
+        return response
 
     def reset(self: TileServer, session_id: str) -> str:
         """Reset the tileserver."""
@@ -422,6 +500,19 @@ class TileServer(Flask):
 
         return "done"
 
+    def remove_slide(self: TileServer) -> Response:
+        """Remove the current slide and its overlays."""
+        session_id = self._get_session_id()
+
+        if session_id is None or session_id not in self.layers:
+            return Response("Session not found.", status=404)
+
+        self.layers[session_id] = {}
+        self.pyramids[session_id] = {}
+        self.slide_mpps.pop(session_id, None)
+
+        return Response("done", status=200)
+
     def clear_overlays(self: TileServer) -> str:
         """Clear all overlays."""
         session_id = self._get_session_id()
@@ -431,6 +522,21 @@ class TileServer(Flask):
             "slide": ZoomifyGenerator(slide_layer, tile_size=256),
         }
         return "done"
+
+    def remove_overlay(self: TileServer, layer: str) -> Response:
+        """Remove an overlay layer."""
+        session_id = self._get_session_id()
+
+        if layer == "slide":
+            return Response("Cannot remove the slide.", status=400)
+
+        if layer not in self.layers[session_id]:
+            return Response("Layer not found.", status=404)
+
+        self.layers[session_id].pop(layer)
+        self.pyramids[session_id].pop(layer, None)
+
+        return Response("done", status=200)
 
     def change_mapper(self: TileServer) -> str:
         """Change the colour mapper for the overlay."""
