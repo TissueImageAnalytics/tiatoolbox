@@ -74,6 +74,100 @@ def test_sam_infer_batch_requires_prompts() -> None:
         )
 
 
+def test_sam_forward_point_prompts_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test SAM forward pass using point prompts only."""
+    sam = SAM.__new__(SAM)
+
+    captured: dict[str, object] = {}
+
+    def _fake_encode_image(
+        image: list,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Return fake embeddings and size metadata."""
+        _ = image
+
+        return (
+            torch.zeros((1, 1)),
+            torch.tensor([[8, 8]]),
+            torch.tensor([[8, 8]]),
+        )
+
+    def _fake_process_prompts(
+        image: list,
+        embeddings: torch.Tensor,
+        orig_sizes: torch.Tensor,
+        reshaped_sizes: torch.Tensor,
+        points: list | None,
+        boxes: list | None,
+        point_labels: list | None,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Capture point prompt inputs."""
+        _ = (
+            image,
+            embeddings,
+            orig_sizes,
+            reshaped_sizes,
+        )
+
+        captured["points"] = points
+        captured["boxes"] = boxes
+        captured["point_labels"] = point_labels
+
+        return (
+            np.ones((1, 8, 8), dtype=np.uint8),
+            np.array([[0.95]], dtype=np.float32),
+        )
+
+    monkeypatch.setattr(
+        sam,
+        "_encode_image",
+        _fake_encode_image,
+    )
+
+    monkeypatch.setattr(
+        sam,
+        "_process_prompts",
+        _fake_process_prompts,
+    )
+
+    image = np.zeros(
+        (8, 8, 3),
+        dtype=np.uint8,
+    )
+
+    point_coords = [
+        np.array(
+            [
+                [2, 3],
+                [4, 5],
+            ],
+            dtype=np.int32,
+        ),
+    ]
+
+    masks, scores = sam.forward(
+        imgs=[image],
+        point_coords=point_coords,
+        box_coords=None,
+    )
+
+    #
+    # box_coords branch skipped
+    #
+    assert captured["boxes"] is None
+
+    #
+    # point_coords branch executed
+    #
+    assert captured["points"] is not None
+    assert captured["point_labels"] == [[[1], [1]]]
+
+    assert masks.shape[2] == 1
+    assert scores.shape[2] == 1
+
+
 # Test pretrained Model =============================
 @pytest.mark.skipif(
     _RUNNING_ON_CI,
