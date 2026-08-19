@@ -14,7 +14,6 @@ from tiatoolbox.cli.common import tiatoolbox_cli
     help="Port to launch the visualization tool on.",
     default=5000,
 )
-@click.option("--noshow", is_flag=True, help="Do not launch browser.")
 def visualize_beta(
     port: int,
 ) -> None:
