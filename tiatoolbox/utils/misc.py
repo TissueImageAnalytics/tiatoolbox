@@ -31,7 +31,7 @@ from skimage import exposure
 from tqdm.auto import tqdm, trange
 from tqdm.dask import TqdmCallback
 
-from tiatoolbox import logger
+from tiatoolbox import logger, miscrust
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
@@ -427,9 +427,14 @@ def contrast_enhancer(img: np.ndarray, low_p: int = 2, high_p: int = 98) -> np.n
 
     """
     # check if image is not uint8
+    # check if image is not uint8
+    dimension_for_rust = 3
+
     if img.dtype != np.uint8:
         msg = "Image should be uint8."
         raise AssertionError(msg)
+    if img.ndim == dimension_for_rust:
+        return miscrust.contrast_enhancer(img, low_p, high_p)
     img_out = img.copy()
     percentiles = np.array(np.percentile(img_out, (low_p, high_p)))
     p_low, p_high = percentiles[0], percentiles[1]

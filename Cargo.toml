@@ -10,4 +10,6 @@ name = "miscrust"
 crate-type = ["cdylib"]
 
 [dependencies]
+ndarray = "0.17.2"
+numpy = "0.29.0"
 pyo3 = "0.29.2"
