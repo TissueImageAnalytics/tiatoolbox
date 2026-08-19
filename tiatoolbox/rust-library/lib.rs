@@ -3,10 +3,28 @@ use ndarray::{Array1, Array3};
 use numpy::{IntoPyArray, PyArray3, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::types::{PyList, PyDict};
 use std::collections::HashMap;
+use pythonize::depythonize;
+use serde_json::Value;
 
 #[pyfunction]
 fn add(a: i32, b: i32) -> i32 {
     a + b
+}
+
+#[pyfunction]
+fn json_dump_python_object(save_path: String, obj: &Bound<'_, PyAny>) -> PyResult<()> {
+    //Equilivent to json.dump(obj, save_path)
+    let value: Value = depythonize(obj)
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+    let file = std::fs::File::create(&save_path)
+        .map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
+    let mut writer = std::io::BufWriter::new(file);
+
+    serde_json::to_writer(&mut writer, &value)
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+
+    Ok(())
 }
 
 #[pyfunction]
@@ -173,5 +191,6 @@ fn miscrust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(contrast_enhancer, m)?)?;
     m.add_function(wrap_pyfunction!(patch_predictions_as_qupath_json, m)?)?;
     m.add_function(wrap_pyfunction!(patch_predictions_as_annotations, m)?)?;
+    m.add_function(wrap_pyfunction!(json_dump_python_object, m)?)?;
     Ok(())
 }
