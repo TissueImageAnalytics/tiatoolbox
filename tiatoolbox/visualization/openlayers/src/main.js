@@ -220,7 +220,6 @@ const coordinateFormat = (coordinate) => {
 
 const mousePositionControl = new MousePosition({
   coordinateFormat,
-  projection,
   className: "ol-mouse-position",
   placeholder: "\u00a0",
 });
@@ -399,6 +398,7 @@ map.on("moveend", () => {
 
 function clearOverlayLayers() {
   for (const overlayLayer of Object.values(overlayLayers)) {
+    overlayLayer.setSource(null);
     map.removeLayer(overlayLayer);
 
     const layerIndex = layers.indexOf(overlayLayer);
@@ -467,10 +467,7 @@ function updateUrlState() {
 
   const url = new URL(window.location.href);
 
-  if (currentSlidePath !== null) {
-    url.searchParams.set("slide", currentSlidePath);
-  }
-
+  url.searchParams.set("slide", currentSlidePath);
   url.searchParams.set("x", center[0].toFixed(2));
   url.searchParams.set("y", center[1].toFixed(2));
   url.searchParams.set("zoom", zoom.toString());
@@ -539,8 +536,6 @@ async function removeSlide() {
     }),
   );
 
-  mousePositionControl.setProjection(emptyProjection);
-
   graticuleToggle.setActive(false);
   screenSpaceGraticuleToggle.setActive(false);
 
@@ -570,10 +565,11 @@ async function switchSlide(slidePath) {
     throw new Error("Dynamic slide switching requires a TileServer session.");
   }
 
+  clearOverlayLayers();
+
   const slideInfo = await loadSlide(slidePath);
 
   currentSlidePath = slidePath;
-  clearOverlayLayers();
   currentSlideInfo = slideInfo;
 
   slideVersion += 1;
@@ -589,7 +585,7 @@ async function switchSlide(slidePath) {
   const newResolutions = newTileGrid.getResolutions();
 
   const newProjection = new Projection({
-    code: "zoomify",
+    code: "ZoomifyProjection",
     units: "pixels",
     extent: newExtent,
     metersPerUnit: slideInfo.mpp[0] * 1e-6,

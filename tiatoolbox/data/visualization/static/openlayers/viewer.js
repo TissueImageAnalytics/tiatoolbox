@@ -15397,7 +15397,6 @@ var Fh = new Wl({
 $.addControl(Fh);
 var Ih = new wr({
 	coordinateFormat: (e) => Ft([e[0], -e[1]], "{x}, {y}", 0),
-	projection: jh,
 	className: "ol-mouse-position",
 	placeholder: "\xA0"
 });
@@ -15478,7 +15477,7 @@ Zh !== null && ($.getView().setCenter(Zh.center), $.getView().setZoom(Zh.zoom)),
 });
 function Qh() {
 	for (let e of Object.values(wh)) {
-		$.removeLayer(e);
+		e.setSource(null), $.removeLayer(e);
 		let t = Eh.indexOf(e);
 		t !== -1 && Eh.splice(t, 1);
 	}
@@ -15500,7 +15499,7 @@ function tg() {
 	let e = $.getView(), t = e.getCenter(), n = e.getZoom();
 	if (t === void 0 || n === void 0) return;
 	let r = new URL(window.location.href);
-	Ch !== null && r.searchParams.set("slide", Ch), r.searchParams.set("x", t[0].toFixed(2)), r.searchParams.set("y", t[1].toFixed(2)), r.searchParams.set("zoom", n.toString()), window.history.replaceState({}, "", r);
+	r.searchParams.set("slide", Ch), r.searchParams.set("x", t[0].toFixed(2)), r.searchParams.set("y", t[1].toFixed(2)), r.searchParams.set("zoom", n.toString()), window.history.replaceState({}, "", r);
 }
 async function ng() {
 	if (yh === null) throw Error("Removing a slide requires a TileServer session.");
@@ -15534,16 +15533,17 @@ async function ng() {
 		constrainOnlyCenter: !0,
 		center: [.5, -.5],
 		resolution: e[0]
-	})), Ih.setProjection(n), Yh.setActive(!1), Xh.setActive(!1), Wh.setMap(null), Jh.setMap(null), Wh = Uh(n), Jh = qh(n), window.graticule = Wh, window.screenSpaceGraticule = Jh, window.projection = n, window.resolutions = e, window.extent = t, window.view = r;
+	})), Yh.setActive(!1), Xh.setActive(!1), Wh.setMap(null), Jh.setMap(null), Wh = Uh(n), Jh = qh(n), window.graticule = Wh, window.screenSpaceGraticule = Jh, window.projection = n, window.resolutions = e, window.extent = t, window.view = r;
 	let i = new URL(window.location.href);
 	i.search = "", window.history.replaceState({}, "", i);
 }
 async function rg(e) {
 	if (yh === null) throw Error("Dynamic slide switching requires a TileServer session.");
+	Qh();
 	let t = await hh(e);
-	Ch = e, Qh(), Sh = t, bh += 1;
+	Ch = e, Sh = t, bh += 1;
 	let n = gh(yh, t, bh), r = n.getTileGrid(), i = r.getExtent(), a = r.getResolutions(), o = new qt({
-		code: "zoomify",
+		code: "ZoomifyProjection",
 		units: "pixels",
 		extent: i,
 		metersPerUnit: t.mpp[0] * 1e-6
