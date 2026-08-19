@@ -36,6 +36,7 @@ dependencies = [
   "opencv-python>=4.6.0",
   "openslide-bin>=4.0.0.2",
   "openslide-python>=1.4.0",
+  "maturin>=1.14.1",
   "pandas>=2.0.0",
   "pillow>=9.3.0",
   "pydicom>=2.3.1",
@@ -58,6 +59,7 @@ dependencies = [
   "wsidicom>=0.18.0",
   "zarr>=3.2.1",
 ]
+
 
 [project.optional-dependencies]
 docs = [
@@ -132,8 +134,8 @@ torchvision = [
   omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py', 'tiatoolbox/typing.py']
 
 [build-system]
-  requires = ["setuptools"]
-  build-backend = "setuptools.build_meta"
+  requires = ["maturin>=1.5,<2.0", "setuptools"]
+  build-backend = "maturin"
 
 [tool.distutils.bdist_wheel]
   universal = true
@@ -297,3 +299,8 @@ ignore_missing_imports = true
 # Default local target: minimum supported Python (requires-python lower bound).
 # CI overrides this per job with --python-version for 3.12-3.14.
 python_version = "3.12"
+
+[tool.maturin]
+python-source = "."
+include = ["tiatoolbox/**/*"]
+module-name = "tiatoolbox.miscrust"
