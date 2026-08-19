@@ -32,13 +32,13 @@ fn patch_predictions_as_annotations<'py>(
         py: Python<'_>,
         annotation_class: &Bound<'_, PyAny>,
         polygon_class: &Bound<'_, PyAny>,
-        preds: Vec<i32>,
+        preds: Vec<f64>,
         keys: Vec<String>,
-        class_dict: HashMap<i32, String>,
+        class_dict: HashMap<f64, String>,
         py_class_probs: PyReadonlyArray2<'py, f64>,
         py_patch_coords: PyReadonlyArray2<'py, f64>,
         classes_predicted: Vec<i32>,
-        labels: Vec<i32>
+        labels: Vec<f64>
     ) -> PyResult<Vec<Py<PyAny>>>{
     /*Helper function to generate annotation per patch predictions.*/
     let class_probs = py_class_probs.as_array();
