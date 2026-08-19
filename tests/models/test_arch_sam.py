@@ -15,9 +15,8 @@ from tiatoolbox.utils.misc import select_device
 ON_GPU = toolbox_env.has_gpu()
 _RUNNING_ON_CI = toolbox_env.running_on_ci()
 
+
 # Test pretrained Model =============================
-
-
 @pytest.mark.skipif(
     _RUNNING_ON_CI,
     reason="Local test only.",
