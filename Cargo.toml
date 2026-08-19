@@ -2,8 +2,10 @@
 name = "tiatoolbox"
 version = "0.1.0"
 edition = "2024"
+autolib = false
 
 [lib]
+path = "tiatoolbox/rust-library/lib.rs"
 name = "miscrust"
 crate-type = ["cdylib"]
 
