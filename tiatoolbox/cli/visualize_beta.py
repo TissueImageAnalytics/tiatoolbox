@@ -17,7 +17,7 @@ from tiatoolbox.cli.common import tiatoolbox_cli
 def visualize_beta(
     port: int,
 ) -> None:
-    """Launches the TIAToolbox visualization tool (beta).
+    """Launches the experimental TIAToolbox visualization tool.
 
     Args:
         port (int): Port to launch the visualization tool on.
@@ -25,7 +25,6 @@ def visualize_beta(
     """
     from tiatoolbox.visualization.tileserver import TileServer  # noqa: PLC0415
 
-    """Launch the experimental dynamic OpenLayers viewer."""
     app = TileServer(
         title="TIAToolbox OpenLayers beta",
         layers={},
