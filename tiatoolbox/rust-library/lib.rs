@@ -1,11 +1,63 @@
 use pyo3::prelude::*;
 use ndarray::{Array1, Array3};
-use numpy::{IntoPyArray, PyArray3, PyReadonlyArray3};
+use numpy::{IntoPyArray, PyArray3, PyReadonlyArray2, PyReadonlyArray3};
+use pyo3::types::{PyList, PyDict};
+use std::collections::HashMap;
 
 #[pyfunction]
 fn add(a: i32, b: i32) -> i32 {
     a + b
 }
+
+#[pyfunction]
+fn patch_predictions_as_qupath_json<'py>(py: Python<'_>,
+        class_colours: HashMap<i32, Vec<i32>>,
+        preds: Vec<i32>,
+        class_dict: HashMap<i32, String>,
+        py_patch_coords: PyReadonlyArray2<'py, f64>)
+        -> PyResult<Py<PyList>> {
+    /*Helper function to generate QuPath JSON per patch predictions.*/
+
+    let features = PyList::empty(py);
+    let patch_coords = py_patch_coords.as_array();
+    for i in 0..patch_coords.nrows() {
+        let class_idx = preds[i];
+        let class_name = &class_dict[&class_idx];
+        let xmin = patch_coords[[i, 0]];
+        let ymin = patch_coords[[i, 1]];
+        let xmax = patch_coords[[i, 2]];
+        let ymax = patch_coords[[i, 3]];
+        let polygon_feat = PyDict::new(py);
+        polygon_feat.set_item("type", "Polygon")?;
+        polygon_feat.set_item(
+            "coordinates",
+            vec![vec![
+                [xmin, ymin],
+                [xmin, ymax],
+                [xmax, ymax],
+                [xmax, ymin],
+                [xmin, ymin],
+            ]],
+        )?;
+        let feature = PyDict::new(py);
+        feature.set_item("type", "Feature")?;
+        feature.set_item("id", format!("patch_{}", i))?;
+        feature.set_item("geometry", polygon_feat)?;
+        let classification = PyDict::new(py);
+        classification.set_item("name", class_name)?;
+        classification.set_item("color", class_colours[&class_idx].clone())?;
+        let properties = PyDict::new(py);
+        properties.set_item("classification", classification)?;
+        feature.set_item("properties", properties)?;
+        feature.set_item("objectType", "annotation")?;
+        feature.set_item("name", class_name)?;
+        feature.set_item("class_value", class_idx)?;
+        features.append(feature)?;
+    }
+
+    Ok(features.unbind())
+}
+
 
 fn rescale_intensity(x: f32, in_range_low: f32, in_range_high: f32, range: f32) -> u8{
     //asssumes out_min = 0 and out_max = 255
@@ -75,6 +127,6 @@ fn contrast_enhancer<'py>(py: Python<'py>, img: PyReadonlyArray3<'py, u8>, low_p
 fn miscrust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(add, m)?)?;
     m.add_function(wrap_pyfunction!(contrast_enhancer, m)?)?;
-
+    m.add_function(wrap_pyfunction!(patch_predictions_as_qupath_json, m)?)?;
     Ok(())
 }

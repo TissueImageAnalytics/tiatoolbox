@@ -1267,8 +1267,6 @@ def patch_predictions_as_qupath_json(
     verbose: bool = True,
 ) -> dict:
     """Helper function to generate QuPath JSON per patch predictions."""
-    features = []
-    # pick a color for each class based on the class index, using a colormap
     num_classes = len(class_dict)
     cmap = plt.colormaps["tab20"].resampled(num_classes)
     class_colours = {
@@ -1280,36 +1278,15 @@ def patch_predictions_as_qupath_json(
         for class_idx in class_dict
     }
 
-    tqdm_loop = tqdm(
+    tqdm(
         range(np.asarray(patch_coords).shape[0]),
         leave=False,
         desc="Converting outputs to QuPath JSON.",
         disable=not verbose,
     )
-
-    for i in tqdm_loop:
-        class_idx = int(preds[i])
-        class_name = class_dict[class_idx]
-        polygon_geo = Polygon.from_bounds(*patch_coords[i])
-        polygon_feat = mapping(polygon_geo)
-
-        feature = {
-            "type": "Feature",
-            "id": f"patch_{i}",
-            "geometry": polygon_feat,
-            "properties": {
-                "classification": {
-                    "name": class_name,
-                    "color": class_colours[class_idx],
-                }
-            },
-            "objectType": "annotation",
-            "name": class_name,
-            "class_value": class_idx,
-        }
-
-        features.append(feature)
-
+    features = miscrust.patch_predictions_as_qupath_json(
+        class_colours, preds, class_dict, patch_coords
+    )
     return {"type": "FeatureCollection", "features": features}
 
 
