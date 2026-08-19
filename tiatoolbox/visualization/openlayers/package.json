@@ -1,11 +1,11 @@
 {
   "dependencies": {
-    "ol": "6.9.0",
-    "ol-ext": "3.2.17"
+    "ol": "10.10.0",
+    "ol-ext": "4.0.38"
   },
   "description": "OpenLayers frontend for TIAToolbox.",
   "devDependencies": {
-    "vite": "8.1.5"
+    "vite": "8.2.1"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
