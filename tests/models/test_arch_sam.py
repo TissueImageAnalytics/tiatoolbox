@@ -161,11 +161,15 @@ def test_sam_forward_point_prompts_only(
     #
     # point_coords branch executed
     #
+    assert captured["boxes"] is None
     assert captured["points"] is not None
     assert captured["point_labels"] == [[[1], [1]]]
 
-    assert masks.shape[2] == 1
-    assert scores.shape[2] == 1
+    assert isinstance(masks, np.ndarray)
+    assert isinstance(scores, np.ndarray)
+
+    assert masks.shape == (1, 1, 8, 8)
+    assert scores.shape == (1, 1, 1)
 
 
 # Test pretrained Model =============================
