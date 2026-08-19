@@ -227,13 +227,34 @@ if (baseSource !== null) {
   });
 }
 
+// Restricting permitted margin around slide
+const viewExtentMargin = 0.1;
+
+function getPaddedExtent(slideExtent) {
+  const width = slideExtent[2] - slideExtent[0];
+  const height = slideExtent[3] - slideExtent[1];
+
+  const xMargin = width * viewExtentMargin;
+  const yMargin = height * viewExtentMargin;
+
+  return [
+    slideExtent[0] - xMargin,
+    slideExtent[1] - yMargin,
+    slideExtent[2] + xMargin,
+    slideExtent[3] + yMargin,
+  ];
+}
+
 // Register the projection for the mouse position and graticule controls.
 addProjection(projection);
 
 const view = new View({
   projection,
   resolutions,
+  extent: getPaddedExtent(extent),
   constrainOnlyCenter: true,
+  smoothExtentConstraint: true,
+  smoothResolutionConstraint: false,
   center: [0.5, -0.5],
   resolution: resolutions[0],
 });
@@ -286,13 +307,68 @@ const overviewLayer = new TileLayer();
 if (baseSource !== null) {
   overviewLayer.setSource(baseSource);
 }
+
+const overviewMapWidth = 300;
+const overviewMapHeight = 250;
+
+function createOverviewView(overviewProjection, overviewExtent) {
+  const center = [
+    (overviewExtent[0] + overviewExtent[2]) / 2,
+    (overviewExtent[1] + overviewExtent[3]) / 2,
+  ];
+
+  const width = overviewExtent[2] - overviewExtent[0];
+  const height = overviewExtent[3] - overviewExtent[1];
+
+  const resolution = Math.max(
+    width / overviewMapWidth,
+    height / overviewMapHeight,
+  );
+
+  const overviewView = new View({
+    projection: overviewProjection,
+    center,
+    resolution,
+    resolutions: [resolution],
+    constrainOnlyCenter: true,
+  });
+
+  overviewView.on("change:center", () => {
+    const currentCenter = overviewView.getCenter();
+
+    if (
+      currentCenter !== undefined &&
+      (currentCenter[0] !== center[0] ||
+        currentCenter[1] !== center[1])
+    ) {
+      overviewView.setCenter(center);
+    }
+  });
+
+  return overviewView;
+}
+
 // Overview map
+const overviewCollapseLabel = document.createElement("span");
+overviewCollapseLabel.className = "overview-toggle-icon";
+overviewCollapseLabel.innerHTML =
+  '<i class="fas fa-chevron-up"></i>';
+
+const overviewExpandLabel = document.createElement("span");
+overviewExpandLabel.className = "overview-toggle-icon";
+overviewExpandLabel.innerHTML =
+  '<i class="fas fa-chevron-down"></i>';
+
 const overviewMapControl = new OverviewMap({
   className: "ol-overviewmap ol-custom-overviewmap",
   layers: [overviewLayer],
   collapsed: false,
-  collapseLabel: "›",
-  label: "‹",
+  collapsible: true,
+  collapseLabel: overviewCollapseLabel,
+  label: overviewExpandLabel,
+  rotateWithView: false,
+  tipLabel: "Toggle overview map",
+  view: createOverviewView(projection, extent),
 });
 
 map.addControl(overviewMapControl);
@@ -695,13 +771,7 @@ async function removeSlide() {
   map.setView(emptyView);
 
   overviewMap.setView(
-    new View({
-      projection: emptyProjection,
-      resolutions: emptyResolutions,
-      constrainOnlyCenter: true,
-      center: [0.5, -0.5],
-      resolution: emptyResolutions[0],
-    }),
+    createOverviewView(emptyProjection, emptyExtent),
   );
 
   graticuleToggle.setActive(false);
@@ -774,8 +844,10 @@ async function switchSlide(slidePath) {
   const newView = new View({
     projection: newProjection,
     resolutions: newResolutions,
-    extent: newExtent,
+    extent: getPaddedExtent(newExtent),
     constrainOnlyCenter: true,
+    smoothExtentConstraint: true,
+    smoothResolutionConstraint: false,
     center: newCenter,
     resolution: newResolutions[0],
   });
@@ -787,14 +859,7 @@ async function switchSlide(slidePath) {
   map.setView(newView);
 
   overviewMap.setView(
-    new View({
-      projection: newProjection,
-      resolutions: newResolutions,
-      extent: newExtent,
-      constrainOnlyCenter: true,
-      center: newCenter,
-      resolution: newResolutions[0],
-    }),
+    createOverviewView(newProjection, newExtent),
   );
 
   const graticuleWasActive = graticuleToggle.getActive();
