@@ -16,6 +16,40 @@ ON_GPU = toolbox_env.has_gpu()
 _RUNNING_ON_CI = toolbox_env.running_on_ci()
 
 
+def test_sam_preproc_torch_tensor() -> None:
+    """Test SAM pre-processing for PyTorch tensor input."""
+    image = torch.arange(
+        4 * 2 * 3,
+        dtype=torch.float32,
+    ).reshape(4, 2, 3)
+
+    result = SAM.preproc(image)
+
+    assert isinstance(result, np.ndarray)
+
+    # CHW -> HWC and alpha channel removed.
+    assert result.shape == (2, 3, 3)
+
+    expected = image.permute(1, 2, 0).cpu().numpy()[..., :3]
+
+    np.testing.assert_array_equal(
+        result,
+        expected,
+    )
+
+
+def test_sam_preproc_numpy_array_with_alpha() -> None:
+    """Test SAM pre-processing for NumPy input."""
+    image = np.zeros(
+        (8, 8, 4),
+        dtype=np.uint8,
+    )
+
+    result = SAM.preproc(image)
+
+    assert result.shape == (8, 8, 3)
+
+
 # Test pretrained Model =============================
 @pytest.mark.skipif(
     _RUNNING_ON_CI,
