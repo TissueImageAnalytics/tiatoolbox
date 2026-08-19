@@ -1,11 +1,31 @@
 """Command line interface for the experimental OpenLayers viewer."""
 
+from __future__ import annotations
+
+import click
+
 from tiatoolbox.cli.common import tiatoolbox_cli
-from tiatoolbox.visualization.tileserver import TileServer
 
 
 @tiatoolbox_cli.command(name="visualize-beta")
-def visualize_beta() -> None:  # pragma: no cover
+@click.option(
+    "--port",
+    type=int,
+    help="Port to launch the visualization tool on.",
+    default=5000,
+)
+@click.option("--noshow", is_flag=True, help="Do not launch browser.")
+def visualize_beta(
+    port: int,
+) -> None:
+    """Launches the TIAToolbox visualization tool (beta).
+
+    Args:
+        port (int): Port to launch the visualization tool on.
+
+    """
+    from tiatoolbox.visualization.tileserver import TileServer  # noqa: PLC0415
+
     """Launch the experimental dynamic OpenLayers viewer."""
     app = TileServer(
         title="TIAToolbox OpenLayers beta",
@@ -15,5 +35,5 @@ def visualize_beta() -> None:  # pragma: no cover
 
     app.run(
         host="127.0.0.1",
-        port=5000,
+        port=port,
     )
