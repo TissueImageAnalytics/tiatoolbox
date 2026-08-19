@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 import torch
 import torchvision.models as torch_models
+import zarr
 
 from tiatoolbox.models.architecture import (
     fetch_pretrained_weights,
@@ -683,3 +684,66 @@ def test_calculate_scale_factor_branches(
 
     result = EngineABC._calculate_scale_factor(dataloader)  # type: ignore[arg-type]
     assert result == expected
+
+
+def test_save_predictions_as_zarr_existing_task_group(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test skipping existing keys within an existing task group."""
+    eng = TestEngineABC(model="alexnet-kather100k")
+
+    save_path = track_tmp_path / "multitask.zarr"
+
+    root = zarr.open_group(save_path, mode="w")
+
+    task_group = root.create_group("nuclei_segmentation")
+
+    task_group.create_array(
+        "predictions",
+        data=np.array([1, 2, 3], dtype=np.uint8),
+    )
+
+    processed_predictions = {
+        "predictions": da.from_array(
+            np.array([9, 9, 9], dtype=np.uint8),
+        ),
+        "probabilities": da.from_array(
+            np.array([[0.1, 0.9]], dtype=np.float32),
+        ),
+    }
+
+    received_keys: list[str] = []
+
+    def _fake_get_tasks_for_saving_zarr(
+        dask_output: da.Array,
+        key: str,
+        task_name: str | None,
+        save_path: Path,
+        write_tasks: list,
+    ) -> list:
+        """Record keys requested for writing."""
+        _ = dask_output, task_name, save_path
+        received_keys.append(key)
+        return write_tasks
+
+    monkeypatch.setattr(
+        eng,
+        "_get_tasks_for_saving_zarr",
+        _fake_get_tasks_for_saving_zarr,
+    )
+
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.engine_abc.tqdm_dask_progress_bar",
+        lambda **_: None,
+    )
+
+    eng.save_predictions_as_zarr(
+        processed_predictions=processed_predictions,
+        save_path=save_path,
+        keys_to_compute=["predictions", "probabilities"],
+        task_name="nuclei_segmentation",
+    )
+
+    # Existing task-group key should be filtered out.
+    assert received_keys == ["probabilities"]
