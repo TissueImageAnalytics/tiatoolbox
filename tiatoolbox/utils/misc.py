@@ -1235,28 +1235,23 @@ def patch_predictions_as_annotations(
     verbose: bool = True,
 ) -> list:
     """Helper function to generate annotation per patch predictions."""
-    annotations = []
-    tqdm_loop = tqdm(
+    tqdm(
         patch_coords,
         leave=False,
         desc="Converting outputs to AnnotationStore.",
         disable=not verbose,
     )
-
-    for i, _ in enumerate(tqdm_loop):
-        if "probabilities" in keys:
-            props = {
-                f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
-            }
-        else:
-            props = {}
-        if "labels" in keys:
-            props["label"] = class_dict[labels[i]]
-        if len(preds) > 0:
-            props["type"] = class_dict[preds[i]]
-        annotations.append(Annotation(Polygon.from_bounds(*patch_coords[i]), props))
-
-    return annotations
+    return miscrust.patch_predictions_as_annotations(
+        Annotation,
+        Polygon,
+        preds,
+        keys,
+        class_dict,
+        class_probs,
+        patch_coords,
+        classes_predicted,
+        labels,
+    )
 
 
 def patch_predictions_as_qupath_json(

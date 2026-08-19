@@ -10,6 +10,50 @@ fn add(a: i32, b: i32) -> i32 {
 }
 
 #[pyfunction]
+fn patch_predictions_as_annotations<'py>(
+        py: Python<'_>,
+        annotation_class: &Bound<'_, PyAny>,
+        polygon_class: &Bound<'_, PyAny>,
+        preds: Vec<i32>,
+        keys: Vec<String>,
+        class_dict: HashMap<i32, String>,
+        py_class_probs: PyReadonlyArray2<'py, f64>,
+        py_patch_coords: PyReadonlyArray2<'py, f64>,
+        classes_predicted: Vec<i32>,
+        labels: Vec<i32>
+    ) -> PyResult<Vec<Py<PyAny>>>{
+    /*Helper function to generate annotation per patch predictions.*/
+    let class_probs = py_class_probs.as_array();
+    let patch_coords = py_patch_coords.as_array();
+    let mut annotations: Vec<Py<PyAny>>  = Vec::with_capacity(patch_coords.nrows());
+    let preds_len = preds.len();
+    let keys_contains_labels = keys.contains(&"labels".to_string());
+    for i in 0..patch_coords.nrows() {
+        let props = PyDict::new(py);
+        if keys.contains(&"probabilities".to_string()) {
+            for j in &classes_predicted {
+                props.set_item(format!("prob_{}", class_dict[&j]), class_probs[[i, *j as usize]])?;
+            }
+        }
+        if keys_contains_labels {
+            props.set_item("label".to_string(), class_dict[&labels[i]].clone())?;
+        }
+        if preds_len > 0 {
+            props.set_item("type".to_string(), class_dict[&preds[i]].clone())?;
+        }
+        annotations.push(annotation_class.call1((
+            polygon_class.call_method1("from_bounds", (
+            patch_coords[[i, 0]],
+            patch_coords[[i, 1]],
+            patch_coords[[i, 2]],
+            patch_coords[[i, 3]]
+        ))?,
+        props))?.unbind());
+    }
+    Ok(annotations)
+}
+
+#[pyfunction]
 fn patch_predictions_as_qupath_json<'py>(py: Python<'_>,
         class_colours: HashMap<i32, Vec<i32>>,
         preds: Vec<i32>,
@@ -128,5 +172,6 @@ fn miscrust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(add, m)?)?;
     m.add_function(wrap_pyfunction!(contrast_enhancer, m)?)?;
     m.add_function(wrap_pyfunction!(patch_predictions_as_qupath_json, m)?)?;
+    m.add_function(wrap_pyfunction!(patch_predictions_as_annotations, m)?)?;
     Ok(())
 }
