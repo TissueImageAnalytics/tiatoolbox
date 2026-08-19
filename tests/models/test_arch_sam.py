@@ -50,6 +50,30 @@ def test_sam_preproc_numpy_array_with_alpha() -> None:
     assert result.shape == (8, 8, 3)
 
 
+def test_sam_infer_batch_requires_prompts() -> None:
+    """Test infer_batch raises when no prompts are provided."""
+    model = torch.nn.Identity()
+
+    batch_data = [
+        np.zeros(
+            (8, 8, 3),
+            dtype=np.uint8,
+        ),
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match="At least one of point_coords or box_coords must be provided",
+    ):
+        SAM.infer_batch(
+            model=model,
+            batch_data=batch_data,
+            point_coords=None,
+            box_coords=None,
+            device="cpu",
+        )
+
+
 # Test pretrained Model =============================
 @pytest.mark.skipif(
     _RUNNING_ON_CI,
