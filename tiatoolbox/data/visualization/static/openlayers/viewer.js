@@ -15423,16 +15423,8 @@ var qh = new Wl({
 	label: "‹"
 });
 $.addControl(qh);
-var Jh = qh.getOverviewMap();
-Jh.on("singleclick", (e) => {
-	Fh.getSource() !== null && $.getView().animate({
-		center: e.coordinate,
-		duration: 200
-	});
-});
-var Yh = new wr({
+var Jh = qh.getOverviewMap(), Yh = new wr({
 	coordinateFormat: (e) => Ft([e[0], -e[1]], "{x}, {y}", 0),
-	projection: zh,
 	className: "ol-mouse-position",
 	placeholder: "\xA0"
 });
@@ -15530,7 +15522,7 @@ $.on("moveend", () => {
 });
 function dg() {
 	for (let e of Object.values(jh)) {
-		$.removeLayer(e);
+		e.setSource(null), $.removeLayer(e);
 		let t = Ph.indexOf(e);
 		t !== -1 && Ph.splice(t, 1);
 	}
@@ -15589,21 +15581,22 @@ async function hg() {
 		constrainOnlyCenter: !0,
 		center: [.5, -.5],
 		resolution: t[0]
-	})), Yh.setProjection(n), cg.setActive(!1), lg.setActive(!1), cg.element.classList.remove("active"), lg.element.classList.remove("active"), rg.setMap(null), sg.setMap(null), rg = ng(n), sg = og(n), window.graticule = rg, window.screenSpaceGraticule = sg;
+	})), cg.setActive(!1), lg.setActive(!1), cg.element.classList.remove("active"), lg.element.classList.remove("active"), rg.setMap(null), sg.setMap(null), rg = ng(n), sg = og(n), window.graticule = rg, window.screenSpaceGraticule = sg;
 	let i = new URL(window.location.href);
 	i.search = "", i.hash = "", window.history.replaceState({}, "", i), ug(!1), Wh();
 }
 async function gg(e) {
 	if (Eh === null) throw Error("Dynamic slide switching requires a TileServer session.");
+	dg();
 	let t = await hh(e);
-	Ah = e, Mh(), dg(), kh = t, Dh += 1;
+	Ah = e, Mh(), kh = t, Dh += 1;
 	let n = gh(Eh, t, Dh), r = n.getTileGrid(), i = r.getExtent(), a = r.getResolutions(), o = new qt({
-		code: "zoomify",
+		code: "ZoomifyProjection",
 		units: "pixels",
 		extent: i,
 		metersPerUnit: t.mpp[0] * 1e-6
 	});
-	er(o), Yh.setProjection(o);
+	er(o);
 	let s = [(i[0] + i[2]) / 2, (i[1] + i[3]) / 2], c = new ua({
 		projection: o,
 		resolutions: a,

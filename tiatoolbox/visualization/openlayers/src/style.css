@@ -94,6 +94,8 @@ body {
 .viewer-panel-control button:hover:not(:disabled),
 .layer-editor-control button:hover:not(:disabled) {
     background: #333333;
+    color: #ffffff;
+    outline: none;
 }
 
 
@@ -105,18 +107,8 @@ body {
 .viewer-panel-control button:active:not(:disabled),
 .layer-editor-control button:active:not(:disabled) {
     background: #555555;
-}
-
-
-.ol-zoom button:focus-visible,
-.ol-rotate button:focus-visible,
-.ol-full-screen button:focus-visible,
-.ol-graticule button:focus-visible,
-.ol-screen-space-graticule button:focus-visible,
-.viewer-panel-control button:focus-visible,
-.layer-editor-control button:focus-visible {
-    outline: 2px solid #888888;
-    outline-offset: -2px;
+    color: #ffffff;
+    outline: none;
 }
 
 
@@ -125,10 +117,17 @@ body {
 .ol-control button:disabled,
 .ol-control button:disabled:hover,
 .ol-control button:disabled:active,
-.ol-control button:disabled:focus {
+.ol-control button:disabled:focus,
+.ol-control.ol-toggle button:disabled,
+.ol-control.ol-toggle button:disabled:hover,
+.ol-control.ol-toggle button:disabled:active,
+.ol-control.ol-toggle button:disabled:focus {
     background: #111111;
+    color: #ffffff;
     opacity: 0.4;
     cursor: default;
+    outline: none;
+    pointer-events: none;
 }
 
 
@@ -303,17 +302,29 @@ body {
 
 .layer-editor-order button:hover:not(:disabled) {
     background: #333333;
+    color: #ffffff;
+    outline: none;
 }
 
 
 .layer-editor-order button:active:not(:disabled) {
     background: #555555;
+    color: #ffffff;
+    outline: none;
+}
+
+
+.layer-editor-order button:focus {
+    color: #ffffff;
+    outline: none;
 }
 
 
 .layer-editor-order button:disabled {
     color: #555555;
     cursor: default;
+    pointer-events: none;
+    outline: none;
 }
 
 
@@ -495,11 +506,21 @@ body {
 
 .map .ol-custom-overviewmap button:hover {
     background: #333333;
+    color: #ffffff;
+    outline: none;
 }
 
 
 .map .ol-custom-overviewmap button:active {
     background: #555555;
+    color: #ffffff;
+    outline: none;
+}
+
+
+.map .ol-custom-overviewmap button:focus {
+    color: #ffffff;
+    outline: none;
 }
 
 
@@ -571,7 +592,7 @@ body {
 }
 
 
-/* Remove persistent focus colour */
+/* Remove persistent OpenLayers focus styling */
 
 .ol-zoom button:focus,
 .ol-rotate button:focus,
@@ -580,7 +601,8 @@ body {
 .ol-screen-space-graticule button:focus,
 .viewer-panel-control button:focus,
 .layer-editor-control button:focus {
-    background: #111111;
+    color: #ffffff;
+    outline: none;
 }
 
 
