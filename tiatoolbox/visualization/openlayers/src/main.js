@@ -140,17 +140,12 @@ function updateCurrentSlide() {
 const params = new URLSearchParams(window.location.search);
 const slidePath = params.get("slide");
 
-if (slidePath === null) {
-  layersData = [];
-  sessionId = await createSession();
-} else {
+if (slidePath !== null) {
   currentSlidePath = slidePath;
   sessionId = await createSession();
-
   const slideInfo = await loadSlide(slidePath);
 
   currentSlideInfo = slideInfo;
-
   layersData = [
     {
       name: "slide",
@@ -161,6 +156,8 @@ if (slidePath === null) {
       mpp: slideInfo.mpp[0],
     },
   ];
+} else if (layersData.length === 0) {
+  sessionId = await createSession();
 }
 
 updateCurrentSlide();
@@ -735,6 +732,7 @@ async function removeSlide() {
 
   currentSlidePath = null;
   currentSlideInfo = null;
+  layersData.length = 0;
   updateCurrentSlide();
 
   slideVersion += 1;

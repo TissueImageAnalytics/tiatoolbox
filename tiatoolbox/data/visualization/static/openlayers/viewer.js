@@ -15337,8 +15337,7 @@ function Mh() {
 	xh.textContent = Ah.split(/[\\/]/).pop() || Ah, xh.title = Ah;
 }
 var Nh = new URLSearchParams(window.location.search).get("slide");
-if (Nh === null) Th = [], Eh = await mh();
-else {
+if (Nh !== null) {
 	Ah = Nh, Eh = await mh();
 	let e = await hh(Nh);
 	kh = e, Th = [{
@@ -15347,7 +15346,7 @@ else {
 		size: e.slide_dimensions,
 		mpp: e.mpp[0]
 	}];
-}
+} else Th.length === 0 && (Eh = await mh());
 Mh();
 var Ph = Th.map((e) => {
 	let t = new dd({
@@ -15587,7 +15586,7 @@ function xg() {
 async function Sg() {
 	if (Eh === null) throw Error("No TileServer session is available.");
 	if (!(await fetch("/tileserver/slide", { method: "DELETE" })).ok) throw Error("Failed to remove the current slide.");
-	vg(), Ah = null, kh = null, Mh(), Dh += 1, Oh += 1, Fh.setSource(null), Jh.setSource(null), Eg();
+	vg(), Ah = null, kh = null, Th.length = 0, Mh(), Dh += 1, Oh += 1, Fh.setSource(null), Jh.setSource(null), Eg();
 	let e = [
 		0,
 		-1,
