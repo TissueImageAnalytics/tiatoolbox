@@ -642,7 +642,15 @@ function updateUrlState() {
   url.searchParams.set("y", center[1].toFixed(2));
   url.searchParams.set("zoom", zoom.toString());
 
-  window.history.replaceState({}, "", url);
+  const search = url.searchParams
+    .toString()
+    .replace(/%2F/gi, "/");
+
+  window.history.replaceState(
+    {},
+    "",
+    `${url.pathname}?${search}${url.hash}`,
+  );
 }
 
 async function removeSlide() {

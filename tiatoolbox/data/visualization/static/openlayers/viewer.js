@@ -11409,7 +11409,9 @@ function vf() {
 	let e = $.getView(), t = e.getCenter(), n = e.getZoom();
 	if (t === void 0 || n === void 0) return;
 	let r = new URL(window.location.href);
-	r.searchParams.set("slide", Nd), r.searchParams.set("x", t[0].toFixed(2)), r.searchParams.set("y", t[1].toFixed(2)), r.searchParams.set("zoom", n.toString()), window.history.replaceState({}, "", r);
+	r.searchParams.set("slide", Nd), r.searchParams.set("x", t[0].toFixed(2)), r.searchParams.set("y", t[1].toFixed(2)), r.searchParams.set("zoom", n.toString());
+	let i = r.searchParams.toString().replace(/%2F/gi, "/");
+	window.history.replaceState({}, "", `${r.pathname}?${i}${r.hash}`);
 }
 async function yf() {
 	if (kd === null) throw Error("No TileServer session is available.");
