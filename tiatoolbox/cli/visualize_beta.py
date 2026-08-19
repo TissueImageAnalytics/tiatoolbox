@@ -16,7 +16,7 @@ from tiatoolbox.cli.common import tiatoolbox_cli
 )
 def visualize_beta(
     port: int,
-) -> None:
+) -> None:  # pragma: no cover
     """Launches the experimental TIAToolbox visualization tool.
 
     Args:
