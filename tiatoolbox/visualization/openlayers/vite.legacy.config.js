@@ -9,10 +9,10 @@ export default defineConfig({
   build: {
     emptyOutDir: false,
     lib: {
-      entry: resolve(currentDirectory, "src/main.js"),
+      entry: resolve(currentDirectory, "src/main_legacy.js"),
       formats: ["es"],
-      fileName: "viewer",
-      cssFileName: "viewer",
+      fileName: "viewer_legacy",
+      cssFileName: "viewer_legacy",
     },
     outDir: resolve(
       currentDirectory,
