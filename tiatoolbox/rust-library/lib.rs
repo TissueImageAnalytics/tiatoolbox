@@ -239,7 +239,7 @@ fn contrast_enhancer<'py>(py: Python<'py>, img: PyReadonlyArray3<'py, u8>, low_p
 }
 
 #[pymodule]
-fn miscrust(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn rust_misc(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(add, m)?)?;
     m.add_function(wrap_pyfunction!(contrast_enhancer, m)?)?;
     m.add_function(wrap_pyfunction!(patch_predictions_as_qupath_json, m)?)?;

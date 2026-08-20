@@ -31,7 +31,7 @@ from skimage import exposure
 from tqdm.auto import tqdm, trange
 from tqdm.dask import TqdmCallback
 
-from tiatoolbox import logger, miscrust
+from tiatoolbox import logger, rust_misc
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
@@ -434,7 +434,7 @@ def contrast_enhancer(img: np.ndarray, low_p: int = 2, high_p: int = 98) -> np.n
         msg = "Image should be uint8."
         raise AssertionError(msg)
     if img.ndim == dimension_for_rust:
-        return miscrust.contrast_enhancer(img, low_p, high_p)
+        return rust_misc.contrast_enhancer(img, low_p, high_p)
     img_out = img.copy()
     percentiles = np.array(np.percentile(img_out, (low_p, high_p)))
     p_low, p_high = percentiles[0], percentiles[1]
@@ -1245,7 +1245,7 @@ def patch_predictions_as_annotations(
         class_probs = np.empty((0, 2))
     if len(patch_coords) == 0:
         patch_coords = np.empty((0, 2))
-    return miscrust.patch_predictions_as_annotations(
+    return rust_misc.patch_predictions_as_annotations(
         Annotation,
         Polygon,
         preds,
@@ -1284,7 +1284,7 @@ def patch_predictions_as_qupath_json(
         desc="Converting outputs to QuPath JSON.",
         disable=not verbose,
     )
-    features = miscrust.patch_predictions_as_qupath_json(
+    features = rust_misc.patch_predictions_as_qupath_json(
         class_colours, preds, class_dict, np.array(patch_coords).astype("float")
     )
     return {"type": "FeatureCollection", "features": features}

@@ -303,4 +303,4 @@ python_version = "3.12"
 [tool.maturin]
 python-source = "."
 include = ["tiatoolbox/**/*"]
-module-name = "tiatoolbox.miscrust"
+module-name = "tiatoolbox.rust_misc"
