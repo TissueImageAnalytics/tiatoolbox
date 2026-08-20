@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 [dependencies]
 ndarray = "0.17.2"
 numpy = "0.29.0"
+ordered-float = "5.3.0"
 pyo3 = "0.29.2"
 pythonize = "0.29.0"
 serde_json = "1.0.151"
