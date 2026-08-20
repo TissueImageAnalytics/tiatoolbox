@@ -47,10 +47,18 @@ def show_wsi(
         msg = "At least one image path must be provided."
         raise ValueError(msg)
     if len(name) == 0:
-        app = TileServer("TileServer", list(img_input), renderer=renderer)
+        app = TileServer(
+            "TileServer",
+            list(img_input),
+            renderer=renderer,
+            legacy=True,
+        )
     elif len(name) == len(img_input):
         app = TileServer(
-            "TileServer", dict(zip(name, img_input, strict=False)), renderer=renderer
+            "TileServer",
+            dict(zip(name, img_input, strict=False)),
+            renderer=renderer,
+            legacy=True,
         )
     else:
         msg = "if names are provided, must match the number of paths provided"
