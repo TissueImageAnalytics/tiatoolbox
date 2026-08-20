@@ -214,7 +214,7 @@ if (baseSource !== null) {
   extent = [0, -1, 1, 0];
 
   projection = new Projection({
-    code: "ZoomifyProjection",
+    code: "ZoomifyProjectionEmpty",
     units: "pixels",
     extent,
     metersPerUnit: 1,
