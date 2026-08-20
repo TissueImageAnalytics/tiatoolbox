@@ -83,18 +83,35 @@ fn patch_predictions_as_annotations<'py>(
 
 #[pyfunction]
 fn patch_predictions_as_qupath_json<'py>(py: Python<'_>,
-        class_colours: HashMap<i32, Vec<i32>>,
-        preds: Vec<i32>,
-        class_dict: HashMap<i32, String>,
+        class_colours: &Bound<'_, PyDict>,
+        preds: Vec<f64>,
+        class_dict: &Bound<'_, PyDict>,
         py_patch_coords: PyReadonlyArray2<'py, f64>)
         -> PyResult<Py<PyList>> {
     /*Helper function to generate QuPath JSON per patch predictions.*/
+    let class_colours: HashMap<OrderedFloat<f64>, Vec<i32>> = class_colours
+        .iter()
+        .map(|(key, value)| {
+            let key: f64 = key.extract()?;
+            let value: Vec<i32> = value.extract()?;
 
+            Ok((OrderedFloat(key), value))
+        })
+        .collect::<PyResult<_>>()?;
+    let class_dict: HashMap<OrderedFloat<f64>, String> = class_dict
+        .iter()
+        .map(|(key, value)| {
+            let key: f64 = key.extract()?;
+            let value: String = value.extract()?;
+
+            Ok((OrderedFloat(key), value))
+        })
+        .collect::<PyResult<_>>()?;
     let features = PyList::empty(py);
     let patch_coords = py_patch_coords.as_array();
     for i in 0..patch_coords.nrows() {
         let class_idx = preds[i];
-        let class_name = &class_dict[&class_idx];
+        let class_name = &class_dict[&OrderedFloat(class_idx)];
         let xmin = patch_coords[[i, 0]];
         let ymin = patch_coords[[i, 1]];
         let xmax = patch_coords[[i, 2]];
@@ -117,7 +134,7 @@ fn patch_predictions_as_qupath_json<'py>(py: Python<'_>,
         feature.set_item("geometry", polygon_feat)?;
         let classification = PyDict::new(py);
         classification.set_item("name", class_name)?;
-        classification.set_item("color", class_colours[&class_idx].clone())?;
+        classification.set_item("color", class_colours[&OrderedFloat(class_idx)].clone())?;
         let properties = PyDict::new(py);
         properties.set_item("classification", classification)?;
         feature.set_item("properties", properties)?;
