@@ -1280,7 +1280,7 @@ def patch_predictions_as_qupath_json(
         disable=not verbose,
     )
     features = miscrust.patch_predictions_as_qupath_json(
-        class_colours, preds, class_dict, np.array(patch_coords)
+        class_colours, preds, class_dict, np.array(patch_coords).astype("float")
     )
     return {"type": "FeatureCollection", "features": features}
 
