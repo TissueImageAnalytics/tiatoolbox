@@ -58,6 +58,12 @@ import numpy as np
 import torch
 from torch import nn
 
+from tiatoolbox.models.architecture.utils import (
+    Conv2dReLU as _Conv2dReLU,
+)
+from tiatoolbox.models.architecture.utils import (
+    SegmentationHead,
+)
 from tiatoolbox.models.models_abc import ModelABC
 
 
@@ -475,29 +481,8 @@ class EfficientNetEncoder(nn.Module):
         return features
 
 
-class Conv2dReLU(nn.Sequential):
-    """Conv2d + BatchNorm + ReLU block.
-
-    This class implements a common convolutional block used in UNet decoder.
-    It consists of a 2D convolution followed by batch normalization and a
-    ReLU activation function.
-
-    Attributes:
-        conv (nn.Conv2d):
-            Convolutional layer for feature extraction.
-        norm (nn.BatchNorm2d):
-            Batch normalization layer for stabilizing training.
-        activation (nn.ReLU):
-            ReLU activation function applied after normalization.
-
-    Example:
-        >>> block = Conv2dReLU(in_channels=32, out_channels=64)
-        >>> x = torch.randn(1, 32, 128, 128)
-        >>> output = block(x)
-        >>> output.shape
-        ... torch.Size([1, 64, 128, 128])
-
-    """
+class Conv2dReLU(_Conv2dReLU):
+    """Conv2d + BatchNorm + ReLU block."""
 
     def __init__(
         self: Conv2dReLU,
@@ -507,9 +492,6 @@ class Conv2dReLU(nn.Sequential):
         padding: int = 1,
     ) -> None:
         """Initialize Conv2dReLU block.
-
-        Creates a convolutional layer followed by batch normalization and a ReLU
-        activation function.
 
         Args:
             in_channels (int):
@@ -523,11 +505,13 @@ class Conv2dReLU(nn.Sequential):
 
         """
         super().__init__(
-            nn.Conv2d(
-                in_channels, out_channels, kernel_size, padding=padding, bias=False
-            ),
-            nn.BatchNorm2d(out_channels, eps=1e-5, momentum=0.1),
-            nn.ReLU(inplace=True),
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            padding=padding,
+            bias=False,
+            batch_norm_eps=1e-5,
+            batch_norm_momentum=0.1,
         )
 
 
@@ -689,58 +673,6 @@ class UnetDecoder(nn.Module):
         x = self.blocks[2](x, skips[2])
         x = self.blocks[3](x, skips[3])
         return self.blocks[4](x)
-
-
-class SegmentationHead(nn.Sequential):
-    """Segmentation head for UNet architecture.
-
-    This class defines the final segmentation layer for the UNet model.
-    It applies a convolution to produce the segmentation output.
-
-    Attributes:
-        conv2d (nn.Conv2d):
-            Convolutional layer for feature transformation to output classes.
-
-    Example:
-        >>> head = SegmentationHead(in_channels=16, out_channels=1)
-        >>> x = torch.randn(1, 16, 224, 224)
-        >>> output = head(x)
-        >>> output.shape
-        ... torch.Size([1, 1, 224, 224])
-
-    """
-
-    def __init__(
-        self: SegmentationHead,
-        in_channels: int,
-        out_channels: int,
-        kernel_size: int = 3,
-    ) -> None:
-        """Initialize the SegmentationHead module.
-
-        This method sets up the segmentation head by creating a convolutional layer.
-        It is typically used as the final stage in UNet architectures for
-        semantic segmentation.
-
-        Args:
-            in_channels (int):
-                Number of input channels to the segmentation head.
-            out_channels (int):
-                Number of output channels (usually equal to the number of classes).
-            kernel_size (int):
-                Size of the convolution kernel. Defaults to 3.
-
-        """
-        super().__init__(
-            nn.Conv2d(
-                in_channels,
-                out_channels,
-                kernel_size=kernel_size,
-                padding=kernel_size // 2,
-            ),
-            nn.Identity(),
-            nn.Identity(),
-        )
 
 
 class EfficientUNetTissueMaskModel(ModelABC):
