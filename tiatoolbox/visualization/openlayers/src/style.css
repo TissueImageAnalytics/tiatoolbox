@@ -248,10 +248,9 @@ body {
 
 
 .layer-editor-empty {
-    color: #999999;
+    color: #cccccc;
     font-size: 12px;
 }
-
 
 .layer-editor-item {
     margin-bottom: 14px;

@@ -122,6 +122,18 @@ let overlayVersion = Date.now();
 let currentSlideInfo = null;
 let currentSlidePath = null;
 const overlayLayers = {};
+const annotationLayerNames = new Set();
+
+function getFileStem(filePath) {
+  const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
+  const extensionIndex = fileName.lastIndexOf(".");
+
+  if (extensionIndex <= 0) {
+    return fileName;
+  }
+
+  return fileName.slice(0, extensionIndex);
+}
 
 function updateCurrentSlide() {
   if (currentSlidePath === null) {
@@ -308,6 +320,7 @@ if (baseSource !== null) {
 const overviewMapWidth = 300;
 const overviewMapHeight = 250;
 
+// Keeps the overview fixed and show the whole slide
 function createOverviewView(overviewProjection, overviewExtent) {
   const center = [
     (overviewExtent[0] + overviewExtent[2]) / 2,
@@ -788,6 +801,11 @@ async function removeSlide() {
   window.graticule = graticule;
   window.screenSpaceGraticule = screenSpaceGraticule;
 
+  window.projection = emptyProjection;
+  window.resolutions = emptyResolutions;
+  window.extent = emptyExtent;
+  window.view = emptyView;
+
   const url = new URL(window.location.href);
   url.search = "";
   url.hash = "";
@@ -898,13 +916,17 @@ function getLayerEditorEntries() {
 
   if (slideLayer.getSource() !== null) {
     entries.push({
-      name: "slide",
+      id: "slide",
+      name: getFileStem(currentSlidePath ?? "slide"),
       layer: slideLayer,
     });
   }
 
-  for (const [layerName, layer] of Object.entries(overlayLayers)) {
+  for (const [layerName, layer] of Object.entries(
+    overlayLayers,
+  )) {
     entries.push({
+      id: layerName,
       name: layerName,
       layer,
     });
@@ -917,12 +939,11 @@ function getLayerEditorEntries() {
   );
 }
 
-
-function moveLayer(layerName, direction) {
+function moveLayer(layerId, direction) {
   const entries = getLayerEditorEntries();
 
   const index = entries.findIndex(
-    (entry) => entry.name === layerName,
+    (entry) => entry.id === layerId,
   );
 
   if (index === -1) {
@@ -966,7 +987,7 @@ function updateLayerEditor() {
     return;
   }
 
-  entries.forEach(({ name: layerName, layer }, index) => {
+  entries.forEach(({ id: layerId, name: layerName, layer }, index) => {
     const item = document.createElement("div");
     item.className = "layer-editor-item";
 
@@ -998,7 +1019,7 @@ function updateLayerEditor() {
     moveUp.disabled = index === 0;
 
     moveUp.addEventListener("click", () => {
-      moveLayer(layerName, "up");
+      moveLayer(layerId, "up");
     });
 
     const moveDown = document.createElement("button");
@@ -1009,7 +1030,7 @@ function updateLayerEditor() {
     moveDown.disabled = index === entries.length - 1;
 
     moveDown.addEventListener("click", () => {
-      moveLayer(layerName, "down");
+      moveLayer(layerId, "down");
     });
 
     order.append(moveUp, moveDown);
@@ -1072,8 +1093,21 @@ async function loadOverlay(overlayPath) {
     );
   }
 
+  const isAnnotation = ["db", "dat", "geojson"].includes(
+    extension,
+  );
+
+  const layerName = getFileStem(overlayPath);
+
+  if (layerName === "slide") {
+    throw new Error(
+      'The overlay name "slide" is reserved.',
+    );
+  }
+
   const formData = new FormData();
   formData.append("overlay_path", overlayPath);
+  formData.append("layer_name", layerName);
 
   const response = await fetch("/tileserver/overlay", {
     method: "PUT",
@@ -1086,11 +1120,11 @@ async function loadOverlay(overlayPath) {
 
   const result = await response.json();
 
-  const isAnnotation = ["db", "dat", "geojson"].includes(
-    extension,
-  );
-
-  const layerName = isAnnotation ? "overlay" : result;
+  if (isAnnotation) {
+    annotationLayerNames.add(layerName);
+  } else {
+    annotationLayerNames.delete(layerName);
+  }
 
   overlayVersion += 1;
 
@@ -1105,6 +1139,7 @@ async function loadOverlay(overlayPath) {
   });
 
   if (overlayLayers[layerName] !== undefined) {
+    // Replace an existing layer with the same filename stem.
     overlayLayers[layerName].setSource(source);
     overlayLayers[layerName].setVisible(true);
   } else {
@@ -1164,13 +1199,15 @@ async function removeOverlay(layerName) {
     layers.splice(layerIndex, 1);
   }
 
+  annotationLayerNames.delete(layerName);
+
   delete overlayLayers[layerName];
 
   updateLayerEditor();
 }
 
 async function setAnnotationColors(colorMap) {
-  if (overlayLayers.overlay === undefined) {
+  if (annotationLayerNames.size === 0) {
     throw new Error("No annotation overlay is loaded.");
   }
 
@@ -1194,16 +1231,25 @@ async function setAnnotationColors(colorMap) {
 
   overlayVersion += 1;
 
-  const source = new Zoomify({
-    url:
-      `/tileserver/layer/overlay/${sessionId}/zoomify/` +
-      `{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${overlayVersion}`,
-    size: currentSlideInfo.slide_dimensions,
-    crossOrigin: "anonymous",
-    zDirection: -1,
-  });
+  for (const layerName of annotationLayerNames) {
+    const overlayLayer = overlayLayers[layerName];
 
-  overlayLayers.overlay.setSource(source);
+    if (overlayLayer === undefined) {
+      continue;
+    }
+
+    const source = new Zoomify({
+      url:
+        `/tileserver/layer/${encodeURIComponent(layerName)}/` +
+        `${sessionId}/zoomify/` +
+        `{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${overlayVersion}`,
+      size: currentSlideInfo.slide_dimensions,
+      crossOrigin: "anonymous",
+      zDirection: -1,
+    });
+
+    overlayLayer.setSource(source);
+  }
 }
 
 // Preserve variables exposed by the original inline viewer.
