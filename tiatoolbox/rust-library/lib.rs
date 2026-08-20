@@ -6,7 +6,13 @@ use std::collections::HashMap;
 use pythonize::depythonize;
 use serde_json::Value;
 use ordered_float::OrderedFloat;
+use pyo3::FromPyObject;
 
+#[derive(FromPyObject)]
+enum StringOrFloat {
+    String(String),
+    Float(f64),
+}
 #[pyfunction]
 fn add(a: i32, b: i32) -> i32 {
     a + b
@@ -34,20 +40,20 @@ fn patch_predictions_as_annotations<'py>(
         annotation_class: &Bound<'_, PyAny>,
         polygon_class: &Bound<'_, PyAny>,
         preds: Vec<f64>,
-        keys: Vec<String>,
+        keys_contains_labels: bool,
+        keys_contains_probabilities: bool,
         class_dict: &Bound<'_, PyDict>,
         py_class_probs: PyReadonlyArray2<'py, f64>,
         py_patch_coords: PyReadonlyArray2<'py, f64>,
-        classes_predicted: Vec<i32>,
+        classes_predicted: Vec<f64>,
         labels: Vec<f64>
     ) -> PyResult<Vec<Py<PyAny>>>{
     /*Helper function to generate annotation per patch predictions.*/
-    let class_dict: HashMap<OrderedFloat<f64>, String> = class_dict
+    let class_dict: HashMap<OrderedFloat<f64>, StringOrFloat> = class_dict
         .iter()
         .map(|(key, value)| {
             let key: f64 = key.extract()?;
-            let value: String = value.extract()?;
-
+            let value: StringOrFloat = value.extract()?;
             Ok((OrderedFloat(key), value))
         })
         .collect::<PyResult<_>>()?;
@@ -55,19 +61,39 @@ fn patch_predictions_as_annotations<'py>(
     let patch_coords = py_patch_coords.as_array();
     let mut annotations: Vec<Py<PyAny>>  = Vec::with_capacity(patch_coords.nrows());
     let preds_len = preds.len();
-    let keys_contains_labels = keys.contains(&"labels".to_string());
     for i in 0..patch_coords.nrows() {
         let props = PyDict::new(py);
-        if keys.contains(&"probabilities".to_string()) {
+        if keys_contains_probabilities {
             for j in &classes_predicted {
-                props.set_item(format!("prob_{}", class_dict[&OrderedFloat(*j as f64)]), class_probs[[i, *j as usize]])?;
+                let y = &class_dict[&OrderedFloat(*j as f64)];
+                let probability = match y {
+                    StringOrFloat::String(s) => s.clone(),
+                    StringOrFloat::Float(i) => i.to_string(),
+                };
+                props.set_item(format!("prob_{}", probability), class_probs[[i, *j as usize]])?;
             }
         }
         if keys_contains_labels {
-            props.set_item("label".to_string(), class_dict[&OrderedFloat(labels[i])].clone())?;
+            let y = &class_dict[&OrderedFloat(labels[i])];
+            match y {
+                StringOrFloat::String(s) => {
+                    props.set_item("label".to_string(), s)?;
+                }
+                StringOrFloat::Float(i) => {
+                    props.set_item("label".to_string(), *i)?;
+                }
+            }
         }
         if preds_len > 0 {
-            props.set_item("type".to_string(), class_dict[&OrderedFloat(preds[i])].clone())?;
+            let y = &class_dict[&OrderedFloat(preds[i])];
+            match y {
+                StringOrFloat::String(s) => {
+                    props.set_item("type".to_string(), s)?;
+                }
+                StringOrFloat::Float(i) => {
+                    props.set_item("type".to_string(), *i)?;
+                }
+            }
         }
         annotations.push(annotation_class.call1((
             polygon_class.call_method1("from_bounds", (
@@ -102,7 +128,7 @@ fn patch_predictions_as_qupath_json<'py>(py: Python<'_>,
         .iter()
         .map(|(key, value)| {
             let key: f64 = key.extract()?;
-            let value: String = value.extract()?;
+            let value: String = value.extract::<String>()?;
 
             Ok((OrderedFloat(key), value))
         })

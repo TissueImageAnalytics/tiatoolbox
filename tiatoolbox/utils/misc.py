@@ -1241,11 +1241,16 @@ def patch_predictions_as_annotations(
         desc="Converting outputs to AnnotationStore.",
         disable=not verbose,
     )
+    if len(class_probs) == 0:
+        class_probs = np.empty((0, 2))
+    if len(patch_coords) == 0:
+        patch_coords = np.empty((0, 2))
     return miscrust.patch_predictions_as_annotations(
         Annotation,
         Polygon,
         preds,
-        keys,
+        "labels" in keys,
+        "probabilities" in keys,
         class_dict,
         np.array(class_probs).astype("float"),
         np.array(patch_coords).astype("float"),
