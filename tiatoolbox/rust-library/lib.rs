@@ -146,13 +146,13 @@ fn patch_predictions_as_qupath_json<'py>(py: Python<'_>,
         polygon_feat.set_item("type", "Polygon")?;
         polygon_feat.set_item(
             "coordinates",
-            vec![vec![
-                [xmin, ymin],
-                [xmin, ymax],
-                [xmax, ymax],
-                [xmax, ymin],
-                [xmin, ymin],
-            ]],
+            ((
+                (xmin, ymin),
+                (xmin, ymax),
+                (xmax, ymax),
+                (xmax, ymin),
+                (xmin, ymin),
+            ),),
         )?;
         let feature = PyDict::new(py);
         feature.set_item("type", "Feature")?;

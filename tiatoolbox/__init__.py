@@ -14,7 +14,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from logging import LogRecord
     from types import ModuleType
 
-    from tiatoolbox import rust_misc
+    from . import rust_misc
 
 __author__ = """TIA Centre"""
 __email__ = "TIA@warwick.ac.uk"

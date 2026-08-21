@@ -1235,6 +1235,53 @@ def patch_predictions_as_annotations(
     verbose: bool = True,
 ) -> list:
     """Helper function to generate annotation per patch predictions."""
+    preds = np.array(preds)
+    if np.issubdtype(preds.dtype, np.number):
+        return rust_patch_predictions_as_annotations(
+            preds.astype("float").tolist(),
+            keys,
+            class_dict,
+            class_probs,
+            patch_coords,
+            classes_predicted,
+            labels,
+        )
+    annotations = []
+    tqdm_loop = tqdm(
+        patch_coords,
+        leave=False,
+        desc="Converting outputs to AnnotationStore.",
+        disable=not verbose,
+    )
+
+    for i, _ in enumerate(tqdm_loop):
+        if "probabilities" in keys:
+            props = {
+                f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
+            }
+        else:
+            props = {}
+        if "labels" in keys:
+            props["label"] = class_dict[labels[i]]
+        if len(preds) > 0:
+            props["type"] = class_dict[preds[i]]
+        annotations.append(Annotation(Polygon.from_bounds(*patch_coords[i]), props))
+
+    return annotations
+
+
+def rust_patch_predictions_as_annotations(
+    preds: list[float],
+    keys: list,
+    class_dict: dict,
+    class_probs: list | np.ndarray,
+    patch_coords: list | np.ndarray,
+    classes_predicted: list,
+    labels: list,
+    *,
+    verbose: bool = True,
+) -> list:
+    """Helper function to generate annotation per patch predictions."""
     tqdm(
         patch_coords,
         leave=False,
@@ -1261,6 +1308,65 @@ def patch_predictions_as_annotations(
 
 def patch_predictions_as_qupath_json(
     preds: list | np.ndarray,
+    class_dict: dict,
+    patch_coords: list | np.ndarray,
+    *,
+    verbose: bool = True,
+) -> dict:
+    """Helper function to generate QuPath JSON per patch predictions."""
+    preds = np.array(preds)
+    if np.issubdtype(preds.dtype, np.number):
+        return rust_patch_predictions_as_qupath_json(
+            preds.astype("float").tolist(), class_dict, patch_coords
+        )
+    features = []
+    # pick a color for each class based on the class index, using a colormap
+    num_classes = len(class_dict)
+    cmap = plt.colormaps["tab20"].resampled(num_classes)
+    class_colours = {
+        class_idx: [
+            int(cmap(class_idx)[0] * 255),
+            int(cmap(class_idx)[1] * 255),
+            int(cmap(class_idx)[2] * 255),
+        ]
+        for class_idx in class_dict
+    }
+
+    tqdm_loop = tqdm(
+        range(np.asarray(patch_coords).shape[0]),
+        leave=False,
+        desc="Converting outputs to QuPath JSON.",
+        disable=not verbose,
+    )
+
+    for i in tqdm_loop:
+        class_idx = int(preds[i])
+        class_name = class_dict[class_idx]
+        polygon_geo = Polygon.from_bounds(*patch_coords[i])
+        polygon_feat = mapping(polygon_geo)
+
+        feature = {
+            "type": "Feature",
+            "id": f"patch_{i}",
+            "geometry": polygon_feat,
+            "properties": {
+                "classification": {
+                    "name": class_name,
+                    "color": class_colours[class_idx],
+                }
+            },
+            "objectType": "annotation",
+            "name": class_name,
+            "class_value": class_idx,
+        }
+
+        features.append(feature)
+
+    return {"type": "FeatureCollection", "features": features}
+
+
+def rust_patch_predictions_as_qupath_json(
+    preds: list[float],
     class_dict: dict,
     patch_coords: list | np.ndarray,
     *,
