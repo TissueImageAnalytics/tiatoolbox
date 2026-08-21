@@ -8,6 +8,7 @@ import io
 import json
 import re
 import shutil
+import sys
 import threading
 import time
 import types
@@ -1367,32 +1368,47 @@ def reload_main(
     req_args: dict[str, list[bytes]] | None = None,
     pre_import_patch: Callable | None = None,
 ) -> object:
-    """Reload ``main`` in a controlled environment."""
-    # Apply pre-import patches FIRST (critical).
+    """Reload main in a controlled environment."""
     if pre_import_patch is not None:
         pre_import_patch(monkeypatch)
 
-    # Patch curdoc
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "bokeh_app",
+            "/tmp",  # noqa: S108
+            "/tmp",  # noqa: S108
+        ],
+    )
+
     monkeypatch.setattr(
         "bokeh.io.curdoc",
-        lambda: FakeDoc(with_session=with_session, arguments=req_args),
+        lambda: FakeDoc(
+            with_session=with_session,
+            arguments=req_args,
+        ),
         raising=False,
     )
 
-    # Core stub patches used everywhere in the suite
-    monkeypatch.setattr("requests.Session", FakeSession, raising=True)
+    monkeypatch.setattr(
+        "requests.Session",
+        FakeSession,
+        raising=True,
+    )
+
     monkeypatch.setattr(
         "tiatoolbox.wsicore.wsireader.WSIReader.open",
         FakeWSIReader.open,
         raising=True,
     )
+
     monkeypatch.setattr(
         "tiatoolbox.tools.pyramid.ZoomifyGenerator",
         FakeZoomifyGenerator,
         raising=True,
     )
 
-    # Safe reload with all patches applied
     return importlib.reload(main)
 
 
@@ -1900,34 +1916,46 @@ def test_module_level_do_doc_true(
     track_tmp_path: Path,
 ) -> None:
     """Test that module-level do_doc becomes True when session_context is present."""
-    # Create a dummy slide path that the patched Path.glob will return.
-    fake_slide: Path = track_tmp_path / "dummy.svs"
+    fake_slide = track_tmp_path / "dummy.svs"
     fake_slide.touch()
 
     def pre_import_patch(mp: pytest.MonkeyPatch) -> None:
         """Patch Path.glob during import so slide enumeration is non-empty."""
         original_glob = Path.glob
 
-        def forced_nonempty_glob(self: Path, pattern: str) -> list[Path]:
-            # During import-time enumeration, always return at least one slide.
-            # This avoids touching /app_data while ensuring setup_doc() succeeds.
-            try:
-                # If this is the "slides" folder, short-circuit to our fake slide.
-                if self.name == "slides" or self.as_posix().endswith("/slides"):
-                    return [fake_slide]
-            except Exception:  # noqa: BLE001
-                # Fallback to be defensive, but still non-empty.
+        def forced_nonempty_glob(
+            self: Path,
+            pattern: str,
+        ) -> list:
+            """Return a fake slide for slide searches."""
+            if pattern.endswith(
+                (
+                    ".svs",
+                    ".ndpi",
+                    ".tiff",
+                    ".tif",
+                    ".mrxs",
+                    ".png",
+                    ".jpg",
+                    ".qptiff",
+                    ".dcm",
+                ),
+            ):
                 return [fake_slide]
-            # For non-slide paths, fall back to the real glob (converted to list).
-            return list(original_glob(self, pattern))  # type: ignore[arg-type]
 
-        mp.setattr(Path, "glob", forced_nonempty_glob, raising=False)
+            return list(original_glob(self, pattern))
 
-    # Provide a session-backing FakeDoc so main.do_doc is computed True at import.
-    req_args: dict[str, list[bytes]] = {"x": [b"1"]}
+        mp.setattr(
+            Path,
+            "glob",
+            forced_nonempty_glob,
+            raising=False,
+        )
 
-    # IMPORTANT: with_session=True so reload_main supplies a curdoc()
-    # with session_context.
+    req_args: dict[str, list[bytes]] = {
+        "x": [b"1"],
+    }
+
     main = reload_main(
         monkeypatch,
         with_session=True,
@@ -1947,38 +1975,51 @@ def test_module_auto_setup_doc(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
 ) -> None:
-    """Test that module auto-initialises the document when do_doc=True."""
-    # Create a dummy slide path that the patched Path.glob will return.
-    fake_slide: Path = track_tmp_path / "dummy.svs"
+    """Test that module auto-initializes the document."""
+    fake_slide = track_tmp_path / "dummy.svs"
     fake_slide.touch()
 
     def pre_import_patch(mp: pytest.MonkeyPatch) -> None:
-        """Patch Path.glob during import so slide enumeration is non-empty."""
-        original_glob = Path.glob
+        """Patch slide discovery."""
 
-        def forced_nonempty_glob(self: Path, pattern: str) -> list[Path]:
-            # During import-time enumeration, always return at least one slide.
-            try:
-                if self.name == "slides" or self.as_posix().endswith("/slides"):
-                    return [fake_slide]
-            except Exception:  # noqa: BLE001
+        def forced_nonempty_glob(
+            self: Path,
+            pattern: str,
+        ) -> list[Path]:
+            """Return a non-empty slide list during import."""
+            _ = self
+
+            if pattern.endswith(
+                (
+                    ".svs",
+                    ".ndpi",
+                    ".tiff",
+                    ".tif",
+                    ".mrxs",
+                    ".png",
+                    ".jpg",
+                    ".qptiff",
+                    ".dcm",
+                ),
+            ):
                 return [fake_slide]
-            return list(original_glob(self, pattern))  # type: ignore[arg-type]
 
-        mp.setattr(Path, "glob", forced_nonempty_glob, raising=False)
+            return []
 
-    # Trigger the module-level path that sets up the document on import.
-    # with_session=True ensures do_doc=True at import.
+        mp.setattr(
+            Path,
+            "glob",
+            forced_nonempty_glob,
+            raising=False,
+        )
+
     main = reload_main(
         monkeypatch,
         with_session=True,
-        req_args={},  # ok to be empty; only the presence of session matters
+        req_args={},
         pre_import_patch=pre_import_patch,
     )
 
-    # IMPORTANT: assert on the SAME document the module used during import.
-    # main.doc is set at module import when setup_doc() is called.
     assert hasattr(main, "doc")
     assert hasattr(main.doc, "_roots")
-    # slide_wins, control_tabs, popup_table, slide_info
     assert len(main.doc._roots) == 4

@@ -1,0 +1,21 @@
+{
+  "dependencies": {
+    "ol": "10.10.0",
+    "ol-ext": "4.0.38"
+  },
+  "description": "OpenLayers frontend for TIAToolbox.",
+  "devDependencies": {
+    "vite": "8.2.1"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "name": "tiatoolbox-openlayers",
+  "private": true,
+  "scripts": {
+    "build": "vite build",
+    "build:legacy": "vite build --config vite.legacy.config.js"
+  },
+  "type": "module",
+  "version": "0.0.0"
+}
