@@ -898,6 +898,144 @@ def test_infer_wsi_spills_to_disk_and_wraps_zarr(  # noqa: PLR0915
     assert len(cache_calls) >= 2
 
 
+def test_save_to_cache_creates_zarr_arrays(
+    track_tmp_path: Path,
+) -> None:
+    """Test save_to_cache creates zarr datasets from scratch."""
+    canvas = da.from_array(
+        np.ones((4, 2, 1), dtype=np.float32),
+        chunks=(2, 2, 1),
+    )
+    count = da.from_array(
+        np.ones((4, 2, 1), dtype=np.uint8),
+        chunks=(2, 2, 1),
+    )
+
+    canvas_zarr, count_zarr = semantic_segmentor.save_to_cache(
+        canvas=canvas,
+        count=count,
+        canvas_zarr=None,
+        count_zarr=None,
+        save_path=track_tmp_path / "cache.zarr",
+        verbose=False,
+    )
+
+    assert isinstance(canvas_zarr, zarr.Array)
+    assert isinstance(count_zarr, zarr.Array)
+
+    np.testing.assert_array_equal(
+        canvas_zarr[:],
+        np.ones((4, 2, 1), dtype=np.float32),
+    )
+
+    np.testing.assert_array_equal(
+        count_zarr[:],
+        np.ones((4, 2, 1), dtype=np.uint8),
+    )
+
+
+def test_save_to_cache_appends_when_zarr_exists(
+    track_tmp_path: Path,
+) -> None:
+    """Test appending data when Zarr arrays already exist.
+
+    Covers the branch:
+
+        else:
+            start_idx = 0
+
+    """
+    save_path = track_tmp_path / "cache.zarr"
+
+    zarr_group = zarr.open_group(save_path, mode="w")
+
+    canvas_zarr = zarr_group.create_array(
+        "canvas",
+        data=np.array(
+            [
+                [[1.0], [1.0]],
+                [[1.0], [1.0]],
+            ],
+            dtype=np.float32,
+        ),
+    )
+
+    count_zarr = zarr_group.create_array(
+        "count",
+        data=np.array(
+            [
+                [[1], [1]],
+                [[1], [1]],
+            ],
+            dtype=np.uint8,
+        ),
+    )
+
+    canvas = da.from_array(
+        np.array(
+            [
+                [[5.0], [5.0]],
+                [[5.0], [5.0]],
+            ],
+            dtype=np.float32,
+        ),
+        chunks=(2, 2, 1),
+    )
+
+    count = da.from_array(
+        np.array(
+            [
+                [[7], [7]],
+                [[7], [7]],
+            ],
+            dtype=np.uint8,
+        ),
+        chunks=(2, 2, 1),
+    )
+
+    canvas_zarr, count_zarr = semantic_segmentor.save_to_cache(
+        canvas=canvas,
+        count=count,
+        canvas_zarr=canvas_zarr,
+        count_zarr=count_zarr,
+        save_path=save_path,
+        verbose=False,
+    )
+
+    expected_canvas = np.array(
+        [
+            [[1.0], [1.0]],
+            [[1.0], [1.0]],
+            [[5.0], [5.0]],
+            [[5.0], [5.0]],
+        ],
+        dtype=np.float32,
+    )
+
+    expected_count = np.array(
+        [
+            [[1], [1]],
+            [[1], [1]],
+            [[7], [7]],
+            [[7], [7]],
+        ],
+        dtype=np.uint8,
+    )
+
+    np.testing.assert_array_equal(
+        canvas_zarr[:],
+        expected_canvas,
+    )
+
+    np.testing.assert_array_equal(
+        count_zarr[:],
+        expected_count,
+    )
+
+    assert canvas_zarr.shape == (4, 2, 1)
+    assert count_zarr.shape == (4, 2, 1)
+
+
 @pytest.mark.skipif(
     _RUNNING_ON_CI,
     reason="Local test only.",

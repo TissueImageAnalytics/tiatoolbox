@@ -53,7 +53,7 @@ dependencies = [
   "torch>=2.5.0",
   "torchvision>=0.15.0",
   "tqdm>=4.64.1",
-  "transformers>=4.51.1",
+  "transformers>=5.15.0",
   "umap-learn>=0.5.3",
   "wsidicom>=0.18.0",
   "zarr>=3.2.1",
@@ -72,7 +72,7 @@ dev = [
   "tiatoolbox[docs]",
   "coverage>=7.0.0",
   "docutils>=0.18.1",
-  "mypy>=1.16",
+  "mypy>=2.3",
   "pip>=22.3",
   "poetry-bumpversion>=0.3.1",
   "pre-commit>=2.20.0",
@@ -294,4 +294,6 @@ skip-magic-trailing-comma = false
 
 [tool.mypy]
 ignore_missing_imports = true
+# Default local target: minimum supported Python (requires-python lower bound).
+# CI overrides this per job with --python-version for 3.12-3.14.
 python_version = "3.12"

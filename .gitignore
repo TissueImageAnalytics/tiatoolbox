@@ -130,4 +130,9 @@ outputs/
 /main.py
 
 # uv lockfile
-/uv.lock
+uv.lock
+
+# Node.js
+node_modules/
+.vite/
+TXT
