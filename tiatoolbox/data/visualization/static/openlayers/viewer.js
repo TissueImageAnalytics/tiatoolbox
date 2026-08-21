@@ -15383,7 +15383,7 @@ if (Rh !== null) {
 	1,
 	0
 ], Vh = new qt({
-	code: "ZoomifyProjection",
+	code: "ZoomifyProjectionEmpty",
 	units: "pixels",
 	extent: Bh,
 	metersPerUnit: 1,

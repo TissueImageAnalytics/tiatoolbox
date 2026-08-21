@@ -226,7 +226,7 @@ if (baseSource !== null) {
   extent = [0, -1, 1, 0];
 
   projection = new Projection({
-    code: "ZoomifyProjection",
+    code: "ZoomifyProjectionEmpty",
     units: "pixels",
     extent,
     metersPerUnit: 1,
@@ -320,7 +320,6 @@ if (baseSource !== null) {
 const overviewMapWidth = 300;
 const overviewMapHeight = 250;
 
-// Keeps the overview fixed and show the whole slide
 function createOverviewView(overviewProjection, overviewExtent) {
   const center = [
     (overviewExtent[0] + overviewExtent[2]) / 2,
@@ -800,11 +799,6 @@ async function removeSlide() {
 
   window.graticule = graticule;
   window.screenSpaceGraticule = screenSpaceGraticule;
-
-  window.projection = emptyProjection;
-  window.resolutions = emptyResolutions;
-  window.extent = emptyExtent;
-  window.view = emptyView;
 
   const url = new URL(window.location.href);
   url.search = "";
