@@ -654,6 +654,8 @@ function clearOverlayLayers() {
     delete overlayLayers[layerName];
   }
 
+  annotationLayerNames.clear();
+
   updateLayerEditor();
 }
 
@@ -1001,6 +1003,7 @@ function updateLayerEditor() {
     const name = document.createElement("span");
     name.className = "layer-editor-name";
     name.textContent = layerName;
+    name.title = layerName;
 
     const order = document.createElement("div");
     order.className = "layer-editor-order";

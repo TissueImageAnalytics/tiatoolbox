@@ -15565,7 +15565,7 @@ function bg() {
 		t !== -1 && Ih.splice(t, 1);
 	}
 	for (let e of Object.keys(jh)) delete jh[e];
-	Og();
+	Mh.clear(), Og();
 }
 async function xg() {
 	if (!(await fetch("/tileserver/clear_overlays", { method: "PUT" })).ok) throw Error("Failed to clear overlays.");
@@ -15613,7 +15613,7 @@ async function wg() {
 		center: [.5, -.5],
 		resolution: t[0]
 	});
-	$.setView(r), rg.setView($h(n, e)), _g.setActive(!1), vg.setActive(!1), _g.element.classList.remove("active"), vg.element.classList.remove("active"), fg.setMap(null), gg.setMap(null), fg = dg(n), gg = hg(n), window.graticule = fg, window.screenSpaceGraticule = gg, window.projection = n, window.resolutions = t, window.extent = e, window.view = r;
+	$.setView(r), rg.setView($h(n, e)), _g.setActive(!1), vg.setActive(!1), _g.element.classList.remove("active"), vg.element.classList.remove("active"), fg.setMap(null), gg.setMap(null), fg = dg(n), gg = hg(n), window.graticule = fg, window.screenSpaceGraticule = gg;
 	let i = new URL(window.location.href);
 	i.search = "", i.hash = "", window.history.replaceState({}, "", i), yg(!1), Jh();
 }
@@ -15683,7 +15683,7 @@ function Og() {
 			r.setVisible(s.checked);
 		});
 		let c = document.createElement("span");
-		c.className = "layer-editor-name", c.textContent = n;
+		c.className = "layer-editor-name", c.textContent = n, c.title = n;
 		let l = document.createElement("div");
 		l.className = "layer-editor-order";
 		let u = document.createElement("button");
