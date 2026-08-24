@@ -519,6 +519,45 @@ body {
 }
 
 
+.viewer-file-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+
+.viewer-file-actions button {
+    min-width: 0;
+    height: 30px;
+    padding: 0 8px;
+
+    border: 0;
+    border-radius: 4px;
+
+    background: #222222;
+    color: #ffffff;
+
+    font-size: 11px;
+    cursor: pointer;
+}
+
+
+.viewer-file-actions button:hover:not(:disabled) {
+    background: #333333;
+}
+
+
+.viewer-file-actions button:active:not(:disabled) {
+    background: #555555;
+}
+
+
+.viewer-file-actions button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+
 /* Overview map */
 
 .map .ol-custom-overviewmap {

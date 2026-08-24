@@ -59,6 +59,23 @@ async function loadSlide(slidePath) {
   return metadataResponse.json();
 }
 
+async function uploadFile(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/tileserver/upload", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to upload file: ${file.name}`);
+  }
+
+  const result = await response.json();
+  return result.path;
+}
+
 // Create a Zoomify source with versions to avoid reusing tiles from an old slide.
 function createSlideSource(sessionId, slideInfo, version) {
   return new Zoomify({
@@ -124,6 +141,129 @@ let currentSlidePath = null;
 const overlayLayers = {};
 const annotationLayerNames = new Set();
 
+const fileActions = document.createElement("div");
+fileActions.className = "viewer-file-actions";
+
+function createFileActionButton(label) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = label;
+  return button;
+}
+
+const loadSlideButton = createFileActionButton("Load Slide");
+const loadOverlayButton =
+  createFileActionButton("Load Overlay");
+const clearSlideButton =
+  createFileActionButton("Clear Slide");
+const clearOverlaysButton =
+  createFileActionButton("Clear Overlays");
+
+loadOverlayButton.disabled = true;
+clearSlideButton.disabled = true;
+clearOverlaysButton.disabled = true;
+
+fileActions.append(
+  loadSlideButton,
+  loadOverlayButton,
+  clearSlideButton,
+  clearOverlaysButton,
+);
+
+currentSlide.insertAdjacentElement("afterend", fileActions);
+
+const slideFileInput = document.createElement("input");
+slideFileInput.type = "file";
+slideFileInput.hidden = true;
+
+const overlayFileInput = document.createElement("input");
+overlayFileInput.type = "file";
+overlayFileInput.accept =
+  ".jpg,.png,.tiff,.svs,.ndpi,.mrxs,.db,.dat,.geojson";
+overlayFileInput.hidden = true;
+
+viewerPanel.append(slideFileInput, overlayFileInput);
+
+function updateFileActionState() {
+  const hasSlide = currentSlideInfo !== null;
+  const hasOverlays = Object.keys(overlayLayers).length > 0;
+
+  loadSlideButton.disabled = false;
+  loadOverlayButton.disabled = !hasSlide;
+  clearSlideButton.disabled = !hasSlide;
+  clearOverlaysButton.disabled = !hasSlide || !hasOverlays;
+}
+
+loadSlideButton.addEventListener("click", () => {
+  slideFileInput.click();
+});
+
+loadOverlayButton.addEventListener("click", () => {
+  overlayFileInput.click();
+});
+
+clearSlideButton.addEventListener("click", async () => {
+  clearSlideButton.disabled = true;
+  loadOverlayButton.disabled = true;
+  clearOverlaysButton.disabled = true;
+
+  try {
+    await removeSlide();
+  } catch (error) {
+    console.error(error);
+  } finally {
+    updateFileActionState();
+  }
+});
+
+clearOverlaysButton.addEventListener("click", async () => {
+  clearOverlaysButton.disabled = true;
+
+  try {
+    await clearOverlays();
+  } catch (error) {
+    console.error(error);
+  } finally {
+    updateFileActionState();
+  }
+});
+
+slideFileInput.addEventListener("change", async () => {
+  const file = slideFileInput.files?.[0];
+
+  if (file === undefined) {
+    return;
+  }
+
+  try {
+    const filePath = await uploadFile(file);
+    await switchSlide(filePath);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    slideFileInput.value = "";
+  }
+});
+
+overlayFileInput.addEventListener("change", async () => {
+  const file = overlayFileInput.files?.[0];
+
+  if (file === undefined) {
+    return;
+  }
+
+  try {
+    const filePath = await uploadFile(file);
+    await loadOverlay(filePath);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    overlayFileInput.value = "";
+  }
+});
+
+updateFileActionState();
+
 function getFileStem(filePath) {
   const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
   const extensionIndex = fileName.lastIndexOf(".");
@@ -146,6 +286,8 @@ function updateCurrentSlide() {
 
   currentSlide.textContent = slideName || currentSlidePath;
   currentSlide.title = currentSlidePath;
+
+  updateFileActionState();
 }
 
 // Dynamic slide loading
@@ -657,6 +799,7 @@ function clearOverlayLayers() {
   annotationLayerNames.clear();
 
   updateLayerEditor();
+  updateFileActionState();
 }
 
 async function clearOverlays() {
@@ -669,6 +812,7 @@ async function clearOverlays() {
   }
 
   clearOverlayLayers();
+  updateFileActionState();
 }
 
 function getUrlViewState() {
@@ -810,6 +954,7 @@ async function removeSlide() {
 
   setViewerEnabled(false);
   updateZoomLevel();
+  updateFileActionState();
 }
 
 // Slide switching
@@ -821,10 +966,10 @@ async function switchSlide(slidePath) {
   clearOverlayLayers();
 
   const slideInfo = await loadSlide(slidePath);
-
+  currentSlideInfo = slideInfo;
   currentSlidePath = slidePath;
   updateCurrentSlide();
-  currentSlideInfo = slideInfo;
+  updateFileActionState();
 
   slideVersion += 1;
 
@@ -1200,6 +1345,7 @@ async function loadOverlay(overlayPath) {
   }
 
   updateLayerEditor();
+  updateFileActionState();
 
   return result;
 }
@@ -1242,6 +1388,7 @@ async function removeOverlay(layerName) {
   delete overlayLayers[layerName];
 
   updateLayerEditor();
+  updateFileActionState();
 }
 
 async function setAnnotationColors(colorMap) {

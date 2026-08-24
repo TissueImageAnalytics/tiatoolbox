@@ -158,6 +158,7 @@ class TileServer(Flask):
             methods=["PUT"],
         )(self.load_annotations)
         self.route("/tileserver/overlay", methods=["PUT"])(self.change_overlay)
+        self.route("/tileserver/upload", methods=["POST"])(self.upload_file)
         self.route(
             "/tileserver/overlay/<layer>",
             methods=["DELETE"],
@@ -499,6 +500,36 @@ class TileServer(Flask):
         self.slide_mpps[session_id] = self.layers[session_id]["slide"].info.mpp
 
         return "done"
+
+    def upload_file(self: TileServer) -> Response:
+        """Upload a local file for use by the experimental viewer."""
+        session_id = self._get_session_id()
+
+        if session_id is None or session_id not in self.layers:
+            return Response("Session not found.", status=404)
+
+        uploaded_file = request.files.get("file")
+
+        if uploaded_file is None or not uploaded_file.filename:
+            return Response("No file selected.", status=400)
+
+        filename = Path(uploaded_file.filename.replace("\\", "/")).name
+
+        if filename in {"", ".", ".."}:
+            return Response("Invalid filename.", status=400)
+
+        upload_dir = (
+            Path(tempfile.gettempdir())
+            / "tiatoolbox"
+            / session_id
+            / secrets.token_hex(8)
+        )
+        upload_dir.mkdir(parents=True, exist_ok=True)
+
+        upload_path = upload_dir / filename
+        uploaded_file.save(upload_path)
+
+        return jsonify({"path": str(upload_path)})
 
     def remove_slide(self: TileServer) -> Response:
         """Remove the current slide and its overlays."""

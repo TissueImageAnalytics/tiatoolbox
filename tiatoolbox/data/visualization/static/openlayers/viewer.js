@@ -15310,7 +15310,17 @@ async function hh(e) {
 	if (!n.ok) throw Error("Failed to retrieve slide metadata.");
 	return n.json();
 }
-function gh(e, t, n) {
+async function gh(e) {
+	let t = new FormData();
+	t.append("file", e);
+	let n = await fetch("/tileserver/upload", {
+		method: "POST",
+		body: t
+	});
+	if (!n.ok) throw Error(`Failed to upload file: ${e.name}`);
+	return (await n.json()).path;
+}
+function _h(e, t, n) {
 	return new dd({
 		url: `/tileserver/layer/slide/${e}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${n}`,
 		size: t.slide_dimensions,
@@ -15318,41 +15328,97 @@ function gh(e, t, n) {
 		zDirection: -1
 	});
 }
-var _h = document.getElementById("map"), vh = document.querySelector(".viewer-app"), yh = document.getElementById("viewer-panel"), bh = document.getElementById("viewer-panel-toggle"), xh = document.getElementById("current-slide"), Sh = document.getElementById("layer-editor"), Ch = document.getElementById("layer-editor-toggle"), wh = document.getElementById("layer-editor-list");
-if (_h === null || vh === null) throw Error("The OpenLayers viewer could not be found.");
-if (yh === null || bh === null || Sh === null || Ch === null || wh === null || xh === null) throw Error("The OpenLayers viewer controls could not be found.");
-bh.addEventListener("click", () => {
-	let e = yh.classList.toggle("hidden");
-	bh.classList.toggle("active", !e);
-}), Ch.addEventListener("click", () => {
-	let e = Sh.classList.toggle("hidden");
-	Ch.classList.toggle("active", !e);
+var vh = document.getElementById("map"), yh = document.querySelector(".viewer-app"), bh = document.getElementById("viewer-panel"), xh = document.getElementById("viewer-panel-toggle"), Sh = document.getElementById("current-slide"), Ch = document.getElementById("layer-editor"), wh = document.getElementById("layer-editor-toggle"), Th = document.getElementById("layer-editor-list");
+if (vh === null || yh === null) throw Error("The OpenLayers viewer could not be found.");
+if (bh === null || xh === null || Ch === null || wh === null || Th === null || Sh === null) throw Error("The OpenLayers viewer controls could not be found.");
+xh.addEventListener("click", () => {
+	let e = bh.classList.toggle("hidden");
+	xh.classList.toggle("active", !e);
+}), wh.addEventListener("click", () => {
+	let e = Ch.classList.toggle("hidden");
+	wh.classList.toggle("active", !e);
 });
-var Th = JSON.parse(_h.dataset.layers ?? "[]"), Eh = null, Dh = Date.now(), Oh = Date.now(), kh = null, Ah = null, jh = {}, Mh = /* @__PURE__ */ new Set();
-function Nh(e) {
+var Eh = JSON.parse(vh.dataset.layers ?? "[]"), Dh = null, Oh = Date.now(), kh = Date.now(), Ah = null, jh = null, Mh = {}, Nh = /* @__PURE__ */ new Set(), Ph = document.createElement("div");
+Ph.className = "viewer-file-actions";
+function Fh(e) {
+	let t = document.createElement("button");
+	return t.type = "button", t.textContent = e, t;
+}
+var Ih = Fh("Load Slide"), Lh = Fh("Load Overlay"), Rh = Fh("Clear Slide"), zh = Fh("Clear Overlays");
+Lh.disabled = !0, Rh.disabled = !0, zh.disabled = !0, Ph.append(Ih, Lh, Rh, zh), Sh.insertAdjacentElement("afterend", Ph);
+var Bh = document.createElement("input");
+Bh.type = "file", Bh.hidden = !0;
+var Vh = document.createElement("input");
+Vh.type = "file", Vh.accept = ".jpg,.png,.tiff,.svs,.ndpi,.mrxs,.db,.dat,.geojson", Vh.hidden = !0, bh.append(Bh, Vh);
+function Hh() {
+	let e = Ah !== null, t = Object.keys(Mh).length > 0;
+	Ih.disabled = !1, Lh.disabled = !e, Rh.disabled = !e, zh.disabled = !e || !t;
+}
+Ih.addEventListener("click", () => {
+	Bh.click();
+}), Lh.addEventListener("click", () => {
+	Vh.click();
+}), Rh.addEventListener("click", async () => {
+	Rh.disabled = !0, Lh.disabled = !0, zh.disabled = !0;
+	try {
+		await Pg();
+	} catch (e) {
+		console.error(e);
+	} finally {
+		Hh();
+	}
+}), zh.addEventListener("click", async () => {
+	zh.disabled = !0;
+	try {
+		await jg();
+	} catch (e) {
+		console.error(e);
+	} finally {
+		Hh();
+	}
+}), Bh.addEventListener("change", async () => {
+	let e = Bh.files?.[0];
+	if (e !== void 0) try {
+		await Fg(await gh(e));
+	} catch (e) {
+		console.error(e);
+	} finally {
+		Bh.value = "";
+	}
+}), Vh.addEventListener("change", async () => {
+	let e = Vh.files?.[0];
+	if (e !== void 0) try {
+		await zg(await gh(e));
+	} catch (e) {
+		console.error(e);
+	} finally {
+		Vh.value = "";
+	}
+}), Hh();
+function Uh(e) {
 	let t = e.split(/[\\/]/).pop() ?? e, n = t.lastIndexOf(".");
 	return n <= 0 ? t : t.slice(0, n);
 }
-function Ph() {
-	if (Ah === null) {
-		xh.textContent = "No slide selected", xh.removeAttribute("title");
+function Wh() {
+	if (jh === null) {
+		Sh.textContent = "No slide selected", Sh.removeAttribute("title");
 		return;
 	}
-	xh.textContent = Ah.split(/[\\/]/).pop() || Ah, xh.title = Ah;
+	Sh.textContent = jh.split(/[\\/]/).pop() || jh, Sh.title = jh, Hh();
 }
-var Fh = new URLSearchParams(window.location.search).get("slide");
-if (Fh !== null) {
-	Ah = Fh, Eh = await mh();
-	let e = await hh(Fh);
-	kh = e, Th = [{
+var Gh = new URLSearchParams(window.location.search).get("slide");
+if (Gh !== null) {
+	jh = Gh, Dh = await mh();
+	let e = await hh(Gh);
+	Ah = e, Eh = [{
 		name: "slide",
-		url: `/tileserver/layer/slide/${Eh}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${Dh}`,
+		url: `/tileserver/layer/slide/${Dh}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${Oh}`,
 		size: e.slide_dimensions,
 		mpp: e.mpp[0]
 	}];
-} else Th.length === 0 && (Eh = await mh());
-Ph();
-var Ih = Th.map((e) => {
+} else Eh.length === 0 && (Dh = await mh());
+Wh();
+var Kh = Eh.map((e) => {
 	let t = new dd({
 		url: e.url,
 		size: e.size,
@@ -15363,37 +15429,37 @@ var Ih = Th.map((e) => {
 		title: e.name,
 		source: t
 	});
-}), Lh = Ih[0];
-Lh === void 0 && (Lh = new Lu({ title: "slide" }), Ih.push(Lh)), Lh.setZIndex(0);
-var Rh = Lh.getSource(), zh, Bh, Vh;
-if (Rh !== null) {
-	let e = Rh.getTileGrid();
-	zh = e.getResolutions(), Bh = e.getExtent(), Vh = new qt({
+}), qh = Kh[0];
+qh === void 0 && (qh = new Lu({ title: "slide" }), Kh.push(qh)), qh.setZIndex(0);
+var Jh = qh.getSource(), Yh, Xh, Zh;
+if (Jh !== null) {
+	let e = Jh.getTileGrid();
+	Yh = e.getResolutions(), Xh = e.getExtent(), Zh = new qt({
 		code: "ZoomifyProjection",
 		units: "pixels",
-		extent: Bh,
-		metersPerUnit: Th[0].mpp * 1e-6,
+		extent: Xh,
+		metersPerUnit: Eh[0].mpp * 1e-6,
 		getPointResolution(e) {
 			return e;
 		}
 	});
-} else zh = [1], Bh = [
+} else Yh = [1], Xh = [
 	0,
 	-1,
 	1,
 	0
-], Vh = new qt({
+], Zh = new qt({
 	code: "ZoomifyProjectionEmpty",
 	units: "pixels",
-	extent: Bh,
+	extent: Xh,
 	metersPerUnit: 1,
 	getPointResolution(e) {
 		return e;
 	}
 });
-var Hh = .1;
-function Uh(e) {
-	let t = e[2] - e[0], n = e[3] - e[1], r = t * Hh, i = n * Hh;
+var Qh = .1;
+function $h(e) {
+	let t = e[2] - e[0], n = e[3] - e[1], r = t * Qh, i = n * Qh;
 	return [
 		e[0] - r,
 		e[1] - i,
@@ -15401,39 +15467,39 @@ function Uh(e) {
 		e[3] + i
 	];
 }
-er(Vh);
-var Wh = new ua({
-	projection: Vh,
-	resolutions: zh,
-	extent: Uh(Bh),
+er(Zh);
+var eg = new ua({
+	projection: Zh,
+	resolutions: Yh,
+	extent: $h(Xh),
 	constrainOnlyCenter: !0,
 	smoothExtentConstraint: !0,
 	smoothResolutionConstraint: !1,
 	center: [.5, -.5],
-	resolution: zh[0]
+	resolution: Yh[0]
 }), $ = new Rl({
-	target: _h,
-	layers: Ih,
-	view: Wh
-}), Gh = _h.querySelector(".ol-zoom"), Kh = _h.querySelector(".ol-zoom-out");
-if (Gh === null || Kh === null) throw Error("The OpenLayers zoom control could not be found.");
-var qh = document.createElement("div");
-qh.className = "ol-zoom-level", Gh.insertBefore(qh, Kh);
-function Jh() {
+	target: vh,
+	layers: Kh,
+	view: eg
+}), tg = vh.querySelector(".ol-zoom"), ng = vh.querySelector(".ol-zoom-out");
+if (tg === null || ng === null) throw Error("The OpenLayers zoom control could not be found.");
+var rg = document.createElement("div");
+rg.className = "ol-zoom-level", tg.insertBefore(rg, ng);
+function ig() {
 	let e = $.getView().getZoom();
-	e !== void 0 && (qh.textContent = `${Number.isInteger(e) ? e.toString() : e.toFixed(1)}x`);
+	e !== void 0 && (rg.textContent = `${Number.isInteger(e) ? e.toString() : e.toFixed(1)}x`);
 }
-Jh();
-var Yh = new Jl({
+ig();
+var ag = new Jl({
 	units: "metric",
 	minWidth: 100
 });
-$.addControl(Yh);
-var Xh = new Lu();
-Rh !== null && Xh.setSource(Rh);
-var Zh = 300, Qh = 250;
-function $h(e, t) {
-	let n = [(t[0] + t[2]) / 2, (t[1] + t[3]) / 2], r = t[2] - t[0], i = t[3] - t[1], a = Math.max(r / Zh, i / Qh), o = new ua({
+$.addControl(ag);
+var og = new Lu();
+Jh !== null && og.setSource(Jh);
+var sg = 300, cg = 250;
+function lg(e, t) {
+	let n = [(t[0] + t[2]) / 2, (t[1] + t[3]) / 2], r = t[2] - t[0], i = t[3] - t[1], a = Math.max(r / sg, i / cg), o = new ua({
 		projection: e,
 		center: n,
 		resolution: a,
@@ -15445,38 +15511,38 @@ function $h(e, t) {
 		e !== void 0 && (e[0] !== n[0] || e[1] !== n[1]) && o.setCenter(n);
 	}), o;
 }
-var eg = document.createElement("span");
-eg.className = "overview-toggle-icon", eg.innerHTML = "<i class=\"fas fa-chevron-up\"></i>";
-var tg = document.createElement("span");
-tg.className = "overview-toggle-icon", tg.innerHTML = "<i class=\"fas fa-chevron-down\"></i>";
-var ng = new Wl({
+var ug = document.createElement("span");
+ug.className = "overview-toggle-icon", ug.innerHTML = "<i class=\"fas fa-chevron-up\"></i>";
+var dg = document.createElement("span");
+dg.className = "overview-toggle-icon", dg.innerHTML = "<i class=\"fas fa-chevron-down\"></i>";
+var fg = new Wl({
 	className: "ol-overviewmap ol-custom-overviewmap",
-	layers: [Xh],
+	layers: [og],
 	collapsed: !1,
 	collapsible: !0,
-	collapseLabel: eg,
-	label: tg,
+	collapseLabel: ug,
+	label: dg,
 	rotateWithView: !1,
 	tipLabel: "Toggle overview map",
-	view: $h(Vh, Bh)
+	view: lg(Zh, Xh)
 });
-$.addControl(ng);
-var rg = ng.getOverviewMap(), ig = new wr({
+$.addControl(fg);
+var pg = fg.getOverviewMap(), mg = new wr({
 	coordinateFormat: (e) => Ft([e[0], -e[1]], "{x}, {y}", 0),
 	className: "ol-mouse-position",
 	placeholder: "\xA0"
 });
-$.addControl(ig);
-var ag = new va({
+$.addControl(mg);
+var hg = new va({
 	autoHide: !1,
 	className: "ol-rotate"
 });
-$.addControl(ag);
-var og = new Oe({ source: vh });
-$.addControl(og);
-var sg = new dh();
-$.addControl(sg);
-var cg = 64, lg = 64, ug = new Bc({
+$.addControl(hg);
+var gg = new Oe({ source: yh });
+$.addControl(gg);
+var _g = new dh();
+$.addControl(_g);
+var vg = 64, yg = 64, bg = new Bc({
 	stroke: new zc({
 		color: "rgba(0, 0, 0, 0.5)",
 		width: 1
@@ -15490,25 +15556,25 @@ var cg = 64, lg = 64, ug = new Bc({
 		})
 	})
 });
-function dg(e) {
+function xg(e) {
 	return new md({
 		projection: e,
-		margin: lg,
-		style: ug,
-		spacing: cg,
+		margin: yg,
+		style: bg,
+		spacing: vg,
 		formatCoord: (e, t) => (e = t === "left" || t === "right" ? -Math.floor(e) : Math.floor(e), e >= 1e6 && (e = e.toExponential(3), e = e.replace("+", "")), e)
 	});
 }
-var fg = dg(Vh), pg = cg, mg = lg;
-function hg(e) {
+var Sg = xg(Zh), Cg = vg, wg = yg;
+function Tg(e) {
 	return new md({
 		projection: e.getCode(),
-		spacing: pg,
-		margin: mg,
-		style: ug,
+		spacing: Cg,
+		margin: wg,
+		style: bg,
 		formatCoord(e, t) {
-			let n = $.getView().calculateExtent($.getSize()), r = $.getView().getResolution(), i = n[0] + r * mg, a = n[3] - r * mg, o;
-			if (o = t === "left" || t === "right" ? -(e - a) : e - i, o = Math.floor(o / r / pg), t === "left" || t === "right") {
+			let n = $.getView().calculateExtent($.getSize()), r = $.getView().getResolution(), i = n[0] + r * wg, a = n[3] - r * wg, o;
+			if (o = t === "left" || t === "right" ? -(e - a) : e - i, o = Math.floor(o / r / Cg), t === "left" || t === "right") {
 				let e = "";
 				do
 					e += String.fromCharCode(65 + o % 26), o = Math.floor(o / 26);
@@ -15519,26 +15585,26 @@ function hg(e) {
 		}
 	});
 }
-var gg = hg(Vh), _g = new ph({
+var Eg = Tg(Zh), Dg = new ph({
 	html: "<i class=\"fas fa-ruler-combined\"></i>",
 	className: "ol-graticule",
 	title: "Toggle Graticule",
 	onToggle(e) {
-		_g.element.classList.toggle("active", e), e ? (vg.setActive(!1), vg.element.classList.remove("active"), gg.setMap(null), fg.setMap($)) : fg.setMap(null);
+		Dg.element.classList.toggle("active", e), e ? (Og.setActive(!1), Og.element.classList.remove("active"), Eg.setMap(null), Sg.setMap($)) : Sg.setMap(null);
 	}
 });
-$.addControl(_g);
-var vg = new ph({
+$.addControl(Dg);
+var Og = new ph({
 	html: "<i class=\"fas fa-border-all\"></i>",
 	className: "ol-screen-space-graticule",
 	title: "Toggle Screen Space Graticule",
 	onToggle(e) {
-		vg.element.classList.toggle("active", e), e ? (_g.setActive(!1), _g.element.classList.remove("active"), fg.setMap(null), gg.setMap($)) : gg.setMap(null);
+		Og.element.classList.toggle("active", e), e ? (Dg.setActive(!1), Dg.element.classList.remove("active"), Sg.setMap(null), Eg.setMap($)) : Eg.setMap(null);
 	}
 });
-$.addControl(vg);
-function yg(e) {
-	let t = _h.querySelector(".ol-zoom-in"), n = _h.querySelector(".ol-zoom-out"), r = ag.element.querySelector("button"), i = _g.element.querySelector("button"), a = vg.element.querySelector("button");
+$.addControl(Og);
+function kg(e) {
+	let t = vh.querySelector(".ol-zoom-in"), n = vh.querySelector(".ol-zoom-out"), r = hg.element.querySelector("button"), i = Dg.element.querySelector("button"), a = Og.element.querySelector("button");
 	for (let o of [
 		t,
 		n,
@@ -15546,51 +15612,51 @@ function yg(e) {
 		i,
 		a
 	]) o !== null && (o.disabled = !e);
-	Yh.element.classList.toggle("viewer-control-hidden", !e), ig.element.classList.toggle("viewer-control-hidden", !e), ng.element.classList.toggle("viewer-control-hidden", !e), e || (_g.setActive(!1), vg.setActive(!1), _g.element.classList.remove("active"), vg.element.classList.remove("active"), fg.setMap(null), gg.setMap(null)), e && requestAnimationFrame(() => {
-		rg.updateSize(), rg.renderSync();
+	ag.element.classList.toggle("viewer-control-hidden", !e), mg.element.classList.toggle("viewer-control-hidden", !e), fg.element.classList.toggle("viewer-control-hidden", !e), e || (Dg.setActive(!1), Og.setActive(!1), Dg.element.classList.remove("active"), Og.element.classList.remove("active"), Sg.setMap(null), Eg.setMap(null)), e && requestAnimationFrame(() => {
+		pg.updateSize(), pg.renderSync();
 	});
 }
-if (yg(Rh !== null), Rh !== null) {
-	$.getView().fit(Bh);
-	let e = Sg();
+if (kg(Jh !== null), Jh !== null) {
+	$.getView().fit(Xh);
+	let e = Mg();
 	e !== null && ($.getView().setCenter(e.center), $.getView().setZoom(e.zoom));
 }
 $.on("moveend", () => {
-	Cg(), Jh();
+	Ng(), ig();
 });
-function bg() {
-	for (let e of Object.values(jh)) {
+function Ag() {
+	for (let e of Object.values(Mh)) {
 		e.setSource(null), $.removeLayer(e);
-		let t = Ih.indexOf(e);
-		t !== -1 && Ih.splice(t, 1);
+		let t = Kh.indexOf(e);
+		t !== -1 && Kh.splice(t, 1);
 	}
-	for (let e of Object.keys(jh)) delete jh[e];
-	Mh.clear(), Og();
+	for (let e of Object.keys(Mh)) delete Mh[e];
+	Nh.clear(), Rg(), Hh();
 }
-async function xg() {
+async function jg() {
 	if (!(await fetch("/tileserver/clear_overlays", { method: "PUT" })).ok) throw Error("Failed to clear overlays.");
-	bg();
+	Ag(), Hh();
 }
-function Sg() {
+function Mg() {
 	let e = new URLSearchParams(window.location.search), t = Number(e.get("x")), n = Number(e.get("y")), r = Number(e.get("zoom"));
 	return e.get("x") === null || e.get("y") === null || e.get("zoom") === null || !Number.isFinite(t) || !Number.isFinite(n) || !Number.isFinite(r) ? null : {
 		center: [t, n],
 		zoom: r
 	};
 }
-function Cg() {
-	if (Ah === null) return;
+function Ng() {
+	if (jh === null) return;
 	let e = $.getView(), t = e.getCenter(), n = e.getZoom();
 	if (t === void 0 || n === void 0) return;
 	let r = new URL(window.location.href);
-	r.searchParams.set("slide", Ah), r.searchParams.set("x", t[0].toFixed(2)), r.searchParams.set("y", t[1].toFixed(2)), r.searchParams.set("zoom", n.toString());
+	r.searchParams.set("slide", jh), r.searchParams.set("x", t[0].toFixed(2)), r.searchParams.set("y", t[1].toFixed(2)), r.searchParams.set("zoom", n.toString());
 	let i = r.searchParams.toString().replace(/%2F/gi, "/");
 	window.history.replaceState({}, "", `${r.pathname}?${i}${r.hash}`);
 }
-async function wg() {
-	if (Eh === null) throw Error("No TileServer session is available.");
+async function Pg() {
+	if (Dh === null) throw Error("No TileServer session is available.");
 	if (!(await fetch("/tileserver/slide", { method: "DELETE" })).ok) throw Error("Failed to remove the current slide.");
-	bg(), Ah = null, kh = null, Th.length = 0, Ph(), Dh += 1, Oh += 1, Lh.setSource(null), Xh.setSource(null), Og();
+	Ag(), jh = null, Ah = null, Eh.length = 0, Wh(), Oh += 1, kh += 1, qh.setSource(null), og.setSource(null), Rg();
 	let e = [
 		0,
 		-1,
@@ -15613,16 +15679,16 @@ async function wg() {
 		center: [.5, -.5],
 		resolution: t[0]
 	});
-	$.setView(r), rg.setView($h(n, e)), _g.setActive(!1), vg.setActive(!1), _g.element.classList.remove("active"), vg.element.classList.remove("active"), fg.setMap(null), gg.setMap(null), fg = dg(n), gg = hg(n), window.graticule = fg, window.screenSpaceGraticule = gg;
+	$.setView(r), pg.setView(lg(n, e)), Dg.setActive(!1), Og.setActive(!1), Dg.element.classList.remove("active"), Og.element.classList.remove("active"), Sg.setMap(null), Eg.setMap(null), Sg = xg(n), Eg = Tg(n), window.graticule = Sg, window.screenSpaceGraticule = Eg;
 	let i = new URL(window.location.href);
-	i.search = "", i.hash = "", window.history.replaceState({}, "", i), yg(!1), Jh();
+	i.search = "", i.hash = "", window.history.replaceState({}, "", i), kg(!1), ig(), Hh();
 }
-async function Tg(e) {
-	if (Eh === null) throw Error("Dynamic slide switching requires a TileServer session.");
-	bg();
+async function Fg(e) {
+	if (Dh === null) throw Error("Dynamic slide switching requires a TileServer session.");
+	Ag();
 	let t = await hh(e);
-	Ah = e, Ph(), kh = t, Dh += 1;
-	let n = gh(Eh, t, Dh), r = n.getTileGrid(), i = r.getExtent(), a = r.getResolutions(), o = new qt({
+	Ah = t, jh = e, Wh(), Hh(), Oh += 1;
+	let n = _h(Dh, t, Oh), r = n.getTileGrid(), i = r.getExtent(), a = r.getResolutions(), o = new qt({
 		code: "ZoomifyProjection",
 		units: "pixels",
 		extent: i,
@@ -15632,46 +15698,46 @@ async function Tg(e) {
 	let s = [(i[0] + i[2]) / 2, (i[1] + i[3]) / 2], c = new ua({
 		projection: o,
 		resolutions: a,
-		extent: Uh(i),
+		extent: $h(i),
 		constrainOnlyCenter: !0,
 		smoothExtentConstraint: !0,
 		smoothResolutionConstraint: !1,
 		center: s,
 		resolution: a[0]
 	});
-	c.fit(i, { size: $.getSize() }), $.setView(c), rg.setView($h(o, i));
-	let l = _g.getActive(), u = vg.getActive();
-	fg.setMap(null), gg.setMap(null), fg = dg(o), gg = hg(o), l && fg.setMap($), u && gg.setMap($), Lh.setSource(n), Xh.setSource(n), Og(), window.graticule = fg, window.screenSpaceGraticule = gg, yg(!0), Cg(), Jh();
+	c.fit(i, { size: $.getSize() }), $.setView(c), pg.setView(lg(o, i));
+	let l = Dg.getActive(), u = Og.getActive();
+	Sg.setMap(null), Eg.setMap(null), Sg = xg(o), Eg = Tg(o), l && Sg.setMap($), u && Eg.setMap($), qh.setSource(n), og.setSource(n), Rg(), window.graticule = Sg, window.screenSpaceGraticule = Eg, kg(!0), Ng(), ig();
 }
-function Eg() {
+function Ig() {
 	let e = [];
-	Lh.getSource() !== null && e.push({
+	qh.getSource() !== null && e.push({
 		id: "slide",
-		name: Nh(Ah ?? "slide"),
-		layer: Lh
+		name: Uh(jh ?? "slide"),
+		layer: qh
 	});
-	let t = Object.entries(jh).map(([e, t]) => ({
+	let t = Object.entries(Mh).map(([e, t]) => ({
 		id: e,
 		name: e,
 		layer: t
 	})).sort((e, t) => (e.layer.getZIndex() ?? 0) - (t.layer.getZIndex() ?? 0));
 	return e.push(...t), e;
 }
-function Dg(e, t) {
+function Lg(e, t) {
 	if (e === "slide") return;
-	let n = Eg().filter((e) => e.id !== "slide"), r = n.findIndex((t) => t.id === e);
+	let n = Ig().filter((e) => e.id !== "slide"), r = n.findIndex((t) => t.id === e);
 	if (r === -1) return;
 	let i = t === "up" ? r - 1 : r + 1;
 	if (i < 0 || i >= n.length) return;
 	let a = n[r].layer, o = n[i].layer, s = a.getZIndex() ?? 0, c = o.getZIndex() ?? 0;
-	a.setZIndex(c), o.setZIndex(s), Og();
+	a.setZIndex(c), o.setZIndex(s), Rg();
 }
-function Og() {
-	wh.replaceChildren();
-	let e = Eg(), t = e.filter((e) => e.id !== "slide");
+function Rg() {
+	Th.replaceChildren();
+	let e = Ig(), t = e.filter((e) => e.id !== "slide");
 	if (e.length === 0) {
 		let e = document.createElement("div");
-		e.className = "layer-editor-empty", e.textContent = "No layers loaded", wh.appendChild(e);
+		e.className = "layer-editor-empty", e.textContent = "No layers loaded", Th.appendChild(e);
 		return;
 	}
 	e.forEach(({ id: e, name: n, layer: r }) => {
@@ -15689,15 +15755,15 @@ function Og() {
 			i.className = "layer-editor-order";
 			let o = document.createElement("button");
 			o.type = "button", o.title = "Move layer up", o.innerHTML = "<i class=\"fas fa-chevron-up\"></i>", o.disabled = r === 0, o.addEventListener("click", () => {
-				Dg(e, "up");
+				Lg(e, "up");
 			});
 			let s = document.createElement("button");
 			s.type = "button", s.title = "Move layer down", s.innerHTML = "<i class=\"fas fa-chevron-down\"></i>", s.disabled = r === t.length - 1, s.addEventListener("click", () => {
-				Dg(e, "down");
+				Lg(e, "down");
 			});
 			let c = document.createElement("button");
 			c.type = "button", c.title = `Remove ${n}`, c.innerHTML = "<i class=\"fas fa-times\"></i>", c.addEventListener("click", () => {
-				Ag(e).catch((e) => {
+				Bg(e).catch((e) => {
 					console.error(e);
 				});
 			}), i.append(o, s, c), a.appendChild(i);
@@ -15710,19 +15776,19 @@ function Og() {
 		u.className = "layer-editor-value", u.textContent = `${Math.round(r.getOpacity() * 100)}%`, l.addEventListener("input", () => {
 			let e = Number(l.value);
 			r.setOpacity(e), u.textContent = `${Math.round(e * 100)}%`;
-		}), c.append(l, u), i.append(a, c), wh.appendChild(i);
+		}), c.append(l, u), i.append(a, c), Th.appendChild(i);
 	});
 }
-Og();
-async function kg(e) {
-	if (Eh === null || kh === null) throw Error("Dynamic overlay loading requires a loaded slide.");
+Rg();
+async function zg(e) {
+	if (Dh === null || Ah === null) throw Error("Dynamic overlay loading requires a loaded slide.");
 	let t = e.split(".").pop().toLowerCase();
 	if (t === "npy" || t === "mha") throw Error("Registration overlays are not supported yet.");
 	let n = [
 		"db",
 		"dat",
 		"geojson"
-	].includes(t), r = Nh(e);
+	].includes(t), r = Uh(e);
 	if (r === "slide") throw Error("The overlay name \"slide\" is reserved.");
 	let i = new FormData();
 	i.append("overlay_path", e), i.append("layer_name", r);
@@ -15732,35 +15798,34 @@ async function kg(e) {
 	});
 	if (!a.ok) throw Error(`Failed to load overlay: ${e}`);
 	let o = await a.json();
-	n ? Mh.add(r) : Mh.delete(r), Oh += 1;
+	n ? Nh.add(r) : Nh.delete(r), kh += 1;
 	let s = new dd({
-		url: `/tileserver/layer/${encodeURIComponent(r)}/${Eh}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${Oh}`,
-		size: kh.slide_dimensions,
+		url: `/tileserver/layer/${encodeURIComponent(r)}/${Dh}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${kh}`,
+		size: Ah.slide_dimensions,
 		crossOrigin: "anonymous",
 		zDirection: -1
 	});
-	if (jh[r] !== void 0) jh[r].setSource(s), jh[r].setVisible(!0);
+	if (Mh[r] !== void 0) Mh[r].setSource(s), Mh[r].setVisible(!0);
 	else {
-		let e = [Lh, ...Object.values(jh)], t = Math.max(...e.map((e) => e.getZIndex() ?? 0)), n = new Lu({
+		let e = [qh, ...Object.values(Mh)], t = Math.max(...e.map((e) => e.getZIndex() ?? 0)), n = new Lu({
 			title: r,
 			source: s,
 			opacity: .75
 		});
-		n.setZIndex(t + 1), jh[r] = n, $.addLayer(n), Ih.push(n);
+		n.setZIndex(t + 1), Mh[r] = n, $.addLayer(n), Kh.push(n);
 	}
-	return Og(), o;
+	return Rg(), Hh(), o;
 }
-async function Ag(e) {
-	let t = jh[e];
+async function Bg(e) {
+	let t = Mh[e];
 	if (t === void 0) throw Error(`Overlay is not loaded: ${e}`);
 	let n = t.getSource();
-	if (t.setSource(null), !(await fetch(`/tileserver/overlay/${encodeURIComponent(e)}`, { method: "DELETE" })).ok) throw t.setSource(n), Error(`Failed to remove overlay: ${e}`);
-	$.removeLayer(t);
-	let r = Ih.indexOf(t);
-	r !== -1 && Ih.splice(r, 1), Mh.delete(e), delete jh[e], Og();
+	if (t.setVisible(!1), t.setSource(null), $.removeLayer(t), !(await fetch(`/tileserver/overlay/${encodeURIComponent(e)}`, { method: "DELETE" })).ok) throw t.setSource(n), t.setVisible(!0), $.addLayer(t), Error(`Failed to remove overlay: ${e}`);
+	let r = Kh.indexOf(t);
+	r !== -1 && Kh.splice(r, 1), Nh.delete(e), delete Mh[e], Rg(), Hh();
 }
-async function jg(e) {
-	if (Mh.size === 0) throw Error("No annotation overlay is loaded.");
+async function Vg(e) {
+	if (Nh.size === 0) throw Error("No annotation overlay is loaded.");
 	let t = new FormData();
 	if (t.append("cmap", JSON.stringify({
 		keys: Object.keys(e),
@@ -15769,13 +15834,13 @@ async function jg(e) {
 		method: "PUT",
 		body: t
 	})).ok) throw Error("Failed to update annotation colours.");
-	Oh += 1;
-	for (let e of Mh) {
-		let t = jh[e];
+	kh += 1;
+	for (let e of Nh) {
+		let t = Mh[e];
 		if (t === void 0) continue;
 		let n = new dd({
-			url: `/tileserver/layer/${encodeURIComponent(e)}/${Eh}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${Oh}`,
-			size: kh.slide_dimensions,
+			url: `/tileserver/layer/${encodeURIComponent(e)}/${Dh}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${kh}`,
+			size: Ah.slide_dimensions,
 			crossOrigin: "anonymous",
 			zDirection: -1
 		});
@@ -15783,29 +15848,29 @@ async function jg(e) {
 	}
 }
 Object.assign(window, {
-	clearOverlays: xg,
-	extent: Bh,
-	fullscreen: og,
-	graticule: fg,
-	graticuleToggle: _g,
-	layerSwitcher: sg,
-	layers: Ih,
-	layersData: Th,
-	loadOverlay: kg,
+	clearOverlays: jg,
+	extent: Xh,
+	fullscreen: gg,
+	graticule: Sg,
+	graticuleToggle: Dg,
+	layerSwitcher: _g,
+	layers: Kh,
+	layersData: Eh,
+	loadOverlay: zg,
 	map: $,
-	mousePositionControl: ig,
-	overlayLayers: jh,
-	overviewMapControl: ng,
-	projection: Vh,
-	removeOverlay: Ag,
-	removeSlide: wg,
-	resolutions: zh,
-	rotate: ag,
-	scaleLineControl: Yh,
-	screenSpaceGraticule: gg,
-	screenSpaceGraticuleToggle: vg,
-	setAnnotationColors: jg,
-	switchSlide: Tg,
-	view: Wh
+	mousePositionControl: mg,
+	overlayLayers: Mh,
+	overviewMapControl: fg,
+	projection: Zh,
+	removeOverlay: Bg,
+	removeSlide: Pg,
+	resolutions: Yh,
+	rotate: hg,
+	scaleLineControl: ag,
+	screenSpaceGraticule: Eg,
+	screenSpaceGraticuleToggle: Og,
+	setAnnotationColors: Vg,
+	switchSlide: Fg,
+	view: eg
 });
 //#endregion
