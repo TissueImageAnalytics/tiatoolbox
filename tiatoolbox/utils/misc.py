@@ -31,7 +31,7 @@ from skimage import exposure
 from tqdm.auto import tqdm, trange
 from tqdm.dask import TqdmCallback
 
-from tiatoolbox import logger, rmisc
+from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
@@ -873,11 +873,8 @@ def save_as_json(
         raise FileExistsError(msg)
     if parents:
         save_path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        rmisc.json_dump_python_object(save_path, shadow_data)
-    except ValueError:
-        with Path.open(save_path, "w") as handle:  # skipcq: PTC-W6004
-            json.dump(shadow_data, handle)
+    with Path.open(save_path, "w") as handle:  # skipcq: PTC-W6004
+        json.dump(shadow_data, handle)
 
 
 def select_device(*, on_gpu: bool) -> str:
@@ -1665,11 +1662,8 @@ def save_annotations(
 def save_qupath_json(save_path: Path, qupath_json: dict) -> Path:
     """Saves QuPath JSON to disk."""
     save_path = save_path.with_suffix(".json")
-    try:
-        rmisc.json_dump_python_object(save_path, qupath_json)
-    except ValueError:
-        with Path.open(save_path, "w") as f:
-            json.dump(qupath_json, f, indent=2)
+    with Path.open(save_path, "w") as f:
+        json.dump(qupath_json, f, indent=2)
     return save_path
 
 
