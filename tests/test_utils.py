@@ -915,6 +915,10 @@ def test_contrast_enhancer() -> None:
     output_array = utils.misc.contrast_enhancer(input_array, low_p=2, high_p=98)
     # The out_put array should be equal to expected result_array
     assert np.all(result_array == output_array)
+    # Calculating the contrast enhanced version of input_array
+    output_array = utils.misc.contrast_enhancer(input_array, low_p=98, high_p=2)
+    # The out_put array should be equal to expected result_array
+    assert np.all(result_array == output_array)
 
     input_array = np.array(
         [
