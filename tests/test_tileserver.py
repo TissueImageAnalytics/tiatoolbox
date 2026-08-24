@@ -822,6 +822,12 @@ def test_named_annotation_overlays(
             "first",
             "second",
         }
+
+        response = client.get("/tileserver/prop_values/type/all")
+
+        assert response.status_code == 200
+        assert set(json.loads(response.data)) == {0, 1, 2, 3, 4}
+
         assert set(empty_app.pyramids[session_id]) == {
             "slide",
             "first",

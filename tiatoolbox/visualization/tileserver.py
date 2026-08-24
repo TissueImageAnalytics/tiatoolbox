@@ -870,9 +870,12 @@ class TileServer(Flask):
         where = None
         if ann_type != "all":
             where = f'props["type"]=={ann_type}'
-        if "overlay" not in self.pyramids[session_id]:
+        try:
+            layer = self.get_ann_layer(session_id)
+        except ValueError:
             return json.dumps([])
-        ann_props = self.get_ann_layer(session_id).store.pquery(
+
+        ann_props = layer.store.pquery(
             select=f"props['{prop}']",
             where=where,
             unique=True,
