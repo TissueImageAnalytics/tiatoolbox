@@ -143,10 +143,15 @@ body {
 /* Zoom */
 
 .ol-zoom {
-    top: 8px;
-    left: 8px;
+    top: auto;
+    bottom: 8px;
+    left: 50%;
+    right: auto;
+
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+
+    transform: translateX(-50%);
 }
 
 
@@ -155,11 +160,8 @@ body {
 }
 
 
-.ol-zoom .ol-zoom-in,
-.ol-zoom .ol-zoom-in:hover,
-.ol-zoom .ol-zoom-in:active,
-.ol-zoom .ol-zoom-in:focus {
-    border-radius: 4px 4px 0 0;
+.ol-zoom .ol-zoom-out {
+    order: 1;
 }
 
 
@@ -167,33 +169,53 @@ body {
 .ol-zoom .ol-zoom-out:hover,
 .ol-zoom .ol-zoom-out:active,
 .ol-zoom .ol-zoom-out:focus {
-    border-radius: 0 0 4px 4px;
+    border-radius: 4px 0 0 4px;
 }
 
 
 .ol-zoom-level {
-    width: 32px;
-    height: 26px;
+    order: 2;
+
+    width: 40px;
+    height: 32px;
     box-sizing: border-box;
+
     display: flex;
     align-items: center;
     justify-content: center;
+
     background: #111111;
     color: #ffffff;
-    border-top: 1px solid #333333;
-    border-bottom: 1px solid #333333;
+
+    border-left: 1px solid #333333;
+    border-right: 1px solid #333333;
+
     font-size: 11px;
     font-weight: 600;
+
     cursor: default;
     user-select: none;
+}
+
+
+.ol-zoom .ol-zoom-in {
+    order: 3;
+}
+
+
+.ol-zoom .ol-zoom-in,
+.ol-zoom .ol-zoom-in:hover,
+.ol-zoom .ol-zoom-in:active,
+.ol-zoom .ol-zoom-in:focus {
+    border-radius: 0 4px 4px 0;
 }
 
 
 /* Layer editor control */
 
 .layer-editor-control {
-    top: 8px;
-    left: 50px;
+    top: 188px;
+    left: 8px;
     right: auto;
 }
 
@@ -214,10 +236,10 @@ body {
 
 .layer-editor {
     position: absolute;
-    top: 50px;
+    top: 188px;
     left: 50px;
     z-index: 1000;
-    width: 230px;
+    width: 240px;
     box-sizing: border-box;
     overflow: hidden;
 
@@ -384,23 +406,23 @@ body {
 
 
 .ol-rotate {
-    top: 108px;
+    top: 50px;
     border-radius: 4px 4px 0 0;
 }
 
 
 .ol-full-screen {
-    top: 140px;
+    top: 82px;
 }
 
 
 .ol-graticule {
-    top: 172px;
+    top: 114px;
 }
 
 
 .ol-screen-space-graticule {
-    top: 204px;
+    top: 146px;
     border-radius: 0 0 4px 4px;
 }
 
@@ -444,7 +466,7 @@ body {
 /* Viewer panel control */
 
 .viewer-panel-control {
-    top: 246px;
+    top: 8px;
     left: 8px;
     right: auto;
 }
@@ -466,10 +488,11 @@ body {
 
 .viewer-panel {
     position: absolute;
-    top: 288px;
-    left: 8px;
+    top: 8px;
+    left: 50px;
     z-index: 1000;
     width: 240px;
+    max-height: 170px;
     box-sizing: border-box;
     overflow: hidden;
 
@@ -487,14 +510,14 @@ body {
 
 
 .viewer-panel-header {
-    padding: 12px 14px;
+    padding: 9px 12px;
     font-weight: 600;
     border-bottom: 1px solid #333333;
 }
 
 
 .viewer-panel-section {
-    padding: 12px 14px;
+    padding: 9px 12px;
     border-bottom: 1px solid #333333;
 }
 
@@ -512,7 +535,7 @@ body {
 
 
 .current-slide {
-    margin-bottom: 10px;
+    margin-bottom: 7px;
     color: #cccccc;
     font-size: 12px;
     overflow-wrap: anywhere;
@@ -529,7 +552,7 @@ body {
 .viewer-file-actions button {
     min-width: 0;
     height: 30px;
-    padding: 0 8px;
+    padding: 5px 7px;
 
     border: 0;
     border-radius: 4px;

@@ -120,16 +120,32 @@ if (
   throw new Error("The OpenLayers viewer controls could not be found.");
 }
 
-viewerPanelToggle.addEventListener("click", () => {
-  const isHidden = viewerPanel.classList.toggle("hidden");
+function setViewerPanelOpen(open) {
+  viewerPanel.classList.toggle("hidden", !open);
+  viewerPanelToggle.classList.toggle("active", open);
+  viewerPanelToggle.innerHTML = open
+    ? '<i class="fas fa-folder-open"></i>'
+    : '<i class="fas fa-folder"></i>';
+}
 
-  viewerPanelToggle.classList.toggle("active", !isHidden);
+function setLayerEditorOpen(open) {
+  layerEditor.classList.toggle("hidden", !open);
+  layerEditorToggle.classList.toggle("active", open);
+}
+
+viewerPanelToggle.title = "Files";
+viewerPanelToggle.setAttribute("aria-label", "Files");
+
+setViewerPanelOpen(false);
+
+viewerPanelToggle.addEventListener("click", () => {
+  const open = viewerPanel.classList.contains("hidden");
+  setViewerPanelOpen(open);
 });
 
 layerEditorToggle.addEventListener("click", () => {
-  const isHidden = layerEditor.classList.toggle("hidden");
-
-  layerEditorToggle.classList.toggle("active", !isHidden);
+  const open = layerEditor.classList.contains("hidden");
+  setLayerEditorOpen(open);
 });
 
 let layersData = JSON.parse(mapElement.dataset.layers ?? "[]");
