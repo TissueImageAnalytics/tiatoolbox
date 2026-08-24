@@ -31,7 +31,7 @@ from skimage import exposure
 from tqdm.auto import tqdm, trange
 from tqdm.dask import TqdmCallback
 
-from tiatoolbox import logger, rust_misc
+from tiatoolbox import logger, rmisc
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
@@ -427,14 +427,9 @@ def contrast_enhancer(img: np.ndarray, low_p: int = 2, high_p: int = 98) -> np.n
 
     """
     # check if image is not uint8
-    # check if image is not uint8
-    dimension_for_rust = 3
-
     if img.dtype != np.uint8:
         msg = "Image should be uint8."
         raise AssertionError(msg)
-    if img.ndim == dimension_for_rust:
-        return rust_misc.contrast_enhancer(img, low_p, high_p)
     img_out = img.copy()
     percentiles = np.array(np.percentile(img_out, (low_p, high_p)))
     p_low, p_high = percentiles[0], percentiles[1]
@@ -878,8 +873,11 @@ def save_as_json(
         raise FileExistsError(msg)
     if parents:
         save_path.parent.mkdir(parents=True, exist_ok=True)
-    with Path.open(save_path, "w") as handle:  # skipcq: PTC-W6004
-        json.dump(shadow_data, handle)
+    try:
+        rmisc.json_dump_python_object(save_path, shadow_data)
+    except ValueError:
+        with Path.open(save_path, "w") as handle:  # skipcq: PTC-W6004
+            json.dump(shadow_data, handle)
 
 
 def select_device(*, on_gpu: bool) -> str:
@@ -1235,17 +1233,6 @@ def patch_predictions_as_annotations(
     verbose: bool = True,
 ) -> list:
     """Helper function to generate annotation per patch predictions."""
-    preds = np.array(preds)
-    if np.issubdtype(preds.dtype, np.number):
-        return rust_patch_predictions_as_annotations(
-            preds.astype("float").tolist(),
-            keys,
-            class_dict,
-            class_probs,
-            patch_coords,
-            classes_predicted,
-            labels,
-        )
     annotations = []
     tqdm_loop = tqdm(
         patch_coords,
@@ -1270,42 +1257,6 @@ def patch_predictions_as_annotations(
     return annotations
 
 
-def rust_patch_predictions_as_annotations(
-    preds: list[float],
-    keys: list,
-    class_dict: dict,
-    class_probs: list | np.ndarray,
-    patch_coords: list | np.ndarray,
-    classes_predicted: list,
-    labels: list,
-    *,
-    verbose: bool = True,
-) -> list:
-    """Helper function to generate annotation per patch predictions."""
-    tqdm(
-        patch_coords,
-        leave=False,
-        desc="Converting outputs to AnnotationStore.",
-        disable=not verbose,
-    )
-    if len(class_probs) == 0:
-        class_probs = np.empty((0, 2))
-    if len(patch_coords) == 0:
-        patch_coords = np.empty((0, 2))
-    return rust_misc.patch_predictions_as_annotations(
-        Annotation,
-        Polygon,
-        preds,
-        "labels" in keys,
-        "probabilities" in keys,
-        class_dict,
-        np.array(class_probs).astype("float"),
-        np.array(patch_coords).astype("float"),
-        classes_predicted,
-        labels,
-    )
-
-
 def patch_predictions_as_qupath_json(
     preds: list | np.ndarray,
     class_dict: dict,
@@ -1314,11 +1265,6 @@ def patch_predictions_as_qupath_json(
     verbose: bool = True,
 ) -> dict:
     """Helper function to generate QuPath JSON per patch predictions."""
-    preds = np.array(preds)
-    if np.issubdtype(preds.dtype, np.number):
-        return rust_patch_predictions_as_qupath_json(
-            preds.astype("float").tolist(), class_dict, patch_coords
-        )
     features = []
     # pick a color for each class based on the class index, using a colormap
     num_classes = len(class_dict)
@@ -1362,37 +1308,6 @@ def patch_predictions_as_qupath_json(
 
         features.append(feature)
 
-    return {"type": "FeatureCollection", "features": features}
-
-
-def rust_patch_predictions_as_qupath_json(
-    preds: list[float],
-    class_dict: dict,
-    patch_coords: list | np.ndarray,
-    *,
-    verbose: bool = True,
-) -> dict:
-    """Helper function to generate QuPath JSON per patch predictions."""
-    num_classes = len(class_dict)
-    cmap = plt.colormaps["tab20"].resampled(num_classes)
-    class_colours = {
-        class_idx: [
-            int(cmap(class_idx)[0] * 255),
-            int(cmap(class_idx)[1] * 255),
-            int(cmap(class_idx)[2] * 255),
-        ]
-        for class_idx in class_dict
-    }
-
-    tqdm(
-        range(np.asarray(patch_coords).shape[0]),
-        leave=False,
-        desc="Converting outputs to QuPath JSON.",
-        disable=not verbose,
-    )
-    features = rust_misc.patch_predictions_as_qupath_json(
-        class_colours, preds, class_dict, np.array(patch_coords).astype("float")
-    )
     return {"type": "FeatureCollection", "features": features}
 
 
@@ -1750,8 +1665,11 @@ def save_annotations(
 def save_qupath_json(save_path: Path, qupath_json: dict) -> Path:
     """Saves QuPath JSON to disk."""
     save_path = save_path.with_suffix(".json")
-    with Path.open(save_path, "w") as f:
-        json.dump(qupath_json, f, indent=2)
+    try:
+        rmisc.json_dump_python_object(save_path, qupath_json)
+    except ValueError:
+        with Path.open(save_path, "w") as f:
+            json.dump(qupath_json, f, indent=2)
     return save_path
 
 

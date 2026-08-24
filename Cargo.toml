@@ -6,7 +6,7 @@ autolib = false
 
 [lib]
 path = "tiatoolbox/rust-library/lib.rs"
-name = "rust_misc"
+name = "rmisc"
 crate-type = ["cdylib"]
 
 [dependencies]

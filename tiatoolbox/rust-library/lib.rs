@@ -1,12 +1,16 @@
 use pyo3::prelude::*;
 use ndarray::{Array1, Array3};
 use numpy::{IntoPyArray, PyArray3, PyReadonlyArray2, PyReadonlyArray3};
+use numpy::PyUntypedArrayMethods;
+use ndarray::Axis;
+use numpy::PyReadonlyArrayDyn;
 use pyo3::types::{PyList, PyDict};
 use std::collections::HashMap;
 use pythonize::depythonize;
 use serde_json::Value;
 use ordered_float::OrderedFloat;
 use pyo3::FromPyObject;
+use pyo3::pyclass::CompareOp;
 
 #[derive(FromPyObject)]
 enum StringOrFloat {
@@ -19,8 +23,98 @@ fn add(a: i32, b: i32) -> i32 {
 }
 
 #[pyfunction]
+fn string_to_tuple(in_str: String) -> Vec<String> {
+    /*Splits input string to tuple at ','.
+
+    Args:
+        in_str (str):
+            input string.
+
+    */
+    in_str
+        .split(',')
+        .map(|substring| substring.trim().to_string())
+        .collect()
+}
+
+#[pyfunction]
+fn semantic_segmentations_as_qupath_json<'py>(py: Python<'_>,
+    layer_list: &Bound<'_, PyList>,
+    preds: &Bound<'_, PyAny>,
+    scale_factor: (f64, f64),
+    class_dict: &Bound<'_, PyDict>,
+    class_colours: &Bound<'_, PyDict>,
+    cv2: &Bound<'_, PyAny>,
+    poly_geo_fun: &Bound<'_, PyAny>
+) -> PyResult<Py<PyList>> {
+    /*Helper function to save semantic segmentation as QuPath json.*/
+    let class_colours: HashMap<OrderedFloat<f64>, Vec<i32>> = class_colours
+        .iter()
+        .map(|(key, value)| {
+            let key: f64 = key.extract()?;
+            let value: Vec<i32> = value.extract()?;
+
+            Ok((OrderedFloat(key), value))
+        })
+        .collect::<PyResult<_>>()?;
+    let features = PyList::empty(py);
+    let retr_ccomp = cv2.getattr("RETR_CCOMP")?;
+    let chain_approx_none = cv2.getattr("CHAIN_APPROX_NONE")?;
+    let find_contours = cv2.getattr("findContours")?;
+    for type_class in layer_list.iter() {
+        let class_id: i64 = type_class.extract()?;    let class_label = class_dict.get_item(class_id)?;
+        let layer = preds
+        .rich_compare(class_id, CompareOp::Eq)?
+        .call_method1("astype", ("uint8",))?
+        .call_method0("compute")?;
+        let result = find_contours.call1((layer, retr_ccomp.clone(), chain_approx_none.clone()))?;
+
+        let result = result.cast::<pyo3::types::PyTuple>()?;
+
+        let contours = result.get_item(0)?;
+
+        for cnt in contours.try_iter()? {
+            let cnt = cnt?;
+            let py_array = cnt.cast::<PyArray3<i32>>()?;
+            //let array = py_array.to_owned();
+            if py_array.shape()[0] >= 3 {
+                let cnt_array: PyReadonlyArrayDyn<'_, i32> = cnt.extract()?;
+                let cnt_scaled = cnt_array.as_array()
+                        .index_axis_move(Axis(1), 0);
+                let exterior: Vec<(f64, f64)> = cnt_scaled
+                    .outer_iter()
+                    .map(|p| (
+                        p[0] as f64 * scale_factor.0,
+                        p[1] as f64 * scale_factor.1,
+                    ))
+                    .collect();
+                let coordinates = vec![exterior];
+                let poly_geo = poly_geo_fun.call1((coordinates,))?;
+                let feature = PyDict::new(py);
+                feature.set_item("type", "Feature")?;
+                feature.set_item("geometry", poly_geo)?;
+                feature.set_item("id", format!("class_{}_{}", class_id, features.len()))?;
+                let classification = PyDict::new(py);
+                classification.set_item("name", &class_label)?;
+                classification.set_item("color", class_colours[&OrderedFloat(class_id as f64)].clone())?;
+                let properties = PyDict::new(py);
+                properties.set_item("classification", classification)?;
+                feature.set_item("properties", properties)?;
+                feature.set_item("objectType", "annotation")?;
+                feature.set_item("name", &class_label)?;
+                feature.set_item("class_value", class_id)?;
+                features.append(feature)?;
+            }
+        }
+
+    }
+    Ok(features.unbind())
+}
+
+#[pyfunction]
 fn json_dump_python_object(save_path: String, obj: &Bound<'_, PyAny>) -> PyResult<()> {
     //Equilivent to json.dump(obj, save_path)
+    //Caution: if obj is a dictionary and has a key of an integer it will throw an error
     let value: Value = depythonize(obj)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
 
@@ -28,9 +122,13 @@ fn json_dump_python_object(save_path: String, obj: &Bound<'_, PyAny>) -> PyResul
         .map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
     let mut writer = std::io::BufWriter::new(file);
 
-    serde_json::to_writer(&mut writer, &value)
+    serde_json::to_writer_pretty(&mut writer, &value)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
 
+    /*
+    serde_json::to_writer(&mut writer, &value)
+        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+    */
     Ok(())
 }
 
@@ -239,11 +337,13 @@ fn contrast_enhancer<'py>(py: Python<'py>, img: PyReadonlyArray3<'py, u8>, low_p
 }
 
 #[pymodule]
-fn rust_misc(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn rmisc(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(add, m)?)?;
     m.add_function(wrap_pyfunction!(contrast_enhancer, m)?)?;
     m.add_function(wrap_pyfunction!(patch_predictions_as_qupath_json, m)?)?;
     m.add_function(wrap_pyfunction!(patch_predictions_as_annotations, m)?)?;
     m.add_function(wrap_pyfunction!(json_dump_python_object, m)?)?;
+    m.add_function(wrap_pyfunction!(string_to_tuple, m)?)?;
+    m.add_function(wrap_pyfunction!(semantic_segmentations_as_qupath_json, m)?)?;
     Ok(())
 }
