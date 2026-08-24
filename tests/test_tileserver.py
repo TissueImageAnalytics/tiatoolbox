@@ -547,8 +547,9 @@ def test_clear_overlays(app: TileServer) -> None:
         response = client.put("/tileserver/clear_overlays")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
-        # check that the overlay has been correctly cleared
-        assert "overlay" not in app.pyramids["default"]
+        # check all overlays are cleared while the slide remains
+        assert set(app.layers["default"]) == {"slide"}
+        assert set(app.pyramids["default"]) == {"slide"}
 
 
 def test_load_annotations_empty(
@@ -726,6 +727,186 @@ def test_change_overlay(  # noqa: PLR0915
         lname = Path(tiff_path).stem
         layer = empty_app.pyramids[session_id][lname]
         assert layer.wsi.info.file_path == tiff_path
+
+
+def test_named_image_overlay_replaces_existing(
+    empty_app: TileServer,
+    remote_sample: Callable,
+) -> None:
+    """Test replacing an explicitly named image overlay."""
+    first_path = remote_sample("wsi2_4k_4k_svs")
+    second_path = remote_sample("svs-1-small")
+
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(second_path)},
+        )
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(first_path),
+                "layer_name": "named-image",
+            },
+        )
+        assert response.status_code == 200
+        assert json.loads(response.data) == "named-image"
+        assert empty_app.layers[session_id]["named-image"].info.file_path == first_path
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(second_path),
+                "layer_name": "named-image",
+            },
+        )
+        assert response.status_code == 200
+        assert set(empty_app.layers[session_id]) == {
+            "slide",
+            "named-image",
+        }
+        assert set(empty_app.pyramids[session_id]) == {
+            "slide",
+            "named-image",
+        }
+        assert empty_app.layers[session_id]["named-image"].info.file_path == second_path
+
+
+def test_named_annotation_overlays(
+    empty_app: TileServer,
+    track_tmp_path: Path,
+    remote_sample: Callable,
+) -> None:
+    """Test coexistence, replacement, and removal of named annotations."""
+    sample_store = Path(remote_sample("annotation_store_svs_1"))
+
+    dat_path = track_tmp_path / "named.dat"
+    db_path = track_tmp_path / "named.db"
+    joblib.dump(make_simple_dat(), dat_path)
+
+    store = store_from_dat(dat_path)
+    store.dump(db_path)
+    store.close()
+
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(sample_store),
+                "layer_name": "first",
+            },
+        )
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(db_path),
+                "layer_name": "second",
+            },
+        )
+        assert response.status_code == 200
+
+        assert set(empty_app.layers[session_id]) == {
+            "slide",
+            "first",
+            "second",
+        }
+        assert set(empty_app.pyramids[session_id]) == {
+            "slide",
+            "first",
+            "second",
+        }
+
+        first_store_path = empty_app.pyramids[session_id]["first"].store.path
+        second_store_path = empty_app.pyramids[session_id]["second"].store.path
+
+        assert SQLiteStore._connection_to_path(first_store_path) == sample_store
+        assert SQLiteStore._connection_to_path(second_store_path) == db_path
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(db_path),
+                "layer_name": "first",
+            },
+        )
+        assert response.status_code == 200
+
+        assert set(empty_app.pyramids[session_id]) == {
+            "slide",
+            "first",
+            "second",
+        }
+
+        first_store_path = empty_app.pyramids[session_id]["first"].store.path
+        assert SQLiteStore._connection_to_path(first_store_path) == db_path
+
+        response = client.delete("/tileserver/overlay/first")
+
+        assert response.status_code == 200
+        assert set(empty_app.layers[session_id]) == {
+            "slide",
+            "second",
+        }
+        assert set(empty_app.pyramids[session_id]) == {
+            "slide",
+            "second",
+        }
+        assert len(empty_app.pyramids[session_id]["second"].store) == 2
+
+
+def test_commit_named_annotation_overlay(
+    empty_app: TileServer,
+    track_tmp_path: Path,
+    remote_sample: Callable,
+) -> None:
+    """Test committing a named temporary annotation overlay."""
+    dat_path = track_tmp_path / "named.dat"
+    save_path = track_tmp_path / "named.db"
+    joblib.dump(make_simple_dat(), dat_path)
+
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(dat_path),
+                "layer_name": "named-annotations",
+            },
+        )
+        assert response.status_code == 200
+
+        store_path = empty_app.pyramids[session_id]["named-annotations"].store.path
+
+        assert store_path.name == (f"temp_{session_id}_named-annotations.db")
+
+        response = client.post(
+            "/tileserver/commit",
+            data={"save_path": safe_str(save_path)},
+        )
+        assert response.status_code == 200
+        assert response.data == b"done"
+
+    store = SQLiteStore(save_path)
+    assert len(store) == 2
+    store.close()
 
 
 def test_commit(

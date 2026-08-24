@@ -15650,15 +15650,16 @@ function Eg() {
 		name: Nh(Ah ?? "slide"),
 		layer: Lh
 	});
-	for (let [t, n] of Object.entries(jh)) e.push({
-		id: t,
-		name: t,
-		layer: n
-	});
-	return e.sort((e, t) => (t.layer.getZIndex() ?? 0) - (e.layer.getZIndex() ?? 0));
+	let t = Object.entries(jh).map(([e, t]) => ({
+		id: e,
+		name: e,
+		layer: t
+	})).sort((e, t) => (e.layer.getZIndex() ?? 0) - (t.layer.getZIndex() ?? 0));
+	return e.push(...t), e;
 }
 function Dg(e, t) {
-	let n = Eg(), r = n.findIndex((t) => t.id === e);
+	if (e === "slide") return;
+	let n = Eg().filter((e) => e.id !== "slide"), r = n.findIndex((t) => t.id === e);
 	if (r === -1) return;
 	let i = t === "up" ? r - 1 : r + 1;
 	if (i < 0 || i >= n.length) return;
@@ -15667,42 +15668,49 @@ function Dg(e, t) {
 }
 function Og() {
 	wh.replaceChildren();
-	let e = Eg();
+	let e = Eg(), t = e.filter((e) => e.id !== "slide");
 	if (e.length === 0) {
 		let e = document.createElement("div");
 		e.className = "layer-editor-empty", e.textContent = "No layers loaded", wh.appendChild(e);
 		return;
 	}
-	e.forEach(({ id: t, name: n, layer: r }, i) => {
+	e.forEach(({ id: e, name: n, layer: r }) => {
+		let i = document.createElement("div");
+		i.className = "layer-editor-item";
 		let a = document.createElement("div");
-		a.className = "layer-editor-item";
-		let o = document.createElement("div");
-		o.className = "layer-editor-item-header";
-		let s = document.createElement("input");
-		s.className = "layer-editor-visibility", s.type = "checkbox", s.checked = r.getVisible(), s.title = `Toggle ${n}`, s.addEventListener("change", () => {
-			r.setVisible(s.checked);
+		a.className = "layer-editor-item-header";
+		let o = document.createElement("input");
+		o.className = "layer-editor-visibility", o.type = "checkbox", o.checked = r.getVisible(), o.title = `Toggle ${n}`, o.addEventListener("change", () => {
+			r.setVisible(o.checked);
 		});
-		let c = document.createElement("span");
-		c.className = "layer-editor-name", c.textContent = n, c.title = n;
-		let l = document.createElement("div");
-		l.className = "layer-editor-order";
-		let u = document.createElement("button");
-		u.type = "button", u.title = "Move layer up", u.innerHTML = "<i class=\"fas fa-chevron-up\"></i>", u.disabled = i === 0, u.addEventListener("click", () => {
-			Dg(t, "up");
-		});
-		let d = document.createElement("button");
-		d.type = "button", d.title = "Move layer down", d.innerHTML = "<i class=\"fas fa-chevron-down\"></i>", d.disabled = i === e.length - 1, d.addEventListener("click", () => {
-			Dg(t, "down");
-		}), l.append(u, d), o.append(s, c, l);
-		let f = document.createElement("div");
-		f.className = "layer-editor-opacity";
-		let p = document.createElement("input");
-		p.className = "layer-editor-slider", p.type = "range", p.min = "0", p.max = "1", p.step = "0.05", p.value = r.getOpacity().toString();
-		let m = document.createElement("span");
-		m.className = "layer-editor-value", m.textContent = `${Math.round(r.getOpacity() * 100)}%`, p.addEventListener("input", () => {
-			let e = Number(p.value);
-			r.setOpacity(e), m.textContent = `${Math.round(e * 100)}%`;
-		}), f.append(p, m), a.append(o, f), wh.appendChild(a);
+		let s = document.createElement("span");
+		if (s.className = "layer-editor-name", s.textContent = n, s.title = n, a.append(o, s), e !== "slide") {
+			let r = t.findIndex((t) => t.id === e), i = document.createElement("div");
+			i.className = "layer-editor-order";
+			let o = document.createElement("button");
+			o.type = "button", o.title = "Move layer up", o.innerHTML = "<i class=\"fas fa-chevron-up\"></i>", o.disabled = r === 0, o.addEventListener("click", () => {
+				Dg(e, "up");
+			});
+			let s = document.createElement("button");
+			s.type = "button", s.title = "Move layer down", s.innerHTML = "<i class=\"fas fa-chevron-down\"></i>", s.disabled = r === t.length - 1, s.addEventListener("click", () => {
+				Dg(e, "down");
+			});
+			let c = document.createElement("button");
+			c.type = "button", c.title = `Remove ${n}`, c.innerHTML = "<i class=\"fas fa-times\"></i>", c.addEventListener("click", () => {
+				Ag(e).catch((e) => {
+					console.error(e);
+				});
+			}), i.append(o, s, c), a.appendChild(i);
+		}
+		let c = document.createElement("div");
+		c.className = "layer-editor-opacity";
+		let l = document.createElement("input");
+		l.className = "layer-editor-slider", l.type = "range", l.min = "0", l.max = "1", l.step = "0.05", l.value = r.getOpacity().toString();
+		let u = document.createElement("span");
+		u.className = "layer-editor-value", u.textContent = `${Math.round(r.getOpacity() * 100)}%`, l.addEventListener("input", () => {
+			let e = Number(l.value);
+			r.setOpacity(e), u.textContent = `${Math.round(e * 100)}%`;
+		}), c.append(l, u), i.append(a, c), wh.appendChild(i);
 	});
 }
 Og();
@@ -15745,10 +15753,11 @@ async function kg(e) {
 async function Ag(e) {
 	let t = jh[e];
 	if (t === void 0) throw Error(`Overlay is not loaded: ${e}`);
-	if (!(await fetch(`/tileserver/overlay/${encodeURIComponent(e)}`, { method: "DELETE" })).ok) throw Error(`Failed to remove overlay: ${e}`);
+	let n = t.getSource();
+	if (t.setSource(null), !(await fetch(`/tileserver/overlay/${encodeURIComponent(e)}`, { method: "DELETE" })).ok) throw t.setSource(n), Error(`Failed to remove overlay: ${e}`);
 	$.removeLayer(t);
-	let n = Ih.indexOf(t);
-	n !== -1 && Ih.splice(n, 1), Mh.delete(e), delete jh[e], Og();
+	let r = Ih.indexOf(t);
+	r !== -1 && Ih.splice(r, 1), Mh.delete(e), delete jh[e], Og();
 }
 async function jg(e) {
 	if (Mh.size === 0) throw Error("No annotation overlay is loaded.");

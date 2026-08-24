@@ -918,25 +918,31 @@ function getLayerEditorEntries() {
     });
   }
 
-  for (const [layerName, layer] of Object.entries(
-    overlayLayers,
-  )) {
-    entries.push({
+  const overlayEntries = Object.entries(overlayLayers)
+    .map(([layerName, layer]) => ({
       id: layerName,
       name: layerName,
       layer,
-    });
-  }
+    }))
+    .sort(
+      (a, b) =>
+        (a.layer.getZIndex() ?? 0) -
+        (b.layer.getZIndex() ?? 0),
+    );
 
-  return entries.sort(
-    (a, b) =>
-      (b.layer.getZIndex() ?? 0) -
-      (a.layer.getZIndex() ?? 0),
-  );
+  entries.push(...overlayEntries);
+
+  return entries;
 }
 
 function moveLayer(layerId, direction) {
-  const entries = getLayerEditorEntries();
+  if (layerId === "slide") {
+    return;
+  }
+
+  const entries = getLayerEditorEntries().filter(
+    (entry) => entry.id !== "slide",
+  );
 
   const index = entries.findIndex(
     (entry) => entry.id === layerId,
@@ -973,6 +979,10 @@ function updateLayerEditor() {
 
   const entries = getLayerEditorEntries();
 
+  const overlayEntries = entries.filter(
+    (entry) => entry.id !== "slide",
+  );
+
   if (entries.length === 0) {
     const empty = document.createElement("div");
     empty.className = "layer-editor-empty";
@@ -983,7 +993,7 @@ function updateLayerEditor() {
     return;
   }
 
-  entries.forEach(({ id: layerId, name: layerName, layer }, index) => {
+  entries.forEach(({ id: layerId, name: layerName, layer }) => {
     const item = document.createElement("div");
     item.className = "layer-editor-item";
 
@@ -1005,38 +1015,62 @@ function updateLayerEditor() {
     name.textContent = layerName;
     name.title = layerName;
 
-    const order = document.createElement("div");
-    order.className = "layer-editor-order";
-
-    const moveUp = document.createElement("button");
-    moveUp.type = "button";
-    moveUp.title = "Move layer up";
-    moveUp.innerHTML =
-      '<i class="fas fa-chevron-up"></i>';
-    moveUp.disabled = index === 0;
-
-    moveUp.addEventListener("click", () => {
-      moveLayer(layerId, "up");
-    });
-
-    const moveDown = document.createElement("button");
-    moveDown.type = "button";
-    moveDown.title = "Move layer down";
-    moveDown.innerHTML =
-      '<i class="fas fa-chevron-down"></i>';
-    moveDown.disabled = index === entries.length - 1;
-
-    moveDown.addEventListener("click", () => {
-      moveLayer(layerId, "down");
-    });
-
-    order.append(moveUp, moveDown);
-
     header.append(
       visibility,
       name,
-      order,
     );
+
+    if (layerId !== "slide") {
+      const overlayIndex = overlayEntries.findIndex(
+        (entry) => entry.id === layerId,
+      );
+
+      const order = document.createElement("div");
+      order.className = "layer-editor-order";
+
+      const moveUp = document.createElement("button");
+      moveUp.type = "button";
+      moveUp.title = "Move layer up";
+      moveUp.innerHTML =
+        '<i class="fas fa-chevron-up"></i>';
+      moveUp.disabled = overlayIndex === 0;
+
+      moveUp.addEventListener("click", () => {
+        moveLayer(layerId, "up");
+      });
+
+      const moveDown = document.createElement("button");
+      moveDown.type = "button";
+      moveDown.title = "Move layer down";
+      moveDown.innerHTML =
+        '<i class="fas fa-chevron-down"></i>';
+      moveDown.disabled =
+        overlayIndex === overlayEntries.length - 1;
+
+      moveDown.addEventListener("click", () => {
+        moveLayer(layerId, "down");
+      });
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.title = `Remove ${layerName}`;
+      remove.innerHTML =
+        '<i class="fas fa-times"></i>';
+
+      remove.addEventListener("click", () => {
+        removeOverlay(layerId).catch((error) => {
+          console.error(error);
+        });
+      });
+
+      order.append(
+        moveUp,
+        moveDown,
+        remove,
+      );
+
+      header.appendChild(order);
+    }
 
     const opacityRow = document.createElement("div");
     opacityRow.className = "layer-editor-opacity";
@@ -1177,6 +1211,12 @@ async function removeOverlay(layerName) {
     throw new Error(`Overlay is not loaded: ${layerName}`);
   }
 
+  const source = overlayLayer.getSource();
+
+  overlayLayer.setVisible(false);
+  overlayLayer.setSource(null);
+  map.removeLayer(overlayLayer);
+
   const response = await fetch(
     `/tileserver/overlay/${encodeURIComponent(layerName)}`,
     {
@@ -1185,10 +1225,12 @@ async function removeOverlay(layerName) {
   );
 
   if (!response.ok) {
+    overlayLayer.setSource(source);
+    overlayLayer.setVisible(true);
+    map.addLayer(overlayLayer);
+
     throw new Error(`Failed to remove overlay: ${layerName}`);
   }
-
-  map.removeLayer(overlayLayer);
 
   const layerIndex = layers.indexOf(overlayLayer);
 
@@ -1197,7 +1239,6 @@ async function removeOverlay(layerName) {
   }
 
   annotationLayerNames.delete(layerName);
-
   delete overlayLayers[layerName];
 
   updateLayerEditor();
