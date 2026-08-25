@@ -617,17 +617,16 @@ class TileServer(Flask):
 
     def change_overlay(self: TileServer) -> str:
         """Change or add an overlay.
-    
+
         An explicit layer name allows multiple overlays to coexist.
         Loading an overlay with the same layer name replaces the
         existing layer.
-    
+
         Returns:
             str:
                 A jsonified list of annotation types or the updated layer name.
-    
-        """
 
+        """
         # Get other session id
         session_ids = list(self.layers.keys())
         session_ids.remove(session_id)
