@@ -46,7 +46,7 @@ jobs:
           python -m pip install --force-reinstall --no-deps -e .
 
           # Verify which native extension Python actually loads
-          python -c "import tiatoolbox.rust_misc as r; print(r.__file__)"
+          python -c "import tiatoolbox.rmisc as r; print(r.__file__)"
 
           # Run Python tests that exercise the Rust extension
           python -m pytest tests/test_rust.py -v
