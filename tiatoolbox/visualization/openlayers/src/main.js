@@ -59,17 +59,18 @@ async function loadSlide(slidePath) {
   return metadataResponse.json();
 }
 
-async function uploadFile(file) {
+// Request a native file path from the local TileServer.
+async function pickFile(kind) {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("kind", kind);
 
-  const response = await fetch("/tileserver/upload", {
+  const response = await fetch("/tileserver/file_picker", {
     method: "POST",
     body: formData,
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to upload file: ${file.name}`);
+    throw new Error(`Failed to open ${kind} file picker.`);
   }
 
   const result = await response.json();
@@ -188,18 +189,6 @@ fileActions.append(
 
 currentSlide.insertAdjacentElement("afterend", fileActions);
 
-const slideFileInput = document.createElement("input");
-slideFileInput.type = "file";
-slideFileInput.hidden = true;
-
-const overlayFileInput = document.createElement("input");
-overlayFileInput.type = "file";
-overlayFileInput.accept =
-  ".jpg,.png,.tiff,.svs,.ndpi,.mrxs,.db,.dat,.geojson";
-overlayFileInput.hidden = true;
-
-viewerPanel.append(slideFileInput, overlayFileInput);
-
 function updateFileActionState() {
   const hasSlide = currentSlideInfo !== null;
   const hasOverlays = Object.keys(overlayLayers).length > 0;
@@ -210,71 +199,71 @@ function updateFileActionState() {
   clearOverlaysButton.disabled = !hasSlide || !hasOverlays;
 }
 
-loadSlideButton.addEventListener("click", () => {
-  slideFileInput.click();
+function setFileActionsBusy(busy) {
+  if (!busy) {
+    updateFileActionState();
+    return;
+  }
+
+  loadSlideButton.disabled = true;
+  loadOverlayButton.disabled = true;
+  clearSlideButton.disabled = true;
+  clearOverlaysButton.disabled = true;
+}
+
+loadSlideButton.addEventListener("click", async () => {
+  setFileActionsBusy(true);
+
+  try {
+    const filePath = await pickFile("slide");
+
+    if (filePath !== null) {
+      await switchSlide(filePath);
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setFileActionsBusy(false);
+  }
 });
 
-loadOverlayButton.addEventListener("click", () => {
-  overlayFileInput.click();
+loadOverlayButton.addEventListener("click", async () => {
+  setFileActionsBusy(true);
+
+  try {
+    const filePath = await pickFile("overlay");
+
+    if (filePath !== null) {
+      await loadOverlay(filePath);
+    }
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setFileActionsBusy(false);
+  }
 });
 
 clearSlideButton.addEventListener("click", async () => {
-  clearSlideButton.disabled = true;
-  loadOverlayButton.disabled = true;
-  clearOverlaysButton.disabled = true;
+  setFileActionsBusy(true);
 
   try {
     await removeSlide();
   } catch (error) {
     console.error(error);
   } finally {
-    updateFileActionState();
+    setFileActionsBusy(false);
   }
 });
 
 clearOverlaysButton.addEventListener("click", async () => {
-  clearOverlaysButton.disabled = true;
+  setFileActionsBusy(true);
 
   try {
     await clearOverlays();
   } catch (error) {
     console.error(error);
   } finally {
-    updateFileActionState();
-  }
-});
-
-slideFileInput.addEventListener("change", async () => {
-  const file = slideFileInput.files?.[0];
-
-  if (file === undefined) {
-    return;
-  }
-
-  try {
-    const filePath = await uploadFile(file);
-    await switchSlide(filePath);
-  } catch (error) {
-    console.error(error);
-  } finally {
-    slideFileInput.value = "";
-  }
-});
-
-overlayFileInput.addEventListener("change", async () => {
-  const file = overlayFileInput.files?.[0];
-
-  if (file === undefined) {
-    return;
-  }
-
-  try {
-    const filePath = await uploadFile(file);
-    await loadOverlay(filePath);
-  } catch (error) {
-    console.error(error);
-  } finally {
-    overlayFileInput.value = "";
+    setFileActionsBusy(false);
   }
 });
 
