@@ -50,6 +50,7 @@ jobs:
 
           # Run Python tests that exercise the Rust extension
           python -m pytest tests/test_rust.py -v
+          python -m pytest tests/test_utils.py -v
 
           # Run normal native Rust tests too
           cargo test --all-features
