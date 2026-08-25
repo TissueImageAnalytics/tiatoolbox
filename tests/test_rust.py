@@ -7,7 +7,6 @@ from tiatoolbox import utils
 
 def test_contrast_enhancer() -> None:
     """Test contrast enhancement functionality."""
-    print("Test contrast")
     input_array = np.array(
         [
             [
@@ -26,6 +25,33 @@ def test_contrast_enhancer() -> None:
                 [35, 255, 203, 110, 248, 133, 72, 146, 46],
                 [106, 193, 73, 17, 198, 251, 131, 3, 0],
                 [143, 205, 215, 30, 214, 178, 104, 78, 139],
+            ]
+        ],
+        dtype=np.uint8,
+    )
+
+    # Calculating the contrast enhanced version of input_array
+    output_array = utils.misc.contrast_enhancer(input_array, low_p=2, high_p=98)
+    # The out_put array should be equal to expected result_array
+    assert np.all(result_array == output_array)
+    input_array = np.array(
+        [
+            [
+                [0],
+                [0],
+                [0],
+            ]
+        ],
+        dtype=np.uint8,
+    )
+
+    # expected output of the contrast_enhancer
+    result_array = np.array(
+        [
+            [
+                [0],
+                [0],
+                [0],
             ]
         ],
         dtype=np.uint8,
