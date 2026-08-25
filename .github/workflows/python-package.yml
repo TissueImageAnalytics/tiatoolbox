@@ -28,33 +28,16 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
         components: llvm-tools-preview
-
     - name: Install cargo-llvm-cov
       if: matrix.python-version == '3.12'
       uses: taiki-e/install-action@cargo-llvm-cov
-    - name: Debug checkout
-      run: |
-        echo "Current directory:"
-        pwd
-
-        echo "Current commit:"
-        git rev-parse HEAD
-        git log -1 --oneline
-
-        echo "Root files:"
-        ls -la
-
-        echo "Cargo manifests:"
-        find . -name Cargo.toml -print
-
-        echo "Is Cargo.toml tracked in this commit?"
-        git ls-tree -r HEAD --name-only | grep '^Cargo.toml$' || true
     - name: Set Rust coverage environment
       if: matrix.python-version == '3.12'
       run: |
         cargo llvm-cov show-env --sh > llvm-cov-env.sh
         source llvm-cov-env.sh
         cargo llvm-cov clean --workspace
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
@@ -67,6 +50,9 @@ jobs:
         python -m pip install ruff==0.16.1 pytest pytest-cov pytest-runner
         pip install uv
         uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
+        if [ "${{ matrix.python-version }}" = "3.12" ]; then
+          source llvm-cov-env.sh
+        fi
         uv pip install --system -e .
     - name: Cache tiatoolbox static assets
       uses: actions/cache@v4
@@ -91,6 +77,9 @@ jobs:
         ruff check .
     - name: Test with pytest
       run: |
+        if [ "${{ matrix.python-version }}" = "3.12" ]; then
+          source llvm-cov-env.sh
+        fi
         pytest --basetemp={envtmpdir} \
            --cov=tiatoolbox --cov-report=term --cov-report=xml --cov-config=pyproject.toml \
            --capture=sys \
@@ -104,7 +93,11 @@ jobs:
         files: coverage.xml
         fail_ci_if_error: false
         verbose: true
-
+    - name: Generate Rust coverage report
+      if: matrix.python-version == '3.12'
+      run: |
+        source llvm-cov-env.sh
+        cargo llvm-cov report --lcov --output-path rust-lcov.info
     - name: Report test coverage to DeepSource
       uses: deepsourcelabs/test-coverage-action@master
       with:
