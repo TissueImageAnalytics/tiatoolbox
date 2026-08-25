@@ -2,16 +2,9 @@ name: Rust
 
 on:
   push:
-    branches:
-      - develop
-      - main
-      - master
-
+    branches: [ develop, main, master ]
   pull_request:
-    branches:
-      - develop
-      - main
-      - master
+    branches: [ develop, main, master ]
 
 jobs:
   rust:
@@ -26,11 +19,22 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
       - name: Check formatting
         run: cargo fmt --all -- --check
 
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings -A clippy::too_many_arguments
 
-      - name: Run Rust tests
-        run: cargo test --all
+      - name: Run Rust tests with coverage
+        run: cargo llvm-cov --all-features --lcov --output-path lcov.info
+
+      - name: Upload Rust coverage to Codecov
+        uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          files: lcov.info
+          fail_ci_if_error: false
