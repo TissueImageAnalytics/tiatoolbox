@@ -627,6 +627,11 @@ class TileServer(Flask):
                 A jsonified list of annotation types or the updated layer name.
 
         """
+        session_id = self._get_session_id()
+        overlay_path = request.form["overlay_path"]
+        overlay_path = self.decode_safe_name(overlay_path)
+        layer_name = request.form.get("layer_name")
+
         # Get other session id
         session_ids = list(self.layers.keys())
         session_ids.remove(session_id)
