@@ -91,37 +91,25 @@ tiatoolbox visualize-beta
 opens an empty viewer and creates a TileServer session which can then be used
 to load and change slides dynamically.
 
-The experimental viewer is currently a work in progress. Slides can currently
-be loaded from the browser developer console with:
+Slides and overlays can be loaded directly from the Files panel in the top-left
+corner of the viewer.
 
-```js
-await switchSlide("/path/to/slide.svs");
-```
+Use **Load Slide** to open the native file picker and select a whole slide image.
+A different slide can be selected at any time without restarting the viewer.
 
-A different slide can be loaded using the same command without restarting the
-viewer:
+Once a slide is loaded, use **Load Overlay** to select an image or annotation
+overlay. Multiple overlays can be loaded and managed using the Layers panel.
 
-```js
-await switchSlide("/path/to/another_slide.svs");
-```
+The slide and overlay file pickers remember their most recently used directories
+separately for the current TileServer session. For example, selecting a slide
+from a slides directory does not change the directory used when opening the
+overlay file picker.
 
-The experimental viewer also supports dynamic overlay loading and removal:
+Use **Clear Overlays** to remove all overlays while keeping the current slide
+loaded. Use **Clear Slide** to remove the slide and its overlays and return the
+viewer to its empty state.
 
-```js
-await loadOverlay("/path/to/overlay.png");
-await removeOverlay("overlay-name");
-await clearOverlays();
-```
-
-The current slide can be removed and the viewer returned to its empty state
-with:
-
-```js
-await removeSlide();
-```
-
-The same TileServer session remains available, so another slide can be loaded
-after removing the current slide.
+The native file picker currently supports local Windows and WSL environments.
 
 The experimental viewer also stores the current slide, position and zoom level
 in the URL. A saved viewer URL can therefore be reopened to restore the slide
@@ -223,7 +211,8 @@ The experimental viewer also uses:
 
 - `tiatoolbox/cli/visualize_beta.py` to provide the `visualize-beta` command.
 - Dynamic TileServer routes in `tiatoolbox/visualization/tileserver.py` for
-  loading and removing slides and overlays while the viewer is running.
+  selecting, loading and removing slides and overlays while the viewer is
+  running.
 
 ## Building the frontend
 
