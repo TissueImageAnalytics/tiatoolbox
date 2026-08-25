@@ -15,7 +15,7 @@ fn test_string_to_tuple() {
 
     assert_eq!(result, vec!["a", "b", "c"])
 }
-'''
+/*
 #[test]
 fn test_misc() {
     let status = Command::new("python3")
@@ -32,4 +32,4 @@ fn test_misc() {
         std::process::exit(1);
     }
 }
-'''
+*/
