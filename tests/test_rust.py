@@ -234,10 +234,48 @@ def test_patch_predictions_as_annotations() -> None:
         "label": "Tumour",
         "type": "Normal",
     }
+    class_dict = {
+        0.0: 1.2,
+        1.0: "Normal",
+    }
+
+    annotations = rmisc.patch_predictions_as_annotations(
+        DummyAnnotation,
+        DummyPolygon,
+        preds,
+        keys_contains_labels,
+        keys_contains_probabilities,
+        class_dict,
+        class_probs,
+        patch_coords,
+        [0.0, 1.0],  # classes_predicted
+        [1.0, 0.0],  # labels
+    )
+
+    assert len(annotations) == 2
+
+    assert annotations[0].polygon == (10.0, 20.0, 30.0, 40.0)
+    assert annotations[0].properties == {
+        "prob_1.2": 0.8,
+        "prob_Normal": 0.2,
+        "label": "Normal",
+        "type": 1.2,
+    }
+
+    assert annotations[1].polygon == (50.0, 60.0, 70.0, 80.0)
+    assert annotations[1].properties == {
+        "prob_1.2": 0.1,
+        "prob_Normal": 0.9,
+        "label": 1.2,
+        "type": "Normal",
+    }
 
     keys_contains_labels = False
     keys_contains_probabilities = False
-
+    class_dict = {
+        0.0: "Tumour",
+        1.0: "Normal",
+    }
     annotations = rmisc.patch_predictions_as_annotations(
         DummyAnnotation,
         DummyPolygon,
