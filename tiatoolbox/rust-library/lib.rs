@@ -262,17 +262,15 @@ fn patch_predictions_as_qupath_json<'py>(
                 (xmax, ymax),
                 (xmax, ymin),
                 (xmin, ymin),
-            ),),)?;
+            ),),
+        )?;
         let feature = PyDict::new(py);
         feature.set_item("type", "Feature")?;
         feature.set_item("id", format!("patch_{}", i))?;
         feature.set_item("geometry", polygon_feat)?;
         let classification = PyDict::new(py);
         classification.set_item("name", class_name)?;
-        classification.set_item(
-            "color",
-            class_colours[&OrderedFloat(class_idx)].clone()
-        )?;
+        classification.set_item("color", class_colours[&OrderedFloat(class_idx)].clone())?;
         let properties = PyDict::new(py);
         properties.set_item("classification", classification)?;
         feature.set_item("properties", properties)?;
