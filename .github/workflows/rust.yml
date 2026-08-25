@@ -34,3 +34,17 @@ jobs:
 
       - name: Run Rust tests
         run: cargo test --all
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Run Rust tests with coverage
+        run: cargo llvm-cov --all-features --lcov --output-path rust-lcov.info
+
+      - name: Upload Rust coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: rust-lcov.info
+          flags: rust
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
