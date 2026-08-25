@@ -1,0 +1,22 @@
+flags:
+  python:
+    paths:
+      - "**/*.py"
+    carryforward: false
+  rust:
+    paths:
+      - "src/"
+    carryforward: false
+  rust-via-python:
+    paths:
+      - "src/"
+    carryforward: false
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+    patch:
+      default:
+        target: auto

@@ -1,40 +1,80 @@
 name: Rust
-
 on:
   push:
     branches: [ develop, main, master ]
   pull_request:
     branches: [ develop, main, master ]
-
 jobs:
   rust:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
-
       - name: Check formatting
         run: cargo fmt --all -- --check
-
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings -A clippy::too_many_arguments
-
       - name: Run Rust tests with coverage
         run: cargo llvm-cov --all-features --lcov --output-path lcov.info
-
       - name: Upload Rust coverage to Codecov
         uses: codecov/codecov-action@v4
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           files: lcov.info
+          flags: rust
+          fail_ci_if_error: false
+
+  rust-via-python:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - name: Install grcov
+        uses: taiki-e/install-action@grcov
+      - name: Install Python + build deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install maturin pytest pytest-cov
+      - name: Build instrumented extension
+        env:
+          RUSTFLAGS: "-C instrument-coverage"
+          LLVM_PROFILE_FILE: "target/coverage/prof-%p-%m.profraw"
+        run: maturin develop
+      - name: Run Python tests (exercises Rust via extension)
+        env:
+          RUSTFLAGS: "-C instrument-coverage"
+          LLVM_PROFILE_FILE: "target/coverage/prof-%p-%m.profraw"
+        run: pytest --maxfail=1
+      - name: Generate Rust lcov from Python-driven execution
+        run: |
+          grcov target/coverage/ \
+            --binary-path ./target/debug/ \
+            -s . \
+            -t lcov \
+            --branch \
+            --ignore-not-existing \
+            --ignore "*/target/*" \
+            -o rust-via-python.lcov
+      - name: Upload Rust-via-Python coverage to Codecov
+        uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          files: rust-via-python.lcov
+          flags: rust-via-python
           fail_ci_if_error: false
