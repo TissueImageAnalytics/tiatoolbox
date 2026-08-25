@@ -82,6 +82,8 @@ class TileServer(Flask):
         renderer: AnnotationRenderer | None = None,
         *,
         legacy: bool = True,
+        slide_directory: str | Path | None = None,
+        overlay_directory: str | Path | None = None,
     ) -> None:
         """Initialize :class:`TileServer`."""
         super().__init__(
@@ -96,6 +98,19 @@ class TileServer(Flask):
         )
         self.title = title
         self.legacy = legacy
+
+        self.slide_directory = (
+            Path(slide_directory).expanduser().resolve()
+            if slide_directory is not None
+            else None
+        )
+
+        self.overlay_directory = (
+            Path(overlay_directory).expanduser().resolve()
+            if overlay_directory is not None
+            else None
+        )
+
         self.layers = {}
         self.pyramids = {}
         self.renderer = renderer
@@ -157,6 +172,9 @@ class TileServer(Flask):
         self.route("/tileserver/session_id")(self.session_id)
         self.route("/tileserver/file_picker", methods=["POST"])(
             self.open_file_picker,
+        )
+        self.route("/tileserver/files/<kind>", methods=["GET"])(
+            self.get_configured_files,
         )
         self.route("/tileserver/color_prop", methods=["PUT"])(self.change_prop)
         self.route("/tileserver/slide", methods=["PUT"])(self.change_slide)
@@ -492,6 +510,54 @@ class TileServer(Flask):
             )
 
         return response
+
+    def get_configured_files(
+        self: TileServer,
+        kind: str,
+    ) -> Response:
+        """Return files from a configured slide or overlay directory."""
+        if kind == "slide":
+            directory = self.slide_directory
+        elif kind == "overlay":
+            directory = self.overlay_directory
+        else:
+            return Response(
+                "Invalid configured file type.",
+                status=400,
+            )
+
+        if directory is None:
+            return jsonify(
+                {
+                    "directory": None,
+                    "files": [],
+                },
+            )
+
+        if not directory.is_dir():
+            return Response(
+                "Configured file directory is unavailable.",
+                status=404,
+            )
+
+        files = [
+            {
+                "name": path.name,
+                "path": str(path),
+            }
+            for path in sorted(
+                directory.iterdir(),
+                key=lambda path: path.name.casefold(),
+            )
+            if path.is_file()
+        ]
+
+        return jsonify(
+            {
+                "directory": str(directory),
+                "files": files,
+            },
+        )
 
     @staticmethod
     def _select_windows_file(
