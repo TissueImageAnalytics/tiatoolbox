@@ -7,6 +7,7 @@ from tiatoolbox import utils
 
 def test_contrast_enhancer() -> None:
     """Test contrast enhancement functionality."""
+    print("Test contrast")
     input_array = np.array(
         [
             [
