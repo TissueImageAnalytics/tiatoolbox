@@ -35,7 +35,7 @@ jobs:
     - name: Set Rust coverage environment
       if: matrix.python-version == '3.12'
       run: |
-        cargo llvm-cov --manifest-path ../Cargo.toml show-env --sh > llvm-cov-env.sh
+        cargo llvm-cov --manifest-path tiatoolbox/Cargo.toml show-env --sh > llvm-cov-env.sh
         source llvm-cov-env.sh
         cargo llvm-cov clean --workspace
     - uses: actions/checkout@v4
