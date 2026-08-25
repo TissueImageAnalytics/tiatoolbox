@@ -23,7 +23,7 @@ pub fn add(a: i32, b: i32) -> i32 {
 }
 
 #[pyfunction]
-fn string_to_tuple(in_str: String) -> Vec<String> {
+pub fn string_to_tuple(in_str: String) -> Vec<String> {
     /*Splits input string to tuple at ','.
 
     Args:
@@ -38,7 +38,7 @@ fn string_to_tuple(in_str: String) -> Vec<String> {
 }
 
 #[pyfunction]
-fn semantic_segmentations_as_qupath_json(
+pub fn semantic_segmentations_as_qupath_json(
     py: Python<'_>,
     layer_list: &Bound<'_, PyList>,
     preds: &Bound<'_, PyAny>,
@@ -344,7 +344,7 @@ fn rust_contrast_enhancer(img: Array3<u8>, low_p: u8, high_p: u8) -> Array3<u8> 
 }
 
 #[pyfunction]
-fn contrast_enhancer<'py>(
+pub fn contrast_enhancer<'py>(
     py: Python<'py>,
     img: PyReadonlyArray3<'py, u8>,
     low_p: u8,
