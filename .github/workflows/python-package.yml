@@ -23,6 +23,7 @@ jobs:
         python-version: ["3.12", "3.13", "3.14"]
 
     steps:
+    - uses: actions/checkout@v4
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
       with:
@@ -54,7 +55,6 @@ jobs:
         cargo llvm-cov show-env --sh > llvm-cov-env.sh
         source llvm-cov-env.sh
         cargo llvm-cov clean --workspace
-    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
