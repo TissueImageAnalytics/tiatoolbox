@@ -38,7 +38,7 @@ fn string_to_tuple(in_str: String) -> Vec<String> {
 }
 
 #[pyfunction]
-fn semantic_segmentations_as_qupath_json<'py>(
+fn semantic_segmentations_as_qupath_json(
     py: Python<'_>,
     layer_list: &Bound<'_, PyList>,
     preds: &Bound<'_, PyAny>,
@@ -163,7 +163,7 @@ fn patch_predictions_as_annotations<'py>(
         let props = PyDict::new(py);
         if keys_contains_probabilities {
             for j in &classes_predicted {
-                let y = &class_dict[&OrderedFloat(*j as f64)];
+                let y = &class_dict[&OrderedFloat(*j)];
                 let probability = match y {
                     StringOrFloat::String(s) => s.clone(),
                     StringOrFloat::Float(i) => i.to_string(),
@@ -340,7 +340,7 @@ fn rust_contrast_enhancer(img: Array3<u8>, low_p: u8, high_p: u8) -> Array3<u8> 
         return img.mapv(|x| rescale_intensity(x.into(), p_low, p_high, range));
     }
 
-    return img;
+    img
 }
 
 #[pyfunction]
