@@ -35,10 +35,27 @@ jobs:
     - name: Set Rust coverage environment
       if: matrix.python-version == '3.12'
       run: |
-        cargo llvm-cov --manifest-path ./Cargo.toml show-env --sh > llvm-cov-env.sh
+        cargo llvm-cov show-env --sh > llvm-cov-env.sh
         source llvm-cov-env.sh
         cargo llvm-cov clean --workspace
     - uses: actions/checkout@v4
+    - name: Debug checkout
+      run: |
+        echo "Current directory:"
+        pwd
+
+        echo "Current commit:"
+        git rev-parse HEAD
+        git log -1 --oneline
+
+        echo "Root files:"
+        ls -la
+
+        echo "Cargo manifests:"
+        find . -name Cargo.toml -print
+
+        echo "Is Cargo.toml tracked in this commit?"
+        git ls-tree -r HEAD --name-only | grep '^Cargo.toml$' || true
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
