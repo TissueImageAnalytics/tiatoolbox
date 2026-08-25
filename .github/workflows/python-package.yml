@@ -31,14 +31,6 @@ jobs:
     - name: Install cargo-llvm-cov
       if: matrix.python-version == '3.12'
       uses: taiki-e/install-action@cargo-llvm-cov
-
-    - name: Set Rust coverage environment
-      if: matrix.python-version == '3.12'
-      run: |
-        cargo llvm-cov show-env --sh > llvm-cov-env.sh
-        source llvm-cov-env.sh
-        cargo llvm-cov clean --workspace
-    - uses: actions/checkout@v4
     - name: Debug checkout
       run: |
         echo "Current directory:"
@@ -56,6 +48,13 @@ jobs:
 
         echo "Is Cargo.toml tracked in this commit?"
         git ls-tree -r HEAD --name-only | grep '^Cargo.toml$' || true
+    - name: Set Rust coverage environment
+      if: matrix.python-version == '3.12'
+      run: |
+        cargo llvm-cov show-env --sh > llvm-cov-env.sh
+        source llvm-cov-env.sh
+        cargo llvm-cov clean --workspace
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
