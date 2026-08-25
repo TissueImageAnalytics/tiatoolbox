@@ -89,7 +89,7 @@ const viewerPanel = document.getElementById("viewer-panel");
 const viewerPanelToggle = document.getElementById(
   "viewer-panel-toggle",
 );
-const currentSlide = document.getElementById("current-slide");
+const viewerFiles = document.getElementById("viewer-files");
 
 const layerEditor = document.getElementById("layer-editor");
 const layerEditorToggle = document.getElementById(
@@ -109,7 +109,7 @@ if (
   layerEditor === null ||
   layerEditorToggle === null ||
   layerEditorList === null ||
-  currentSlide === null
+  viewerFiles === null
 ) {
   throw new Error("The OpenLayers viewer controls could not be found.");
 }
@@ -168,7 +168,7 @@ function createFileSelect(placeholder) {
 }
 
 const slideSelect = createFileSelect("Select slide");
-const overlaySelect = createFileSelect("Select overlay");
+const overlaySelect = createFileSelect("Load overlay");
 
 fileSelectors.append(
   slideSelect,
@@ -199,13 +199,8 @@ fileActions.append(
   clearOverlaysButton,
 );
 
-currentSlide.insertAdjacentElement(
-  "afterend",
+viewerFiles.append(
   fileSelectors,
-);
-
-fileSelectors.insertAdjacentElement(
-  "afterend",
   fileActions,
 );
 
@@ -256,8 +251,41 @@ populateFileSelect(
   configuredOverlays.files,
   configuredOverlays.directory === null
     ? "No overlay directory configured"
-    : "Select overlay",
+    : "Load overlay",
 );
+
+function updateSlideSelect(filePath) {
+  const temporaryOption = slideSelect.querySelector(
+    'option[data-current-slide="true"]',
+  );
+
+  if (
+    temporaryOption !== null &&
+    temporaryOption.value !== filePath
+  ) {
+    temporaryOption.remove();
+  }
+
+  const matchingOption = Array.from(slideSelect.options).find(
+    (option) => option.value === filePath,
+  );
+
+  if (matchingOption !== undefined) {
+    slideSelect.value = filePath;
+    return;
+  }
+
+  const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
+
+  const option = document.createElement("option");
+  option.value = filePath;
+  option.textContent = fileName;
+  option.title = filePath;
+  option.dataset.currentSlide = "true";
+
+  slideSelect.append(option);
+  slideSelect.value = filePath;
+}
 
 function updateFileActionState() {
   const hasSlide = currentSlideInfo !== null;
@@ -373,21 +401,6 @@ function getFileStem(filePath) {
   return fileName.slice(0, extensionIndex);
 }
 
-function updateCurrentSlide() {
-  if (currentSlidePath === null) {
-    currentSlide.textContent = "No slide selected";
-    currentSlide.removeAttribute("title");
-    return;
-  }
-
-  const slideName = currentSlidePath.split(/[\\/]/).pop();
-
-  currentSlide.textContent = slideName || currentSlidePath;
-  currentSlide.title = currentSlidePath;
-
-  updateFileActionState();
-}
-
 // Dynamic slide loading
 const params = new URLSearchParams(window.location.search);
 const slidePath = params.get("slide");
@@ -398,6 +411,7 @@ if (slidePath !== null) {
   const slideInfo = await loadSlide(slidePath);
 
   currentSlideInfo = slideInfo;
+  updateSlideSelect(slidePath);
   layersData = [
     {
       name: "slide",
@@ -412,7 +426,7 @@ if (slidePath !== null) {
   sessionId = await createSession();
 }
 
-updateCurrentSlide();
+updateFileActionState();
 
 const layers = layersData.map((layer) => {
   const source = new Zoomify({
@@ -989,7 +1003,6 @@ async function removeSlide() {
   currentSlidePath = null;
   currentSlideInfo = null;
   layersData.length = 0;
-  updateCurrentSlide();
 
   slideVersion += 1;
   overlayVersion += 1;
@@ -1066,7 +1079,7 @@ async function switchSlide(slidePath) {
   const slideInfo = await loadSlide(slidePath);
   currentSlideInfo = slideInfo;
   currentSlidePath = slidePath;
-  updateCurrentSlide();
+  updateSlideSelect(slidePath);
   updateFileActionState();
 
   slideVersion += 1;

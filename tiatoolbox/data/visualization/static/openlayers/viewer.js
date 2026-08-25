@@ -15323,7 +15323,7 @@ function _h(e, t, n) {
 		zDirection: -1
 	});
 }
-var vh = document.getElementById("map"), yh = document.querySelector(".viewer-app"), bh = document.getElementById("viewer-panel"), xh = document.getElementById("viewer-panel-toggle"), Sh = document.getElementById("current-slide"), Ch = document.getElementById("layer-editor"), wh = document.getElementById("layer-editor-toggle"), Th = document.getElementById("layer-editor-list");
+var vh = document.getElementById("map"), yh = document.querySelector(".viewer-app"), bh = document.getElementById("viewer-panel"), xh = document.getElementById("viewer-panel-toggle"), Sh = document.getElementById("viewer-files"), Ch = document.getElementById("layer-editor"), wh = document.getElementById("layer-editor-toggle"), Th = document.getElementById("layer-editor-list");
 if (vh === null || yh === null) throw Error("The OpenLayers viewer could not be found.");
 if (bh === null || xh === null || Ch === null || wh === null || Th === null || Sh === null) throw Error("The OpenLayers viewer controls could not be found.");
 function Eh(e) {
@@ -15343,7 +15343,7 @@ function Lh(e) {
 	let t = document.createElement("select"), n = document.createElement("option");
 	return n.value = "", n.textContent = e, t.append(n), t.disabled = !0, t;
 }
-var Rh = Lh("Select slide"), zh = Lh("Select overlay");
+var Rh = Lh("Select slide"), zh = Lh("Load overlay");
 Ih.append(Rh, zh);
 var Bh = document.createElement("div");
 Bh.className = "viewer-file-actions";
@@ -15352,7 +15352,7 @@ function Vh(e) {
 	return t.type = "button", t.textContent = e, t;
 }
 var Hh = Vh("Clear Slide"), Uh = Vh("Clear Overlays");
-Hh.disabled = !0, Uh.disabled = !0, Bh.append(Hh, Uh), Sh.insertAdjacentElement("afterend", Ih), Ih.insertAdjacentElement("afterend", Bh);
+Hh.disabled = !0, Uh.disabled = !0, Bh.append(Hh, Uh), Sh.append(Ih, Bh);
 function Wh(e, t, n) {
 	e.replaceChildren();
 	let r = document.createElement("option");
@@ -15364,14 +15364,23 @@ function Wh(e, t, n) {
 	e.disabled = t.length === 0;
 }
 var Gh = await gh("slide"), Kh = await gh("overlay");
-Wh(Rh, Gh.files, Gh.directory === null ? "No slide directory configured" : "Select slide"), Wh(zh, Kh.files, Kh.directory === null ? "No overlay directory configured" : "Select overlay");
-function qh() {
+Wh(Rh, Gh.files, Gh.directory === null ? "No slide directory configured" : "Select slide"), Wh(zh, Kh.files, Kh.directory === null ? "No overlay directory configured" : "Load overlay");
+function qh(e) {
+	let t = Rh.querySelector("option[data-current-slide=\"true\"]");
+	if (t !== null && t.value !== e && t.remove(), Array.from(Rh.options).find((t) => t.value === e) !== void 0) {
+		Rh.value = e;
+		return;
+	}
+	let n = e.split(/[\\/]/).pop() ?? e, r = document.createElement("option");
+	r.value = e, r.textContent = n, r.title = e, r.dataset.currentSlide = "true", Rh.append(r), Rh.value = e;
+}
+function Jh() {
 	let e = Mh !== null, t = Object.keys(Ph).length > 0;
 	Hh.disabled = !e, Uh.disabled = !e || !t, Rh.disabled = Gh.files.length === 0, zh.disabled = !e || Kh.files.length === 0;
 }
-function Jh(e) {
+function Yh(e) {
 	if (!e) {
-		qh();
+		Jh();
 		return;
 	}
 	Rh.disabled = !0, zh.disabled = !0, Hh.disabled = !0, Uh.disabled = !0;
@@ -15379,69 +15388,62 @@ function Jh(e) {
 Rh.addEventListener("change", async () => {
 	let e = Rh.value;
 	if (e !== "") {
-		Jh(!0);
+		Yh(!0);
 		try {
 			await Vg(e), zh.value = "";
 		} catch (e) {
 			console.error(e);
 		} finally {
-			Jh(!1);
+			Yh(!1);
 		}
 	}
 }), zh.addEventListener("change", async () => {
 	let e = zh.value;
 	if (e !== "") {
-		Jh(!0);
+		Yh(!0);
 		try {
 			await Gg(e), zh.value = "";
 		} catch (e) {
 			console.error(e);
 		} finally {
-			Jh(!1);
+			Yh(!1);
 		}
 	}
 }), Hh.addEventListener("click", async () => {
-	Jh(!0);
+	Yh(!0);
 	try {
 		await Bg(), Rh.value = "", zh.value = "";
 	} catch (e) {
 		console.error(e);
 	} finally {
-		Jh(!1);
+		Yh(!1);
 	}
 }), Uh.addEventListener("click", async () => {
-	Jh(!0);
+	Yh(!0);
 	try {
 		await Lg(), zh.value = "";
 	} catch (e) {
 		console.error(e);
 	} finally {
-		Jh(!1);
+		Yh(!1);
 	}
-}), qh();
-function Yh(e) {
+}), Jh();
+function Xh(e) {
 	let t = e.split(/[\\/]/).pop() ?? e, n = t.lastIndexOf(".");
 	return n <= 0 ? t : t.slice(0, n);
-}
-function Xh() {
-	if (Nh === null) {
-		Sh.textContent = "No slide selected", Sh.removeAttribute("title");
-		return;
-	}
-	Sh.textContent = Nh.split(/[\\/]/).pop() || Nh, Sh.title = Nh, qh();
 }
 var Zh = new URLSearchParams(window.location.search).get("slide");
 if (Zh !== null) {
 	Nh = Zh, kh = await mh();
 	let e = await hh(Zh);
-	Mh = e, Oh = [{
+	Mh = e, qh(Zh), Oh = [{
 		name: "slide",
 		url: `/tileserver/layer/slide/${kh}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${Ah}`,
 		size: e.slide_dimensions,
 		mpp: e.mpp[0]
 	}];
 } else Oh.length === 0 && (kh = await mh());
-Xh();
+Jh();
 var Qh = Oh.map((e) => {
 	let t = new dd({
 		url: e.url,
@@ -15655,11 +15657,11 @@ function Ig() {
 		t !== -1 && Qh.splice(t, 1);
 	}
 	for (let e of Object.keys(Ph)) delete Ph[e];
-	Fh.clear(), Wg(), qh();
+	Fh.clear(), Wg(), Jh();
 }
 async function Lg() {
 	if (!(await fetch("/tileserver/clear_overlays", { method: "PUT" })).ok) throw Error("Failed to clear overlays.");
-	Ig(), qh();
+	Ig(), Jh();
 }
 function Rg() {
 	let e = new URLSearchParams(window.location.search), t = Number(e.get("x")), n = Number(e.get("y")), r = Number(e.get("zoom"));
@@ -15680,7 +15682,7 @@ function zg() {
 async function Bg() {
 	if (kh === null) throw Error("No TileServer session is available.");
 	if (!(await fetch("/tileserver/slide", { method: "DELETE" })).ok) throw Error("Failed to remove the current slide.");
-	Ig(), Nh = null, Mh = null, Oh.length = 0, Xh(), Ah += 1, jh += 1, $h.setSource(null), fg.setSource(null), Wg();
+	Ig(), Nh = null, Mh = null, Oh.length = 0, Ah += 1, jh += 1, $h.setSource(null), fg.setSource(null), Wg();
 	let e = [
 		0,
 		-1,
@@ -15705,13 +15707,13 @@ async function Bg() {
 	});
 	$.setView(r), yg.setView(hg(n, e)), Ng.setActive(!1), Pg.setActive(!1), Ng.element.classList.remove("active"), Pg.element.classList.remove("active"), Og.setMap(null), Mg.setMap(null), Og = Dg(n), Mg = jg(n), window.graticule = Og, window.screenSpaceGraticule = Mg;
 	let i = new URL(window.location.href);
-	i.search = "", i.hash = "", window.history.replaceState({}, "", i), Fg(!1), ug(), qh();
+	i.search = "", i.hash = "", window.history.replaceState({}, "", i), Fg(!1), ug(), Jh();
 }
 async function Vg(e) {
 	if (kh === null) throw Error("Dynamic slide switching requires a TileServer session.");
 	Ig();
 	let t = await hh(e);
-	Mh = t, Nh = e, Xh(), qh(), Ah += 1;
+	Mh = t, Nh = e, qh(e), Jh(), Ah += 1;
 	let n = _h(kh, t, Ah), r = n.getTileGrid(), i = r.getExtent(), a = r.getResolutions(), o = new qt({
 		code: "ZoomifyProjection",
 		units: "pixels",
@@ -15737,7 +15739,7 @@ function Hg() {
 	let e = [];
 	$h.getSource() !== null && e.push({
 		id: "slide",
-		name: Yh(Nh ?? "slide"),
+		name: Xh(Nh ?? "slide"),
 		layer: $h
 	});
 	let t = Object.entries(Ph).map(([e, t]) => ({
@@ -15812,7 +15814,7 @@ async function Gg(e) {
 		"db",
 		"dat",
 		"geojson"
-	].includes(t), r = Yh(e);
+	].includes(t), r = Xh(e);
 	if (r === "slide") throw Error("The overlay name \"slide\" is reserved.");
 	let i = new FormData();
 	i.append("overlay_path", e), i.append("layer_name", r);
@@ -15838,7 +15840,7 @@ async function Gg(e) {
 		});
 		n.setZIndex(t + 1), Ph[r] = n, $.addLayer(n), Qh.push(n);
 	}
-	return Wg(), qh(), o;
+	return Wg(), Jh(), o;
 }
 async function Kg(e) {
 	let t = Ph[e];
@@ -15846,7 +15848,7 @@ async function Kg(e) {
 	let n = t.getSource();
 	if (t.setVisible(!1), t.setSource(null), $.removeLayer(t), !(await fetch(`/tileserver/overlay/${encodeURIComponent(e)}`, { method: "DELETE" })).ok) throw t.setSource(n), t.setVisible(!0), $.addLayer(t), Error(`Failed to remove overlay: ${e}`);
 	let r = Qh.indexOf(t);
-	r !== -1 && Qh.splice(r, 1), Fh.delete(e), delete Ph[e], Wg(), qh();
+	r !== -1 && Qh.splice(r, 1), Fh.delete(e), delete Ph[e], Wg(), Jh();
 }
 async function qg(e) {
 	if (Fh.size === 0) throw Error("No annotation overlay is loaded.");
