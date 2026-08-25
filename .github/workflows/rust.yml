@@ -8,6 +8,12 @@ jobs:
   rust:
     runs-on: ubuntu-latest
     steps:
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt-get install -y libopenjp2-7 libopenjp2-tools
+          python -m pip install --upgrade pip
+          python -m pip install ruff==0.16.1 pytest pytest-cov pytest-runner
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Install Rust
