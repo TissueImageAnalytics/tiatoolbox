@@ -59,22 +59,15 @@ async function loadSlide(slidePath) {
   return metadataResponse.json();
 }
 
-// Request a native file path from the local TileServer.
-async function pickFile(kind) {
-  const formData = new FormData();
-  formData.append("kind", kind);
-
-  const response = await fetch("/tileserver/file_picker", {
-    method: "POST",
-    body: formData,
-  });
+// Get files from a directory configured when TileServer was launched.
+async function getConfiguredFiles(kind) {
+  const response = await fetch(`/tileserver/files/${kind}`);
 
   if (!response.ok) {
-    throw new Error(`Failed to open ${kind} file picker.`);
+    throw new Error(`Failed to get configured ${kind} files.`);
   }
 
-  const result = await response.json();
-  return result.path;
+  return response.json();
 }
 
 // Create a Zoomify source with versions to avoid reusing tiles from an old slide.
@@ -158,6 +151,30 @@ let currentSlidePath = null;
 const overlayLayers = {};
 const annotationLayerNames = new Set();
 
+const fileSelectors = document.createElement("div");
+fileSelectors.className = "viewer-file-selectors";
+
+function createFileSelect(placeholder) {
+  const select = document.createElement("select");
+
+  const option = document.createElement("option");
+  option.value = "";
+  option.textContent = placeholder;
+
+  select.append(option);
+  select.disabled = true;
+
+  return select;
+}
+
+const slideSelect = createFileSelect("Select slide");
+const overlaySelect = createFileSelect("Select overlay");
+
+fileSelectors.append(
+  slideSelect,
+  overlaySelect,
+);
+
 const fileActions = document.createElement("div");
 fileActions.className = "viewer-file-actions";
 
@@ -168,35 +185,95 @@ function createFileActionButton(label) {
   return button;
 }
 
-const loadSlideButton = createFileActionButton("Load Slide");
-const loadOverlayButton =
-  createFileActionButton("Load Overlay");
 const clearSlideButton =
   createFileActionButton("Clear Slide");
+
 const clearOverlaysButton =
   createFileActionButton("Clear Overlays");
 
-loadOverlayButton.disabled = true;
 clearSlideButton.disabled = true;
 clearOverlaysButton.disabled = true;
 
 fileActions.append(
-  loadSlideButton,
-  loadOverlayButton,
   clearSlideButton,
   clearOverlaysButton,
 );
 
-currentSlide.insertAdjacentElement("afterend", fileActions);
+currentSlide.insertAdjacentElement(
+  "afterend",
+  fileSelectors,
+);
+
+fileSelectors.insertAdjacentElement(
+  "afterend",
+  fileActions,
+);
+
+function populateFileSelect(
+  select,
+  files,
+  placeholder,
+) {
+  select.replaceChildren();
+
+  const placeholderOption =
+    document.createElement("option");
+
+  placeholderOption.value = "";
+  placeholderOption.textContent = placeholder;
+
+  select.append(placeholderOption);
+
+  for (const file of files) {
+    const option = document.createElement("option");
+
+    option.value = file.path;
+    option.textContent = file.name;
+    option.title = file.path;
+
+    select.append(option);
+  }
+
+  select.disabled = files.length === 0;
+}
+
+const configuredSlides =
+  await getConfiguredFiles("slide");
+
+const configuredOverlays =
+  await getConfiguredFiles("overlay");
+
+populateFileSelect(
+  slideSelect,
+  configuredSlides.files,
+  configuredSlides.directory === null
+    ? "No slide directory configured"
+    : "Select slide",
+);
+
+populateFileSelect(
+  overlaySelect,
+  configuredOverlays.files,
+  configuredOverlays.directory === null
+    ? "No overlay directory configured"
+    : "Select overlay",
+);
 
 function updateFileActionState() {
   const hasSlide = currentSlideInfo !== null;
-  const hasOverlays = Object.keys(overlayLayers).length > 0;
+  const hasOverlays =
+    Object.keys(overlayLayers).length > 0;
 
-  loadSlideButton.disabled = false;
-  loadOverlayButton.disabled = !hasSlide;
   clearSlideButton.disabled = !hasSlide;
-  clearOverlaysButton.disabled = !hasSlide || !hasOverlays;
+  clearOverlaysButton.disabled =
+    !hasSlide || !hasOverlays;
+
+  slideSelect.disabled =
+    configuredSlides.files.length === 0;
+
+  overlaySelect.disabled =
+    !hasSlide ||
+    configuredOverlays.files.length === 0;
 }
 
 function setFileActionsBusy(busy) {
@@ -205,21 +282,24 @@ function setFileActionsBusy(busy) {
     return;
   }
 
-  loadSlideButton.disabled = true;
-  loadOverlayButton.disabled = true;
+  slideSelect.disabled = true;
+  overlaySelect.disabled = true;
   clearSlideButton.disabled = true;
   clearOverlaysButton.disabled = true;
 }
 
-loadSlideButton.addEventListener("click", async () => {
+slideSelect.addEventListener("change", async () => {
+  const filePath = slideSelect.value;
+
+  if (filePath === "") {
+    return;
+  }
+
   setFileActionsBusy(true);
 
   try {
-    const filePath = await pickFile("slide");
-
-    if (filePath !== null) {
-      await switchSlide(filePath);
-    }
+    await switchSlide(filePath);
+    overlaySelect.value = "";
   } catch (error) {
     console.error(error);
   } finally {
@@ -227,27 +307,36 @@ loadSlideButton.addEventListener("click", async () => {
   }
 });
 
-loadOverlayButton.addEventListener("click", async () => {
-  setFileActionsBusy(true);
+overlaySelect.addEventListener(
+  "change",
+  async () => {
+    const filePath = overlaySelect.value;
 
-  try {
-    const filePath = await pickFile("overlay");
+    if (filePath === "") {
+      return;
+    }
 
-    if (filePath !== null) {
+    setFileActionsBusy(true);
+
+    try {
       await loadOverlay(filePath);
+      overlaySelect.value = "";
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setFileActionsBusy(false);
     }
-  } catch (error) {
-    console.error(error);
-  } finally {
-    setFileActionsBusy(false);
-  }
-});
+  },
+);
 
 clearSlideButton.addEventListener("click", async () => {
   setFileActionsBusy(true);
 
   try {
     await removeSlide();
+
+    slideSelect.value = "";
+    overlaySelect.value = "";
   } catch (error) {
     console.error(error);
   } finally {
@@ -255,17 +344,21 @@ clearSlideButton.addEventListener("click", async () => {
   }
 });
 
-clearOverlaysButton.addEventListener("click", async () => {
-  setFileActionsBusy(true);
+clearOverlaysButton.addEventListener(
+  "click",
+  async () => {
+    setFileActionsBusy(true);
 
-  try {
-    await clearOverlays();
-  } catch (error) {
-    console.error(error);
-  } finally {
-    setFileActionsBusy(false);
-  }
-});
+    try {
+      await clearOverlays();
+      overlaySelect.value = "";
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setFileActionsBusy(false);
+    }
+  },
+);
 
 updateFileActionState();
 
