@@ -12,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 import urllib
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -112,6 +112,7 @@ class TileServer(Flask):
         self.slide_mpps = {}
         self.renderers = {}
         self.overlaps = {}
+        self.file_picker_dirs: dict[str, dict[str, str | None]] = {}
 
         # Generic layer names if none provided.
         if isinstance(layers, list):
@@ -128,6 +129,10 @@ class TileServer(Flask):
             self.layers["default"] = {}
             self.pyramids["default"] = {}
             self.renderers["default"] = copy.deepcopy(self.renderer)
+            self.file_picker_dirs["default"] = {
+                "slide": None,
+                "overlay": None,
+            }
         for i, (key, layer) in enumerate(layers.items()):
             layer = self._get_layer_as_wsireader(layer, meta)  # noqa: PLW2901
 
@@ -436,6 +441,10 @@ class TileServer(Flask):
         self.overlaps[session_id] = 0
         self.layers[session_id] = {}
         self.pyramids[session_id] = {}
+        self.file_picker_dirs[session_id] = {
+            "slide": None,
+            "overlay": None,
+        }
 
         return session_id
 
@@ -458,6 +467,10 @@ class TileServer(Flask):
             self.overlaps[session_id] = 0
             self.layers[session_id] = {}
             self.pyramids[session_id] = {}
+            self.file_picker_dirs[session_id] = {
+                "slide": None,
+                "overlay": None,
+            }
 
             return resp
 
@@ -481,7 +494,10 @@ class TileServer(Flask):
         return response
 
     @staticmethod
-    def _select_windows_file(kind: str) -> str | Response | None:
+    def _select_windows_file(
+        kind: str,
+        initial_directory: str | None,
+    ) -> str | Response | None:
         """Open the Windows file picker and return the selected path."""
         powershell = shutil.which("powershell.exe")
 
@@ -493,6 +509,14 @@ class TileServer(Flask):
 
         title = "Select slide" if kind == "slide" else "Select overlay"
 
+        initial_directory_command = ""
+
+        if initial_directory is not None:
+            escaped_directory = initial_directory.replace("'", "''")
+            initial_directory_command = (
+                f"$dialog.InitialDirectory = '{escaped_directory}'\n"
+            )
+
         script = (
             "Add-Type -AssemblyName System.Windows.Forms\n"
             "[Console]::OutputEncoding = "
@@ -500,6 +524,7 @@ class TileServer(Flask):
             "$dialog = New-Object "
             "System.Windows.Forms.OpenFileDialog\n"
             f"$dialog.Title = '{title}'\n"
+            f"{initial_directory_command}"
             '$dialog.Filter = "All files (*.*)|*.*"\n'
             "$dialog.CheckFileExists = $true\n"
             "$dialog.RestoreDirectory = $true\n"
@@ -577,26 +602,43 @@ class TileServer(Flask):
         if kind not in {"slide", "overlay"}:
             return Response("Invalid file picker type.", status=400)
 
-        selected_path = self._select_windows_file(kind)
+        session_id = self._get_session_id()
 
-        if isinstance(selected_path, Response):
-            return selected_path
+        if session_id is None or session_id not in self.file_picker_dirs:
+            return Response("Session not found.", status=404)
 
-        if selected_path is None:
+        initial_directory = self.file_picker_dirs[session_id][kind]
+
+        selected_windows_path = self._select_windows_file(
+            kind,
+            initial_directory,
+        )
+
+        if isinstance(selected_windows_path, Response):
+            return selected_windows_path
+
+        if selected_windows_path is None:
             return jsonify({"path": None})
 
-        selected_path = self._convert_windows_path(selected_path)
+        selected_path = self._convert_windows_path(
+            selected_windows_path,
+        )
 
         if isinstance(selected_path, Response):
             return selected_path
 
-        if not Path(selected_path).is_file():
-            return Response(
+        if Path(selected_path).is_file():
+            self.file_picker_dirs[session_id][kind] = str(
+                PureWindowsPath(selected_windows_path).parent,
+            )
+            response = jsonify({"path": selected_path})
+        else:
+            response = Response(
                 "The selected file is not accessible to TileServer.",
                 status=400,
             )
 
-        return jsonify({"path": selected_path})
+        return response
 
     def reset(self: TileServer, session_id: str) -> str:
         """Reset the tileserver."""
@@ -605,6 +647,7 @@ class TileServer(Flask):
         del self.slide_mpps[session_id]
         del self.renderers[session_id]
         del self.overlaps[session_id]
+        self.file_picker_dirs.pop(session_id, None)
         return "done"
 
     def change_slide(self: TileServer) -> str:
