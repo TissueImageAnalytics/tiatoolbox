@@ -7,7 +7,7 @@ autolib = false
 [lib]
 path = "tiatoolbox/rust-library/lib.rs"
 name = "rmisc"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 ndarray = "0.17.2"
