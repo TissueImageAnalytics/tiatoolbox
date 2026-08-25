@@ -23,8 +23,6 @@ jobs:
           pip install uv
           uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
           uv pip install --system -e .
-      - name: Checkout repository
-        uses: actions/checkout@v4
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
