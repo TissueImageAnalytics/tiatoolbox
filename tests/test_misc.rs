@@ -1,5 +1,5 @@
 use rmisc::{add, string_to_tuple};
-use std::process::{Command, Stdio};
+//use std::process::{Command, Stdio};
 
 #[test]
 fn test_add() {
