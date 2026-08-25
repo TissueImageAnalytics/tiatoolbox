@@ -146,3 +146,139 @@ def test_patch_predictions_as_qupath_json() -> None:
     ]
 
     assert result == expected
+
+
+class DummyPolygon:
+    """Minimal polygon stub used to test annotation generation."""
+
+    @classmethod
+    def from_bounds(
+        cls,
+        xmin: float,
+        ymin: float,
+        xmax: float,
+        ymax: float,
+    ) -> tuple[float, float, float, float]:
+        """Return polygon bounds as a tuple."""
+        return (xmin, ymin, xmax, ymax)
+
+
+class DummyAnnotation:
+    """Minimal annotation stub storing polygon geometry and properties."""
+
+    def __init__(
+        self,
+        polygon: tuple[float, float, float, float],
+        properties: dict[str, str | float],
+    ) -> None:
+        """Initialize an annotation with geometry and associated properties."""
+        self.polygon: tuple[float, float, float, float] = polygon
+        self.properties: dict[str, str | float] = properties
+
+
+def test_patch_predictions_as_annotations() -> None:
+    """Tests that the rust code for patch_predictions_as_annotations works correctly."""
+    preds = [0.0, 1.0]
+
+    class_dict = {
+        0.0: "Tumour",
+        1.0: "Normal",
+    }
+
+    class_probs = np.array(
+        [
+            [0.8, 0.2],
+            [0.1, 0.9],
+        ],
+        dtype=np.float64,
+    )
+
+    patch_coords = np.array(
+        [
+            [10.0, 20.0, 30.0, 40.0],
+            [50.0, 60.0, 70.0, 80.0],
+        ],
+        dtype=np.float64,
+    )
+
+    keys_contains_labels = True
+    keys_contains_probabilities = True
+
+    annotations = rmisc.patch_predictions_as_annotations(
+        DummyAnnotation,
+        DummyPolygon,
+        preds,
+        keys_contains_labels,
+        keys_contains_probabilities,
+        class_dict,
+        class_probs,
+        patch_coords,
+        [0.0, 1.0],  # classes_predicted
+        [1.0, 0.0],  # labels
+    )
+
+    assert len(annotations) == 2
+
+    assert annotations[0].polygon == (10.0, 20.0, 30.0, 40.0)
+    assert annotations[0].properties == {
+        "prob_Tumour": 0.8,
+        "prob_Normal": 0.2,
+        "label": "Normal",
+        "type": "Tumour",
+    }
+
+    assert annotations[1].polygon == (50.0, 60.0, 70.0, 80.0)
+    assert annotations[1].properties == {
+        "prob_Tumour": 0.1,
+        "prob_Normal": 0.9,
+        "label": "Tumour",
+        "type": "Normal",
+    }
+
+    keys_contains_labels = False
+    keys_contains_probabilities = False
+
+    annotations = rmisc.patch_predictions_as_annotations(
+        DummyAnnotation,
+        DummyPolygon,
+        preds,
+        keys_contains_labels,
+        keys_contains_probabilities,
+        class_dict,
+        class_probs,
+        patch_coords,
+        [0.0, 1.0],  # classes_predicted
+        [1.0, 0.0],  # labels
+    )
+
+    assert len(annotations) == 2
+
+    assert annotations[0].polygon == (10.0, 20.0, 30.0, 40.0)
+    assert annotations[0].properties == {
+        "type": "Tumour",
+    }
+
+    assert annotations[1].polygon == (50.0, 60.0, 70.0, 80.0)
+    assert annotations[1].properties == {
+        "type": "Normal",
+    }
+    annotations = rmisc.patch_predictions_as_annotations(
+        DummyAnnotation,
+        DummyPolygon,
+        [],
+        keys_contains_labels,
+        keys_contains_probabilities,
+        class_dict,
+        class_probs,
+        patch_coords,
+        [0.0, 1.0],  # classes_predicted
+        [1.0, 0.0],  # labels
+    )
+
+    assert len(annotations) == 2
+
+    assert annotations[0].polygon == (10.0, 20.0, 30.0, 40.0)
+    assert annotations[0].properties == {}
+
+    assert annotations[1].polygon == (50.0, 60.0, 70.0, 80.0)
+    assert annotations[1].properties == {}

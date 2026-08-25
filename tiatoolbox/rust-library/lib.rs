@@ -96,8 +96,7 @@ pub fn semantic_segmentations_as_qupath_json(
                 classification.set_item("name", &class_label)?;
                 classification.set_item(
                     "color",
-                    class_colours[&OrderedFloat(class_id as f64)].clone(),
-                )?;
+                    class_colours[&OrderedFloat(class_id as f64)].clone(),)?;
                 let properties = PyDict::new(py);
                 properties.set_item("classification", classification)?;
                 feature.set_item("properties", properties)?;
@@ -170,8 +169,7 @@ fn patch_predictions_as_annotations<'py>(
                 };
                 props.set_item(
                     format!("prob_{}", probability),
-                    class_probs[[i, *j as usize]],
-                )?;
+                    class_probs[[i, *j as usize]],)?;
             }
         }
         if keys_contains_labels {
@@ -262,8 +260,7 @@ fn patch_predictions_as_qupath_json<'py>(
                 (xmax, ymax),
                 (xmax, ymin),
                 (xmin, ymin),
-            ),),
-        )?;
+            ),),)?;
         let feature = PyDict::new(py);
         feature.set_item("type", "Feature")?;
         feature.set_item("id", format!("patch_{}", i))?;
