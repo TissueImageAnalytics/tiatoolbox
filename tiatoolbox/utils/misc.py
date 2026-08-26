@@ -878,7 +878,7 @@ def save_as_json(
         save_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         rmisc.json_dump_python_object(str(save_path), shadow_data)
-    except ValueError:
+    except (ValueError, OSError):
         with Path.open(save_path, "w") as handle:  # skipcq: PTC-W6004
             json.dump(shadow_data, handle)
 
@@ -1602,7 +1602,7 @@ def save_qupath_json(save_path: Path, qupath_json: dict) -> Path:
     save_path = save_path.with_suffix(".json")
     try:
         rmisc.json_dump_python_object(str(save_path), qupath_json)
-    except ValueError:
+    except (ValueError, OSError):
         with Path.open(save_path, "w") as f:
             json.dump(qupath_json, f, indent=2)
     return save_path
