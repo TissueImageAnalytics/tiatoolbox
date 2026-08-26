@@ -699,7 +699,13 @@ class TileServer(Flask):
         """Change or add an overlay.
 
         An explicit layer name allows multiple overlays to coexist.
-        Loading the same layer name again replaces that layer.
+        Loading an overlay with the same layer name replaces the
+        existing layer.
+
+        Returns:
+            str:
+                A jsonified list of annotation types or the updated layer name.
+
         """
         session_id = self._get_session_id()
         overlay_path = request.form["overlay_path"]
