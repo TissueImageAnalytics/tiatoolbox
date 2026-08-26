@@ -2,57 +2,41 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
 
-from tiatoolbox.cli.common import tiatoolbox_cli
+from tiatoolbox.cli.common import (
+    cli_base_path,
+    cli_overlays,
+    cli_port,
+    cli_slides,
+    tiatoolbox_cli,
+)
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @tiatoolbox_cli.command(name="visualize-beta")
-@click.option(
-    "--base-path",
-    type=click.Path(
-        exists=True,
-        file_okay=False,
-        path_type=Path,
-    ),
-    help=(
-        """Path to base directory containing images to be displayed.
+@cli_base_path(
+    usage_help="""Path to base directory containing images to be displayed.
     Slides and overlays to be visualized are expected in subdirectories of the
     base directory named slides and overlays, respectively. It is also possible
     to provide a slide and overlay path separately
-    (use --slides and --overlays)."""
-    ),
+    (use --slides and --overlays).""",
 )
-@click.option(
-    "--slides",
-    type=click.Path(
-        exists=True,
-        file_okay=False,
-        path_type=Path,
-    ),
-    help="""Path to directory containing slides to be displayed.
+@cli_slides(
+    usage_help="""Path to directory containing slides to be displayed.
     This option must be used in conjunction with --overlays.
     The --base-path option should not be used in this case.""",
 )
-@click.option(
-    "--overlays",
-    type=click.Path(
-        exists=True,
-        file_okay=False,
-        path_type=Path,
-    ),
-    help="""Path to directory containing overlays to be displayed.
-This option must be used in conjunction with --slides.
-The --base-path option should not be used in this case.""",
+@cli_overlays(
+    usage_help="""Path to directory containing overlays to be displayed.
+    This option must be used in conjunction with --slides.
+    The --base-path option should not be used in this case.""",
 )
-@click.option(
-    "--port",
-    type=int,
-    help="Port to launch the visualization tool on.",
-    default=5000,
-)
+@cli_port(default=5000)
 def visualize_beta(
     base_path: Path | None,
     slides: Path | None,
