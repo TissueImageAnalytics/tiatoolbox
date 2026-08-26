@@ -937,7 +937,7 @@ def string_to_tuple(in_str: str) -> tuple[str, ...]:
             Return a tuple of strings by splitting in_str at ','.
 
     """
-    return tuple(rmisc.string_to_tuple(in_str))
+    return tuple(substring.strip() for substring in in_str.split(","))
 
 
 def ppu2mpp(ppu: int, units: str | int) -> float:
