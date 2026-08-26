@@ -87,36 +87,65 @@ The experimental OpenLayers viewer is launched using:
 tiatoolbox visualize-beta
 ```
 
-`visualize-beta` does not require a slide path when the command is started. It
-opens an empty viewer and creates a TileServer session which can then be used
-to load and change slides dynamically.
+Slides and overlays can be provided using a base directory containing
+`slides` and `overlays` subdirectories:
 
-Slides and overlays can be loaded directly from the Files panel in the top-left
-corner of the viewer.
+```text
+/path/to/data
+├── slides/
+└── overlays/
+```
 
-Use **Load Slide** to open the native file picker and select a whole slide image.
-A different slide can be selected at any time without restarting the viewer.
+Launch the viewer using:
 
-Once a slide is loaded, use **Load Overlay** to select an image or annotation
-overlay. Multiple overlays can be loaded and managed using the Layers panel.
+```bash
+tiatoolbox visualize-beta --base-path /path/to/data
+```
 
-The slide and overlay file pickers remember their most recently used directories
-separately for the current TileServer session. For example, selecting a slide
-from a slides directory does not change the directory used when opening the
-overlay file picker.
+The slide and overlay directories can also be provided separately:
+
+```bash
+tiatoolbox visualize-beta \
+    --slides /path/to/slides \
+    --overlays /path/to/overlays
+```
+
+When directories are provided, the files they contain are made available in
+the Files panel in the top-left corner of the viewer.
+
+Select a slide from the slide dropdown to load it. A different slide can be
+selected at any time without restarting the viewer.
+
+Once a slide is loaded, overlays can be selected from the overlay dropdown.
+Multiple overlays can be loaded and managed using the Layers panel.
 
 Use **Clear Overlays** to remove all overlays while keeping the current slide
 loaded. Use **Clear Slide** to remove the slide and its overlays and return the
 viewer to its empty state.
 
-The native file picker currently supports local Windows and WSL environments.
+The viewer can also be launched without predefined directories:
 
-The experimental viewer also stores the current slide, position and zoom level
-in the URL. A saved viewer URL can therefore be reopened to restore the slide
-and view state.
+```bash
+tiatoolbox visualize-beta
+```
+
+In this case, the viewer starts empty without configured slide or overlay
+directories.
+
+A different port can be specified using `--port`:
+
+```bash
+tiatoolbox visualize-beta \
+    --base-path /path/to/data \
+    --port 5001
+```
+
+The experimental viewer stores the current slide, position and zoom level in
+the URL. A saved viewer URL can therefore be reopened to restore the slide and
+view state.
 
 These features are currently part of the experimental `visualize-beta`
-workflow and do not change the behaviour of `show-wsi`.
+command and do not change the behaviour of `show-wsi`.
 
 ## For Developers
 
@@ -211,7 +240,7 @@ The experimental viewer also uses:
 
 - `tiatoolbox/cli/visualize_beta.py` to provide the `visualize-beta` command.
 - Dynamic TileServer routes in `tiatoolbox/visualization/tileserver.py` for
-  selecting, loading and removing slides and overlays while the viewer is
+  listing, loading and removing slides and overlays while the viewer is
   running.
 
 ## Building the frontend
@@ -294,7 +323,7 @@ tiatoolbox show-wsi --img-input /path/to/slide.svs
 Test the experimental viewer with:
 
 ```bash
-tiatoolbox visualize-beta
+tiatoolbox visualize-beta --base-path /path/to/data
 ```
 
 If the OpenLayers or ol-ext version needs to be changed, update it with npm
