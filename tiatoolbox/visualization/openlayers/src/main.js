@@ -232,6 +232,45 @@ function populateFileSelect(
   select.disabled = files.length === 0;
 }
 
+function getMatchingOverlays(slidePath) {
+  const slideStem = getFileStem(slidePath);
+
+  return configuredOverlays.files.filter(
+    (file) => file.name.includes(slideStem),
+  );
+}
+
+function updateOverlaySelect() {
+  if (configuredOverlays.directory === null) {
+    populateFileSelect(
+      overlaySelect,
+      [],
+      "No overlay directory configured",
+    );
+    return;
+  }
+
+  if (currentSlidePath === null) {
+    populateFileSelect(
+      overlaySelect,
+      [],
+      "Select slide first",
+    );
+    return;
+  }
+
+  const matchingOverlays =
+    getMatchingOverlays(currentSlidePath);
+
+  populateFileSelect(
+    overlaySelect,
+    matchingOverlays,
+    matchingOverlays.length === 0
+      ? "No matching overlays"
+      : "Load overlay",
+  );
+}
+
 const configuredSlides =
   await getConfiguredFiles("slide");
 
@@ -246,13 +285,7 @@ populateFileSelect(
     : "Select slide",
 );
 
-populateFileSelect(
-  overlaySelect,
-  configuredOverlays.files,
-  configuredOverlays.directory === null
-    ? "No overlay directory configured"
-    : "Load overlay",
-);
+updateOverlaySelect();
 
 function updateSlideSelect(filePath) {
   const temporaryOption = slideSelect.querySelector(
@@ -291,6 +324,9 @@ function updateFileActionState() {
   const hasSlide = currentSlideInfo !== null;
   const hasOverlays =
     Object.keys(overlayLayers).length > 0;
+  const hasMatchingOverlays =
+    currentSlidePath !== null &&
+    getMatchingOverlays(currentSlidePath).length > 0;
 
   clearSlideButton.disabled = !hasSlide;
   clearOverlaysButton.disabled =
@@ -300,8 +336,7 @@ function updateFileActionState() {
     configuredSlides.files.length === 0;
 
   overlaySelect.disabled =
-    !hasSlide ||
-    configuredOverlays.files.length === 0;
+    !hasSlide || !hasMatchingOverlays;
 }
 
 function setFileActionsBusy(busy) {
@@ -363,15 +398,15 @@ clearSlideButton.addEventListener("click", async () => {
   try {
     await removeSlide();
 
+    const temporaryOption = slideSelect.querySelector(
+      'option[data-current-slide="true"]',
+    );
 
-  const temporaryOption = slideSelect.querySelector(
-    'option[data-current-slide="true"]',
-  );
-
-  temporaryOption?.remove();
+    temporaryOption?.remove();
 
     slideSelect.value = "";
     overlaySelect.value = "";
+    updateOverlaySelect();
   } catch (error) {
     console.error(error);
   } finally {
@@ -419,6 +454,8 @@ if (slidePath !== null) {
 
   currentSlideInfo = slideInfo;
   updateSlideSelect(slidePath);
+  updateOverlaySelect();
+
   layersData = [
     {
       name: "slide",
@@ -1087,6 +1124,7 @@ async function switchSlide(slidePath) {
   currentSlideInfo = slideInfo;
   currentSlidePath = slidePath;
   updateSlideSelect(slidePath);
+  updateOverlaySelect();
   updateFileActionState();
 
   slideVersion += 1;
