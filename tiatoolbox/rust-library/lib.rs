@@ -63,7 +63,7 @@ pub fn semantic_segmentations_as_qupath_json(
     let chain_approx_none = cv2.getattr("CHAIN_APPROX_NONE")?;
     let find_contours = cv2.getattr("findContours")?;
     for type_class in layer_list.iter() {
-        let class_id: i64 = type_class.extract()?;
+        let class_id: f64 = type_class.extract()?;
         let class_label = class_dict.get_item(class_id)?;
         let layer = preds
             .rich_compare(class_id, CompareOp::Eq)?
@@ -171,7 +171,7 @@ fn patch_predictions_as_annotations<'py>(
                 props.set_item(
                     format!("prob_{}", probability),
                     class_probs[[i, *j as usize]],
-                )?;
+                );
             }
         }
         if keys_contains_labels {
@@ -263,7 +263,7 @@ fn patch_predictions_as_qupath_json<'py>(
                 (xmax, ymin),
                 (xmin, ymin),
             ),),
-        )?;
+        );
         let feature = PyDict::new(py);
         feature.set_item("type", "Feature")?;
         feature.set_item("id", format!("patch_{}", i))?;

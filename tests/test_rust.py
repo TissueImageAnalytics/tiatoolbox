@@ -1,5 +1,11 @@
 """Test for rust functionality."""
 
+import json
+import tempfile
+from pathlib import Path
+
+import cv2
+import dask.array as da
 import numpy as np
 
 from tiatoolbox import rmisc, utils
@@ -149,7 +155,7 @@ def test_patch_predictions_as_qupath_json() -> None:
 
 
 class DummyPolygon:
-    """Minimal polygon stub used to test annotation generation."""
+    """Minimal polygon class used to test the method from bounds."""
 
     @classmethod
     def from_bounds(
@@ -164,7 +170,7 @@ class DummyPolygon:
 
 
 class DummyAnnotation:
-    """Minimal annotation stub storing polygon geometry and properties."""
+    """Minimal annotation class storing polygon geometry and properties."""
 
     def __init__(
         self,
@@ -320,3 +326,90 @@ def test_patch_predictions_as_annotations() -> None:
 
     assert annotations[1].polygon == (50.0, 60.0, 70.0, 80.0)
     assert annotations[1].properties == {}
+
+
+def test_json_dump_python_object() -> None:
+    """Tests whether json_dump_python_object works."""
+    obj = {
+        "name": "Alice",
+        "age": 30,
+        "active": True,
+        "numbers": [1, 2, 3],
+    }
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
+        path = Path(tmp.name)
+
+    try:
+        rmisc.json_dump_python_object(str(path), obj)
+
+        with path.open() as f:
+            result = json.load(f)
+
+        assert result == obj
+
+    finally:
+        path.unlink()
+
+
+def poly_geo_func(_coords: list) -> list:
+    """Dummy function for testing semantic_segmentations_as_qupath_json."""
+    return []
+
+
+def test_semantic_segmentations_as_qupath_json() -> None:
+    """Test semantic_segmentations_as_qupath_json.
+
+    Ensure the Rust implementation returns the expected result.
+    """
+    class_colours = {
+        0.0: [255, 0, 0],
+        1.0: [0, 255, 0],
+    }
+
+    class_dict = {
+        0.0: "Tumour",
+        1.0: "Normal",
+    }
+
+    preds = da.from_array(
+        np.array(
+            [
+                [0, 0, 0, 1, 1],
+                [0, 0, 0, 1, 1],
+                [0, 0, 0, 1, 1],
+                [1, 1, 1, 1, 1],
+            ]
+        )
+    )
+
+    scale_factor = (0.5, 0.5)
+
+    layer_list = [0.0, 1.0]
+
+    result = rmisc.semantic_segmentations_as_qupath_json(
+        layer_list, preds, scale_factor, class_dict, class_colours, cv2, poly_geo_func
+    )
+
+    expected = [
+        {
+            "type": "Feature",
+            "geometry": [],
+            "id": "class_0_0",
+            "properties": {"classification": {"name": "Tumour", "color": [255, 0, 0]}},
+            "objectType": "annotation",
+            "name": "Tumour",
+            "class_value": 0.0,
+        },
+        {
+            "type": "Feature",
+            "geometry": [],
+            "id": "class_1_1",
+            "properties": {"classification": {"name": "Normal", "color": [0, 255, 0]}},
+            "objectType": "annotation",
+            "name": "Normal",
+            "class_value": 1.0,
+        },
+    ]
+
+    assert result == expected
