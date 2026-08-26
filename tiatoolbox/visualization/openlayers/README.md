@@ -81,11 +81,7 @@ This viewer uses the legacy OpenLayers frontend files and keeps the existing
 
 ## Running the experimental dynamic viewer
 
-The experimental OpenLayers viewer is launched using:
-
-```bash
-tiatoolbox visualize-beta
-```
+The experimental OpenLayers viewer is launched using `visualize-beta`.
 
 Slides and overlays can be provided using a base directory containing
 `slides` and `overlays` subdirectories:

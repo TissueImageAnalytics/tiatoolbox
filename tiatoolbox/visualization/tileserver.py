@@ -58,6 +58,10 @@ class TileServer(Flask):
         legacy (bool):
             Whether to use the legacy OpenLayers viewer behaviour (show-wsi)
             or to use the experimental viewer (visualize-beta). Defaults to True.
+        slide_directory (str or Path or None):
+            Directory containing slides available to the experimental viewer.
+        overlay_directory (str or Path or None):
+            Directory containing overlays available to the experimental viewer.
 
     Examples:
         >>> from tiatoolbox.wsicore.wsireader import WSIReader
@@ -497,7 +501,17 @@ class TileServer(Flask):
         self: TileServer,
         kind: str,
     ) -> Response:
-        """Return files from a configured slide or overlay directory."""
+        """Return files from a configured slide or overlay directory.
+
+        Args:
+            kind (str):
+                The configured file type. Must be "slide" or "overlay".
+
+        Returns:
+            flask.Response:
+                A JSON response containing the configured directory and files.
+
+        """
         if kind == "slide":
             directory = self.slide_directory
         elif kind == "overlay":
