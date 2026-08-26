@@ -304,3 +304,5 @@ python_version = "3.12"
 python-source = "."
 include = ["tiatoolbox/**/*"]
 module-name = "tiatoolbox.rmisc"
+#Delete the following line when releasing, only to be used to run codecov
+editable-profile = "dev"
