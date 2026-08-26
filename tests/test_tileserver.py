@@ -341,6 +341,116 @@ def test_visualize_beta_index() -> None:
         assert client.get_cookie("session_id") is None
 
 
+def test_configured_files(tmp_path: Path) -> None:
+    """Test files returned from configured directories."""
+    slides = tmp_path / "slides"
+    overlays = tmp_path / "overlays"
+    slides.mkdir()
+    overlays.mkdir()
+
+    slide = slides / "slide.svs"
+    overlay = overlays / "overlay.png"
+    slide.touch()
+    overlay.touch()
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slides,
+        overlay_directory=overlays,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/files/slide")
+
+        assert response.status_code == 200
+        assert response.get_json() == {
+            "directory": str(slides.resolve()),
+            "files": [
+                {
+                    "name": "slide.svs",
+                    "path": str(slide.resolve()),
+                },
+            ],
+        }
+
+        response = client.get("/tileserver/files/overlay")
+
+        assert response.status_code == 200
+        assert response.get_json() == {
+            "directory": str(overlays.resolve()),
+            "files": [
+                {
+                    "name": "overlay.png",
+                    "path": str(overlay.resolve()),
+                },
+            ],
+        }
+
+
+def test_configured_files_not_set() -> None:
+    """Test requesting files when no directory is configured."""
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/files/slide")
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "directory": None,
+        "files": [],
+    }
+
+
+def test_configured_files_invalid_kind() -> None:
+    """Test requesting an invalid configured file type."""
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/files/invalid")
+
+    assert response.status_code == 400
+    assert response.get_data(as_text=True) == ("Invalid configured file type.")
+
+
+def test_configured_files_unavailable_directory(
+    tmp_path: Path,
+) -> None:
+    """Test requesting a configured directory which becomes unavailable."""
+    slides = tmp_path / "slides"
+    slides.mkdir()
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slides,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    slides.rmdir()
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/files/slide")
+
+    assert response.status_code == 404
+    assert response.get_data(as_text=True) == (
+        "Configured file directory is unavailable."
+    )
+
+
 def test_remove_slide_missing_session(empty_app: TileServer) -> None:
     """Test removing a slide without an active session."""
     with empty_app.test_client() as client:
