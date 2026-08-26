@@ -17,10 +17,6 @@ enum StringOrFloat {
     String(String),
     Float(f64),
 }
-#[pyfunction]
-pub fn add(a: i32, b: i32) -> i32 {
-    a + b
-}
 
 #[pyfunction]
 pub fn string_to_tuple(in_str: String) -> Vec<String> {
@@ -38,7 +34,7 @@ pub fn string_to_tuple(in_str: String) -> Vec<String> {
 }
 
 #[pyfunction]
-pub fn semantic_segmentations_as_qupath_json(
+fn semantic_segmentations_as_qupath_json(
     py: Python<'_>,
     layer_list: &Bound<'_, PyList>,
     preds: &Bound<'_, PyAny>,
@@ -122,10 +118,6 @@ fn json_dump_python_object(save_path: String, obj: &Bound<'_, PyAny>) -> PyResul
     serde_json::to_writer_pretty(&mut writer, &value)
         .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
 
-    /*
-    serde_json::to_writer(&mut writer, &value)
-        .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
-    */
     Ok(())
 }
 
@@ -341,7 +333,7 @@ fn rust_contrast_enhancer(img: Array3<u8>, low_p: u8, high_p: u8) -> Array3<u8> 
 }
 
 #[pyfunction]
-pub fn contrast_enhancer<'py>(
+fn contrast_enhancer<'py>(
     py: Python<'py>,
     img: PyReadonlyArray3<'py, u8>,
     low_p: u8,
@@ -353,7 +345,6 @@ pub fn contrast_enhancer<'py>(
 
 #[pymodule]
 fn rmisc(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(add, m)?)?;
     m.add_function(wrap_pyfunction!(contrast_enhancer, m)?)?;
     m.add_function(wrap_pyfunction!(patch_predictions_as_qupath_json, m)?)?;
     m.add_function(wrap_pyfunction!(patch_predictions_as_annotations, m)?)?;

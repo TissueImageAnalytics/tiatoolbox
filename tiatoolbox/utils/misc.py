@@ -427,12 +427,10 @@ def contrast_enhancer(img: np.ndarray, low_p: int = 2, high_p: int = 98) -> np.n
 
     """
     # check if image is not uint8
-    # check if image is not uint8
-    dimension_for_rust = 3
-
     if img.dtype != np.uint8:
         msg = "Image should be uint8."
         raise AssertionError(msg)
+    dimension_for_rust = 3
     if img.ndim == dimension_for_rust:
         return rmisc.contrast_enhancer(img, low_p, high_p)
     img_out = img.copy()
