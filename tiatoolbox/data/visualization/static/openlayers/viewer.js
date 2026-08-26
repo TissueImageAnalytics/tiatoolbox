@@ -15412,7 +15412,7 @@ Rh.addEventListener("change", async () => {
 }), Hh.addEventListener("click", async () => {
 	Yh(!0);
 	try {
-		await Bg(), Rh.value = "", zh.value = "";
+		await Bg(), Rh.querySelector("option[data-current-slide=\"true\"]")?.remove(), Rh.value = "", zh.value = "";
 	} catch (e) {
 		console.error(e);
 	} finally {
