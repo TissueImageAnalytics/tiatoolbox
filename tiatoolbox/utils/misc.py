@@ -1229,8 +1229,6 @@ def patch_predictions_as_annotations(
     patch_coords: list | np.ndarray,
     classes_predicted: list,
     labels: list,
-    *,
-    _verbose: bool = True,
 ) -> list:
     """Helper function to generate annotation per patch predictions."""
     if len(class_probs) == 0:
@@ -1240,7 +1238,7 @@ def patch_predictions_as_annotations(
     return rmisc.patch_predictions_as_annotations(
         Annotation,
         Polygon,
-        preds,
+        np.array(preds).astype("float"),
         "labels" in keys,
         "probabilities" in keys,
         class_dict,
@@ -1255,8 +1253,6 @@ def patch_predictions_as_qupath_json(
     preds: list | np.ndarray,
     class_dict: dict,
     patch_coords: list | np.ndarray,
-    *,
-    _verbose: bool = True,
 ) -> dict:
     """Helper function to generate QuPath JSON per patch predictions."""
     num_classes = len(class_dict)
@@ -1271,7 +1267,10 @@ def patch_predictions_as_qupath_json(
     }
 
     features = rmisc.patch_predictions_as_qupath_json(
-        class_colours, preds, class_dict, np.array(patch_coords).astype("float")
+        class_colours,
+        np.array(preds).astype("float"),
+        class_dict,
+        np.array(patch_coords).astype("float"),
     )
     return {"type": "FeatureCollection", "features": features}
 
@@ -1458,7 +1457,6 @@ def dict_to_store_semantic_segmentor(
             scale_factor=scale_factor,
             class_dict=class_dict,
             save_path=save_path,
-            verbose=verbose,
         )
 
     return _semantic_segmentations_as_annotations(
@@ -1492,8 +1490,6 @@ def _semantic_segmentations_as_qupath_json(
     scale_factor: tuple[float, float],
     class_dict: dict,
     save_path: Path | None = None,
-    *,
-    _verbose: bool = True,
 ) -> dict | Path:
     """Helper function to save semantic segmentation as QuPath json."""
     num_classes = len(class_dict)
@@ -1634,6 +1630,7 @@ def dict_to_store_patch_predictions(
             for each patch.
 
     """
+    _ = verbose
     if "coordinates" not in patch_output:
         # we cant create annotations without coordinates
         msg = "Patch output must contain coordinates."
@@ -1678,10 +1675,7 @@ def dict_to_store_patch_predictions(
 
     if output_type.lower() == "qupath":
         qupath_json = patch_predictions_as_qupath_json(
-            preds=preds,
-            class_dict=class_dict,
-            patch_coords=patch_coords,
-            verbose=verbose,
+            preds=preds, class_dict=class_dict, patch_coords=patch_coords
         )
 
         if save_path:
@@ -1698,7 +1692,6 @@ def dict_to_store_patch_predictions(
         patch_coords.astype(float),
         classes_predicted,
         cast("list", labels),
-        verbose=verbose,
     )
 
     store = SQLiteStore()
