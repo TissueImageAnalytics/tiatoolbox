@@ -363,6 +363,13 @@ clearSlideButton.addEventListener("click", async () => {
   try {
     await removeSlide();
 
+
+  const temporaryOption = slideSelect.querySelector(
+    'option[data-current-slide="true"]',
+  );
+
+  temporaryOption?.remove();
+
     slideSelect.value = "";
     overlaySelect.value = "";
   } catch (error) {
