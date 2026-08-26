@@ -94,10 +94,7 @@ pub fn semantic_segmentations_as_qupath_json(
                 feature.set_item("id", format!("class_{}_{}", class_id, features.len()))?;
                 let classification = PyDict::new(py);
                 classification.set_item("name", &class_label)?;
-                classification.set_item(
-                    "color",
-                    class_colours[&OrderedFloat(class_id)].clone(),
-                )?;
+                classification.set_item("color", class_colours[&OrderedFloat(class_id)].clone())?;
                 let properties = PyDict::new(py);
                 properties.set_item("classification", classification)?;
                 feature.set_item("properties", properties)?;
