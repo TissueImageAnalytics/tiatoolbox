@@ -304,4 +304,3 @@ python_version = "3.12"
 python-source = "."
 include = ["tiatoolbox/**/*"]
 module-name = "tiatoolbox.rmisc"
-editable-profile = "dev"
