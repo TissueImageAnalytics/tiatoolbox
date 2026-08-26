@@ -17,7 +17,13 @@ from tiatoolbox.cli.common import tiatoolbox_cli
         file_okay=False,
         path_type=Path,
     ),
-    help=("Base directory containing 'slides' and 'overlays' subdirectories."),
+    help=(
+        """Path to base directory containing images to be displayed.
+    Slides and overlays to be visualized are expected in subdirectories of the
+    base directory named slides and overlays, respectively. It is also possible
+    to provide a slide and overlay path separately
+    (use --slides and --overlays)."""
+    ),
 )
 @click.option(
     "--slides",
@@ -26,7 +32,9 @@ from tiatoolbox.cli.common import tiatoolbox_cli
         file_okay=False,
         path_type=Path,
     ),
-    help="Directory containing slides.",
+    help="""Path to directory containing slides to be displayed.
+    This option must be used in conjunction with --overlays.
+    The --base-path option should not be used in this case.""",
 )
 @click.option(
     "--overlays",
@@ -35,7 +43,9 @@ from tiatoolbox.cli.common import tiatoolbox_cli
         file_okay=False,
         path_type=Path,
     ),
-    help="Directory containing overlays.",
+    help="""Path to directory containing overlays to be displayed.
+This option must be used in conjunction with --slides.
+The --base-path option should not be used in this case.""",
 )
 @click.option(
     "--port",
@@ -49,7 +59,18 @@ def visualize_beta(
     overlays: Path | None,
     port: int,
 ) -> None:  # pragma: no cover
-    """Launch the experimental TIAToolbox visualization tool."""
+    """Launch the experimental TIAToolbox visualization tool for given directory(s).
+
+    If only base-path is given, Slides and overlays to be visualized are expected in
+    subdirectories of the base directory named slides and overlays, respectively.
+
+    Args:
+        base_path (str): Path to base directory containing images to be displayed.
+        slides (str): Path to directory containing slides to be displayed.
+        overlays (str): Path to directory containing overlays to be displayed.
+        port (int): Port to launch the visualization tool on.
+
+    """
     from tiatoolbox.visualization.tileserver import TileServer  # noqa: PLC0415
 
     if base_path is not None and (slides is not None or overlays is not None):
