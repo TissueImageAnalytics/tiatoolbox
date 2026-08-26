@@ -1229,8 +1229,11 @@ def patch_predictions_as_annotations(
     patch_coords: list | np.ndarray,
     classes_predicted: list,
     labels: list,
+    *,
+    verbose: bool = True,
 ) -> list:
     """Helper function to generate annotation per patch predictions."""
+    _ = verbose
     if len(class_probs) == 0:
         class_probs = np.empty((0, 2))
     if len(patch_coords) == 0:
@@ -1253,8 +1256,11 @@ def patch_predictions_as_qupath_json(
     preds: list | np.ndarray,
     class_dict: dict,
     patch_coords: list | np.ndarray,
+    *,
+    verbose: bool = True,
 ) -> dict:
     """Helper function to generate QuPath JSON per patch predictions."""
+    _ = verbose
     num_classes = len(class_dict)
     cmap = plt.colormaps["tab20"].resampled(num_classes)
     class_colours = {
@@ -1457,6 +1463,7 @@ def dict_to_store_semantic_segmentor(
             scale_factor=scale_factor,
             class_dict=class_dict,
             save_path=save_path,
+            verbose=verbose,
         )
 
     return _semantic_segmentations_as_annotations(
@@ -1490,8 +1497,11 @@ def _semantic_segmentations_as_qupath_json(
     scale_factor: tuple[float, float],
     class_dict: dict,
     save_path: Path | None = None,
+    *,
+    verbose: bool = True,
 ) -> dict | Path:
     """Helper function to save semantic segmentation as QuPath json."""
+    _ = verbose
     num_classes = len(class_dict)
     cmap = plt.colormaps["tab20"].resampled(num_classes)
     class_colours = {
@@ -1630,7 +1640,6 @@ def dict_to_store_patch_predictions(
             for each patch.
 
     """
-    _ = verbose
     if "coordinates" not in patch_output:
         # we cant create annotations without coordinates
         msg = "Patch output must contain coordinates."
@@ -1675,7 +1684,10 @@ def dict_to_store_patch_predictions(
 
     if output_type.lower() == "qupath":
         qupath_json = patch_predictions_as_qupath_json(
-            preds=preds, class_dict=class_dict, patch_coords=patch_coords
+            preds=preds,
+            class_dict=class_dict,
+            patch_coords=patch_coords,
+            verbose=verbose,
         )
 
         if save_path:
@@ -1692,6 +1704,7 @@ def dict_to_store_patch_predictions(
         patch_coords.astype(float),
         classes_predicted,
         cast("list", labels),
+        verbose=verbose,
     )
 
     store = SQLiteStore()
