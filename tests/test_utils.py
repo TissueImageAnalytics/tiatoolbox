@@ -2783,3 +2783,36 @@ def test_create_smart_array_with_explicit_chunks(
     assert isinstance(result, zarr.Array)
     assert result.shape == (10, 20)
     assert result.chunks == (5, 10)
+
+
+def test_patch_predictions_as_annotations() -> None:
+    """Used to test patch predictions as annotations.
+
+    Checks branch if len(patch_coords == 0).
+    """
+    preds = [0.0, 1.0]
+
+    class_dict = {
+        0.0: "Tumour",
+        1.0: "Normal",
+    }
+
+    class_probs = np.array(
+        [
+            [0.8, 0.2],
+            [0.1, 0.9],
+        ],
+        dtype=np.float64,
+    )
+
+    annotations = utils.misc.patch_predictions_as_annotations(
+        preds,
+        ["labels, probabilities"],
+        class_dict,
+        class_probs,
+        [],  # patch_coords
+        [0.0, 1.0],  # classes_predicted
+        [1.0, 0.0],  # labels
+    )
+
+    assert len(annotations) == 0
