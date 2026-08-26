@@ -96,7 +96,7 @@ pub fn semantic_segmentations_as_qupath_json(
                 classification.set_item("name", &class_label)?;
                 classification.set_item(
                     "color",
-                    class_colours[&OrderedFloat(class_id as f64)].clone(),
+                    class_colours[&OrderedFloat(class_id)].clone(),
                 )?;
                 let properties = PyDict::new(py);
                 properties.set_item("classification", classification)?;
@@ -168,7 +168,7 @@ fn patch_predictions_as_annotations<'py>(
                     StringOrFloat::String(s) => s.clone(),
                     StringOrFloat::Float(i) => i.to_string(),
                 };
-                props.set_item(
+                let _ = props.set_item(
                     format!("prob_{}", probability),
                     class_probs[[i, *j as usize]],
                 );
@@ -254,7 +254,7 @@ fn patch_predictions_as_qupath_json<'py>(
         let ymax = patch_coords[[i, 3]];
         let polygon_feat = PyDict::new(py);
         polygon_feat.set_item("type", "Polygon")?;
-        polygon_feat.set_item(
+        let _ = polygon_feat.set_item(
             "coordinates",
             ((
                 (xmin, ymin),
