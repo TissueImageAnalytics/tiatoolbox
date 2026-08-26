@@ -876,8 +876,11 @@ def save_as_json(
         raise FileExistsError(msg)
     if parents:
         save_path.parent.mkdir(parents=True, exist_ok=True)
-    with Path.open(save_path, "w") as handle:  # skipcq: PTC-W6004
-        json.dump(shadow_data, handle)
+    try:
+        rmisc.json_dump_python_object(str(save_path), shadow_data)
+    except ValueError:
+        with Path.open(save_path, "w") as handle:  # skipcq: PTC-W6004
+            json.dump(shadow_data, handle)
 
 
 def select_device(*, on_gpu: bool) -> str:
@@ -1597,8 +1600,11 @@ def save_annotations(
 def save_qupath_json(save_path: Path, qupath_json: dict) -> Path:
     """Saves QuPath JSON to disk."""
     save_path = save_path.with_suffix(".json")
-    with Path.open(save_path, "w") as f:
-        json.dump(qupath_json, f, indent=2)
+    try:
+        rmisc.json_dump_python_object(str(save_path), qupath_json)
+    except ValueError:
+        with Path.open(save_path, "w") as f:
+            json.dump(qupath_json, f, indent=2)
     return save_path
 
 
