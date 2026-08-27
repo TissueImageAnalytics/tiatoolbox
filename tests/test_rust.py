@@ -9,8 +9,13 @@ import cv2
 import dask.array as da
 import numpy as np
 
-from tiatoolbox import rmisc, utils
+from tiatoolbox import rmisc, rmultitask, utils
 from tiatoolbox.type_hints import JSON
+
+
+def test_add() -> None:
+    """Temp test to test function add."""
+    assert rmultitask.add(5, 4) == 9
 
 
 def test_contrast_enhancer() -> None:
