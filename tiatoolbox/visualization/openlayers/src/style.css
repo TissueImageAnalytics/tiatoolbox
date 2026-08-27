@@ -494,7 +494,7 @@ body {
     width: 240px;
     max-height: 170px;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow: visible;
 
     background: #111111;
     color: #ffffff;
@@ -535,33 +535,203 @@ body {
 }
 
 
-.viewer-file-selectors select {
+.viewer-file-select {
+    position: relative;
+    min-width: 0;
+}
+
+
+.viewer-file-select-button {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+
     width: 100%;
     min-width: 0;
     max-width: 100%;
     height: 30px;
     box-sizing: border-box;
-    padding: 5px 7px;
+    padding: 5px 24px 5px 7px;
 
     border: 1px solid #444444;
     border-radius: 4px;
 
     background: #222222;
     color: #ffffff;
-    color-scheme: dark;
 
+    font-family: inherit;
+    font-size: 11px;
+    text-align: left;
+
+    cursor: pointer;
+}
+
+
+.viewer-file-select-button::after {
+    position: absolute;
+    top: 10px;
+    right: 9px;
+
+    width: 5px;
+    height: 5px;
+
+    border-right: 1px solid #aaaaaa;
+    border-bottom: 1px solid #aaaaaa;
+
+    content: "";
+    transform: rotate(45deg);
+}
+
+
+.viewer-file-select.open
+.viewer-file-select-button::after {
+    top: 13px;
+    transform: rotate(225deg);
+}
+
+
+.viewer-file-select-button:hover:not(:disabled) {
+    background: #333333;
+}
+
+
+.viewer-file-select-button:focus {
+    border-color: #666666;
+    outline: none;
+}
+
+
+.viewer-file-select-label {
+    min-width: 0;
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+.viewer-file-select.disabled {
+    opacity: 0.4;
+}
+
+
+.viewer-file-select-button:disabled {
+    cursor: default;
+}
+
+
+.viewer-file-select-menu {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    z-index: 20;
+
+    width: 320px;
+    max-width: calc(100vw - 70px);
+
+    box-sizing: border-box;
+    padding: 5px;
+
+    border: 1px solid #444444;
+    border-radius: 4px;
+
+    background: #222222;
+
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+}
+
+
+.viewer-file-select-search {
+    width: 100%;
+    min-width: 0;
+    height: 28px;
+    box-sizing: border-box;
+    padding: 5px 7px;
+
+    border: 1px solid #444444;
+    border-radius: 3px;
+
+    background: #111111;
+    color: #ffffff;
+
+    font-family: inherit;
     font-size: 11px;
 }
 
 
-.viewer-file-selectors select option {
-    background: #222222;
-    color: #ffffff;
+.viewer-file-select-search::placeholder {
+    color: #888888;
+    opacity: 1;
 }
 
 
-.viewer-file-selectors select:disabled {
-    opacity: 0.4;
+.viewer-file-select-search:focus {
+    border-color: #666666;
+    outline: none;
+}
+
+
+.viewer-file-select-options {
+    max-height: 220px;
+    margin-top: 4px;
+    overflow-y: auto;
+}
+
+
+.viewer-file-select-option {
+    display: block;
+
+    width: 100%;
+    min-width: 0;
+    padding: 6px 7px;
+
+    overflow: hidden;
+
+    border: 0;
+    border-radius: 3px;
+
+    background: transparent;
+    color: #ffffff;
+
+    font-family: inherit;
+    font-size: 11px;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    cursor: pointer;
+}
+
+
+.viewer-file-select-option:hover,
+.viewer-file-select-option.active {
+    background: #333333;
+}
+
+
+.viewer-file-select-option.selected {
+    background: #2a2a2a;
+}
+
+
+.viewer-file-select-option.selected:hover,
+.viewer-file-select-option.selected.active {
+    background: #333333;
+}
+
+
+.viewer-file-select-option:focus {
+    outline: none;
+}
+
+
+.viewer-file-select-empty {
+    padding: 6px 7px;
+
+    color: #888888;
+
+    font-size: 11px;
 }
 
 
