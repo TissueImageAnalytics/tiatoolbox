@@ -7,13 +7,14 @@ fn add(a: i32, b: i32) -> i32 {
 }
 
 #[pyfunction]
-fn build_single_qupath_feature(py: Python<'_>,
+fn build_single_qupath_feature(
+    py: Python<'_>,
     np: &Bound<'_, PyAny>,
     geo_map: &Bound<'_, PyAny>,
     processed_predictions: &Bound<'_, PyDict>,
     i: i32,
     class_dict: &Bound<'_, PyDict>,
-    class_colours: &Bound<'_, PyDict>
+    class_colours: &Bound<'_, PyDict>,
 ) -> PyResult<Py<PyDict>> {
     let props = PyDict::new(py);
     let mut class_value: Option<i32> = None;
@@ -45,9 +46,10 @@ fn build_single_qupath_feature(py: Python<'_>,
                 class_value = value.extract::<Option<i32>>()?;
             }
         } else if !value.is_none() {
-            props.set_item(key,
-            np.call_method1("array", (value,))?
-            .call_method0("tolist")?)?;
+            props.set_item(
+                key,
+                np.call_method1("array", (value,))?.call_method0("tolist")?,
+            )?;
         }
     }
     if !class_name.is_none() && class_colours.contains(&class_value)? {
