@@ -22,12 +22,14 @@ body {
 .viewer-app:fullscreen {
     width: 100%;
     height: 100%;
+    background: #ffffff;
 }
 
 
 .viewer-app:-webkit-full-screen {
     width: 100%;
     height: 100%;
+    background: #ffffff;
 }
 
 
@@ -420,7 +422,6 @@ body {
 /* Viewer tools */
 
 .ol-rotate,
-.ol-full-screen,
 .ol-graticule,
 .ol-screen-space-graticule {
     left: 8px;
@@ -428,25 +429,27 @@ body {
     border-radius: 0;
 }
 
-
 .ol-rotate {
-    top: 50px;
+    top: 66px;
     border-radius: 4px 4px 0 0;
 }
 
 
 .ol-full-screen {
-    top: 82px;
+    top: auto;
+    bottom: 8px;
+    left: calc(50% + 64px);
+    right: auto;
+    border-radius: 4px;
 }
 
 
 .ol-graticule {
-    top: 114px;
+    top: 98px;
 }
 
-
 .ol-screen-space-graticule {
-    top: 146px;
+    top: 130px;
     border-radius: 0 0 4px 4px;
 }
 
@@ -467,10 +470,6 @@ body {
 }
 
 
-.ol-full-screen button,
-.ol-full-screen button:hover,
-.ol-full-screen button:active,
-.ol-full-screen button:focus,
 .ol-graticule button,
 .ol-graticule button:hover,
 .ol-graticule button:active,
@@ -484,6 +483,25 @@ body {
 .ol-screen-space-graticule button:active,
 .ol-screen-space-graticule button:focus {
     border-radius: 0 0 4px 4px;
+}
+
+
+.ol-full-screen button,
+.ol-full-screen button:hover,
+.ol-full-screen button:active,
+.ol-full-screen button:focus {
+    border-radius: 4px;
+}
+
+
+.ol-full-screen button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+    font-size: 16px;
+    line-height: 1;
 }
 
 
