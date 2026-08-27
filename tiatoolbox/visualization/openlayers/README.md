@@ -109,11 +109,13 @@ tiatoolbox visualize-beta \
 When directories are provided, the files they contain are made available in
 the Files panel in the top-left corner of the viewer.
 
-Select a slide from the slide dropdown to load it. A different slide can be
-selected at any time without restarting the viewer.
+Select a slide from the slide dropdown to load it. The available files can be
+searched by name, and a different slide can be selected at any time without
+restarting the viewer.
 
-Once a slide is loaded, overlays can be selected from the overlay dropdown.
-Multiple overlays can be loaded and managed using the Layers panel.
+Once a slide is loaded, related overlays are made available in the overlay
+dropdown. The available overlays can also be searched by name. Multiple
+overlays can be loaded and managed using the Layers panel.
 
 Use **Clear Overlays** to remove all overlays while keeping the current slide
 loaded. Use **Clear Slide** to remove the slide and its overlays and return the
