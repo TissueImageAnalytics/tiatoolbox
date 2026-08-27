@@ -391,6 +391,30 @@ def poly_geo_func(_coords: list) -> list:
     return []
 
 
+class DummyCV2:
+    """Dummy cv2 module returning a contour with fewer than 3 points."""
+
+    RETR_CCOMP = 0
+    CHAIN_APPROX_NONE = 1
+
+    @staticmethod
+    @typing.override
+    def findContours(
+        _layer: np.ndarray,
+        _mode: int,
+        _method: int,
+    ) -> tuple[list[np.ndarray], None]:
+        """Dummy cv2 findContours eturning a contour with fewer than 3 points."""
+        contour = np.array(
+            [
+                [[0, 0]],
+                [[1, 1]],
+            ],
+            dtype=np.int32,
+        )
+        return [contour], None
+
+
 def test_semantic_segmentations_as_qupath_json() -> None:
     """Test semantic_segmentations_as_qupath_json.
 
@@ -447,6 +471,18 @@ def test_semantic_segmentations_as_qupath_json() -> None:
     ]
 
     assert result == expected
+
+    result = rmisc.semantic_segmentations_as_qupath_json(
+        layer_list,
+        preds,
+        scale_factor,
+        class_dict,
+        class_colours,
+        DummyCV2,
+        poly_geo_func,
+    )
+
+    assert result == []
 
 
 def dummy_process_contours(
@@ -526,5 +562,33 @@ def test_semantic_segmentations_as_annotations() -> None:
     assert result[1].polygon == (0.0, 0.0, 4.0, 3.0)
     assert result[1].properties == {
         "type": "Normal",
+        "class": 1.0,
+    }
+
+    class_dict = {0.0: "Tumour"}
+
+    result = rmisc.semantic_segmentations_as_annotations(
+        layer_list,
+        preds,
+        scale_factor,
+        class_dict,
+        None,
+        cv2,
+        dummy_process_contours,
+    )
+
+    assert len(result) == 2
+
+    assert isinstance(result[0], DummyAnnotation)
+    assert result[0].polygon == (0.0, 0.0, 2.0, 2.0)
+    assert result[0].properties == {
+        "type": "Tumour",
+        "class": 0.0,
+    }
+
+    assert isinstance(result[1], DummyAnnotation)
+    assert result[1].polygon == (0.0, 0.0, 4.0, 3.0)
+    assert result[1].properties == {
+        "type": 1.0,
         "class": 1.0,
     }
