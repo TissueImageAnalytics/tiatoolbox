@@ -524,9 +524,12 @@ function populateFileSelect(
 function getMatchingOverlays(slidePath) {
   const slideStem = getFileStem(slidePath);
 
-  return configuredOverlays.files.filter(
-    (file) => file.name.includes(slideStem),
-  );
+  return configuredOverlays.files.filter((file) => {
+    const fileName =
+      file.name.split(/[\\/]/).pop() ?? file.name;
+
+    return fileName.includes(slideStem);
+  });
 }
 
 function updateOverlaySelect() {

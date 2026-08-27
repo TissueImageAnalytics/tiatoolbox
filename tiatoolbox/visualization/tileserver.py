@@ -628,14 +628,14 @@ class TileServer(Flask):
 
         files = [
             {
-                "name": path.name,
+                "name": path.relative_to(directory).as_posix(),
                 "path": self._get_public_file_path(path, kind),
             }
             for path in sorted(
-                directory.iterdir(),
-                key=lambda path: path.name.casefold(),
+                directory.rglob("*"),
+                key=lambda path: path.relative_to(directory).as_posix().casefold(),
             )
-            if path.is_file()
+            if path.is_file() and path.resolve().is_relative_to(directory)
         ]
 
         public_directory = (

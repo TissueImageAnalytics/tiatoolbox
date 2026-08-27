@@ -15460,7 +15460,7 @@ function Gh(e, t, n) {
 }
 function Kh(e) {
 	let t = $h(e);
-	return Yh.files.filter((e) => e.name.includes(t));
+	return Yh.files.filter((e) => (e.name.split(/[\\/]/).pop() ?? e.name).includes(t));
 }
 function qh() {
 	if (Yh.directory === null) {
