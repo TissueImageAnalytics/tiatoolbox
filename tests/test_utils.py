@@ -8,6 +8,7 @@ import platform
 import re
 import shutil
 import sys
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 from unittest.mock import patch
@@ -2816,3 +2817,27 @@ def test_patch_predictions_as_annotations() -> None:
     )
 
     assert len(annotations) == 0
+
+
+def test_save_qupath_json() -> None:
+    """Tests whether save_qupath_json works."""
+    obj = {
+        2: "no_years",
+        "name": "Alice",
+        "age": 30,
+        "active": True,
+        "numbers": [1, 2, 3],
+    }
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
+        path = Path(tmp.name)
+
+    try:
+        utils.misc.save_qupath_json(path, obj)
+        with path.open() as f:
+            result = json.load(f)
+        obj["2"] = obj.pop(2)
+        assert result == obj
+
+    finally:
+        path.unlink()
