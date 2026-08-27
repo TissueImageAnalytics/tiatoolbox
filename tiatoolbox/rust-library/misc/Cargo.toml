@@ -14,3 +14,7 @@ ordered-float = "5.3.0"
 pyo3 = { workspace = true, features = ["extension-module"] }
 pythonize = "0.29.0"
 serde_json = "1.0.151"
+
+[[test]]
+name = "misc_tests"
+path = "../../../tests/test_misc.rs"
