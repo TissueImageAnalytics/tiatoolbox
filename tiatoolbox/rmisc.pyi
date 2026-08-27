@@ -2,8 +2,9 @@ from collections.abc import Callable
 from types import ModuleType
 from typing import Any
 
+import dask.array as da
 import numpy as np
-from numpy.typing import NDArray, npt
+from numpy.typing import NDArray
 from shapely.geometry import Polygon
 
 from tiatoolbox.annotation.storage import Annotation
@@ -11,7 +12,7 @@ from tiatoolbox.annotation.storage import Annotation
 def string_to_tuple(in_str: str) -> list[str]: ...
 def semantic_segmentations_as_qupath_json(
     layer_list: list[Any],
-    preds: npt.NDArray[np.generic],
+    preds: da.Array,
     scale_factor: tuple[float, float],
     class_dict: dict[Any, Any],
     class_colours: dict[Any, Any],
