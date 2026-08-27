@@ -138,7 +138,7 @@ fn semantic_segmentations_as_annotations(
 
         let hierarchy = result.get_item(1)?;
 
-        let mut properties = PyDict::new(py);
+        let properties = PyDict::new(py);
         properties.set_item("type", class_label)?;
         properties.set_item("class", class_id)?;
 
