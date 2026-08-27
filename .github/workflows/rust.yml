@@ -36,25 +36,11 @@ jobs:
       - name: Run Rust coverage
         shell: bash
         run: |
-          # Configure Rust builds for LLVM coverage
           source <(cargo llvm-cov show-env --sh)
-
-          # Important: clean BEFORE rebuilding the Python extension
           cargo llvm-cov clean --workspace
-
-          # Rebuild the PyO3/Maturin extension WITH coverage instrumentation
           python -m pip install --force-reinstall --no-deps -e .
-
-          # Verify which native extension Python actually loads
-          python -c "import tiatoolbox.rmisc as r; print(r.__file__)"
-
-          # Run Python tests that exercise the Rust extension
           python -m pytest tests/test_rust.py -v
-
-          # Run normal native Rust tests too
           cargo test --all-features
-
-          # Generate one Rust coverage report
           cargo llvm-cov report --lcov --output-path lcov.info
       - name: Upload Rust coverage to Codecov
         uses: codecov/codecov-action@v4

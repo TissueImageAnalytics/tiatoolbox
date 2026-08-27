@@ -36,7 +36,6 @@ dependencies = [
   "opencv-python>=4.6.0",
   "openslide-bin>=4.0.0.2",
   "openslide-python>=1.4.0",
-  "maturin>=1.14.1",
   "pandas>=2.0.0",
   "pillow>=9.3.0",
   "pydicom>=2.3.1",
@@ -311,8 +310,12 @@ include = ["tiatoolbox*"]
 target = "tiatoolbox.rmisc"
 path = "tiatoolbox/rust-library/misc/Cargo.toml"
 binding = "PyO3"
+#Uncomment below for release
+#debug = false
 
 [[tool.setuptools-rust.ext-modules]]
 target = "tiatoolbox.rmultitask"
 path = "tiatoolbox/rust-library/multitask/Cargo.toml"
 binding = "PyO3"
+#Uncomment below for release
+#debug = false
