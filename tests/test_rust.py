@@ -8,6 +8,7 @@ from typing import cast
 import cv2
 import dask.array as da
 import numpy as np
+import pytest
 
 from tiatoolbox import rmisc, rmultitask, utils
 from tiatoolbox.type_hints import JSON
@@ -333,6 +334,32 @@ def test_patch_predictions_as_annotations() -> None:
 
     assert annotations[1].polygon == (50.0, 60.0, 70.0, 80.0)
     assert annotations[1].properties == {}
+    with pytest.raises(TypeError):
+        annotations = rmisc.patch_predictions_as_annotations(
+            None,
+            DummyPolygon,
+            [],
+            keys_contains_labels,
+            keys_contains_probabilities,
+            class_dict,
+            class_probs,
+            patch_coords,
+            [0.0, 1.0],  # classes_predicted
+            [1.0, 0.0],  # labels
+        )
+    with pytest.raises(TypeError):
+        annotations = rmisc.patch_predictions_as_annotations(
+            DummyAnnotation,
+            None,
+            [],
+            keys_contains_labels,
+            keys_contains_probabilities,
+            class_dict,
+            class_probs,
+            patch_coords,
+            [0.0, 1.0],  # classes_predicted
+            [1.0, 0.0],  # labels
+        )
 
 
 def test_json_dump_python_object() -> None:
