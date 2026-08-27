@@ -3,12 +3,14 @@
 import json
 import tempfile
 from pathlib import Path
+from typing import cast
 
 import cv2
 import dask.array as da
 import numpy as np
 
 from tiatoolbox import rmisc, utils
+from tiatoolbox.type_hints import JSON
 
 
 def test_contrast_enhancer() -> None:
@@ -413,3 +415,84 @@ def test_semantic_segmentations_as_qupath_json() -> None:
     ]
 
     assert result == expected
+
+
+def dummy_process_contours(
+    contours: list[np.ndarray],
+    hierarchy: np.ndarray,
+    scale_factor: tuple[float, float] = (1, 1),
+    offset: np.ndarray | None = None,
+    properties: dict[str, JSON] | None = None,
+) -> list[DummyAnnotation]:
+    """Used for test_semantic_segmentations_as_annotations()."""
+    annotations = []
+    _ = offset
+    _ = scale_factor
+    _ = hierarchy
+
+    for contour in contours:
+        points = contour.reshape(-1, 2)
+        annotations.append(
+            DummyAnnotation(
+                polygon=(
+                    points[:, 0].min(),
+                    points[:, 1].min(),
+                    points[:, 0].max(),
+                    points[:, 1].max(),
+                ),
+                properties=cast("dict[str, str | float]", properties.copy()),
+            )
+        )
+
+    return annotations
+
+
+def test_semantic_segmentations_as_annotations() -> None:
+    """Test semantic_segmentations_as_annotations.
+
+    Ensure the Rust implementation returns the expected result.
+    """
+    class_dict = {
+        0.0: "Tumour",
+        1.0: "Normal",
+    }
+
+    preds = da.from_array(
+        np.array(
+            [
+                [0, 0, 0, 1, 1],
+                [0, 0, 0, 1, 1],
+                [0, 0, 0, 1, 1],
+                [1, 1, 1, 1, 1],
+            ]
+        )
+    )
+
+    scale_factor = (0.5, 0.5)
+    layer_list = [0.0, 1.0]
+
+    result = rmisc.semantic_segmentations_as_annotations(
+        layer_list,
+        preds,
+        scale_factor,
+        class_dict,
+        None,
+        cv2,
+        dummy_process_contours,
+    )
+
+    assert len(result) == 2
+
+    assert isinstance(result[0], DummyAnnotation)
+    assert result[0].polygon == (0.0, 0.0, 2.0, 2.0)
+    assert result[0].properties == {
+        "type": "Tumour",
+        "class": 0.0,
+    }
+
+    assert isinstance(result[1], DummyAnnotation)
+    assert result[1].polygon == (0.0, 0.0, 4.0, 3.0)
+    assert result[1].properties == {
+        "type": "Normal",
+        "class": 1.0,
+    }
