@@ -136,7 +136,7 @@ from shapely.geometry import shape as feature2geometry
 from shapely.strtree import STRtree
 from tqdm.auto import tqdm
 
-from tiatoolbox import logger
+from tiatoolbox import logger, rmultitask
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.annotation.storage import Annotation
 from tiatoolbox.tools.patchextraction import PatchExtractor
@@ -3572,53 +3572,9 @@ class DaskDelayedJSONStore:
         )
         geo_map = mapping(geom)
 
-        props = {}
-        class_value = None
-        class_name = None
-
-        for key, arr in self._processed_predictions.items():
-            value = arr[i].tolist() if hasattr(arr[i], "tolist") else arr[i]
-
-            if key == "type":
-                # Handle None class name
-                if value is None:
-                    # Assign default class 0
-                    class_value = 0
-                    class_name = class_dict.get(0, 0)
-                    props["type"] = class_name
-                    continue
-
-                # Safe class lookup
-                if class_dict is not None and value in class_dict:
-                    class_name = class_dict[value]
-                else:
-                    # Already a name or no mapping available
-                    class_name = value
-
-                props["type"] = class_name
-                class_value = value
-            else:
-                if value is None:
-                    continue
-                props[key] = np.array(value).tolist()
-
-        # Classification block
-        if class_name is not None and class_value in class_colors:
-            color = class_colors[class_value]
-            props["classification"] = {
-                "name": class_name,
-                "color": color,
-            }
-            props["class_value"] = class_value
-
-        return {
-            "type": "Feature",
-            "id": f"object_{i}",
-            "geometry": geo_map,
-            "properties": props,
-            "objectType": "annotation",
-            "name": class_name if class_name is not None else "object",
-        }
+        return rmultitask.build_single_qupath_feature(
+            np, geo_map, self._processed_predictions, i, class_dict, class_colors
+        )
 
     def compute_annotations(
         self: DaskDelayedJSONStore,
