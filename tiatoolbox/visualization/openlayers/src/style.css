@@ -176,25 +176,49 @@ body {
 .ol-zoom-level {
     order: 2;
 
-    width: 40px;
-    height: 32px;
+    width: 42px;
+    height: 24px;
     box-sizing: border-box;
+    margin: 4px 3px;
+    padding: 0 3px;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    border: 1px solid #555555;
+    border-radius: 3px;
 
-    background: #111111;
+    background: #222222;
     color: #ffffff;
 
-    border-left: 1px solid #333333;
-    border-right: 1px solid #333333;
-
+    font-family: inherit;
     font-size: 11px;
     font-weight: 600;
+    text-align: center;
 
+    appearance: textfield;
+}
+
+
+.ol-zoom-level::-webkit-inner-spin-button,
+.ol-zoom-level::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
+}
+
+
+.ol-zoom-level:hover:not(:disabled) {
+    border-color: #777777;
+}
+
+
+.ol-zoom-level:focus {
+    border-color: #888888;
+    outline: none;
+    background: #2a2a2a;
+}
+
+
+.ol-zoom-level:disabled {
+    opacity: 0.4;
     cursor: default;
-    user-select: none;
 }
 
 

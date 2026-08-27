@@ -836,8 +836,13 @@ if (zoomControl === null || zoomOutButton === null) {
   throw new Error("The OpenLayers zoom control could not be found.");
 }
 
-const zoomLevel = document.createElement("div");
+const zoomLevel = document.createElement("input");
+
+zoomLevel.type = "number";
 zoomLevel.className = "ol-zoom-level";
+zoomLevel.step = "1";
+zoomLevel.setAttribute("aria-label", "Zoom level");
+zoomLevel.title = "Zoom level";
 
 zoomControl.insertBefore(zoomLevel, zoomOutButton);
 
@@ -845,15 +850,55 @@ function updateZoomLevel() {
   const zoom = map.getView().getZoom();
 
   if (zoom === undefined) {
+    zoomLevel.value = "";
     return;
   }
 
-  const displayedZoom = Number.isInteger(zoom)
+  zoomLevel.value = Number.isInteger(zoom)
     ? zoom.toString()
     : zoom.toFixed(1);
-
-  zoomLevel.textContent = `${displayedZoom}x`;
 }
+
+function applyZoomLevel() {
+  const zoom = Number.parseFloat(zoomLevel.value);
+
+  if (!Number.isFinite(zoom)) {
+    updateZoomLevel();
+    return;
+  }
+
+  const view = map.getView();
+
+  const clampedZoom = Math.min(
+    Math.max(zoom, view.getMinZoom()),
+    view.getMaxZoom(),
+  );
+
+  view.setZoom(clampedZoom);
+  updateZoomLevel();
+}
+
+zoomLevel.addEventListener("focus", () => {
+  zoomLevel.select();
+});
+
+zoomLevel.addEventListener("blur", () => {
+  applyZoomLevel();
+});
+
+zoomLevel.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    zoomLevel.blur();
+    return;
+  }
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    updateZoomLevel();
+    zoomLevel.blur();
+  }
+});
 
 updateZoomLevel();
 
@@ -1140,6 +1185,7 @@ function setViewerEnabled(enabled) {
       button.disabled = !enabled;
     }
   }
+  zoomLevel.disabled = !enabled;
 
   scaleLineControl.element.classList.toggle(
     "viewer-control-hidden",
