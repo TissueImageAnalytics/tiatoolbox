@@ -1,4 +1,3 @@
-use pyo3::ffi::PyObject;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
@@ -106,8 +105,8 @@ fn build_single_qupath_feature(
         }
     }
     let class_colours_contains_class_value = match class_value {
-        Some(StringOrFloat::String(ref s)) => class_colours.contains(&s)?,
-        Some(StringOrFloat::Float(i)) => class_colours.contains(&i)?,
+        Some(StringOrFloat::String(ref s)) => class_colours.contains(s)?,
+        Some(StringOrFloat::Float(i)) => class_colours.contains(i)?,
         None => false,
     };
     let class_name_is_none = match class_name {
@@ -116,8 +115,8 @@ fn build_single_qupath_feature(
     };
     if !class_name_is_none && class_colours_contains_class_value {
         let color = match class_value {
-            Some(StringOrFloat::String(ref s)) => class_colours.get_item(&s)?,
-            Some(StringOrFloat::Float(i)) => class_colours.get_item(&i)?,
+            Some(StringOrFloat::String(ref s)) => class_colours.get_item(s)?,
+            Some(StringOrFloat::Float(i)) => class_colours.get_item(i)?,
             None => None,
         };
         let classification_dict = PyDict::new(py);
