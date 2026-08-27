@@ -134,8 +134,11 @@ torchvision = [
   omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py', 'tiatoolbox/typing.py']
 
 [build-system]
-  requires = ["maturin>=1.5,<2.0", "setuptools"]
-  build-backend = "maturin"
+  requires = [
+      "setuptools",
+      "setuptools-rust",
+  ]
+  build-backend = "setuptools.build_meta"
 
 [tool.distutils.bdist_wheel]
   universal = true
@@ -300,9 +303,16 @@ ignore_missing_imports = true
 # CI overrides this per job with --python-version for 3.12-3.14.
 python_version = "3.12"
 
-[tool.maturin]
-python-source = "."
-include = ["tiatoolbox/**/*"]
-module-name = "tiatoolbox.rmisc"
-#Delete the following line when releasing, only to be used to run codecov
-editable-profile = "dev"
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tiatoolbox*"]
+
+[[tool.setuptools-rust.ext-modules]]
+target = "tiatoolbox.rmisc"
+path = "tiatoolbox/rust-library/misc/Cargo.toml"
+binding = "PyO3"
+
+[[tool.setuptools-rust.ext-modules]]
+target = "tiatoolbox.rmultitask"
+path = "tiatoolbox/rust-library/multitask/Cargo.toml"
+binding = "PyO3"

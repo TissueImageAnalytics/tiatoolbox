@@ -1,0 +1,11 @@
+[package]
+name = "rmultitask"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+name = "rmultitask"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3 = { workspace = true, features = ["extension-module"] }

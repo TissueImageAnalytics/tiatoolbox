@@ -105,6 +105,60 @@ fn semantic_segmentations_as_qupath_json(
 }
 
 #[pyfunction]
+fn semantic_segmentations_as_annotations(
+    py: Python<'_>,
+    layer_list: &Bound<'_, PyList>,
+    preds: &Bound<'_, PyAny>,
+    scale_factor: (f64, f64),
+    class_dict: &Bound<'_, PyDict>,
+    offset: &Bound<'_, PyAny>,
+    cv2: &Bound<'_, PyAny>,
+    process_contours: &Bound<'_, PyAny>,
+) -> PyResult<Py<PyList>> {
+    /*Helper function to save semantic segmentation as annotations.*/
+    let annotations_list = PyList::empty(py);
+    let retr_ccomp = cv2.getattr("RETR_CCOMP")?;
+    let chain_approx_none = cv2.getattr("CHAIN_APPROX_NONE")?;
+    let find_contours = cv2.getattr("findContours")?;
+    for type_class in layer_list.iter() {
+        let class_id: f64 = type_class.extract()?;
+        let class_label = match class_dict.get_item(class_id)? {
+            Some(value) => value,
+            None => class_id.into_pyobject(class_dict.py())?.into_any(),
+        };
+        let layer = preds
+            .rich_compare(class_id, CompareOp::Eq)?
+            .call_method1("astype", ("uint8",))?
+            .call_method0("compute")?;
+        let result = find_contours.call1((layer, retr_ccomp.clone(), chain_approx_none.clone()))?;
+
+        let result = result.cast::<pyo3::types::PyTuple>()?;
+
+        let contours = result.get_item(0)?;
+
+        let hierarchy = result.get_item(1)?;
+
+        let mut properties = PyDict::new(py);
+        properties.set_item("type", class_label)?;
+        properties.set_item("class", class_id)?;
+
+        let kwargs = PyDict::new(py);
+
+        kwargs.set_item("contours", contours)?;
+        kwargs.set_item("hierarchy", hierarchy)?;
+        kwargs.set_item("scale_factor", scale_factor)?;
+        kwargs.set_item("offset", offset)?;
+        kwargs.set_item("properties", properties)?;
+
+        let processed_contours = process_contours.call((), Some(&kwargs))?;
+        for annotation in processed_contours.try_iter()? {
+            annotations_list.append(annotation?)?;
+        }
+    }
+    Ok(annotations_list.unbind())
+}
+
+#[pyfunction]
 fn json_dump_python_object(save_path: String, obj: &Bound<'_, PyAny>) -> PyResult<()> {
     //Equilivent to json.dump(obj, save_path)
     //Caution: if obj is a dictionary and has a key of an integer it will throw an error
@@ -351,5 +405,6 @@ fn rmisc(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(json_dump_python_object, m)?)?;
     m.add_function(wrap_pyfunction!(string_to_tuple, m)?)?;
     m.add_function(wrap_pyfunction!(semantic_segmentations_as_qupath_json, m)?)?;
+    m.add_function(wrap_pyfunction!(semantic_segmentations_as_annotations, m)?)?;
     Ok(())
 }
