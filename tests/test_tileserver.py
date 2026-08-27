@@ -342,16 +342,26 @@ def test_visualize_beta_index() -> None:
 
 
 def test_configured_files(tmp_path: Path) -> None:
-    """Test files returned from configured directories."""
+    """Test files returned recursively from configured directories."""
     slides = tmp_path / "slides"
     overlays = tmp_path / "overlays"
+    nested_slides = slides / "nested"
+    nested_overlays = overlays / "nested"
+
     slides.mkdir()
     overlays.mkdir()
+    nested_slides.mkdir()
+    nested_overlays.mkdir()
 
     slide = slides / "slide.svs"
+    nested_slide = nested_slides / "nested.svs"
     overlay = overlays / "overlay.png"
+    nested_overlay = nested_overlays / "nested.png"
+
     slide.touch()
+    nested_slide.touch()
     overlay.touch()
+    nested_overlay.touch()
 
     app = TileServer(
         "Testing TileServer",
@@ -367,11 +377,15 @@ def test_configured_files(tmp_path: Path) -> None:
 
         assert response.status_code == 200
         assert response.get_json() == {
-            "directory": str(slides.resolve()),
+            "directory": "slides",
             "files": [
                 {
                     "name": "slide.svs",
-                    "path": str(slide.resolve()),
+                    "path": "slides/slide.svs",
+                },
+                {
+                    "name": "nested/nested.svs",
+                    "path": "slides/nested/nested.svs",
                 },
             ],
         }
@@ -380,14 +394,108 @@ def test_configured_files(tmp_path: Path) -> None:
 
         assert response.status_code == 200
         assert response.get_json() == {
-            "directory": str(overlays.resolve()),
+            "directory": "overlays",
             "files": [
                 {
                     "name": "overlay.png",
-                    "path": str(overlay.resolve()),
+                    "path": "overlays/overlay.png",
+                },
+                {
+                    "name": "nested/nested.png",
+                    "path": "overlays/nested/nested.png",
                 },
             ],
         }
+
+
+def test_visualize_beta_hides_configured_paths(
+    remote_sample: Callable,
+) -> None:
+    """Test configured files load without exposing absolute paths."""
+    slide_path = Path(remote_sample("svs-1-small")).resolve()
+    overlay_path = Path(
+        remote_sample("annotation_store_svs_1"),
+    ).resolve()
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slide_path.parent,
+        overlay_directory=overlay_path.parent,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    public_slide_path = f"slides/{slide_path.name}"
+    public_overlay_path = f"overlays/{overlay_path.name}"
+
+    with app.test_client() as client:
+        setup_app(client)
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": public_slide_path},
+        )
+
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": public_overlay_path},
+        )
+
+        assert response.status_code == 200
+
+        response = client.get("/tileserver/slide")
+
+        assert response.status_code == 200
+        assert response.get_json()["file_path"] == public_slide_path
+
+        response = client.get("/tileserver/overlay")
+
+        assert response.status_code == 200
+        assert response.get_json() == public_overlay_path
+
+        response = client.get("/tileserver/sessions")
+
+        assert response.status_code == 200
+        assert list(response.get_json().values()) == [
+            public_slide_path,
+        ]
+
+
+def test_visualize_beta_rejects_unsafe_file_paths(
+    tmp_path: Path,
+) -> None:
+    """Test configured files cannot escape their directory."""
+    slides = tmp_path / "slides"
+    slides.mkdir()
+
+    outside_slide = tmp_path / "outside.svs"
+    outside_slide.touch()
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slides,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        setup_app(client)
+
+        for slide_path in [
+            "slides/../outside.svs",
+            str(outside_slide.resolve()),
+        ]:
+            response = client.put(
+                "/tileserver/slide",
+                data={"slide_path": slide_path},
+            )
+
+            assert response.status_code == 400
+            assert response.get_data(as_text=True) == ("Invalid configured file path.")
 
 
 def test_configured_files_not_set() -> None:

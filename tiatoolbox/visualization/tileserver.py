@@ -633,7 +633,10 @@ class TileServer(Flask):
             }
             for path in sorted(
                 directory.rglob("*"),
-                key=lambda path: path.relative_to(directory).as_posix().casefold(),
+                key=lambda path: (
+                    len(path.relative_to(directory).parts),
+                    path.relative_to(directory).as_posix().casefold(),
+                ),
             )
             if path.is_file() and path.resolve().is_relative_to(directory)
         ]
