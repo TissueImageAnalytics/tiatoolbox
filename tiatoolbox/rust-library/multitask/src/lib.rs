@@ -1,6 +1,6 @@
+use pyo3::ffi::PyObject;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use pyo3::ffi::PyObject;
 
 #[derive(Clone)]
 enum StringOrFloat {
@@ -12,7 +12,6 @@ enum StringOrFloat {
 fn add(a: i32, b: i32) -> i32 {
     a + b
 }
-
 
 #[pyfunction]
 fn build_single_qupath_feature(
@@ -40,13 +39,13 @@ fn build_single_qupath_feature(
                 class_name = match class_dict.get_item(0)? {
                     Some(value) => {
                         if let Ok(s) = value.extract::<String>() {
-                                Some(StringOrFloat::String(s))
-                            } else if let Ok(f) = value.extract::<f64>() {
-                                Some(StringOrFloat::Float(f))
-                            } else {
-                                None
-                            }
-                    },
+                            Some(StringOrFloat::String(s))
+                        } else if let Ok(f) = value.extract::<f64>() {
+                            Some(StringOrFloat::Float(f))
+                        } else {
+                            None
+                        }
+                    }
                     None => Some(StringOrFloat::Float(0.0)),
                 };
                 match class_name.as_ref() {
@@ -64,21 +63,21 @@ fn build_single_qupath_feature(
                 if !class_dict.is_none() && class_dict.contains(&value)? {
                     if let Some(item) = class_dict.get_item(&value)? {
                         class_name = if let Ok(s) = item.extract::<String>() {
-                                Some(StringOrFloat::String(s))
-                            } else if let Ok(f) = item.extract::<f64>() {
-                                Some(StringOrFloat::Float(f))
-                            } else {
-                                None
-                            }
+                            Some(StringOrFloat::String(s))
+                        } else if let Ok(f) = item.extract::<f64>() {
+                            Some(StringOrFloat::Float(f))
+                        } else {
+                            None
+                        }
                     }
                 } else {
                     class_name = if let Ok(s) = value.extract::<String>() {
-                                Some(StringOrFloat::String(s))
-                            } else if let Ok(f) = value.extract::<f64>() {
-                                Some(StringOrFloat::Float(f))
-                            } else {
-                                None
-                            }
+                        Some(StringOrFloat::String(s))
+                    } else if let Ok(f) = value.extract::<f64>() {
+                        Some(StringOrFloat::Float(f))
+                    } else {
+                        None
+                    }
                 }
                 match class_name.as_ref() {
                     Some(StringOrFloat::String(s)) => {
@@ -92,12 +91,12 @@ fn build_single_qupath_feature(
                     }
                 }
                 class_value = if let Ok(s) = value.extract::<String>() {
-                                Some(StringOrFloat::String(s))
-                            } else if let Ok(f) = value.extract::<f64>() {
-                                Some(StringOrFloat::Float(f))
-                            } else {
-                                None
-                            };
+                    Some(StringOrFloat::String(s))
+                } else if let Ok(f) = value.extract::<f64>() {
+                    Some(StringOrFloat::Float(f))
+                } else {
+                    None
+                };
             }
         } else if !value.is_none() {
             props.set_item(
