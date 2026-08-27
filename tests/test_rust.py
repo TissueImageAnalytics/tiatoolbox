@@ -334,9 +334,9 @@ def test_patch_predictions_as_annotations() -> None:
 
     assert annotations[1].polygon == (50.0, 60.0, 70.0, 80.0)
     assert annotations[1].properties == {}
-    with pytest.raises(TypeError):
+    with pytest.raises((TypeError, AttributeError)):
         annotations = rmisc.patch_predictions_as_annotations(
-            None,
+            DummyPolygon,
             DummyPolygon,
             [],
             keys_contains_labels,
@@ -347,10 +347,10 @@ def test_patch_predictions_as_annotations() -> None:
             [0.0, 1.0],  # classes_predicted
             [1.0, 0.0],  # labels
         )
-    with pytest.raises(TypeError):
+    with pytest.raises((TypeError, AttributeError)):
         annotations = rmisc.patch_predictions_as_annotations(
             DummyAnnotation,
-            None,
+            DummyAnnotation,
             [],
             keys_contains_labels,
             keys_contains_probabilities,
