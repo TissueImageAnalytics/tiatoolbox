@@ -1,12 +1,6 @@
+use pyo3::IntoPyObjectExt;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use pyo3::IntoPyObjectExt;
-
-#[derive(Clone)]
-enum StringOrFloat {
-    String(String),
-    Float(f64),
-}
 
 #[pyfunction]
 fn add(a: i32, b: i32) -> i32 {
