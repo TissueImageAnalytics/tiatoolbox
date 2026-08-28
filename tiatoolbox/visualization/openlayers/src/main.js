@@ -138,7 +138,7 @@ function setLayerEditorOpen(open) {
 viewerPanelToggle.title = "Files";
 viewerPanelToggle.setAttribute("aria-label", "Files");
 
-setViewerPanelOpen(false);
+setViewerPanelOpen(true);
 
 viewerPanelToggle.addEventListener("click", () => {
   const open = viewerPanel.classList.contains("hidden");

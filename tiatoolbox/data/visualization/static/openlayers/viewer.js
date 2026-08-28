@@ -15332,7 +15332,7 @@ function Eh(e) {
 function Dh(e) {
 	Ch.classList.toggle("hidden", !e), wh.classList.toggle("active", e);
 }
-xh.title = "Files", xh.setAttribute("aria-label", "Files"), Eh(!1), xh.addEventListener("click", () => {
+xh.title = "Files", xh.setAttribute("aria-label", "Files"), Eh(!0), xh.addEventListener("click", () => {
 	Eh(bh.classList.contains("hidden"));
 }), wh.addEventListener("click", () => {
 	Dh(Ch.classList.contains("hidden"));
