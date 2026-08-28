@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+use pyo3::IntoPyObjectExt;
 
 #[derive(Clone)]
 enum StringOrFloat {
@@ -13,18 +14,17 @@ fn add(a: i32, b: i32) -> i32 {
 }
 
 #[pyfunction]
-fn build_single_qupath_feature(
-    py: Python<'_>,
-    np: &Bound<'_, PyAny>,
+fn build_single_qupath_feature<'py>(
+    py: pyo3::Python<'py>,
     geo_map: &Bound<'_, PyAny>,
-    processed_predictions: &Bound<'_, PyDict>,
+    processed_predictions: &pyo3::Bound<'py, PyDict>,
     i: i32,
-    class_dict: &Bound<'_, PyDict>,
+    class_dict: &pyo3::Bound<'py, PyDict>,
     class_colours: &Bound<'_, PyDict>,
 ) -> PyResult<Py<PyDict>> {
     let props = PyDict::new(py);
-    let mut class_value: Option<StringOrFloat> = None;
-    let mut class_name: Option<StringOrFloat> = None;
+    let mut class_value: Option<Bound<'py, PyAny>> = None;
+    let mut class_name: Option<Bound<'py, PyAny>> = None;
     for (key, arr) in processed_predictions.iter() {
         let item = arr.get_item(i)?;
         let value = if item.hasattr("tolist")? {
@@ -34,116 +34,38 @@ fn build_single_qupath_feature(
         };
         if key.eq("type")? {
             if value.is_none() {
-                class_value = Some(StringOrFloat::Float(0.0));
+                class_value = Some(0_i64.into_bound_py_any(py)?);
                 class_name = match class_dict.get_item(0)? {
-                    Some(value) => {
-                        if let Ok(s) = value.extract::<String>() {
-                            Some(StringOrFloat::String(s))
-                        } else if let Ok(f) = value.extract::<f64>() {
-                            Some(StringOrFloat::Float(f))
-                        } else {
-                            None
-                        }
-                    }
-                    None => Some(StringOrFloat::Float(0.0)),
+                    Some(v) => Some(v),
+                    None => Some(0_i64.into_bound_py_any(py)?),
                 };
-                match class_name.as_ref() {
-                    Some(StringOrFloat::String(s)) => {
-                        props.set_item("type", s)?;
-                    }
-                    Some(StringOrFloat::Float(i)) => {
-                        props.set_item("type", i)?;
-                    }
-                    None => {
-                        props.set_item("type", py.None())?;
-                    }
-                }
+                props.set_item("type", &class_name)?;
             } else {
                 if !class_dict.is_none() && class_dict.contains(&value)? {
                     if let Some(item) = class_dict.get_item(&value)? {
-                        class_name = if let Ok(s) = item.extract::<String>() {
-                            Some(StringOrFloat::String(s))
-                        } else if let Ok(f) = item.extract::<f64>() {
-                            Some(StringOrFloat::Float(f))
-                        } else {
-                            None
-                        }
+                        class_name = Some(item.clone());
                     }
                 } else {
-                    class_name = if let Ok(s) = value.extract::<String>() {
-                        Some(StringOrFloat::String(s))
-                    } else if let Ok(f) = value.extract::<f64>() {
-                        Some(StringOrFloat::Float(f))
-                    } else {
-                        None
-                    }
+                    class_name = Some(value.clone());
                 }
-                match class_name.as_ref() {
-                    Some(StringOrFloat::String(s)) => {
-                        props.set_item("type", s)?;
-                    }
-                    Some(StringOrFloat::Float(i)) => {
-                        props.set_item("type", i)?;
-                    }
-                    None => {
-                        props.set_item("type", py.None())?;
-                    }
-                }
-                class_value = if let Ok(s) = value.extract::<String>() {
-                    Some(StringOrFloat::String(s))
-                } else if let Ok(f) = value.extract::<f64>() {
-                    Some(StringOrFloat::Float(f))
-                } else {
-                    None
-                };
+                props.set_item("type", &class_name)?;
+                class_value = Some(value.clone());
             }
         } else if !value.is_none() {
-            props.set_item(
-                key,
-                np.call_method1("array", (value,))?.call_method0("tolist")?,
-            )?;
+            props.set_item(key, &value)?;
         }
     }
-    let class_colours_contains_class_value = match class_value {
-        Some(StringOrFloat::String(ref s)) => class_colours.contains(s)?,
-        Some(StringOrFloat::Float(i)) => class_colours.contains(i)?,
-        None => false,
-    };
     let class_name_is_none = match class_name {
         Some(ref _s) => false,
         None => true,
     };
-    if !class_name_is_none && class_colours_contains_class_value {
-        let color = match class_value {
-            Some(StringOrFloat::String(ref s)) => class_colours.get_item(s)?,
-            Some(StringOrFloat::Float(i)) => class_colours.get_item(i)?,
-            None => None,
-        };
+    if !class_name_is_none && class_colours.contains(&class_value)? {
+        let color = class_colours.get_item(&class_value)?;
         let classification_dict = PyDict::new(py);
-        match class_name.as_ref() {
-            Some(StringOrFloat::String(s)) => {
-                classification_dict.set_item("name", s)?;
-            }
-            Some(StringOrFloat::Float(i)) => {
-                classification_dict.set_item("name", i)?;
-            }
-            None => {
-                classification_dict.set_item("name", py.None())?;
-            }
-        }
+        classification_dict.set_item("name", &class_name)?;
         classification_dict.set_item("color", color)?;
         props.set_item("classification", classification_dict)?;
-        match class_value.as_ref() {
-            Some(StringOrFloat::String(s)) => {
-                props.set_item("class_value", s)?;
-            }
-            Some(StringOrFloat::Float(i)) => {
-                props.set_item("class_value", i)?;
-            }
-            None => {
-                props.set_item("class_value", py.None())?;
-            }
-        }
+        props.set_item("class_value", class_value)?;
     }
     let single_qupath_feature = PyDict::new(py);
     single_qupath_feature.set_item("type", "Feature")?;
@@ -154,17 +76,7 @@ fn build_single_qupath_feature(
     if class_name.is_none() {
         single_qupath_feature.set_item("name", "object")?;
     } else {
-        match class_name.as_ref() {
-            Some(StringOrFloat::String(s)) => {
-                single_qupath_feature.set_item("name", s)?;
-            }
-            Some(StringOrFloat::Float(i)) => {
-                single_qupath_feature.set_item("name", i)?;
-            }
-            None => {
-                single_qupath_feature.set_item("name", py.None())?;
-            }
-        }
+        single_qupath_feature.set_item("name", &class_name)?;
     }
     Ok(single_qupath_feature.unbind())
 }
