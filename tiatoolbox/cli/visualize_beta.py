@@ -14,7 +14,7 @@ from tiatoolbox.cli.common import (
     tiatoolbox_cli,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
 
@@ -42,17 +42,21 @@ def visualize_beta(
     slides: Path | None,
     overlays: Path | None,
     port: int,
-) -> None:  # pragma: no cover
+) -> None:
     """Launch the experimental TIAToolbox visualization tool for given directory(s).
 
     If only base-path is given, Slides and overlays to be visualized are expected in
     subdirectories of the base directory named slides and overlays, respectively.
 
     Args:
-        base_path (str): Path to base directory containing images to be displayed.
-        slides (str): Path to directory containing slides to be displayed.
-        overlays (str): Path to directory containing overlays to be displayed.
-        port (int): Port to launch the visualization tool on.
+        base_path (Path or None):
+            Path to base directory containing images to be displayed.
+        slides (Path or None):
+            Path to directory containing slides to be displayed.
+        overlays (Path or None):
+            Path to directory containing overlays to be displayed.
+        port (int):
+            Port to launch the visualization tool on.
 
     """
     from tiatoolbox.visualization.tileserver import TileServer  # noqa: PLC0415
