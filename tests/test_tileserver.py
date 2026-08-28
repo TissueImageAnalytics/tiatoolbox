@@ -409,6 +409,187 @@ def test_configured_files(tmp_path: Path) -> None:
         }
 
 
+def test_change_slide_sets_missing_file_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test configured slide path is retained when reader metadata has no path."""
+    slides = tmp_path / "slides"
+    slides.mkdir()
+
+    ngff_slide = slides / "slide.ome.zarr"
+    ngff_slide.mkdir()
+
+    monkeypatch.setattr(
+        "tiatoolbox.visualization.tileserver.is_ngff",
+        lambda path: Path(path) == ngff_slide,
+    )
+
+    info = SimpleNamespace(
+        file_path=None,
+        mpp=[0.5, 0.5],
+    )
+    info.as_dict = lambda: {
+        "file_path": info.file_path,
+        "mpp": info.mpp,
+    }
+
+    reader = SimpleNamespace(info=info)
+
+    monkeypatch.setattr(
+        "tiatoolbox.visualization.tileserver.WSIReader.open",
+        lambda _path: reader,
+    )
+    monkeypatch.setattr(
+        "tiatoolbox.visualization.tileserver.ZoomifyGenerator",
+        lambda *_args, **_kwargs: object(),
+    )
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slides,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        setup_app(client)
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": "slides/slide.ome.zarr"},
+        )
+        assert response.status_code == 200
+
+        response = client.get("/tileserver/slide")
+
+    assert response.status_code == 200
+    assert response.get_json()["file_path"] == "slides/slide.ome.zarr"
+
+
+def test_configured_files_ngff_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test NGFF directories are returned as single configured files."""
+    slides = tmp_path / "slides"
+    slides.mkdir()
+
+    ngff_slide = slides / "slide.ome.zarr"
+    ngff_slide.mkdir()
+
+    (ngff_slide / "zarr.json").touch()
+    level = ngff_slide / "0"
+    level.mkdir()
+    (level / "chunk").touch()
+
+    invalid_zarr = slides / "invalid.zarr"
+    invalid_zarr.mkdir()
+    (invalid_zarr / "zarr.json").touch()
+
+    monkeypatch.setattr(
+        "tiatoolbox.visualization.tileserver.is_ngff",
+        lambda path: Path(path) == ngff_slide,
+    )
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slides,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/files/slide")
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "directory": "slides",
+        "files": [
+            {
+                "name": "slide.ome.zarr",
+                "path": "slides/slide.ome.zarr",
+            },
+        ],
+    }
+
+    assert (
+        app._resolve_client_file_path(
+            "slides/slide.ome.zarr",
+            "slide",
+        )
+        == ngff_slide.resolve()
+    )
+
+
+def test_dicom_is_image_overlay(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test DICOM files are treated as image overlays."""
+    dicom_path = tmp_path / "slide.dcm"
+    dicom_path.touch()
+
+    monkeypatch.setattr(
+        "tiatoolbox.visualization.tileserver.is_dicom",
+        lambda path: Path(path) == dicom_path,
+    )
+
+    assert TileServer._is_image_overlay(dicom_path)
+
+
+def test_configured_files_dicom_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test DICOM directories are returned as single configured files."""
+    slides = tmp_path / "slides"
+    slides.mkdir()
+
+    dicom_slide = slides / "3DHISTECH-1"
+    dicom_slide.mkdir()
+
+    (dicom_slide / "000001.dcm").touch()
+    (dicom_slide / "000002.dcm").touch()
+
+    monkeypatch.setattr(
+        "tiatoolbox.visualization.tileserver.is_dicom",
+        lambda path: Path(path) == dicom_slide,
+    )
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slides,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/files/slide")
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "directory": "slides",
+        "files": [
+            {
+                "name": "3DHISTECH-1",
+                "path": "slides/3DHISTECH-1",
+            },
+        ],
+    }
+
+    assert (
+        app._resolve_client_file_path(
+            "slides/3DHISTECH-1",
+            "slide",
+        )
+        == dicom_slide.resolve()
+    )
+
+
 @pytest.mark.parametrize(
     ("kind", "expected"),
     [

@@ -31,6 +31,8 @@ from tiatoolbox.wsicore.wsireader import (
     TransformedWSIReader,
     VirtualWSIReader,
     WSIReader,
+    is_dicom,
+    is_ngff,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -399,6 +401,37 @@ class TileServer(Flask):
         msg = "Invalid configured file type."
         raise ValueError(msg)
 
+    @staticmethod
+    def _is_directory_image(path: Path) -> bool:
+        """Return whether a directory represents a supported image."""
+        if not path.is_dir():
+            return False
+
+        if path.suffix.lower() == ".zarr":
+            return is_ngff(path)
+
+        return is_dicom(path)
+
+    @staticmethod
+    def _is_image_overlay(path: Path) -> bool:
+        """Return whether a configured overlay is an image."""
+        suffix = path.suffix.lower()
+
+        if suffix in {
+            ".jpg",
+            ".png",
+            ".tiff",
+            ".svs",
+            ".ndpi",
+            ".mrxs",
+        }:
+            return True
+
+        if suffix == ".zarr":
+            return is_ngff(path)
+
+        return is_dicom(path)
+
     def _get_public_file_path(
         self: TileServer,
         file_path: Path,
@@ -462,7 +495,7 @@ class TileServer(Flask):
             msg = "Invalid configured file path."
             raise ValueError(msg) from exc
 
-        if not resolved_path.is_file():
+        if not (resolved_path.is_file() or self._is_directory_image(resolved_path)):
             msg = "Configured file does not exist."
             raise ValueError(msg)
 
@@ -626,19 +659,49 @@ class TileServer(Flask):
                 status=404,
             )
 
+        configured_paths = []
+
+        for root, directories, filenames in os.walk(directory):
+            root_path = Path(root)
+
+            for dirname in list(directories):
+                path = root_path / dirname
+
+                if not path.resolve().is_relative_to(directory):
+                    directories.remove(dirname)
+                    continue
+
+                if path.suffix.lower() == ".zarr":
+                    directories.remove(dirname)
+
+                    if self._is_directory_image(path):
+                        configured_paths.append(path)
+
+                    continue
+
+                if self._is_directory_image(path):
+                    directories.remove(dirname)
+                    configured_paths.append(path)
+
+            for filename in filenames:
+                path = root_path / filename
+
+                if path.resolve().is_relative_to(directory):
+                    configured_paths.append(path)
+
+        configured_paths.sort(
+            key=lambda path: (
+                len(path.relative_to(directory).parts),
+                path.relative_to(directory).as_posix().casefold(),
+            ),
+        )
+
         files = [
             {
                 "name": path.relative_to(directory).as_posix(),
                 "path": self._get_public_file_path(path, kind),
             }
-            for path in sorted(
-                directory.rglob("*"),
-                key=lambda path: (
-                    len(path.relative_to(directory).parts),
-                    path.relative_to(directory).as_posix().casefold(),
-                ),
-            )
-            if path.is_file() and path.resolve().is_relative_to(directory)
+            for path in configured_paths
         ]
 
         public_directory = (
@@ -673,6 +736,10 @@ class TileServer(Flask):
             return Response(str(exc), status=400)
 
         self.layers[session_id] = {"slide": WSIReader.open(Path(slide_path))}
+
+        if self.layers[session_id]["slide"].info.file_path is None:
+            self.layers[session_id]["slide"].info.file_path = str(slide_path)
+
         self.pyramids[session_id] = {
             "slide": ZoomifyGenerator(self.layers[session_id]["slide"], tile_size=256),
         }
@@ -833,14 +900,7 @@ class TileServer(Flask):
                 other_session_id,
             )
 
-        if overlay_path.suffix in [
-            ".jpg",
-            ".png",
-            ".tiff",
-            ".svs",
-            ".ndpi",
-            ".mrxs",
-        ]:
+        if self._is_image_overlay(overlay_path):
             return self._add_image_overlay(
                 session_id,
                 overlay_path,
