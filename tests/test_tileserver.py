@@ -1122,6 +1122,38 @@ def test_change_overlay(  # noqa: PLR0915
         assert layer.wsi.info.file_path == tiff_path
 
 
+def test_image_overlay_preserves_slide_metadata(
+    empty_app: TileServer,
+    remote_sample: Callable,
+) -> None:
+    """Test image overlays do not modify slide metadata."""
+    slide_path = remote_sample("wsi2_4k_4k_svs")
+    overlay_path = remote_sample("wsi2_4k_4k_jpg")
+
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(slide_path)},
+        )
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(overlay_path)},
+        )
+        assert response.status_code == 200
+
+        assert empty_app.layers[session_id]["slide"].info.file_path == slide_path
+
+        layer_name = Path(overlay_path).stem
+        assert (
+            Path(empty_app.layers[session_id][layer_name].info.file_path)
+            == overlay_path
+        )
+
+
 def test_named_image_overlay_replaces_existing(
     empty_app: TileServer,
     remote_sample: Callable,

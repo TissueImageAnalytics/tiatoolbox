@@ -923,7 +923,7 @@ class TileServer(Flask):
                 mpp=self.layers[session_id]["slide"].info.mpp[0],
             )
         elif overlay_path.suffix in [".jpg", ".png"]:
-            info = self.layers[session_id]["slide"].info
+            info = copy.deepcopy(self.layers[session_id]["slide"].info)
             info.file_path = str(overlay_path)
 
             self.layers[session_id][layer] = VirtualWSIReader(
