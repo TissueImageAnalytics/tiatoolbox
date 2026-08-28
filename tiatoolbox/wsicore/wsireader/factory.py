@@ -22,7 +22,6 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from .base import (
         AnnotationStoreReader,
-        DICOMWSIReader,
         FsspecJsonWSIReader,
         NGFFWSIReader,
         OpenSlideWSIReader,
@@ -30,6 +29,7 @@ if TYPE_CHECKING:  # pragma: no cover
         VirtualWSIReader,
         WSIReader,
     )
+    from .dicom import DICOMWSIReader
     from .types import WSIReaderExtraParams, WSIReaderParams
 
 
@@ -217,7 +217,7 @@ def try_dicom(
     post_proc: WSIPostProc,
 ) -> DICOMWSIReader | None:
     """Try to create a DICOMWSIReader if the input is a DICOM file."""
-    from .base import DICOMWSIReader  # noqa: PLC0415
+    from .dicom import DICOMWSIReader  # noqa: PLC0415
 
     if is_dicom(input_path):
         return DICOMWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
