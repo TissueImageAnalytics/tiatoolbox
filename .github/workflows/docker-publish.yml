@@ -26,8 +26,12 @@ jobs:
           - dockerfile: ./docker/3.14/Debian/Dockerfile
             mtag: py3.14-debian
           - dockerfile: ./docker/3.14/Ubuntu/Dockerfile
-            mtag: py3.14-ubuntu
-          - dockerfile: ./docker/3.14/Ubuntu/Dockerfile
+            mtag: py3.15-ubuntu
+          - dockerfile: ./docker/3.15/Debian/Dockerfile
+            mtag: py3.15-debian
+          - dockerfile: ./docker/3.15/Ubuntu/Dockerfile
+            mtag: py3.15-ubuntu
+          - dockerfile: ./docker/3.15/Ubuntu/Dockerfile
             mtag: latest
     permissions:
       contents: read
