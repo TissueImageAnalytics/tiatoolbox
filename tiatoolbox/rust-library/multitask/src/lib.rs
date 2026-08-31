@@ -1,7 +1,7 @@
 use pyo3::IntoPyObjectExt;
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList};
 use pyo3::types::PyInt;
+use pyo3::types::{PyDict, PyList};
 use std::collections::HashMap;
 
 #[pyfunction]
@@ -92,7 +92,12 @@ fn build_single_annotation(
         if prop.eq("type")? && !class_dict_is_none {
             properties.set_item(prop, class_dict.get_item(arr.get_item(i)?)?)?;
         } else {
-            properties.set_item(prop,  np_array.call1((arr.get_item(i)?,))?.call_method0("tolist")?)?;
+            properties.set_item(
+                prop,
+                np_array
+                    .call1((arr.get_item(i)?,))?
+                    .call_method0("tolist")?,
+            )?;
         }
     }
     Ok(properties.unbind())
@@ -112,7 +117,7 @@ fn compute_qupath_json(
     plt: &Bound<'_, PyAny>,
     py_build_single_qupath_feature: &Bound<'_, PyAny>,
     delayed: &Bound<'_, PyAny>,
-    tqdm_dask_progress_bar: &Bound<'_, PyAny>
+    tqdm_dask_progress_bar: &Bound<'_, PyAny>,
 ) -> PyResult<Py<PyList>> {
     let builtins = py.import("builtins")?;
     let features = PyList::empty(py);
@@ -130,20 +135,14 @@ fn compute_qupath_json(
         if valid_ids.len() == 0 {
             class_dict.set_item(0, 0)?;
         } else if valid_ids_contain_all_ints {
-            let max_class: i64 = builtins
-                .getattr("max")?
-                .call1((&valid_ids,))?
-                .extract()?;
+            let max_class: i64 = builtins.getattr("max")?.call1((&valid_ids,))?.extract()?;
             for i in 0..max_class + 1 {
                 class_dict.set_item(i, i)?;
             }
         } else {
             let unique_names = builtins
-                    .getattr("sorted")?
-                    .call1((builtins
-                         .getattr("set")?
-                            .call1((&valid_ids,))?,
-                    ))?;
+                .getattr("sorted")?
+                .call1((builtins.getattr("set")?.call1((&valid_ids,))?,))?;
             while let Ok(name) = unique_names.try_iter() {
                 class_dict.set_item(&name, &name)?;
             }
@@ -152,11 +151,9 @@ fn compute_qupath_json(
     let class_keys = class_dict.keys();
     let num_classes = class_keys.len();
 
-
     let colormaps = plt.getattr("colormaps")?;
     let tab20 = colormaps.get_item("tab20")?;
-    let cmap = tab20
-        .call_method1("resampled", (num_classes,))?;
+    let cmap = tab20.call_method1("resampled", (num_classes,))?;
 
     let class_colors = PyDict::new(py);
 
@@ -167,20 +164,14 @@ fn compute_qupath_json(
         let g: f64 = rgba.get_item(1)?.extract()?;
         let b: f64 = rgba.get_item(2)?.extract()?;
 
-        let color = vec![
-            (r * 255.0) as i64,
-            (g * 255.0) as i64,
-            (b * 255.0) as i64,
-        ];
+        let color = vec![(r * 255.0) as i64, (g * 255.0) as i64, (b * 255.0) as i64];
 
         class_colors.set_item(key, color)?;
     }
     for batch_id in (0..num_contours).step_by(batch_size as usize) {
         let delayed_tasks = PyList::empty(py);
-        for i in batch_id..std::cmp::min(batch_id+batch_size, num_contours) {
-            delayed_tasks.append(delayed
-            .call1((py_build_single_qupath_feature,))?
-            .call1((
+        for i in batch_id..std::cmp::min(batch_id + batch_size, num_contours) {
+            delayed_tasks.append(delayed.call1((py_build_single_qupath_feature,))?.call1((
                 i,
                 class_dict,
                 origin,
@@ -214,7 +205,7 @@ fn compute_annotations(
     num_contours: i32,
     py_build_single_annotation: &Bound<'_, PyAny>,
     delayed: &Bound<'_, PyAny>,
-    tqdm_dask_progress_bar: &Bound<'_, PyAny>
+    tqdm_dask_progress_bar: &Bound<'_, PyAny>,
 ) -> PyResult<Py<PyAny>> {
     /*Compute annotations in batches and write them to a SQLiteStore.
 
@@ -255,10 +246,8 @@ fn compute_annotations(
     */
     for batch_id in (0..num_contours).step_by(batch_size as usize) {
         let delayed_tasks = PyList::empty(py);
-        for i in batch_id..std::cmp::min(batch_id+batch_size, num_contours) {
-            delayed_tasks.append(delayed
-            .call1((py_build_single_annotation,))?
-            .call1((
+        for i in batch_id..std::cmp::min(batch_id + batch_size, num_contours) {
+            delayed_tasks.append(delayed.call1((py_build_single_annotation,))?.call1((
                 i,
                 class_dict,
                 origin,
@@ -271,7 +260,7 @@ fn compute_annotations(
         kwargs.set_item("verbose", verbose)?;
         kwargs.set_item("num_workers", num_workers)?;
         let feature = tqdm_dask_progress_bar.call((), Some(&kwargs))?;
-        store.call_method1("append_many", (feature, ))?;
+        store.call_method1("append_many", (feature,))?;
     }
     Ok(store.into())
 }
