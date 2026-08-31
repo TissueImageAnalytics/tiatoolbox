@@ -2,7 +2,6 @@ use pyo3::IntoPyObjectExt;
 use pyo3::prelude::*;
 use pyo3::types::PyInt;
 use pyo3::types::{PyDict, PyList};
-use std::collections::HashMap;
 
 #[pyfunction]
 fn add(a: i32, b: i32) -> i32 {
