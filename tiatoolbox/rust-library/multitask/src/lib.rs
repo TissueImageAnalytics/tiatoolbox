@@ -4,13 +4,6 @@ use pyo3::types::{PyDict, PyList};
 use pyo3::types::PyInt;
 use std::collections::HashMap;
 
-
-#[derive(Clone)]
-enum StringOrFloat {
-    String(String),
-    Float(f64),
-}
-
 #[pyfunction]
 fn add(a: i32, b: i32) -> i32 {
     a + b
@@ -151,7 +144,7 @@ fn compute_qupath_json(
                          .getattr("set")?
                             .call1((&valid_ids,))?,
                     ))?;
-            for name in unique_names.try_iter() {
+            while let Ok(name) = unique_names.try_iter() {
                 class_dict.set_item(&name, &name)?;
             }
         }
