@@ -90,12 +90,11 @@ fn build_single_annotation(
         if prop.eq("type")? && !class_dict.len() == 0 {
             properties.set_item(prop, class_dict.get_item(arr.get_item(i)?)?)?;
         } else {
-            properties.set_item(
-                prop,
-                np_array
-                    .call1((arr.get_item(i)?,))?
-                    .call_method0("tolist")?,
-            )?;
+            let item = arr.get_item(i)?;
+            let np_item = np_array.call1((item,))?;
+            let value = np_item.call_method0("tolist")?;
+
+            properties.set_item(prop, value)?;
         }
     }
     Ok(properties.unbind())
