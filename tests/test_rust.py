@@ -4,7 +4,7 @@ import json
 import tempfile
 import typing
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import cv2
 import dask.array as da
@@ -21,9 +21,16 @@ from tiatoolbox.annotation.storage import Annotation
 from tiatoolbox.type_hints import JSON
 from tiatoolbox.utils.misc import (
     make_valid_poly,
-    save_qupath_json,
     tqdm_dask_progress_bar,
 )
+
+
+def save_qupath_json(
+    save_path: Path | None,  # noqa: ARG001
+    qupath_json: dict[str, Any],
+) -> dict[str, Any]:
+    """Return JSON rather than touching disk."""
+    return qupath_json
 
 
 def test_add() -> None:
@@ -683,6 +690,9 @@ class DaskDelayedJSONStore:
             tuple(origin),
         )
 
+        if class_dict is None:
+            class_dict = {}
+
         properties = rmultitask.build_single_annotation(
             np, i, self._processed_predictions, class_dict
         )
@@ -962,6 +972,8 @@ def test_compute_qupath_json_with_explicit_class_dict(
         save_path=track_tmp_path / "output.json",
         verbose=False,
     )
+
+    print(result)
 
     assert result["type"] == "FeatureCollection"
     assert len(result["features"]) == 1
