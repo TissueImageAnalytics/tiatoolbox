@@ -68,7 +68,7 @@ fn build_single_qupath_feature<'py>(
     single_qupath_feature.set_item("geometry", geo_map)?;
     single_qupath_feature.set_item("properties", props)?;
     single_qupath_feature.set_item("objectType", "annotation")?;
-    if class_name.is_none() {
+    if class_name_is_none {
         single_qupath_feature.set_item("name", "object")?;
     } else {
         single_qupath_feature.set_item("name", &class_name)?;
@@ -88,7 +88,7 @@ fn build_single_annotation(
     let properties = PyDict::new(py);
     let np_array = np.getattr("array")?;
     for (prop, arr) in processed_predictions.iter() {
-        if prop.eq("type")? && !class_dict_is_none {
+        if prop.eq("type")? && !class_dict.len() == 0 {
             properties.set_item(prop, class_dict.get_item(arr.get_item(i)?)?)?;
         } else {
             properties.set_item(
@@ -142,7 +142,8 @@ fn compute_qupath_json(
             let unique_names = builtins
                 .getattr("sorted")?
                 .call1((builtins.getattr("set")?.call1((&valid_ids,))?,))?;
-            while let Ok(name) = unique_names.try_iter() {
+            for name in unique_names.try_iter()? {
+                let name = name?;
                 class_dict.set_item(&name, &name)?;
             }
         }

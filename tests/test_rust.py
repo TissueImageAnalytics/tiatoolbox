@@ -4,7 +4,7 @@ import json
 import tempfile
 import typing
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 import cv2
 import dask.array as da
@@ -19,18 +19,8 @@ from tiatoolbox import rmisc, rmultitask, utils
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.annotation.storage import Annotation
 from tiatoolbox.type_hints import JSON
-from tiatoolbox.utils.misc import (
-    make_valid_poly,
-    tqdm_dask_progress_bar,
-)
-
-
-def save_qupath_json(
-    save_path: Path | None,  # noqa: ARG001
-    qupath_json: dict[str, Any],
-) -> dict[str, Any]:
-    """Return JSON rather than touching disk."""
-    return qupath_json
+from tiatoolbox.utils import misc
+from tiatoolbox.utils.misc import make_valid_poly, tqdm_dask_progress_bar
 
 
 def test_add() -> None:
@@ -845,7 +835,7 @@ class DaskDelayedJSONStore:
         )
         qupath_json = {"type": "FeatureCollection", "features": features}
 
-        return save_qupath_json(save_path=save_path, qupath_json=qupath_json)
+        return misc.save_qupath_json(save_path=save_path, qupath_json=qupath_json)
 
 
 def test_qupath_feature_classification_block_skipped() -> None:
@@ -963,7 +953,8 @@ def test_compute_qupath_json_with_explicit_class_dict(
     )
 
     monkeypatch.setattr(
-        "tiatoolbox.models.engine.multi_task_segmentor.save_qupath_json",
+        misc,
+        "save_qupath_json",
         _fake_save_qupath_json,
     )
 
@@ -972,8 +963,6 @@ def test_compute_qupath_json_with_explicit_class_dict(
         save_path=track_tmp_path / "output.json",
         verbose=False,
     )
-
-    print(result)
 
     assert result["type"] == "FeatureCollection"
     assert len(result["features"]) == 1
