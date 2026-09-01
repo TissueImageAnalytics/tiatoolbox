@@ -679,9 +679,7 @@ def test_change_slide_without_configured_directory() -> None:
         )
 
     assert response.status_code == 400
-    assert response.get_data(as_text=True) == (
-        "Configured file directory is unavailable."
-    )
+    assert response.get_data(as_text=True) == "Invalid slide path."
 
 
 def test_change_slide_missing_configured_file(
@@ -708,7 +706,7 @@ def test_change_slide_missing_configured_file(
         )
 
     assert response.status_code == 400
-    assert response.get_data(as_text=True) == ("Configured file does not exist.")
+    assert response.get_data(as_text=True) == "Invalid slide path."
 
 
 def test_visualize_beta_hides_configured_paths(
@@ -798,7 +796,7 @@ def test_visualize_beta_rejects_unsafe_file_paths(
             )
 
             assert response.status_code == 400
-            assert response.get_data(as_text=True) == ("Invalid configured file path.")
+            assert response.get_data(as_text=True) == "Invalid slide path."
 
 
 def test_visualize_beta_rejects_unsafe_overlay_path(
@@ -828,7 +826,7 @@ def test_visualize_beta_rejects_unsafe_overlay_path(
         )
 
     assert response.status_code == 400
-    assert response.get_data(as_text=True) == ("Invalid configured file path.")
+    assert response.get_data(as_text=True) == "Invalid overlay path."
 
 
 def test_configured_files_not_set() -> None:

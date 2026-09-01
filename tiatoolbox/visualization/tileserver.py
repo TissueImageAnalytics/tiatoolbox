@@ -643,8 +643,8 @@ class TileServer(Flask):
         """
         try:
             directory = self._get_configured_directory(kind)
-        except ValueError as exc:
-            return Response(str(exc), status=400)
+        except ValueError:
+            return Response("Invalid configured file type.", status=400)
 
         if directory is None:
             return jsonify(
@@ -763,8 +763,8 @@ class TileServer(Flask):
                 request.form["slide_path"],
                 "slide",
             )
-        except ValueError as exc:
-            return Response(str(exc), status=400)
+        except ValueError:
+            return Response("Invalid slide path.", status=400)
 
         self.layers[session_id] = {"slide": WSIReader.open(Path(slide_path))}
 
@@ -913,8 +913,8 @@ class TileServer(Flask):
                 request.form["overlay_path"],
                 "overlay",
             )
-        except ValueError as exc:
-            return Response(str(exc), status=400)
+        except ValueError:
+            return Response("Invalid overlay path.", status=400)
         layer_name = request.form.get("layer_name")
 
         # Get other session id
