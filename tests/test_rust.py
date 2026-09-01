@@ -893,6 +893,36 @@ def test_compute_qupath_json_valid_ids_not_empty(track_tmp_path: Path) -> None:
     assert "null" not in json.dumps(data)
 
 
+def _fake_build_single_qupath_feature(
+    i: int,
+    _class_dict_in: dict[int, str],
+    origin: tuple[float, float],
+    scale_factor: tuple[float, float],
+    class_colors: dict[int, list[int]],
+) -> dict[str, object]:
+    """Return a simple fake feature."""
+    _ = i, origin, scale_factor
+
+    assert 0 in class_colors
+    assert 1 in class_colors
+
+    return {
+        "type": "Feature",
+        "properties": {
+            "type": "tumour",
+        },
+    }
+
+
+def _fake_save_qupath_json(
+    save_path: Path | None,
+    qupath_json: dict[str, object],
+) -> dict[str, object]:
+    """Return JSON rather than touching disk."""
+    _ = save_path
+    return qupath_json
+
+
 def test_compute_qupath_json_with_explicit_class_dict(
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
@@ -920,34 +950,54 @@ def test_compute_qupath_json_with_explicit_class_dict(
         1: "tumour",
     }
 
-    def _fake_build_single_qupath_feature(
-        i: int,
-        class_dict_in: dict[int, str],
-        origin: tuple[float, float],
-        scale_factor: tuple[float, float],
-        class_colors: dict[int, list[int]],
-    ) -> dict[str, object]:
-        """Return a simple fake feature."""
-        _ = i, origin, scale_factor
+    monkeypatch.setattr(
+        store,
+        "_build_single_qupath_feature",
+        _fake_build_single_qupath_feature,
+    )
 
-        assert class_dict_in is class_dict
-        assert 0 in class_colors
-        assert 1 in class_colors
+    monkeypatch.setattr(
+        misc,
+        "save_qupath_json",
+        _fake_save_qupath_json,
+    )
 
-        return {
-            "type": "Feature",
-            "properties": {
-                "type": "tumour",
-            },
-        }
+    result = store.compute_qupath_json(
+        class_dict=class_dict,
+        save_path=track_tmp_path / "output.json",
+        verbose=False,
+    )
 
-    def _fake_save_qupath_json(
-        save_path: Path | None,
-        qupath_json: dict[str, object],
-    ) -> dict[str, object]:
-        """Return JSON rather than touching disk."""
-        assert save_path == track_tmp_path / "output.json"
-        return qupath_json
+    assert result["type"] == "FeatureCollection"
+    assert len(result["features"]) == 1
+
+
+def test_compute_qupath_json_with_valid_ids_is_empty(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test compute_qupath_json when class_dict is explicitly provided."""
+    store = DaskDelayedJSONStore.__new__(DaskDelayedJSONStore)
+
+    store._contours = [
+        np.array(
+            [
+                [0, 0],
+                [10, 0],
+                [10, 10],
+            ],
+            dtype=float,
+        ),
+    ]
+
+    store._processed_predictions = {
+        "type": np.array([], dtype=object),
+    }
+
+    class_dict = {
+        0: "background",
+        1: "tumour",
+    }
 
     monkeypatch.setattr(
         store,
@@ -1116,7 +1166,7 @@ def test_build_single_qupath_feature_value_is_none(
         "name": 0,
     }
 
-    result = dask_class._build_single_qupath_feature(0, None, (0, 0), (0, 0), {1: 0})
+    result = dask_class._build_single_qupath_feature(0, {0: 0}, (0, 0), (0, 0), {1: 0})
 
     assert result == {
         "type": "Feature",
@@ -1209,3 +1259,8 @@ def test_build_single_annotation(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert result.polygon == 0
     assert result.properties == {"type": 0, "other": np.array([0])}
+
+    result = dask_class._build_single_annotation(0, None, (0, 0), (0, 0))
+
+    assert result.polygon == 0
+    assert result.properties == {"type": np.array([0]), "other": np.array([0])}
