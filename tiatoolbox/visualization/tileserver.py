@@ -420,6 +420,7 @@ class TileServer(Flask):
         if suffix in {
             ".jpg",
             ".png",
+            ".tif",
             ".tiff",
             ".svs",
             ".ndpi",
@@ -659,6 +660,34 @@ class TileServer(Flask):
                 status=404,
             )
 
+        file_extensions = {
+            "slide": {
+                ".svs",
+                ".ndpi",
+                ".tiff",
+                ".mrxs",
+                ".jpg",
+                ".png",
+                ".tif",
+                ".qptiff",
+            },
+            "overlay": {
+                ".db",
+                ".dat",
+                ".geojson",
+                ".json",
+                ".png",
+                ".jpg",
+                ".tiff",
+                ".mrxs",
+                ".ndpi",
+                ".svs",
+                ".tif",
+                ".npy",
+                ".mha",
+            },
+        }
+
         configured_paths = []
 
         for root, directories, filenames in os.walk(directory):
@@ -686,7 +715,9 @@ class TileServer(Flask):
             for filename in filenames:
                 path = root_path / filename
 
-                if path.resolve().is_relative_to(directory):
+                if path.suffix.lower() in file_extensions[
+                    kind
+                ] and path.resolve().is_relative_to(directory):
                     configured_paths.append(path)
 
         configured_paths.sort(

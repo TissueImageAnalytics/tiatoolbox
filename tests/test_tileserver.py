@@ -348,11 +348,15 @@ def test_configured_files(tmp_path: Path) -> None:
     overlays = tmp_path / "overlays"
     nested_slides = slides / "nested"
     nested_overlays = overlays / "nested"
+    unsupported_slide = slides / "unsupported.txt"
+    unsupported_overlay = overlays / "unsupported.txt"
 
     slides.mkdir()
     overlays.mkdir()
     nested_slides.mkdir()
     nested_overlays.mkdir()
+    unsupported_slide.touch()
+    unsupported_overlay.touch()
 
     slide = slides / "slide.svs"
     nested_slide = nested_slides / "nested.svs"
