@@ -106,7 +106,7 @@ tiatoolbox visualize-beta \
     --overlays /path/to/overlays
 ```
 
-When directories are provided, all the files they contain are made available in
+When directories are provided, all the supported files they contain are made available in
 the Files panel in the top-left corner of the viewer.
 
 Select a slide from the slide dropdown to load it. The available files can be
