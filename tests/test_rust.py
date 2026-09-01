@@ -888,3 +888,143 @@ def test_compute_qupath_json_valid_ids_not_empty(track_tmp_path: Path) -> None:
 
     # 3. classification block should exist only if class_value in class_colours
     assert "null" not in json.dumps(data)
+
+
+def test_compute_qupath_json_with_explicit_class_dict(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test compute_qupath_json when class_dict is explicitly provided."""
+    store = DaskDelayedJSONStore.__new__(DaskDelayedJSONStore)
+
+    store._contours = [
+        np.array(
+            [
+                [0, 0],
+                [10, 0],
+                [10, 10],
+            ],
+            dtype=float,
+        ),
+    ]
+
+    store._processed_predictions = {
+        "type": np.array([1], dtype=object),
+    }
+
+    class_dict = {
+        0: "background",
+        1: "tumour",
+    }
+
+    def _fake_build_single_qupath_feature(
+        i: int,
+        class_dict_in: dict[int, str],
+        origin: tuple[float, float],
+        scale_factor: tuple[float, float],
+        class_colors: dict[int, list[int]],
+    ) -> dict[str, object]:
+        """Return a simple fake feature."""
+        _ = i, origin, scale_factor
+
+        assert class_dict_in is class_dict
+        assert 0 in class_colors
+        assert 1 in class_colors
+
+        return {
+            "type": "Feature",
+            "properties": {
+                "type": "tumour",
+            },
+        }
+
+    def _fake_save_qupath_json(
+        save_path: Path | None,
+        qupath_json: dict[str, object],
+    ) -> dict[str, object]:
+        """Return JSON rather than touching disk."""
+        assert save_path == track_tmp_path / "output.json"
+        return qupath_json
+
+    monkeypatch.setattr(
+        store,
+        "_build_single_qupath_feature",
+        _fake_build_single_qupath_feature,
+    )
+
+    monkeypatch.setattr(
+        "tiatoolbox.models.engine.multi_task_segmentor.save_qupath_json",
+        _fake_save_qupath_json,
+    )
+
+    result = store.compute_qupath_json(
+        class_dict=class_dict,
+        save_path=track_tmp_path / "output.json",
+        verbose=False,
+    )
+
+    assert result["type"] == "FeatureCollection"
+    assert len(result["features"]) == 1
+
+
+def test_qupath_feature_class_dict_lookup_fails() -> None:
+    """Test qupath_feature_class_dict lookup fails."""
+    qupath_json = DaskDelayedJSONStore.__new__(DaskDelayedJSONStore)
+    qupath_json._contours = [np.array([[0, 0], [1, 0], [1, 1]])]
+    qupath_json._processed_predictions = {"type": np.array([5], dtype=object)}
+
+    class_dict = {0: "A", 1: "B"}  # does NOT contain 5
+    class_colors = {0: [255, 0, 0], 1: [0, 255, 0]}  # also does NOT contain 5
+
+    feat = qupath_json._build_single_qupath_feature(
+        i=0,
+        class_dict=class_dict,
+        origin=(0, 0),
+        scale_factor=(1, 1),
+        class_colors=class_colors,
+    )
+
+    # type should fall back to raw value (5)
+    assert feat["properties"]["type"] == 5
+    # classification block should NOT appear
+    assert "classification" not in feat["properties"]
+
+
+def test_compute_qupath_json_string_class_names(track_tmp_path: Path) -> None:
+    """Test compute_qupath_json string class names not empty and str."""
+    store = DaskDelayedJSONStore.__new__(DaskDelayedJSONStore)
+
+    # One simple contour
+    store._contours = [np.array([[0, 0], [10, 0], [10, 10], [0, 10]])]
+
+    # String class names → triggers the "already class names" branch
+    store._processed_predictions = {
+        "type": np.array(["Tumor", None, "Stroma"], dtype=object)
+    }
+
+    # Run compute_qupath_json with class_dict=None
+    out_path = track_tmp_path / "out.json"
+    result_path = store.compute_qupath_json(
+        class_dict=None,
+        save_path=out_path,
+        verbose=False,
+    )
+
+    # Load JSON
+    data = json.loads(Path(result_path).read_text())
+    props = data["features"][0]["properties"]
+
+    # --- Assertions ---
+
+    # 1. type must be one of the string class names
+    assert props["type"] in ("Tumor", "Stroma")
+
+    # 2. type must NOT be null
+    assert props["type"] is not None
+
+    # 3. class_dict should have been inferred as identity mapping
+    #    "Stroma": "Stroma", "Tumor": "Tumor"
+    #    So classification block should exist only if class_colours
+    #    contains the key, but we don't enforce that here — just
+    #    ensure no nulls
+    assert "null" not in json.dumps(data)
