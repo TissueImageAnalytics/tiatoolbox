@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import cast
 
 import cv2
+import dask
 import dask.array as da
 import numpy as np
 import pytest
-from dask import delayed
 from matplotlib import pyplot as plt
 from shapely import geometry
 from shapely.geometry import Polygon
@@ -21,7 +21,6 @@ from tiatoolbox import rmisc, rmultitask, utils
 from tiatoolbox.annotation import SQLiteStore, storage
 from tiatoolbox.type_hints import JSON
 from tiatoolbox.utils import misc
-from tiatoolbox.utils.misc import tqdm_dask_progress_bar
 
 
 def test_add() -> None:
@@ -804,8 +803,8 @@ class DaskDelayedJSONStore:
             verbose,
             len(self._contours),
             self._build_single_annotation,
-            delayed,
-            tqdm_dask_progress_bar,
+            dask.delayed,
+            misc.tqdm_dask_progress_bar,
         )
 
     def compute_qupath_json(
@@ -833,8 +832,8 @@ class DaskDelayedJSONStore:
             self._processed_predictions.get("type").tolist(),
             plt,
             self._build_single_qupath_feature,
-            delayed,
-            tqdm_dask_progress_bar,
+            dask.delayed,
+            misc.tqdm_dask_progress_bar,
         )
         qupath_json = {"type": "FeatureCollection", "features": features}
 
@@ -1255,3 +1254,83 @@ def test_build_single_annotation(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert result.polygon == 0
     assert result.properties == {"type": np.array([0]), "other": np.array([0])}
+
+
+class DummyStore:
+    """Class for testing compute annotations."""
+
+    def __init__(self) -> None:
+        """Initatating dummy store."""
+        self.item = []
+
+    def append_many(self, lists: list) -> None:
+        """Dummy append many function."""
+        self.item.append(lists)
+
+
+def test_compute_annotation(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test compute_annotations writes annotations in batches."""
+    contours = np.array(
+        [
+            [[0, 0], [1, 0], [1, 1]],
+            [[2, 2], [3, 2], [3, 3]],
+            [[4, 4], [5, 4], [5, 5]],
+        ],
+        dtype=object,
+    )
+
+    processed_predictions = {
+        "type": np.array([0, 1, 0]),
+    }
+
+    annotation_store = DaskDelayedJSONStore(
+        contours=contours,
+        processed_predictions=processed_predictions,
+    )
+
+    def fake_tqdm_dask_progress_bar(
+        write_tasks: list,
+        num_workers: int,
+        desc: str = "Processing data",
+        *,
+        verbose: bool = True,
+    ) -> list:
+        """For testing purposes only."""
+        _ = verbose
+        _ = desc
+        _ = num_workers
+        return write_tasks
+
+    store = DummyStore()
+
+    monkeypatch.setattr(
+        annotation_store,
+        "_build_single_annotation",
+        lambda i, _class_dict, _origin, _scale_factor: f"annotation-{i}",
+    )
+
+    monkeypatch.setattr(
+        dask,
+        "delayed",
+        lambda func: func,
+    )
+
+    monkeypatch.setattr(
+        misc,
+        "tqdm_dask_progress_bar",
+        fake_tqdm_dask_progress_bar,
+    )
+
+    result = annotation_store.compute_annotations(
+        store=store,
+        class_dict={0: "background", 1: "cell"},
+        batch_size=2,
+        verbose=False,
+    )
+
+    assert result is store
+
+    assert store.item == [
+        ["annotation-0", "annotation-1"],
+        ["annotation-2"],
+    ]
