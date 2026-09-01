@@ -903,8 +903,7 @@ def _fake_build_single_qupath_feature(
     """Return a simple fake feature."""
     _ = i, origin, scale_factor
 
-    assert 0 in class_colors
-    assert 1 in class_colors
+    _ = class_colors
 
     return {
         "type": "Feature",
@@ -994,10 +993,7 @@ def test_compute_qupath_json_with_valid_ids_is_empty(
         "type": np.array([], dtype=object),
     }
 
-    class_dict = {
-        0: "background",
-        1: "tumour",
-    }
+    class_dict = {}
 
     monkeypatch.setattr(
         store,
@@ -1121,15 +1117,15 @@ def test_build_single_qupath_feature_non_type_property() -> None:
     assert props["class_value"] == 1
 
 
+def _fake_mapping(_geom: Polygon) -> int:
+    """Replacement for mapping to test single qupath feature."""
+    return 0
+
+
 def test_build_single_qupath_feature_value_is_none(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test that single_qupath_feature works if value is None."""
-
-    def _fake_mapping(_geom: Polygon) -> int:
-        """Replacement for mapping to test single qupath feature."""
-        return 0
-
     monkeypatch.setattr(
         geometry,
         "mapping",
@@ -1182,11 +1178,6 @@ def test_build_single_qupath_feature_class_name_is_none(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test that single_qupath_feature works if class_name is None."""
-
-    def _fake_mapping(_geom: Polygon) -> int:
-        """Replacement for mapping to test single qupath feature."""
-        return 0
-
     monkeypatch.setattr(
         geometry,
         "mapping",

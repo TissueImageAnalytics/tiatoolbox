@@ -87,7 +87,7 @@ fn build_single_annotation(
     let properties = PyDict::new(py);
     let np_array = np.getattr("array")?;
     for (prop, arr) in processed_predictions.iter() {
-        if prop.eq("type")? && !class_dict.len() == 0 {
+        if prop.eq("type")? && class_dict.len() != 0 {
             properties.set_item(prop, class_dict.get_item(arr.get_item(i)?)?)?;
         } else {
             let item = arr.get_item(i)?;
