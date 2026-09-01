@@ -413,6 +413,37 @@ def test_configured_files(tmp_path: Path) -> None:
         }
 
 
+def test_configured_files_skips_external_symlink(
+    tmp_path: Path,
+) -> None:
+    """Test configured files ignore directories outside the configured path."""
+    slides = tmp_path / "slides"
+    slides.mkdir()
+
+    outside = tmp_path / "outside"
+    outside.mkdir()
+
+    external_link = slides / "external"
+    external_link.symlink_to(outside, target_is_directory=True)
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slides,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/files/slide")
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "directory": "slides",
+        "files": [],
+    }
+
+
 def test_change_slide_sets_missing_file_path(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -542,6 +573,22 @@ def test_dicom_is_image_overlay(
     )
 
     assert TileServer._is_image_overlay(dicom_path)
+
+
+def test_ngff_is_image_overlay(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test NGFF directories are treated as image overlays."""
+    ngff_path = tmp_path / "overlay.zarr"
+    ngff_path.mkdir()
+
+    monkeypatch.setattr(
+        "tiatoolbox.visualization.tileserver.is_ngff",
+        lambda path: Path(path) == ngff_path,
+    )
+
+    assert TileServer._is_image_overlay(ngff_path)
 
 
 def test_configured_files_dicom_directory(
