@@ -12,15 +12,16 @@ import numpy as np
 import pytest
 from dask import delayed
 from matplotlib import pyplot as plt
-from shapely.geometry import mapping
+from shapely import geometry
+from shapely.geometry import Polygon
 from shapely.geometry import shape as feature2geometry
+from shapely.geometry.base import BaseGeometry
 
 from tiatoolbox import rmisc, rmultitask, utils
-from tiatoolbox.annotation import SQLiteStore
-from tiatoolbox.annotation.storage import Annotation
+from tiatoolbox.annotation import SQLiteStore, storage
 from tiatoolbox.type_hints import JSON
 from tiatoolbox.utils import misc
-from tiatoolbox.utils.misc import make_valid_poly, tqdm_dask_progress_bar
+from tiatoolbox.utils.misc import tqdm_dask_progress_bar
 
 
 def test_add() -> None:
@@ -191,8 +192,8 @@ class DummyAnnotation:
 
     def __init__(
         self,
-        polygon: tuple[float, float, float, float],
-        properties: dict[str, str | float],
+        polygon: tuple[float, float, float, float] | int,
+        properties: dict[str, str | float | np.ndarray],
     ) -> None:
         """Initialize an annotation with geometry and associated properties."""
         self.polygon: tuple[float, float, float, float] = polygon
@@ -642,7 +643,7 @@ class DaskDelayedJSONStore:
         class_dict: dict[int, str] | None,
         origin: tuple[float, float],
         scale_factor: tuple[float, float],
-    ) -> Annotation:
+    ) -> storage.Annotation:
         """Build a single annotation for index ``i``.
 
         This method performs:
@@ -670,7 +671,7 @@ class DaskDelayedJSONStore:
                 A fully constructed TIAToolbox `Annotation` instance.
 
         """
-        geom = make_valid_poly(
+        geom = misc.make_valid_poly(
             feature2geometry(
                 {
                     "type": self._processed_predictions.get("geom_type", "Polygon"),
@@ -687,7 +688,7 @@ class DaskDelayedJSONStore:
             np, i, self._processed_predictions, class_dict
         )
 
-        return Annotation(geom, properties)
+        return storage.Annotation(geom, properties)
 
     def _build_single_qupath_feature(
         self,
@@ -728,7 +729,9 @@ class DaskDelayedJSONStore:
                 to QuPath JSON.
 
         """
-        geom = make_valid_poly(
+        if class_dict is None:
+            class_dict = {}
+        geom = misc.make_valid_poly(
             feature2geometry(
                 {
                     "type": self._processed_predictions.get("geom_type", "Polygon"),
@@ -737,7 +740,7 @@ class DaskDelayedJSONStore:
             ),
             tuple(origin),
         )
-        geo_map = mapping(geom)
+        geo_map = geometry.mapping(geom)
 
         return rmultitask.build_single_qupath_feature(
             geo_map, self._processed_predictions, i, class_dict, class_colors
@@ -1066,3 +1069,143 @@ def test_build_single_qupath_feature_non_type_property() -> None:
 
     assert props["classification"]["name"] == "Tumour"
     assert props["class_value"] == 1
+
+
+def test_build_single_qupath_feature_value_is_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that single_qupath_feature works if value is None."""
+
+    def _fake_mapping(_geom: Polygon) -> int:
+        """Replacement for mapping to test single qupath feature."""
+        return 0
+
+    monkeypatch.setattr(
+        geometry,
+        "mapping",
+        _fake_mapping,
+    )
+
+    dask_class = DaskDelayedJSONStore(
+        np.array(
+            [
+                [
+                    [0, 0],
+                    [10, 0],
+                    [10, 10],
+                    [0, 10],
+                    [0, 0],
+                ]
+            ]
+        ),
+        {"type": [None], "other": [None]},
+    )
+
+    result = dask_class._build_single_qupath_feature(0, None, (0, 0), (0, 0), {0: 0})
+
+    assert result == {
+        "type": "Feature",
+        "id": "object_0",
+        "geometry": 0,
+        "properties": {
+            "type": 0,
+            "classification": {"name": 0, "color": 0},
+            "class_value": 0,
+        },
+        "objectType": "annotation",
+        "name": 0,
+    }
+
+    result = dask_class._build_single_qupath_feature(0, None, (0, 0), (0, 0), {1: 0})
+
+    assert result == {
+        "type": "Feature",
+        "id": "object_0",
+        "geometry": 0,
+        "properties": {"type": 0},
+        "objectType": "annotation",
+        "name": 0,
+    }
+
+
+def test_build_single_qupath_feature_class_name_is_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that single_qupath_feature works if class_name is None."""
+
+    def _fake_mapping(_geom: Polygon) -> int:
+        """Replacement for mapping to test single qupath feature."""
+        return 0
+
+    monkeypatch.setattr(
+        geometry,
+        "mapping",
+        _fake_mapping,
+    )
+
+    dask_class = DaskDelayedJSONStore(
+        np.array(
+            [
+                [
+                    [0, 0],
+                    [10, 0],
+                    [10, 10],
+                    [0, 10],
+                    [0, 0],
+                ]
+            ]
+        ),
+        {},
+    )
+
+    result = dask_class._build_single_qupath_feature(0, None, (0, 0), (0, 0), {0: 0})
+
+    assert result == {
+        "type": "Feature",
+        "id": "object_0",
+        "geometry": 0,
+        "properties": {},
+        "objectType": "annotation",
+        "name": "object",
+    }
+
+
+def test_build_single_annotation(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test build single annotation is functioning properly."""
+
+    def _fake_make_valid_poly(
+        _poly: BaseGeometry, _origin: tuple[float, float] | None = None
+    ) -> int:
+        """Replacement for mapping to test single qupath feature."""
+        return 0
+
+    monkeypatch.setattr(
+        misc,
+        "make_valid_poly",
+        _fake_make_valid_poly,
+    )
+
+    monkeypatch.setattr(
+        storage,
+        "Annotation",
+        DummyAnnotation,
+    )
+    dask_class = DaskDelayedJSONStore(
+        np.array(
+            [
+                [
+                    [0, 0],
+                    [10, 0],
+                    [10, 10],
+                    [0, 10],
+                    [0, 0],
+                ]
+            ]
+        ),
+        {"type": [0], "other": [0]},
+    )
+
+    result = dask_class._build_single_annotation(0, {0: 0}, (0, 0), (0, 0))
+
+    assert result.polygon == 0
+    assert result.properties == {"type": 0, "other": np.array([0])}
