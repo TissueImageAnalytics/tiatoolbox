@@ -84,7 +84,6 @@ fn build_single_annotation(
     processed_predictions: &Bound<'_, PyDict>,
     class_dict: &Bound<'_, PyDict>,
 ) -> PyResult<Py<PyDict>> {
-    let class_dict_is_none = class_dict.is_none();
     let properties = PyDict::new(py);
     let np_array = np.getattr("array")?;
     for (prop, arr) in processed_predictions.iter() {
