@@ -1029,3 +1029,40 @@ def test_compute_qupath_json_string_class_names(track_tmp_path: Path) -> None:
     #    contains the key, but we don't enforce that here — just
     #    ensure no nulls
     assert "null" not in json.dumps(data)
+
+
+def test_build_single_qupath_feature_non_type_property() -> None:
+    """Test non-type properties are written to QuPath feature properties."""
+    store = DaskDelayedJSONStore.__new__(DaskDelayedJSONStore)
+
+    store._contours = [
+        np.array(
+            [
+                [0, 0],
+                [10, 0],
+                [10, 10],
+            ],
+            dtype=float,
+        ),
+    ]
+
+    store._processed_predictions = {
+        "type": np.array([1], dtype=object),
+        "prob": np.array([0.95], dtype=np.float32),
+    }
+
+    result = store._build_single_qupath_feature(
+        i=0,
+        class_dict={1: "Tumour"},
+        origin=(0.0, 0.0),
+        scale_factor=(1.0, 1.0),
+        class_colors={1: [255, 0, 0]},
+    )
+
+    props = result["properties"]
+
+    assert props["type"] == "Tumour"
+    assert np.isclose(props["prob"], 0.95)
+
+    assert props["classification"]["name"] == "Tumour"
+    assert props["class_value"] == 1
