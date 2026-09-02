@@ -61,6 +61,7 @@ dependencies = [
 
 
 [project.optional-dependencies]
+deepspotm = ["deepspotm>=1.0.0"]
 docs = [
   "furo>=2022.12.7",
   "myst-nb>=0.17.1",

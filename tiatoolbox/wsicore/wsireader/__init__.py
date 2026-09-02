@@ -8,7 +8,6 @@ from tiatoolbox.wsicore.wsimeta import WSIMeta
 from .base import (
     AnnotationStoreReader,
     ArrayView,
-    DICOMWSIReader,
     FsspecJsonWSIReader,
     JP2WSIReader,
     NGFFWSIReader,
@@ -22,6 +21,9 @@ from .base import (
     _handle_virtual_wsi,
 )
 from .detection import is_dicom, is_ngff, is_tiled_tiff, is_url, is_zarr
+
+# Import reader classes
+from .dicom import DICOMWSIReader
 
 __all__ = [
     "AnnotationStoreReader",
