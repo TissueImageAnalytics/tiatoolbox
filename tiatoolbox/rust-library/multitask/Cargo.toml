@@ -1,10 +1,10 @@
 [package]
-name = "rmultitask"
+name = "multitask"
 version.workspace = true
 edition.workspace = true
 
 [lib]
-name = "rmultitask"
+name = "multitask"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]

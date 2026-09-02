@@ -1,6 +1,6 @@
 //Tests that functions in rust are working as expected
 
-use rmisc::string_to_tuple;
+use misc::string_to_tuple;
 
 #[test]
 fn test_string_to_tuple() {

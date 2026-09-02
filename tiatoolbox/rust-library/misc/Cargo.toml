@@ -1,10 +1,10 @@
 [package]
-name = "rmisc"
+name = "misc"
 version.workspace = true
 edition.workspace = true
 
 [lib]
-name = "rmisc"
+name = "misc"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]

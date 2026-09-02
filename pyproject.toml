@@ -307,14 +307,14 @@ where = ["."]
 include = ["tiatoolbox*"]
 
 [[tool.setuptools-rust.ext-modules]]
-target = "tiatoolbox.rmisc"
+target = "tiatoolbox.rust.utils.misc"
 path = "tiatoolbox/rust-library/misc/Cargo.toml"
 binding = "PyO3"
 #Uncomment below for release
 #debug = false
 
 [[tool.setuptools-rust.ext-modules]]
-target = "tiatoolbox.rmultitask"
+target = "tiatoolbox.rust.engine.multitask"
 path = "tiatoolbox/rust-library/multitask/Cargo.toml"
 binding = "PyO3"
 #Uncomment below for release

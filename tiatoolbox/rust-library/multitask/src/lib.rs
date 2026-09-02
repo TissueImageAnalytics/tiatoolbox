@@ -264,7 +264,7 @@ fn compute_annotations(
 }
 
 #[pymodule]
-fn rmultitask(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn multitask(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(add, m)?)?;
     m.add_function(wrap_pyfunction!(build_single_qupath_feature, m)?)?;
     m.add_function(wrap_pyfunction!(build_single_annotation, m)?)?;

@@ -11,13 +11,15 @@ import dask
 import dask.array as da
 import numpy as np
 import pytest
+import tiatoolbox.rust.engine.multitask as rmultitask
+import tiatoolbox.rust.utils.misc as rmisc
 from matplotlib import pyplot as plt
 from shapely import geometry
 from shapely.geometry import Polygon
 from shapely.geometry import shape as feature2geometry
 from shapely.geometry.base import BaseGeometry
 
-from tiatoolbox import rmisc, rmultitask, utils
+from tiatoolbox import utils
 from tiatoolbox.annotation import SQLiteStore, storage
 from tiatoolbox.type_hints import JSON
 from tiatoolbox.utils import misc

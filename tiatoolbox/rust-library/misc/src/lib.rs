@@ -398,7 +398,7 @@ fn contrast_enhancer<'py>(
 }
 
 #[pymodule]
-fn rmisc(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn misc(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(contrast_enhancer, m)?)?;
     m.add_function(wrap_pyfunction!(patch_predictions_as_qupath_json, m)?)?;
     m.add_function(wrap_pyfunction!(patch_predictions_as_annotations, m)?)?;
