@@ -10,8 +10,8 @@ import cv2
 import dask.array as da
 import numpy as np
 import pytest
-import tiatoolbox.rust.utils.misc as rmisc
 
+import tiatoolbox.rust.utils.misc as rmisc
 from tiatoolbox import utils
 from tiatoolbox.type_hints import JSON
 
