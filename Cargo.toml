@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "tiatoolbox/rust-library/misc",
+    "tiatoolbox/rust/utils/misc",
 ]
 
 [workspace.package]

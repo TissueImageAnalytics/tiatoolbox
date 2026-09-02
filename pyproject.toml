@@ -303,13 +303,9 @@ ignore_missing_imports = true
 # CI overrides this per job with --python-version for 3.12-3.14.
 python_version = "3.12"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["tiatoolbox*"]
-
 [[tool.setuptools-rust.ext-modules]]
 target = "tiatoolbox.rust.utils.misc"
-path = "tiatoolbox/rust-library/misc/Cargo.toml"
+path = "tiatoolbox/rust/utils/misc/Cargo.toml"
 binding = "PyO3"
 #Uncomment below for release
 #debug = false
