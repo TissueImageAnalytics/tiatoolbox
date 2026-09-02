@@ -208,11 +208,33 @@ def test_get_tile_layer_key_error(app: TileServer) -> None:
 
 
 def test_get_index(app: TileServer) -> None:
-    """Get the index page and check that it is HTML."""
+    """Get the legacy index page and check that it is HTML."""
     with app.test_client() as client:
         response = client.get("/")
+
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
+        assert b"/openlayers/viewer_legacy.js" in response.data
+        assert b"/openlayers/viewer_legacy.css" in response.data
+
+
+def test_get_index_creates_session(empty_app: TileServer) -> None:
+    """Test index creates a session when one does not exist."""
+    with empty_app.test_client() as client:
+        response = client.get("/")
+
+        assert response.status_code == 200
+
+        session_cookie = client.get_cookie("session_id")
+
+        assert session_cookie is not None
+
+        session_id = session_cookie.value
+
+        assert session_id in empty_app.layers
+        assert session_id in empty_app.pyramids
+        assert session_id in empty_app.renderers
+        assert session_id in empty_app.overlaps
 
 
 def test_create_with_dict(sample_svs: Path) -> None:
@@ -236,24 +258,175 @@ def test_cli_name_multiple_flag() -> None:
     """Test cli_name multiple flag."""
 
     @cli_name()
-    def dummy_fn() -> NoReturn:
+    def dummy_fn_single() -> NoReturn:
         """It is empty because it's a dummy function."""
 
-    assert "Multiple" not in dummy_fn.__click_params__[0].help
+    assert "Multiple" not in dummy_fn_single.__click_params__[0].help
 
     @cli_name(multiple=True)
-    def dummy_fn() -> NoReturn:
+    def dummy_fn_multiple() -> NoReturn:
         """It is empty because it's a dummy function."""
 
-    assert "Multiple" in dummy_fn.__click_params__[0].help
+    assert "Multiple" in dummy_fn_multiple.__click_params__[0].help
 
 
 def test_get_session_id(app: TileServer) -> None:
-    """Test session_id endpoint."""
+    """Test legacy session_id endpoint."""
     with app.test_client() as client:
         response = client.get("/tileserver/session_id")
+
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
+        assert response.data == b"done"
+
+
+def test_visualize_beta_session_id() -> None:
+    """Test creating a session for the experimental viewer."""
+    app = TileServer(
+        title="Testing beta TileServer",
+        layers={},
+        legacy=False,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/session_id")
+
+        assert response.status_code == 200
+        assert response.content_type == "application/json"
+
+        session_id = response.get_json()["session_id"]
+
+        assert session_id in app.layers
+        assert session_id in app.pyramids
+        assert client.get_cookie("session_id").value == session_id
+
+
+def test_visualize_beta_reuses_session() -> None:
+    """Test that the experimental viewer reuses its session."""
+    app = TileServer(
+        title="Testing beta TileServer",
+        layers={},
+        legacy=False,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/session_id")
+        session_id = response.get_json()["session_id"]
+
+        response = client.get("/tileserver/session_id")
+
+        assert response.get_json()["session_id"] == session_id
+        assert len(app.layers) == 1
+
+
+def test_visualize_beta_index() -> None:
+    """Test the experimental viewer starts with an empty viewer."""
+    app = TileServer(
+        title="Testing beta TileServer",
+        layers={},
+        legacy=False,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/")
+
+        assert response.status_code == 200
+        assert response.content_type == "text/html; charset=utf-8"
+        assert b"/openlayers/viewer.js" in response.data
+        assert b"/openlayers/viewer.css" in response.data
+        assert app.layers == {}
+        assert client.get_cookie("session_id") is None
+
+
+def test_remove_slide_missing_session(empty_app: TileServer) -> None:
+    """Test removing a slide without an active session."""
+    with empty_app.test_client() as client:
+        response = client.delete("/tileserver/slide")
+
+        assert response.status_code == 404
+        assert response.get_data(as_text=True) == "Session not found."
+
+
+def test_remove_slide(
+    empty_app: TileServer,
+    remote_sample: Callable,
+) -> None:
+    """Test removing the current slide."""
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+
+        assert response.status_code == 200
+        assert "slide" in empty_app.layers[session_id]
+        assert "slide" in empty_app.pyramids[session_id]
+
+        response = client.delete("/tileserver/slide")
+
+        assert response.status_code == 200
+        assert response.get_data(as_text=True) == "done"
+        assert empty_app.layers[session_id] == {}
+        assert empty_app.pyramids[session_id] == {}
+        assert session_id not in empty_app.slide_mpps
+
+
+def test_remove_overlay(app: TileServer) -> None:
+    """Test removing an overlay layer."""
+    with app.test_client() as client:
+        response = client.delete("/tileserver/overlay/slide")
+
+        assert response.status_code == 400
+        assert response.data == b"Cannot remove the slide."
+
+        response = client.delete("/tileserver/overlay/missing")
+
+        assert response.status_code == 404
+        assert response.data == b"Layer not found."
+
+        assert "overlay" in app.layers["default"]
+        assert "overlay" in app.pyramids["default"]
+
+        response = client.delete("/tileserver/overlay/overlay")
+
+        assert response.status_code == 200
+        assert response.data == b"done"
+
+        assert "overlay" not in app.layers["default"]
+        assert "overlay" not in app.pyramids["default"]
+
+
+def test_change_slide_after_remove(
+    empty_app: TileServer,
+    remote_sample: Callable,
+) -> None:
+    """Test loading a new slide after removing the current slide."""
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        response = client.delete("/tileserver/slide")
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("wsi2_4k_4k_jpg"))},
+        )
+
+        assert response.status_code == 200
+        assert "slide" in empty_app.layers[session_id]
+        assert "slide" in empty_app.pyramids[session_id]
+        assert session_id in empty_app.slide_mpps
 
 
 def test_color_prop(app: TileServer) -> None:
@@ -374,8 +547,9 @@ def test_clear_overlays(app: TileServer) -> None:
         response = client.put("/tileserver/clear_overlays")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
-        # check that the overlay has been correctly cleared
-        assert "overlay" not in app.pyramids["default"]
+        # check all overlays are cleared while the slide remains
+        assert set(app.layers["default"]) == {"slide"}
+        assert set(app.pyramids["default"]) == {"slide"}
 
 
 def test_load_annotations_empty(
@@ -553,6 +727,192 @@ def test_change_overlay(  # noqa: PLR0915
         lname = Path(tiff_path).stem
         layer = empty_app.pyramids[session_id][lname]
         assert layer.wsi.info.file_path == tiff_path
+
+
+def test_named_image_overlay_replaces_existing(
+    empty_app: TileServer,
+    remote_sample: Callable,
+) -> None:
+    """Test replacing an explicitly named image overlay."""
+    first_path = remote_sample("wsi2_4k_4k_svs")
+    second_path = remote_sample("svs-1-small")
+
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(second_path)},
+        )
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(first_path),
+                "layer_name": "named-image",
+            },
+        )
+        assert response.status_code == 200
+        assert json.loads(response.data) == "named-image"
+        assert empty_app.layers[session_id]["named-image"].info.file_path == first_path
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(second_path),
+                "layer_name": "named-image",
+            },
+        )
+        assert response.status_code == 200
+        assert set(empty_app.layers[session_id]) == {
+            "slide",
+            "named-image",
+        }
+        assert set(empty_app.pyramids[session_id]) == {
+            "slide",
+            "named-image",
+        }
+        assert empty_app.layers[session_id]["named-image"].info.file_path == second_path
+
+
+def test_named_annotation_overlays(
+    empty_app: TileServer,
+    track_tmp_path: Path,
+    remote_sample: Callable,
+) -> None:
+    """Test coexistence, replacement, and removal of named annotations."""
+    sample_store = Path(remote_sample("annotation_store_svs_1"))
+
+    dat_path = track_tmp_path / "named.dat"
+    db_path = track_tmp_path / "named.db"
+    joblib.dump(make_simple_dat(), dat_path)
+
+    store = store_from_dat(dat_path)
+    store.dump(db_path)
+    store.close()
+
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(sample_store),
+                "layer_name": "first",
+            },
+        )
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(db_path),
+                "layer_name": "second",
+            },
+        )
+        assert response.status_code == 200
+
+        assert set(empty_app.layers[session_id]) == {
+            "slide",
+            "first",
+            "second",
+        }
+
+        response = client.get("/tileserver/prop_values/type/all")
+
+        assert response.status_code == 200
+        assert set(json.loads(response.data)) == {0, 1, 2, 3, 4}
+
+        assert set(empty_app.pyramids[session_id]) == {
+            "slide",
+            "first",
+            "second",
+        }
+
+        first_store_path = empty_app.pyramids[session_id]["first"].store.path
+        second_store_path = empty_app.pyramids[session_id]["second"].store.path
+
+        assert SQLiteStore._connection_to_path(first_store_path) == sample_store
+        assert SQLiteStore._connection_to_path(second_store_path) == db_path
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(db_path),
+                "layer_name": "first",
+            },
+        )
+        assert response.status_code == 200
+
+        assert set(empty_app.pyramids[session_id]) == {
+            "slide",
+            "first",
+            "second",
+        }
+
+        first_store_path = empty_app.pyramids[session_id]["first"].store.path
+        assert SQLiteStore._connection_to_path(first_store_path) == db_path
+
+        response = client.delete("/tileserver/overlay/first")
+
+        assert response.status_code == 200
+        assert set(empty_app.layers[session_id]) == {
+            "slide",
+            "second",
+        }
+        assert set(empty_app.pyramids[session_id]) == {
+            "slide",
+            "second",
+        }
+        assert len(empty_app.pyramids[session_id]["second"].store) == 2
+
+
+def test_commit_named_annotation_overlay(
+    empty_app: TileServer,
+    track_tmp_path: Path,
+    remote_sample: Callable,
+) -> None:
+    """Test committing a named temporary annotation overlay."""
+    dat_path = track_tmp_path / "named.dat"
+    save_path = track_tmp_path / "named.db"
+    joblib.dump(make_simple_dat(), dat_path)
+
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(dat_path),
+                "layer_name": "named-annotations",
+            },
+        )
+        assert response.status_code == 200
+
+        store_path = empty_app.pyramids[session_id]["named-annotations"].store.path
+
+        assert store_path.name == (f"temp_{session_id}_named-annotations.db")
+
+        response = client.post(
+            "/tileserver/commit",
+            data={"save_path": safe_str(save_path)},
+        )
+        assert response.status_code == 200
+        assert response.data == b"done"
+
+    store = SQLiteStore(save_path)
+    assert len(store) == 2
+    store.close()
 
 
 def test_commit(

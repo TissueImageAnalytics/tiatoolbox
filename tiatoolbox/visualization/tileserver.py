@@ -55,6 +55,9 @@ class TileServer(Flask):
             'layer-2' etc. will be used. First entry in list will be assumed to
             be the base slide. If a layer is a single-channel low-res overlay,
             it will be colourized using the 'viridis' colourmap.
+        legacy (bool):
+            Whether to use the legacy OpenLayers viewer behaviour (show-wsi)
+            or to use the experimental viewer (visualize-beta). Defaults to True.
 
     Examples:
         >>> from tiatoolbox.wsicore.wsireader import WSIReader
@@ -75,6 +78,8 @@ class TileServer(Flask):
         title: str,
         layers: dict[str, WSIReader | str] | list[WSIReader | str],
         renderer: AnnotationRenderer | None = None,
+        *,
+        legacy: bool = True,
     ) -> None:
         """Initialize :class:`TileServer`."""
         super().__init__(
@@ -88,6 +93,7 @@ class TileServer(Flask):
             ),
         )
         self.title = title
+        self.legacy = legacy
         self.layers = {}
         self.pyramids = {}
         self.renderer = renderer
@@ -144,6 +150,7 @@ class TileServer(Flask):
         self.route("/tileserver/session_id")(self.session_id)
         self.route("/tileserver/color_prop", methods=["PUT"])(self.change_prop)
         self.route("/tileserver/slide", methods=["PUT"])(self.change_slide)
+        self.route("/tileserver/slide", methods=["DELETE"])(self.remove_slide)
         self.route("/tileserver/clear_overlays", methods=["PUT"])(self.clear_overlays)
         self.route("/tileserver/cmap", methods=["PUT"])(self.change_mapper)
         self.route(
@@ -151,6 +158,10 @@ class TileServer(Flask):
             methods=["PUT"],
         )(self.load_annotations)
         self.route("/tileserver/overlay", methods=["PUT"])(self.change_overlay)
+        self.route(
+            "/tileserver/overlay/<layer>",
+            methods=["DELETE"],
+        )(self.remove_overlay)
         self.route("/tileserver/commit", methods=["POST"])(self.commit_db)
         self.route("/tileserver/renderer/<prop>", methods=["PUT"])(self.update_renderer)
         self.route("/tileserver/reset/<session_id>", methods=["PUT"])(self.reset)
@@ -351,7 +362,7 @@ class TileServer(Flask):
         msg = "No annotation layer found."
         raise ValueError(msg)
 
-    def index(self: TileServer) -> str:
+    def index(self: TileServer) -> Response:
         """Serve the index page.
 
         Returns:
@@ -359,11 +370,26 @@ class TileServer(Flask):
                 The index page.
 
         """
+        if not self.legacy:
+            return make_response(
+                render_template(
+                    "index.html",
+                    title=self.title,
+                    layers="[]",
+                ),
+            )
+
         session_id = self._get_session_id()
+        new_session_id = None
+
+        if session_id is None or session_id not in self.layers:
+            new_session_id = self._create_session()
+            session_id = new_session_id
+
         layers = [
             {
                 "name": name,
-                "url": f"/tileserver/layer/{name}/default/zoomify/"
+                "url": f"/tileserver/layer/{name}/{session_id}/zoomify/"
                 "{TileGroup}/{z}-{x}-{y}@1x.jpg",
                 "size": [int(x) for x in layer.info.slide_dimensions],
                 "mpp": float(np.mean(layer.info.mpp)),
@@ -371,11 +397,23 @@ class TileServer(Flask):
             for name, layer in self.layers[session_id].items()
         ]
 
-        return render_template(
-            "index.html",
-            title=self.title,
-            layers=json.dumps(layers),
+        response = make_response(
+            render_template(
+                "index_legacy.html",
+                title=self.title,
+                layers=json.dumps(layers),
+            ),
         )
+
+        if new_session_id is not None:
+            response.set_cookie(
+                "session_id",
+                new_session_id,
+                httponly=True,
+                samesite="Lax",
+            )  # skipcq: PTC-W6003
+
+        return response
 
     def change_prop(self: TileServer) -> str:
         """Change the property to colour annotations by."""
@@ -385,17 +423,57 @@ class TileServer(Flask):
 
         return "done"
 
-    def session_id(self: TileServer) -> Response:
-        """Set up a new session."""
-        # respond with a random cookie to disambiguate sessions
-        resp = make_response("done")
+    def _create_session(self: TileServer) -> str:
+        """Create and initialise a TileServer session."""
         session_id = "default" if self.default_session_id else secrets.token_urlsafe(16)
-        resp.set_cookie("session_id", session_id, httponly=True)  # skipcq: PTC-W6003
+
         self.renderers[session_id] = copy.deepcopy(self.renderer)
         self.overlaps[session_id] = 0
         self.layers[session_id] = {}
         self.pyramids[session_id] = {}
-        return resp
+
+        return session_id
+
+    def session_id(self: TileServer) -> Response:
+        """Set up a new session."""
+        if self.legacy:
+            resp = make_response("done")
+            session_id = (
+                "default" if self.default_session_id else secrets.token_urlsafe(16)
+            )
+
+            resp.set_cookie(
+                "session_id",
+                session_id,
+                httponly=True,
+                samesite="Lax",
+            )
+
+            self.renderers[session_id] = copy.deepcopy(self.renderer)
+            self.overlaps[session_id] = 0
+            self.layers[session_id] = {}
+            self.pyramids[session_id] = {}
+
+            return resp
+
+        session_id = self._get_session_id()
+        new_session_id = None
+
+        if session_id is None or session_id not in self.layers:
+            new_session_id = self._create_session()
+            session_id = new_session_id
+
+        response = jsonify({"session_id": session_id})
+
+        if new_session_id is not None:
+            response.set_cookie(
+                "session_id",
+                new_session_id,
+                httponly=True,
+                samesite="Lax",
+            )
+
+        return response
 
     def reset(self: TileServer, session_id: str) -> str:
         """Reset the tileserver."""
@@ -422,6 +500,19 @@ class TileServer(Flask):
 
         return "done"
 
+    def remove_slide(self: TileServer) -> Response:
+        """Remove the current slide and its overlays."""
+        session_id = self._get_session_id()
+
+        if session_id is None or session_id not in self.layers:
+            return Response("Session not found.", status=404)
+
+        self.layers[session_id] = {}
+        self.pyramids[session_id] = {}
+        self.slide_mpps.pop(session_id, None)
+
+        return Response("done", status=200)
+
     def clear_overlays(self: TileServer) -> str:
         """Clear all overlays."""
         session_id = self._get_session_id()
@@ -431,6 +522,21 @@ class TileServer(Flask):
             "slide": ZoomifyGenerator(slide_layer, tile_size=256),
         }
         return "done"
+
+    def remove_overlay(self: TileServer, layer: str) -> Response:
+        """Remove an overlay layer."""
+        session_id = self._get_session_id()
+
+        if layer == "slide":
+            return Response("Cannot remove the slide.", status=400)
+
+        if layer not in self.layers[session_id]:
+            return Response("Layer not found.", status=404)
+
+        self.layers[session_id].pop(layer)
+        self.pyramids[session_id].pop(layer, None)
+
+        return Response("done", status=200)
 
     def change_mapper(self: TileServer) -> str:
         """Change the colour mapper for the overlay."""
@@ -510,19 +616,21 @@ class TileServer(Flask):
         return json.dumps(types)
 
     def change_overlay(self: TileServer) -> str:
-        """Change the overlay.
+        """Change or add an overlay.
 
-        If the path points to some annotations, the current overlay
-        is replaced with the new one. If the path points to an image,
-        it is added as a new layer.
+        An explicit layer name allows multiple overlays to coexist.
+        Loading an overlay with the same layer name replaces the
+        existing layer.
 
         Returns:
-            str: A jsonified list of types.
+            str:
+                A jsonified list of annotation types or the updated layer name.
 
         """
         session_id = self._get_session_id()
         overlay_path = request.form["overlay_path"]
         overlay_path = self.decode_safe_name(overlay_path)
+        layer_name = request.form.get("layer_name")
 
         # Get other session id
         session_ids = list(self.layers.keys())
@@ -533,13 +641,30 @@ class TileServer(Flask):
 
         if overlay_path.suffix in [".npy", ".mha"]:
             return self._handle_registration_overlay(
-                session_id, overlay_path, other_session_id
+                session_id,
+                overlay_path,
+                other_session_id,
             )
 
-        if overlay_path.suffix in [".jpg", ".png", ".tiff", ".svs", ".ndpi", ".mrxs"]:
-            return self._add_image_overlay(session_id, overlay_path)
+        if overlay_path.suffix in [
+            ".jpg",
+            ".png",
+            ".tiff",
+            ".svs",
+            ".ndpi",
+            ".mrxs",
+        ]:
+            return self._add_image_overlay(
+                session_id,
+                overlay_path,
+                layer_name=layer_name,
+            )
 
-        return self._add_annotation_overlay(session_id, overlay_path)
+        return self._add_annotation_overlay(
+            session_id,
+            overlay_path,
+            layer_name=layer_name,
+        )
 
     def _handle_registration_overlay(
         self,
@@ -592,11 +717,19 @@ class TileServer(Flask):
         )
         return json.dumps("slide")
 
-    def _add_image_overlay(self, session_id: str, overlay_path: Path) -> str:
-        layer = overlay_path.stem
-        if layer in self.layers[session_id]:
-            # use full file name to disambiguate
+    def _add_image_overlay(
+        self,
+        session_id: str,
+        overlay_path: Path,
+        layer_name: str | None = None,
+    ) -> str:
+        layer = layer_name or overlay_path.stem
+
+        if layer_name is None and layer in self.layers[session_id]:
+            # Preserve the existing behaviour for callers which do not
+            # provide an explicit layer name.
             layer = overlay_path.name
+
         if overlay_path.suffix == ".tiff":
             self.layers[session_id][layer] = OpenSlideWSIReader(
                 overlay_path,
@@ -605,63 +738,104 @@ class TileServer(Flask):
         elif overlay_path.suffix in [".jpg", ".png"]:
             info = self.layers[session_id]["slide"].info
             info.file_path = str(overlay_path)
+
             self.layers[session_id][layer] = VirtualWSIReader(
                 overlay_path,
                 info=info,
             )
         else:
-            self.layers[session_id][layer] = WSIReader.open(overlay_path)
+            self.layers[session_id][layer] = WSIReader.open(
+                overlay_path,
+            )
 
         self.pyramids[session_id][layer] = ZoomifyGenerator(
             self.layers[session_id][layer]
         )
+
         return json.dumps(layer)
 
-    def _add_annotation_overlay(self, session_id: str, overlay_path: Path) -> str:
+    def _add_annotation_overlay(
+        self,
+        session_id: str,
+        overlay_path: Path,
+        layer_name: str | None = None,
+    ) -> str:
         if overlay_path.suffix == ".geojson":
 
             def unpack_qupath(ann: Annotation) -> Annotation:
                 # Helper function to unpack QuPath measurements if present.
                 props = ann.properties
+
                 if "measurements" in props:
                     measurements = props.pop("measurements")
+
                     for k, v in measurements.items():
                         props[k] = v
+
                 if "objectType" in props:
                     props["type"] = props.pop("objectType")
+
                 return ann
 
-            sq = SQLiteStore.from_geojson(overlay_path, transform=unpack_qupath)
+            sq = SQLiteStore.from_geojson(
+                overlay_path,
+                transform=unpack_qupath,
+            )
 
         if overlay_path.suffix == ".dat":
             sq = store_from_dat(overlay_path)
 
         if overlay_path.suffix == ".db":
-            sq = SQLiteStore(overlay_path, auto_commit=False)
+            sq = SQLiteStore(
+                overlay_path,
+                auto_commit=False,
+            )
         else:
-            # make a temporary db for the new annotations
-            tmp_path = Path(tempfile.gettempdir()) / f"temp_{session_id}.db"
+            # Use a different temporary database for each named layer.
+            temp_layer_name = layer_name or "overlay"
+
+            tmp_path = (
+                Path(tempfile.gettempdir()) / f"temp_{session_id}_{temp_layer_name}.db"
+            )
+
             sq.dump(tmp_path)
             sq = SQLiteStore(tmp_path)
 
-        for layer in self.pyramids[session_id].values():
-            if isinstance(layer, AnnotationTileGenerator):
-                layer.store = sq
-                logger.info("Loaded %d annotations.", len(sq))
-                types = self.update_types(sq)
-                return json.dumps(types)
+        if layer_name is None:
+            # Preserve the existing single-annotation-layer behaviour
+            # for callers which do not supply an explicit layer name.
+            for layer in self.pyramids[session_id].values():
+                if isinstance(layer, AnnotationTileGenerator):
+                    layer.store = sq
 
-        self.pyramids[session_id]["overlay"] = AnnotationTileGenerator(
+                    logger.info(
+                        "Loaded %d annotations.",
+                        len(sq),
+                    )
+
+                    types = self.update_types(layer.store)
+
+                    return json.dumps(types)
+
+            layer_name = "overlay"
+
+        self.pyramids[session_id][layer_name] = AnnotationTileGenerator(
             self.layers[session_id]["slide"].info,
             sq,
             self.renderers[session_id],
             overlap=self.overlaps[session_id],
         )
-        self.layers[session_id]["overlay"] = self.pyramids[session_id]["overlay"]
+
+        self.layers[session_id][layer_name] = self.pyramids[session_id][layer_name]
+
         logger.info(
-            "Loaded %d annotations.", len(self.pyramids[session_id]["overlay"].store)
+            "Loaded %d annotations as layer '%s'.",
+            len(sq),
+            layer_name,
         )
+
         types = self.update_types(sq)
+
         return json.dumps(types)
 
     def get_properties(self: TileServer, ann_type: str) -> str:
@@ -702,9 +876,12 @@ class TileServer(Flask):
         where = None
         if ann_type != "all":
             where = f'props["type"]=={ann_type}'
-        if "overlay" not in self.pyramids[session_id]:
+        try:
+            layer = self.get_ann_layer(session_id)
+        except ValueError:
             return json.dumps([])
-        ann_props = self.get_ann_layer(session_id).store.pquery(
+
+        ann_props = layer.store.pquery(
             select=f"props['{prop}']",
             where=where,
             unique=True,
@@ -716,25 +893,44 @@ class TileServer(Flask):
 
         If the store is not already associated with a .db file,
         the save_path is used to create a new .db file.
-
         """
         session_id = self._get_session_id()
         save_path = request.form["save_path"]
         save_path = self.decode_safe_name(save_path)
+
         for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
+                store_path = layer.store.path
+
+                temp_prefix = f"temp_{session_id}"
+
+                is_temporary_store = store_path.parent == Path(
+                    tempfile.gettempdir()
+                ) and (
+                    store_path.name == f"{temp_prefix}.db"
+                    or store_path.name.startswith(f"{temp_prefix}_")
+                )
+
                 if (
-                    layer.store.path.suffix == ".db"
-                    and layer.store.path.name != f"temp_{session_id}.db"
-                    and not str(layer.store.path.parent.name).endswith("bokeh_temp")
+                    store_path.suffix == ".db"
+                    and not is_temporary_store
+                    and not str(store_path.parent.name).endswith("bokeh_temp")
                 ):
-                    logger.info("%s*.db committed.", layer.store.path.stem)
+                    logger.info(
+                        "%s*.db committed.",
+                        store_path.stem,
+                    )
                     layer.store.commit()
                 else:
                     layer.store.commit()
                     layer.store.dump(str(save_path))
-                    logger.info("db saved to %s.", save_path)
+                    logger.info(
+                        "db saved to %s.",
+                        save_path,
+                    )
+
                 return "done"
+
         return "nothing to save"
 
     def get_color_prop(self: TileServer) -> Response:

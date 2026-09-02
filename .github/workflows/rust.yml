@@ -1,0 +1,52 @@
+name: Rust
+on:
+  push:
+    branches: [ develop, main, master ]
+  pull_request:
+    branches: [ develop, main, master ]
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt-get install -y libopenjp2-7 libopenjp2-tools
+          python -m pip install --upgrade pip
+          python -m pip install ruff==0.16.1 pytest pytest-cov pytest-runner
+          pip install uv
+          uv pip install --system torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          uv pip install --system -e .
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings -A clippy::too_many_arguments
+      - name: Run Rust coverage
+        shell: bash
+        run: |
+          source <(cargo llvm-cov show-env --sh)
+          cargo llvm-cov clean --workspace
+          python -m pip install --force-reinstall --no-deps -e .
+          python -m pytest tests/test_rust.py -v
+          cargo test --all-features
+          cargo llvm-cov report --lcov --output-path lcov.info
+      - name: Upload Rust coverage to Codecov
+        uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          files: lcov.info
+          flags: rust
+          fail_ci_if_error: false

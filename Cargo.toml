@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = [
+    "tiatoolbox/rust-library/misc",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+
+[workspace.dependencies]
+pyo3 = "0.29.2"

@@ -53,11 +53,12 @@ dependencies = [
   "torch>=2.5.0",
   "torchvision>=0.15.0",
   "tqdm>=4.64.1",
-  "transformers>=4.51.1",
+  "transformers>=5.15.0",
   "umap-learn>=0.5.3",
   "wsidicom>=0.18.0",
   "zarr>=3.2.1",
 ]
+
 
 [project.optional-dependencies]
 docs = [
@@ -132,7 +133,10 @@ torchvision = [
   omit = ['tests/*', 'tiatoolbox/__main__.py', '*/utils/env_detection.py', 'tiatoolbox/typing.py']
 
 [build-system]
-  requires = ["setuptools"]
+  requires = [
+      "setuptools",
+      "setuptools-rust",
+  ]
   build-backend = "setuptools.build_meta"
 
 [tool.distutils.bdist_wheel]
@@ -297,3 +301,14 @@ ignore_missing_imports = true
 # Default local target: minimum supported Python (requires-python lower bound).
 # CI overrides this per job with --python-version for 3.12-3.14.
 python_version = "3.12"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tiatoolbox*"]
+
+[[tool.setuptools-rust.ext-modules]]
+target = "tiatoolbox.rust.utils.misc"
+path = "tiatoolbox/rust-library/misc/Cargo.toml"
+binding = "PyO3"
+#Uncomment below for release
+#debug = false

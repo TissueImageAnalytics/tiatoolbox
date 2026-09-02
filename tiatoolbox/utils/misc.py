@@ -31,6 +31,7 @@ from skimage import exposure
 from tqdm.auto import tqdm, trange
 from tqdm.dask import TqdmCallback
 
+import tiatoolbox.rust.utils.misc as rmisc
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupportedError
@@ -430,6 +431,9 @@ def contrast_enhancer(img: np.ndarray, low_p: int = 2, high_p: int = 98) -> np.n
     if img.dtype != np.uint8:
         msg = "Image should be uint8."
         raise AssertionError(msg)
+    dimension_for_rust = 3
+    if img.ndim == dimension_for_rust:
+        return rmisc.contrast_enhancer(img, low_p, high_p)
     img_out = img.copy()
     percentiles = np.array(np.percentile(img_out, (low_p, high_p)))
     p_low, p_high = percentiles[0], percentiles[1]
@@ -873,8 +877,11 @@ def save_as_json(
         raise FileExistsError(msg)
     if parents:
         save_path.parent.mkdir(parents=True, exist_ok=True)
-    with Path.open(save_path, "w") as handle:  # skipcq: PTC-W6004
-        json.dump(shadow_data, handle)
+    try:
+        rmisc.json_dump_python_object(str(save_path), shadow_data)
+    except (ValueError, OSError):
+        with Path.open(save_path, "w") as handle:  # skipcq: PTC-W6004
+            json.dump(shadow_data, handle)
 
 
 def select_device(*, on_gpu: bool) -> str:
@@ -1230,28 +1237,23 @@ def patch_predictions_as_annotations(
     verbose: bool = True,
 ) -> list:
     """Helper function to generate annotation per patch predictions."""
-    annotations = []
-    tqdm_loop = tqdm(
-        patch_coords,
-        leave=False,
-        desc="Converting outputs to AnnotationStore.",
-        disable=not verbose,
+    _ = verbose
+    if len(class_probs) == 0:
+        class_probs = np.empty((0, 2))
+    if len(patch_coords) == 0:
+        patch_coords = np.empty((0, 2))
+    return rmisc.patch_predictions_as_annotations(
+        Annotation,
+        Polygon,
+        np.array(preds).astype("float"),
+        "labels" in keys,
+        "probabilities" in keys,
+        class_dict,
+        np.array(class_probs).astype("float"),
+        np.array(patch_coords).astype("float"),
+        classes_predicted,
+        labels,
     )
-
-    for i, _ in enumerate(tqdm_loop):
-        if "probabilities" in keys:
-            props = {
-                f"prob_{class_dict[j]}": class_probs[i][j] for j in classes_predicted
-            }
-        else:
-            props = {}
-        if "labels" in keys:
-            props["label"] = class_dict[labels[i]]
-        if len(preds) > 0:
-            props["type"] = class_dict[preds[i]]
-        annotations.append(Annotation(Polygon.from_bounds(*patch_coords[i]), props))
-
-    return annotations
 
 
 def patch_predictions_as_qupath_json(
@@ -1262,8 +1264,7 @@ def patch_predictions_as_qupath_json(
     verbose: bool = True,
 ) -> dict:
     """Helper function to generate QuPath JSON per patch predictions."""
-    features = []
-    # pick a color for each class based on the class index, using a colormap
+    _ = verbose
     num_classes = len(class_dict)
     cmap = plt.colormaps["tab20"].resampled(num_classes)
     class_colours = {
@@ -1275,36 +1276,12 @@ def patch_predictions_as_qupath_json(
         for class_idx in class_dict
     }
 
-    tqdm_loop = tqdm(
-        range(np.asarray(patch_coords).shape[0]),
-        leave=False,
-        desc="Converting outputs to QuPath JSON.",
-        disable=not verbose,
+    features = rmisc.patch_predictions_as_qupath_json(
+        class_colours,
+        np.array(preds).astype("float"),
+        class_dict,
+        np.array(patch_coords).astype("float"),
     )
-
-    for i in tqdm_loop:
-        class_idx = int(preds[i])
-        class_name = class_dict[class_idx]
-        polygon_geo = Polygon.from_bounds(*patch_coords[i])
-        polygon_feat = mapping(polygon_geo)
-
-        feature = {
-            "type": "Feature",
-            "id": f"patch_{i}",
-            "geometry": polygon_feat,
-            "properties": {
-                "classification": {
-                    "name": class_name,
-                    "color": class_colours[class_idx],
-                }
-            },
-            "objectType": "annotation",
-            "name": class_name,
-            "class_value": class_idx,
-        }
-
-        features.append(feature)
-
     return {"type": "FeatureCollection", "features": features}
 
 
@@ -1504,6 +1481,20 @@ def dict_to_store_semantic_segmentor(
     )
 
 
+def poly_geo_func(coords: list) -> list:
+    """Used solely for function semantic_segmentation_as_qupath_json."""
+    geom = make_valid_poly(
+        feature2geometry(
+            {
+                "type": "Polygon",
+                "coordinates": coords,
+            }
+        ),
+        (0, 0),
+    )
+    return mapping(geom)
+
+
 def _semantic_segmentations_as_qupath_json(
     layer_list: list,
     preds: da.Array,
@@ -1514,9 +1505,7 @@ def _semantic_segmentations_as_qupath_json(
     verbose: bool = True,
 ) -> dict | Path:
     """Helper function to save semantic segmentation as QuPath json."""
-    features: list = []
-
-    # color map for classes
+    _ = verbose
     num_classes = len(class_dict)
     cmap = plt.colormaps["tab20"].resampled(num_classes)
     class_colours = {
@@ -1528,59 +1517,9 @@ def _semantic_segmentations_as_qupath_json(
         for class_idx in class_dict
     }
 
-    tqdm_loop = tqdm(
-        layer_list,
-        leave=False,
-        desc="Converting outputs to QuPath JSON.",
-        disable=not verbose,
+    features = rmisc.semantic_segmentations_as_qupath_json(
+        layer_list, preds, scale_factor, class_dict, class_colours, cv2, poly_geo_func
     )
-
-    for type_class in tqdm_loop:
-        class_id = int(type_class)
-        class_label = class_dict[class_id]
-
-        # binary mask for this class
-        layer = da.where(preds == type_class, 1, 0).astype("uint8").compute()
-
-        contours, _ = cv2.findContours(layer, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
-
-        contours = cast("list[np.ndarray]", contours)
-
-        # Convert contours to polygons
-        for cnt in contours:
-            if cnt.shape[0] < 3:  # noqa: PLR2004
-                continue
-
-            # scale coordinates
-            cnt_scaled: np.ndarray = cnt.squeeze(1).astype(float)
-
-            geom = make_valid_poly(
-                feature2geometry(
-                    {
-                        "type": "Polygon",
-                        "coordinates": scale_factor * np.array([cnt_scaled]),
-                    }
-                ),
-                (0, 0),
-            )
-            poly_geo = mapping(geom)
-
-            feature = {
-                "type": "Feature",
-                "geometry": poly_geo,
-                "id": f"class_{class_id}_{len(features)}",
-                "properties": {
-                    "classification": {
-                        "name": class_label,
-                        "color": class_colours[class_id],
-                    }
-                },
-                "objectType": "annotation",
-                "name": class_label,
-                "class_value": class_id,
-            }
-
-            features.append(feature)
 
     qupath_json = {"type": "FeatureCollection", "features": features}
 
@@ -1662,8 +1601,11 @@ def save_annotations(
 def save_qupath_json(save_path: Path, qupath_json: dict) -> Path:
     """Saves QuPath JSON to disk."""
     save_path = save_path.with_suffix(".json")
-    with Path.open(save_path, "w") as f:
-        json.dump(qupath_json, f, indent=2)
+    try:
+        rmisc.json_dump_python_object(str(save_path), qupath_json)
+    except (ValueError, OSError):
+        with Path.open(save_path, "w") as f:
+            json.dump(qupath_json, f, indent=2)
     return save_path
 
 
