@@ -20,7 +20,7 @@ def semantic_segmentations_as_qupath_json(
     poly_geo_fun: Callable[..., object],
 ) -> list[Any]: ...
 def json_dump_python_object(
-    save_path: str,
+    save_path: int,
     obj: object,
 ) -> None: ...
 def patch_predictions_as_annotations(
