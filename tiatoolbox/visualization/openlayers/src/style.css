@@ -22,12 +22,14 @@ body {
 .viewer-app:fullscreen {
     width: 100%;
     height: 100%;
+    background: #ffffff;
 }
 
 
 .viewer-app:-webkit-full-screen {
     width: 100%;
     height: 100%;
+    background: #ffffff;
 }
 
 
@@ -143,10 +145,15 @@ body {
 /* Zoom */
 
 .ol-zoom {
-    top: 8px;
-    left: 8px;
+    top: auto;
+    bottom: 8px;
+    left: 50%;
+    right: auto;
+
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+
+    transform: translateX(-50%);
 }
 
 
@@ -155,11 +162,8 @@ body {
 }
 
 
-.ol-zoom .ol-zoom-in,
-.ol-zoom .ol-zoom-in:hover,
-.ol-zoom .ol-zoom-in:active,
-.ol-zoom .ol-zoom-in:focus {
-    border-radius: 4px 4px 0 0;
+.ol-zoom .ol-zoom-out {
+    order: 1;
 }
 
 
@@ -167,33 +171,77 @@ body {
 .ol-zoom .ol-zoom-out:hover,
 .ol-zoom .ol-zoom-out:active,
 .ol-zoom .ol-zoom-out:focus {
-    border-radius: 0 0 4px 4px;
+    border-radius: 4px 0 0 4px;
 }
 
 
 .ol-zoom-level {
-    width: 32px;
-    height: 26px;
+    order: 2;
+
+    width: 42px;
+    height: 24px;
     box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #111111;
+    margin: 4px 3px;
+    padding: 0 3px;
+
+    border: 1px solid #555555;
+    border-radius: 3px;
+
+    background: #222222;
     color: #ffffff;
-    border-top: 1px solid #333333;
-    border-bottom: 1px solid #333333;
+
+    font-family: inherit;
     font-size: 11px;
     font-weight: 600;
+    text-align: center;
+
+    appearance: textfield;
+}
+
+
+.ol-zoom-level::-webkit-inner-spin-button,
+.ol-zoom-level::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
+}
+
+
+.ol-zoom-level:hover:not(:disabled) {
+    border-color: #777777;
+}
+
+
+.ol-zoom-level:focus {
+    border-color: #888888;
+    outline: none;
+    background: #2a2a2a;
+}
+
+
+.ol-zoom-level:disabled {
+    opacity: 0.4;
     cursor: default;
-    user-select: none;
+}
+
+
+.ol-zoom .ol-zoom-in {
+    order: 3;
+}
+
+
+.ol-zoom .ol-zoom-in,
+.ol-zoom .ol-zoom-in:hover,
+.ol-zoom .ol-zoom-in:active,
+.ol-zoom .ol-zoom-in:focus {
+    border-radius: 0 4px 4px 0;
 }
 
 
 /* Layer editor control */
 
 .layer-editor-control {
-    top: 8px;
-    left: 50px;
+    top: 188px;
+    left: 8px;
     right: auto;
 }
 
@@ -214,10 +262,10 @@ body {
 
 .layer-editor {
     position: absolute;
-    top: 50px;
+    top: 188px;
     left: 50px;
     z-index: 1000;
-    width: 230px;
+    width: 240px;
     box-sizing: border-box;
     overflow: hidden;
 
@@ -374,7 +422,6 @@ body {
 /* Viewer tools */
 
 .ol-rotate,
-.ol-full-screen,
 .ol-graticule,
 .ol-screen-space-graticule {
     left: 8px;
@@ -382,25 +429,27 @@ body {
     border-radius: 0;
 }
 
-
 .ol-rotate {
-    top: 108px;
+    top: 66px;
     border-radius: 4px 4px 0 0;
 }
 
 
 .ol-full-screen {
-    top: 140px;
+    top: auto;
+    bottom: 8px;
+    left: calc(50% + 64px);
+    right: auto;
+    border-radius: 4px;
 }
 
 
 .ol-graticule {
-    top: 172px;
+    top: 98px;
 }
 
-
 .ol-screen-space-graticule {
-    top: 204px;
+    top: 130px;
     border-radius: 0 0 4px 4px;
 }
 
@@ -421,10 +470,6 @@ body {
 }
 
 
-.ol-full-screen button,
-.ol-full-screen button:hover,
-.ol-full-screen button:active,
-.ol-full-screen button:focus,
 .ol-graticule button,
 .ol-graticule button:hover,
 .ol-graticule button:active,
@@ -441,10 +486,29 @@ body {
 }
 
 
+.ol-full-screen button,
+.ol-full-screen button:hover,
+.ol-full-screen button:active,
+.ol-full-screen button:focus {
+    border-radius: 4px;
+}
+
+
+.ol-full-screen button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+    font-size: 16px;
+    line-height: 1;
+}
+
+
 /* Viewer panel control */
 
 .viewer-panel-control {
-    top: 246px;
+    top: 8px;
     left: 8px;
     right: auto;
 }
@@ -466,12 +530,13 @@ body {
 
 .viewer-panel {
     position: absolute;
-    top: 288px;
-    left: 8px;
+    top: 8px;
+    left: 50px;
     z-index: 1000;
     width: 240px;
+    max-height: 170px;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow: visible;
 
     background: #111111;
     color: #ffffff;
@@ -487,14 +552,14 @@ body {
 
 
 .viewer-panel-header {
-    padding: 12px 14px;
+    padding: 9px 12px;
     font-weight: 600;
     border-bottom: 1px solid #333333;
 }
 
 
 .viewer-panel-section {
-    padding: 12px 14px;
+    padding: 9px 12px;
     border-bottom: 1px solid #333333;
 }
 
@@ -504,18 +569,250 @@ body {
 }
 
 
-.viewer-panel-section h2 {
-    margin: 0 0 10px;
-    color: #ffffff;
-    font-size: 13px;
+.viewer-file-selectors {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    margin-bottom: 6px;
 }
 
 
-.current-slide {
-    margin-bottom: 10px;
-    color: #cccccc;
-    font-size: 12px;
-    overflow-wrap: anywhere;
+.viewer-file-select {
+    position: relative;
+    min-width: 0;
+}
+
+
+.viewer-file-select-button {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    height: 30px;
+    box-sizing: border-box;
+    padding: 5px 24px 5px 7px;
+
+    border: 1px solid #444444;
+    border-radius: 4px;
+
+    background: #222222;
+    color: #ffffff;
+
+    font-family: inherit;
+    font-size: 11px;
+    text-align: left;
+
+    cursor: pointer;
+}
+
+
+.viewer-file-select-button::after {
+    position: absolute;
+    top: 10px;
+    right: 9px;
+
+    width: 5px;
+    height: 5px;
+
+    border-right: 1px solid #aaaaaa;
+    border-bottom: 1px solid #aaaaaa;
+
+    content: "";
+    transform: rotate(45deg);
+}
+
+
+.viewer-file-select.open
+.viewer-file-select-button::after {
+    top: 13px;
+    transform: rotate(225deg);
+}
+
+
+.viewer-file-select-button:hover:not(:disabled) {
+    background: #333333;
+}
+
+
+.viewer-file-select-button:focus {
+    border-color: #666666;
+    outline: none;
+}
+
+
+.viewer-file-select-label {
+    min-width: 0;
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+.viewer-file-select.disabled {
+    opacity: 0.4;
+}
+
+
+.viewer-file-select-button:disabled {
+    cursor: default;
+}
+
+
+.viewer-file-select-menu {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    z-index: 20;
+
+    width: 320px;
+    max-width: calc(100vw - 70px);
+
+    box-sizing: border-box;
+    padding: 5px;
+
+    border: 1px solid #444444;
+    border-radius: 4px;
+
+    background: #222222;
+
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+}
+
+
+.viewer-file-select-search {
+    width: 100%;
+    min-width: 0;
+    height: 28px;
+    box-sizing: border-box;
+    padding: 5px 7px;
+
+    border: 1px solid #444444;
+    border-radius: 3px;
+
+    background: #111111;
+    color: #ffffff;
+
+    font-family: inherit;
+    font-size: 11px;
+}
+
+
+.viewer-file-select-search::placeholder {
+    color: #888888;
+    opacity: 1;
+}
+
+
+.viewer-file-select-search:focus {
+    border-color: #666666;
+    outline: none;
+}
+
+
+.viewer-file-select-options {
+    max-height: 220px;
+    margin-top: 4px;
+    overflow-y: auto;
+}
+
+
+.viewer-file-select-option {
+    display: block;
+
+    width: 100%;
+    min-width: 0;
+    padding: 6px 7px;
+
+    overflow: hidden;
+
+    border: 0;
+    border-radius: 3px;
+
+    background: transparent;
+    color: #ffffff;
+
+    font-family: inherit;
+    font-size: 11px;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    cursor: pointer;
+}
+
+
+.viewer-file-select-option:hover,
+.viewer-file-select-option.active {
+    background: #333333;
+}
+
+
+.viewer-file-select-option.selected {
+    background: #2a2a2a;
+}
+
+
+.viewer-file-select-option.selected:hover,
+.viewer-file-select-option.selected.active {
+    background: #333333;
+}
+
+
+.viewer-file-select-option:focus {
+    outline: none;
+}
+
+
+.viewer-file-select-empty {
+    padding: 6px 7px;
+
+    color: #888888;
+
+    font-size: 11px;
+}
+
+
+.viewer-file-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+
+.viewer-file-actions button {
+    min-width: 0;
+    height: 30px;
+    padding: 5px 7px;
+
+    border: 0;
+    border-radius: 4px;
+
+    background: #222222;
+    color: #ffffff;
+
+    font-size: 11px;
+    cursor: pointer;
+}
+
+
+.viewer-file-actions button:hover:not(:disabled) {
+    background: #333333;
+}
+
+
+.viewer-file-actions button:active:not(:disabled) {
+    background: #555555;
+}
+
+
+.viewer-file-actions button:disabled {
+    opacity: 0.4;
+    cursor: default;
 }
 
 

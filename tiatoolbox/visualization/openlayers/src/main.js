@@ -59,6 +59,17 @@ async function loadSlide(slidePath) {
   return metadataResponse.json();
 }
 
+// Get files from a directory configured when TileServer was launched.
+async function getConfiguredFiles(kind) {
+  const response = await fetch(`/tileserver/files/${kind}`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to get configured ${kind} files.`);
+  }
+
+  return response.json();
+}
+
 // Create a Zoomify source with versions to avoid reusing tiles from an old slide.
 function createSlideSource(sessionId, slideInfo, version) {
   return new Zoomify({
@@ -78,7 +89,7 @@ const viewerPanel = document.getElementById("viewer-panel");
 const viewerPanelToggle = document.getElementById(
   "viewer-panel-toggle",
 );
-const currentSlide = document.getElementById("current-slide");
+const viewerFiles = document.getElementById("viewer-files");
 
 const layerEditor = document.getElementById("layer-editor");
 const layerEditorToggle = document.getElementById(
@@ -98,21 +109,45 @@ if (
   layerEditor === null ||
   layerEditorToggle === null ||
   layerEditorList === null ||
-  currentSlide === null
+  viewerFiles === null
 ) {
   throw new Error("The OpenLayers viewer controls could not be found.");
 }
 
-viewerPanelToggle.addEventListener("click", () => {
-  const isHidden = viewerPanel.classList.toggle("hidden");
+function setViewerPanelOpen(open) {
+  viewerPanel.classList.toggle("hidden", !open);
+  viewerPanelToggle.classList.toggle("active", open);
+  viewerPanelToggle.innerHTML = open
+    ? '<i class="fas fa-folder-open"></i>'
+    : '<i class="fas fa-folder"></i>';
 
-  viewerPanelToggle.classList.toggle("active", !isHidden);
+  if (!open) {
+    for (const select of viewerPanel.querySelectorAll(
+      ".viewer-file-select.open",
+    )) {
+      select.close?.();
+    }
+  }
+}
+
+function setLayerEditorOpen(open) {
+  layerEditor.classList.toggle("hidden", !open);
+  layerEditorToggle.classList.toggle("active", open);
+}
+
+viewerPanelToggle.title = "Files";
+viewerPanelToggle.setAttribute("aria-label", "Files");
+
+setViewerPanelOpen(true);
+
+viewerPanelToggle.addEventListener("click", () => {
+  const open = viewerPanel.classList.contains("hidden");
+  setViewerPanelOpen(open);
 });
 
 layerEditorToggle.addEventListener("click", () => {
-  const isHidden = layerEditor.classList.toggle("hidden");
-
-  layerEditorToggle.classList.toggle("active", !isHidden);
+  const open = layerEditor.classList.contains("hidden");
+  setLayerEditorOpen(open);
 });
 
 let layersData = JSON.parse(mapElement.dataset.layers ?? "[]");
@@ -123,6 +158,538 @@ let currentSlideInfo = null;
 let currentSlidePath = null;
 const overlayLayers = {};
 const annotationLayerNames = new Set();
+
+const fileSelectors = document.createElement("div");
+fileSelectors.className = "viewer-file-selectors";
+
+let fileSelectId = 0;
+
+function createFileSelect(placeholder) {
+  const select = document.createElement("div");
+  select.className = "viewer-file-select";
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "viewer-file-select-button";
+  button.setAttribute("aria-haspopup", "listbox");
+  button.setAttribute("aria-expanded", "false");
+
+  const label = document.createElement("span");
+  label.className = "viewer-file-select-label";
+  label.textContent = placeholder;
+
+  button.append(label);
+
+  const menu = document.createElement("div");
+  menu.className = "viewer-file-select-menu";
+  menu.hidden = true;
+
+  const search = document.createElement("input");
+  search.type = "text";
+  search.className = "viewer-file-select-search";
+  search.placeholder = "Search";
+  search.autocomplete = "off";
+  search.spellcheck = false;
+  search.setAttribute(
+    "aria-label",
+    `Search ${placeholder.toLowerCase()}`,
+  );
+
+  const options = document.createElement("div");
+  options.className = "viewer-file-select-options";
+  options.id = `viewer-file-select-${fileSelectId}`;
+  options.setAttribute("role", "listbox");
+
+  fileSelectId += 1;
+
+  button.setAttribute("aria-controls", options.id);
+  search.setAttribute("aria-controls", options.id);
+
+  menu.append(search, options);
+  select.append(button, menu);
+
+  let files = [];
+  let selectedPath = "";
+  let currentPlaceholder = placeholder;
+  let filteredFiles = [];
+  let activeIndex = -1;
+
+  function setExpanded(expanded) {
+    select.classList.toggle("open", expanded);
+    menu.hidden = !expanded;
+    button.setAttribute(
+      "aria-expanded",
+      expanded.toString(),
+    );
+  }
+
+  function updateLabel() {
+    if (selectedPath === "") {
+      label.textContent = currentPlaceholder;
+      label.title = "";
+      return;
+    }
+
+    const selectedFile = files.find(
+      (file) => file.path === selectedPath,
+    );
+
+    const fileName =
+      selectedFile?.name ??
+      selectedPath.split(/[\\/]/).pop() ??
+      selectedPath;
+
+    label.textContent = fileName;
+    label.title = selectedPath;
+  }
+
+  function selectFile(file) {
+    selectedPath = file.path;
+    updateLabel();
+    close();
+
+    select.dispatchEvent(
+      new CustomEvent("change", {
+        detail: file.path,
+      }),
+    );
+  }
+
+  function renderOptions() {
+    const query = search.value
+      .trim()
+      .toLocaleLowerCase();
+
+    filteredFiles = files.filter(
+      (file) =>
+        file.name
+          .toLocaleLowerCase()
+          .includes(query),
+    );
+
+    options.replaceChildren();
+
+    if (filteredFiles.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "viewer-file-select-empty";
+      empty.textContent = "No matches";
+      options.append(empty);
+      return;
+    }
+
+    filteredFiles.forEach((file, index) => {
+      const option = document.createElement("button");
+
+      option.type = "button";
+      option.className =
+        "viewer-file-select-option";
+      option.textContent = file.name;
+      option.title = file.path;
+      option.setAttribute("role", "option");
+      option.setAttribute(
+        "aria-selected",
+        (file.path === selectedPath).toString(),
+      );
+
+      if (file.path === selectedPath) {
+        option.classList.add("selected");
+      }
+
+      if (index === activeIndex) {
+        option.classList.add("active");
+      }
+
+      option.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+      });
+
+      option.addEventListener("click", (event) => {
+        event.stopPropagation();
+        selectFile(file);
+      });
+
+      options.append(option);
+    });
+
+    options
+      .querySelector(
+        ".viewer-file-select-option.active",
+      )
+      ?.scrollIntoView({
+        block: "nearest",
+      });
+  }
+
+  function open() {
+    if (button.disabled || files.length === 0) {
+      return;
+    }
+
+    for (const otherSelect of document.querySelectorAll(
+      ".viewer-file-select.open",
+    )) {
+      if (otherSelect !== select) {
+        otherSelect.close?.();
+      }
+    }
+
+    search.value = "";
+    activeIndex = -1;
+    renderOptions();
+    setExpanded(true);
+
+    requestAnimationFrame(() => {
+      search.focus();
+    });
+  }
+
+  function close() {
+    search.value = "";
+    activeIndex = -1;
+    setExpanded(false);
+  }
+
+  select.close = close;
+
+  select.setFiles = (
+    newFiles,
+    newPlaceholder,
+  ) => {
+    files = newFiles;
+    selectedPath = "";
+    currentPlaceholder = newPlaceholder;
+
+    updateLabel();
+    close();
+
+    select.disabled = files.length === 0;
+  };
+
+  Object.defineProperty(select, "value", {
+    get() {
+      return selectedPath;
+    },
+    set(filePath) {
+      selectedPath = filePath;
+      updateLabel();
+      close();
+    },
+  });
+
+  Object.defineProperty(select, "disabled", {
+    get() {
+      return button.disabled;
+    },
+    set(disabled) {
+      button.disabled = disabled;
+
+      select.classList.toggle(
+        "disabled",
+        disabled,
+      );
+
+      if (disabled) {
+        close();
+      }
+    },
+  });
+
+  button.addEventListener("click", () => {
+    if (select.classList.contains("open")) {
+      close();
+      return;
+    }
+
+    open();
+  });
+
+  button.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      open();
+    }
+  });
+
+  search.addEventListener("input", () => {
+    activeIndex = -1;
+    renderOptions();
+  });
+
+  search.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      close();
+      button.focus();
+      return;
+    }
+
+    if (filteredFiles.length === 0) {
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+
+      activeIndex = Math.min(
+        activeIndex + 1,
+        filteredFiles.length - 1,
+      );
+
+      renderOptions();
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+
+      activeIndex =
+        activeIndex <= 0
+          ? filteredFiles.length - 1
+          : activeIndex - 1;
+
+      renderOptions();
+      return;
+    }
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+
+      const index =
+        activeIndex >= 0 ? activeIndex : 0;
+
+      const file = filteredFiles[index];
+
+      if (file !== undefined) {
+        selectFile(file);
+      }
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!select.contains(event.target)) {
+      close();
+    }
+  });
+
+  select.disabled = true;
+
+  return select;
+}
+
+const slideSelect = createFileSelect("Select slide");
+const overlaySelect = createFileSelect("Load overlay");
+
+fileSelectors.append(
+  slideSelect,
+  overlaySelect,
+);
+
+const fileActions = document.createElement("div");
+fileActions.className = "viewer-file-actions";
+
+function createFileActionButton(label) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = label;
+  return button;
+}
+
+const clearSlideButton =
+  createFileActionButton("Clear Slide");
+
+const clearOverlaysButton =
+  createFileActionButton("Clear Overlays");
+
+clearSlideButton.disabled = true;
+clearOverlaysButton.disabled = true;
+
+fileActions.append(
+  clearSlideButton,
+  clearOverlaysButton,
+);
+
+viewerFiles.append(
+  fileSelectors,
+  fileActions,
+);
+
+function populateFileSelect(
+  select,
+  files,
+  placeholder,
+) {
+  select.setFiles(files, placeholder);
+}
+
+function getMatchingOverlays(slidePath) {
+  const slideStem = getFileStem(slidePath);
+
+  return configuredOverlays.files.filter((file) => {
+    const fileName =
+      file.name.split(/[\\/]/).pop() ?? file.name;
+
+    return fileName.includes(slideStem);
+  });
+}
+
+function updateOverlaySelect() {
+  if (configuredOverlays.directory === null) {
+    populateFileSelect(
+      overlaySelect,
+      [],
+      "No overlay directory configured",
+    );
+    return;
+  }
+
+  if (currentSlidePath === null) {
+    populateFileSelect(
+      overlaySelect,
+      [],
+      "Select slide first",
+    );
+    return;
+  }
+
+  const matchingOverlays =
+    getMatchingOverlays(currentSlidePath);
+
+  populateFileSelect(
+    overlaySelect,
+    matchingOverlays,
+    matchingOverlays.length === 0
+      ? "No matching overlays"
+      : "Load overlay",
+  );
+}
+
+const configuredSlides =
+  await getConfiguredFiles("slide");
+
+const configuredOverlays =
+  await getConfiguredFiles("overlay");
+
+populateFileSelect(
+  slideSelect,
+  configuredSlides.files,
+  configuredSlides.directory === null
+    ? "No slide directory configured"
+    : "Select slide",
+);
+
+updateOverlaySelect();
+
+function updateSlideSelect(filePath) {
+  slideSelect.value = filePath;
+}
+
+function updateFileActionState() {
+  const hasSlide = currentSlideInfo !== null;
+  const hasOverlays =
+    Object.keys(overlayLayers).length > 0;
+  const hasMatchingOverlays =
+    currentSlidePath !== null &&
+    getMatchingOverlays(currentSlidePath).length > 0;
+
+  clearSlideButton.disabled = !hasSlide;
+  clearOverlaysButton.disabled =
+    !hasSlide || !hasOverlays;
+
+  slideSelect.disabled =
+    configuredSlides.files.length === 0;
+
+  overlaySelect.disabled =
+    !hasSlide || !hasMatchingOverlays;
+}
+
+function setFileActionsBusy(busy) {
+  if (!busy) {
+    updateFileActionState();
+    return;
+  }
+
+  slideSelect.disabled = true;
+  overlaySelect.disabled = true;
+  clearSlideButton.disabled = true;
+  clearOverlaysButton.disabled = true;
+}
+
+slideSelect.addEventListener("change", async (event) => {
+  const filePath =
+    event.detail ?? slideSelect.value;
+
+  if (filePath === "") {
+    return;
+  }
+
+  setFileActionsBusy(true);
+
+  try {
+    await switchSlide(filePath);
+    overlaySelect.value = "";
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setFileActionsBusy(false);
+  }
+});
+
+overlaySelect.addEventListener(
+  "change",
+  async (event) => {
+    const filePath =
+      event.detail ?? overlaySelect.value;
+
+    if (filePath === "") {
+      return;
+    }
+
+    setFileActionsBusy(true);
+
+    try {
+      await loadOverlay(filePath);
+      overlaySelect.value = "";
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setFileActionsBusy(false);
+    }
+  },
+);
+
+clearSlideButton.addEventListener("click", async () => {
+  setFileActionsBusy(true);
+
+  try {
+    await removeSlide();
+
+    slideSelect.value = "";
+    overlaySelect.value = "";
+    updateOverlaySelect();
+  } catch (error) {
+    console.error(error);
+  } finally {
+    setFileActionsBusy(false);
+  }
+});
+
+clearOverlaysButton.addEventListener(
+  "click",
+  async () => {
+    setFileActionsBusy(true);
+
+    try {
+      await clearOverlays();
+      overlaySelect.value = "";
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setFileActionsBusy(false);
+    }
+  },
+);
+
+updateFileActionState();
 
 function getFileStem(filePath) {
   const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
@@ -135,22 +702,14 @@ function getFileStem(filePath) {
   return fileName.slice(0, extensionIndex);
 }
 
-function updateCurrentSlide() {
-  if (currentSlidePath === null) {
-    currentSlide.textContent = "No slide selected";
-    currentSlide.removeAttribute("title");
-    return;
-  }
-
-  const slideName = currentSlidePath.split(/[\\/]/).pop();
-
-  currentSlide.textContent = slideName || currentSlidePath;
-  currentSlide.title = currentSlidePath;
-}
-
 // Dynamic slide loading
 const params = new URLSearchParams(window.location.search);
-const slidePath = params.get("slide");
+
+const slidePath =
+  params.get("slide") ??
+  (layersData.length === 0
+    ? configuredSlides.files[0]?.path ?? null
+    : null);
 
 if (slidePath !== null) {
   currentSlidePath = slidePath;
@@ -158,6 +717,9 @@ if (slidePath !== null) {
   const slideInfo = await loadSlide(slidePath);
 
   currentSlideInfo = slideInfo;
+  updateSlideSelect(slidePath);
+  updateOverlaySelect();
+
   layersData = [
     {
       name: "slide",
@@ -172,7 +734,7 @@ if (slidePath !== null) {
   sessionId = await createSession();
 }
 
-updateCurrentSlide();
+updateFileActionState();
 
 const layers = layersData.map((layer) => {
   const source = new Zoomify({
@@ -282,8 +844,13 @@ if (zoomControl === null || zoomOutButton === null) {
   throw new Error("The OpenLayers zoom control could not be found.");
 }
 
-const zoomLevel = document.createElement("div");
+const zoomLevel = document.createElement("input");
+
+zoomLevel.type = "number";
 zoomLevel.className = "ol-zoom-level";
+zoomLevel.step = "1";
+zoomLevel.setAttribute("aria-label", "Zoom level");
+zoomLevel.title = "Zoom level";
 
 zoomControl.insertBefore(zoomLevel, zoomOutButton);
 
@@ -291,15 +858,55 @@ function updateZoomLevel() {
   const zoom = map.getView().getZoom();
 
   if (zoom === undefined) {
+    zoomLevel.value = "";
     return;
   }
 
-  const displayedZoom = Number.isInteger(zoom)
+  zoomLevel.value = Number.isInteger(zoom)
     ? zoom.toString()
     : zoom.toFixed(1);
-
-  zoomLevel.textContent = `${displayedZoom}x`;
 }
+
+function applyZoomLevel() {
+  const zoom = Number.parseFloat(zoomLevel.value);
+
+  if (!Number.isFinite(zoom)) {
+    updateZoomLevel();
+    return;
+  }
+
+  const view = map.getView();
+
+  const clampedZoom = Math.min(
+    Math.max(zoom, view.getMinZoom()),
+    view.getMaxZoom(),
+  );
+
+  view.setZoom(clampedZoom);
+  updateZoomLevel();
+}
+
+zoomLevel.addEventListener("focus", () => {
+  zoomLevel.select();
+});
+
+zoomLevel.addEventListener("blur", () => {
+  applyZoomLevel();
+});
+
+zoomLevel.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    zoomLevel.blur();
+    return;
+  }
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    updateZoomLevel();
+    zoomLevel.blur();
+  }
+});
 
 updateZoomLevel();
 
@@ -586,6 +1193,7 @@ function setViewerEnabled(enabled) {
       button.disabled = !enabled;
     }
   }
+  zoomLevel.disabled = !enabled;
 
   scaleLineControl.element.classList.toggle(
     "viewer-control-hidden",
@@ -657,6 +1265,7 @@ function clearOverlayLayers() {
   annotationLayerNames.clear();
 
   updateLayerEditor();
+  updateFileActionState();
 }
 
 async function clearOverlays() {
@@ -669,6 +1278,7 @@ async function clearOverlays() {
   }
 
   clearOverlayLayers();
+  updateFileActionState();
 }
 
 function getUrlViewState() {
@@ -747,7 +1357,6 @@ async function removeSlide() {
   currentSlidePath = null;
   currentSlideInfo = null;
   layersData.length = 0;
-  updateCurrentSlide();
 
   slideVersion += 1;
   overlayVersion += 1;
@@ -810,6 +1419,7 @@ async function removeSlide() {
 
   setViewerEnabled(false);
   updateZoomLevel();
+  updateFileActionState();
 }
 
 // Slide switching
@@ -821,10 +1431,11 @@ async function switchSlide(slidePath) {
   clearOverlayLayers();
 
   const slideInfo = await loadSlide(slidePath);
-
-  currentSlidePath = slidePath;
-  updateCurrentSlide();
   currentSlideInfo = slideInfo;
+  currentSlidePath = slidePath;
+  updateSlideSelect(slidePath);
+  updateOverlaySelect();
+  updateFileActionState();
 
   slideVersion += 1;
 
@@ -1200,6 +1811,7 @@ async function loadOverlay(overlayPath) {
   }
 
   updateLayerEditor();
+  updateFileActionState();
 
   return result;
 }
@@ -1242,6 +1854,7 @@ async function removeOverlay(layerName) {
   delete overlayLayers[layerName];
 
   updateLayerEditor();
+  updateFileActionState();
 }
 
 async function setAnnotationColors(colorMap) {

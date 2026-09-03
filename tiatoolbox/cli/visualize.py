@@ -70,7 +70,7 @@ def run_bokeh(img_input: list[str], port: int, *, noshow: bool) -> None:
 @click.option(
     "--slides",
     help="""Path to directory containing slides to be displayed.
-    This option must be used in conjunction with --overlay-path.
+    This option must be used in conjunction with --overlays.
     The --base-path option should not be used in this case.""",
 )
 @click.option(
