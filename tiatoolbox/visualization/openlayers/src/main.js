@@ -3,6 +3,8 @@ import "ol-ext/dist/ol-ext.css";
 import "./style.css";
 
 import FullScreen from "ol/control/FullScreen.js";
+import Zoom from "ol/control/Zoom.js";
+import { defaults as defaultControls } from "ol/control/defaults.js";
 import MousePosition from "ol/control/MousePosition.js";
 import OverviewMap from "ol/control/OverviewMap.js";
 import Rotate from "ol/control/Rotate.js";
@@ -22,6 +24,9 @@ import View from "ol/View.js";
 import Graticule from "ol-ext/control/Graticule.js";
 import LayerSwitcher from "ol-ext/control/LayerSwitcher.js";
 import Toggle from "ol-ext/control/Toggle.js";
+
+import MouseWheelZoom from "ol/interaction/MouseWheelZoom.js";
+import { defaults as defaultInteractions } from "ol/interaction/defaults.js";
 
 // Initialise the TileServer session used for dynamic slide loading.
 async function createSession() {
@@ -95,8 +100,148 @@ const layerEditor = document.getElementById("layer-editor");
 const layerEditorToggle = document.getElementById(
   "layer-editor-toggle",
 );
+
 const layerEditorList = document.getElementById(
   "layer-editor-list",
+);
+
+const settingsPanel = document.getElementById(
+  "settings-panel",
+);
+
+const settingsToggle = document.getElementById(
+  "settings-toggle",
+);
+
+const settingsCloseButton = document.getElementById(
+  "settings-close",
+);
+
+const settingsTabs = document.querySelectorAll(
+  ".settings-tab",
+);
+
+const settingsTabPanels = document.querySelectorAll(
+  ".settings-tab-panel",
+);
+
+const zoomVisibleInput = document.getElementById(
+  "settings-zoom-visible",
+);
+
+const zoomLevelVisibleInput = document.getElementById(
+  "settings-zoom-level-visible",
+);
+
+const rotationVisibleInput = document.getElementById(
+  "settings-rotation-visible",
+);
+
+const graticuleVisibleInput = document.getElementById(
+  "settings-graticule-visible",
+);
+
+const screenSpaceGraticuleVisibleInput =
+  document.getElementById(
+    "settings-screen-space-graticule-visible",
+  );
+
+const resetViewButton = document.getElementById(
+  "reset-view-button",
+);
+
+const resetViewControl = document.querySelector(
+  ".reset-view-control",
+);
+
+const resetViewVisibleInput = document.getElementById(
+  "settings-reset-view-visible",
+);
+
+const fullscreenVisibleInput = document.getElementById(
+  "settings-fullscreen-visible",
+);
+
+const mousePositionVisibleInput = document.getElementById(
+  "settings-mouse-position-visible",
+);
+
+const overviewMapVisibleInput = document.getElementById(
+  "settings-overview-map-visible",
+);
+
+const overviewMapSizeSelect = document.getElementById(
+  "settings-overview-map-size",
+);
+
+const mouseWheelZoomSensitivitySelect =
+  document.getElementById(
+    "settings-mouse-wheel-zoom-sensitivity",
+  );
+
+const zoomButtonStepSelect =
+  document.getElementById(
+    "settings-zoom-button-step",
+  );
+
+const scaleBarEnabledInput = document.getElementById(
+  "settings-scale-bar-enabled",
+);
+
+const themeSelect = document.getElementById(
+  "settings-theme",
+);
+
+const gridThemeSelect = document.getElementById(
+  "settings-grid-theme",
+);
+
+const gridOpacityInput = document.getElementById(
+  "settings-grid-opacity",
+);
+
+const gridOpacityValue = document.getElementById(
+  "settings-grid-opacity-value",
+);
+
+const gridSpacingSelect = document.getElementById(
+  "settings-grid-spacing",
+);
+
+const gridLabelsVisibleInput = document.getElementById(
+  "settings-grid-labels-visible",
+);
+
+const controlOpacityInput = document.getElementById(
+  "settings-control-opacity",
+);
+
+const controlOpacityValue = document.getElementById(
+  "settings-control-opacity-value",
+);
+
+const resetDefaultsButton = document.getElementById(
+  "settings-reset-defaults",
+);
+
+const scaleBarColourInput = document.getElementById(
+  "settings-scale-bar-colour",
+);
+
+const scaleBarOpacityInput = document.getElementById(
+  "settings-scale-bar-opacity",
+);
+
+const scaleBarOpacityValue = document.getElementById(
+  "settings-scale-bar-opacity-value",
+);
+
+const scaleBarSizeSelect = document.getElementById(
+  "settings-scale-bar-size",
+);
+
+const scaleBarUnitsSelect = document.getElementById(
+  "settings-scale-bar-units",
 );
 
 if (mapElement === null || viewerApp === null) {
@@ -109,12 +254,550 @@ if (
   layerEditor === null ||
   layerEditorToggle === null ||
   layerEditorList === null ||
+  settingsPanel === null ||
+  settingsToggle === null ||
+  settingsCloseButton === null ||
+  zoomVisibleInput === null ||
+  zoomLevelVisibleInput === null ||
+  rotationVisibleInput === null ||
+  graticuleVisibleInput === null ||
+  screenSpaceGraticuleVisibleInput === null ||
+  resetViewButton === null ||
+  resetViewControl === null ||
+  resetViewVisibleInput === null ||
+  fullscreenVisibleInput === null ||
+  mousePositionVisibleInput === null ||
+  overviewMapVisibleInput === null ||
+  overviewMapSizeSelect === null ||
+  mouseWheelZoomSensitivitySelect === null ||
+  zoomButtonStepSelect === null ||
+  themeSelect === null ||
+  gridThemeSelect === null ||
+  gridOpacityInput === null ||
+  gridOpacityValue === null ||
+  gridSpacingSelect === null ||
+  gridLabelsVisibleInput === null ||
+  controlOpacityInput === null ||
+  controlOpacityValue === null ||
+  resetDefaultsButton === null ||
+  scaleBarEnabledInput === null ||
+  scaleBarColourInput === null ||
+  scaleBarOpacityInput === null ||
+  scaleBarOpacityValue === null ||
+  scaleBarSizeSelect === null ||
+  scaleBarUnitsSelect === null ||
   viewerFiles === null
 ) {
   throw new Error("The OpenLayers viewer controls could not be found.");
 }
 
+const settingsStorageKey =
+  "tiatoolbox-openlayers-settings";
+
+function saveSettings() {
+  const settings = {
+    theme: themeSelect.value,
+    interfaceOpacity: controlOpacityInput.value,
+
+    controls: {
+      zoom: zoomVisibleInput.checked,
+      zoomLevel: zoomLevelVisibleInput.checked,
+      rotation: rotationVisibleInput.checked,
+      graticule: graticuleVisibleInput.checked,
+      screenSpaceGraticule:
+        screenSpaceGraticuleVisibleInput.checked,
+      resetView: resetViewVisibleInput.checked,
+      fullscreen: fullscreenVisibleInput.checked,
+      mousePosition:
+        mousePositionVisibleInput.checked,
+      overviewMap: overviewMapVisibleInput.checked,
+    },
+
+    navigation: {
+      mouseWheelZoomSensitivity:
+        mouseWheelZoomSensitivitySelect.value,
+      zoomButtonStep:
+        zoomButtonStepSelect.value,
+    },
+
+    overviewMap: {
+      size: overviewMapSizeSelect.value,
+    },
+
+    grid: {
+      theme: gridThemeSelect.value,
+      opacity: gridOpacityInput.value,
+      spacing: gridSpacingSelect.value,
+      labels: gridLabelsVisibleInput.checked,
+    },
+
+    scaleBar: {
+      enabled: scaleBarEnabledInput.checked,
+      colour: scaleBarColourInput.value,
+      opacity: scaleBarOpacityInput.value,
+      size: scaleBarSizeSelect.value,
+      units: scaleBarUnitsSelect.value,
+    },
+  };
+
+  try {
+    window.localStorage.setItem(
+      settingsStorageKey,
+      JSON.stringify(settings),
+    );
+  } catch {
+    // Continue using the viewer if storage is unavailable.
+  }
+}
+
+function loadSettings() {
+  let savedSettings;
+
+  try {
+    const storedSettings =
+      window.localStorage.getItem(settingsStorageKey);
+
+    if (storedSettings === null) {
+      return;
+    }
+
+    savedSettings = JSON.parse(storedSettings);
+  } catch {
+    return;
+  }
+
+  if (
+    savedSettings === null ||
+    typeof savedSettings !== "object"
+  ) {
+    return;
+  }
+
+  if (
+    ["dark", "light", "high-contrast"].includes(
+      savedSettings.theme,
+    )
+  ) {
+    themeSelect.value = savedSettings.theme;
+  }
+
+  if (
+    ["40", "45", "50", "55", "60", "65", "70",
+      "75", "80", "85", "90", "95", "100"].includes(
+      savedSettings.interfaceOpacity,
+    )
+  ) {
+    controlOpacityInput.value =
+      savedSettings.interfaceOpacity;
+  }
+
+  const controls = savedSettings.controls;
+
+  if (
+    controls !== null &&
+    typeof controls === "object"
+  ) {
+    if (typeof controls.zoom === "boolean") {
+      zoomVisibleInput.checked = controls.zoom;
+    }
+
+    if (typeof controls.zoomLevel === "boolean") {
+      zoomLevelVisibleInput.checked =
+        controls.zoomLevel;
+    }
+
+    if (typeof controls.rotation === "boolean") {
+      rotationVisibleInput.checked =
+        controls.rotation;
+    }
+
+    if (typeof controls.graticule === "boolean") {
+      graticuleVisibleInput.checked =
+        controls.graticule;
+    }
+
+    if (
+      typeof controls.screenSpaceGraticule ===
+      "boolean"
+    ) {
+      screenSpaceGraticuleVisibleInput.checked =
+        controls.screenSpaceGraticule;
+    }
+
+    if (typeof controls.resetView === "boolean") {
+      resetViewVisibleInput.checked =
+        controls.resetView;
+    }
+
+    if (typeof controls.fullscreen === "boolean") {
+      fullscreenVisibleInput.checked =
+        controls.fullscreen;
+    }
+
+    if (
+      typeof controls.mousePosition === "boolean"
+    ) {
+      mousePositionVisibleInput.checked =
+        controls.mousePosition;
+    }
+
+    if (
+      typeof controls.overviewMap === "boolean"
+    ) {
+      overviewMapVisibleInput.checked =
+        controls.overviewMap;
+    }
+  }
+
+  const navigation = savedSettings.navigation;
+
+  if (
+    navigation !== null &&
+    typeof navigation === "object"
+  ) {
+    if (
+      ["low", "default", "high"].includes(
+        navigation.mouseWheelZoomSensitivity,
+      )
+    ) {
+      mouseWheelZoomSensitivitySelect.value =
+        navigation.mouseWheelZoomSensitivity;
+    }
+    if (
+      ["0.1", "0.5", "1", "2"].includes(
+        navigation.zoomButtonStep,
+      )
+    ) {
+      zoomButtonStepSelect.value =
+        navigation.zoomButtonStep;
+    }
+  }
+
+  const overviewMapSettings = savedSettings.overviewMap;
+
+  if (
+    overviewMapSettings !== null &&
+    typeof overviewMapSettings === "object"
+  ) {
+    if (
+      ["small", "default", "large"].includes(
+        overviewMapSettings.size,
+      )
+    ) {
+      overviewMapSizeSelect.value =
+        overviewMapSettings.size;
+    }
+  }
+
+  const grid = savedSettings.grid;
+
+  if (
+    grid !== null &&
+    typeof grid === "object"
+  ) {
+    if (
+      [
+        "default",
+        "light",
+        "dark",
+        "light-contrast",
+        "dark-contrast",
+      ].includes(grid.theme)
+    ) {
+      gridThemeSelect.value = grid.theme;
+    }
+
+    const opacity = Number(grid.opacity);
+
+    if (
+      Number.isFinite(opacity) &&
+      opacity >= 0 &&
+      opacity <= 100
+    ) {
+      gridOpacityInput.value = opacity.toString();
+    }
+
+    if (
+      ["fine", "default", "coarse"].includes(
+        grid.spacing,
+      )
+    ) {
+      gridSpacingSelect.value = grid.spacing;
+    }
+
+    if (typeof grid.labels === "boolean") {
+      gridLabelsVisibleInput.checked = grid.labels;
+    }
+  }
+
+  const scaleBar = savedSettings.scaleBar;
+
+  if (
+    scaleBar !== null &&
+    typeof scaleBar === "object"
+  ) {
+    if (typeof scaleBar.enabled === "boolean") {
+      scaleBarEnabledInput.checked =
+        scaleBar.enabled;
+    }
+
+    if (
+      typeof scaleBar.colour === "string" &&
+      /^#[0-9a-fA-F]{6}$/.test(scaleBar.colour)
+    ) {
+      scaleBarColourInput.value = scaleBar.colour;
+    }
+
+    const opacity = Number(scaleBar.opacity);
+
+    if (
+      Number.isFinite(opacity) &&
+      opacity >= 0 &&
+      opacity <= 100
+    ) {
+      scaleBarOpacityInput.value =
+        opacity.toString();
+    }
+
+    if (
+      ["small", "default", "large"].includes(
+        scaleBar.size,
+      )
+    ) {
+      scaleBarSizeSelect.value = scaleBar.size;
+    }
+
+    if (
+      ["metric", "imperial"].includes(
+        scaleBar.units,
+      )
+    ) {
+      scaleBarUnitsSelect.value = scaleBar.units;
+    }
+  }
+}
+
+function hexToRgb(hex) {
+  const value = hex.replace("#", "");
+
+  if (!/^[0-9a-fA-F]{6}$/.test(value)) {
+    return null;
+  }
+
+  return {
+    r: Number.parseInt(value.slice(0, 2), 16),
+    g: Number.parseInt(value.slice(2, 4), 16),
+    b: Number.parseInt(value.slice(4, 6), 16),
+  };
+}
+
+function getRelativeLuminance({ r, g, b }) {
+  const channels = [r, g, b].map((channel) => {
+    const value = channel / 255;
+
+    return value <= 0.04045
+      ? value / 12.92
+      : ((value + 0.055) / 1.055) ** 2.4;
+  });
+
+  return (
+    0.2126 * channels[0] +
+    0.7152 * channels[1] +
+    0.0722 * channels[2]
+  );
+}
+
+function getContrastingColour(rgb) {
+  const luminance = getRelativeLuminance(rgb);
+
+  const whiteContrast = 1.05 / (luminance + 0.05);
+  const blackContrast = (luminance + 0.05) / 0.05;
+
+  return whiteContrast >= blackContrast
+    ? "#ffffff"
+    : "#000000";
+}
+
+function mixColour(rgb, target, amount) {
+  return {
+    r: Math.round(rgb.r + (target - rgb.r) * amount),
+    g: Math.round(rgb.g + (target - rgb.g) * amount),
+    b: Math.round(rgb.b + (target - rgb.b) * amount),
+  };
+}
+
+function toRgba(rgb, opacity) {
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity})`;
+}
+
+const interfaceThemeColours = {
+  dark: "#111111",
+  light: "#f2f2f2",
+  "high-contrast": "#000000",
+};
+
+const scaleBarThemeColours = {
+  dark: "#ffffff",
+  light: "#000000",
+  "high-contrast": "#ffffff",
+};
+
+function updateControlAppearance() {
+  const themeColour =
+    interfaceThemeColours[themeSelect.value] ??
+    interfaceThemeColours.dark;
+
+  const colour = hexToRgb(themeColour);
+
+  if (colour === null) {
+    return;
+  }
+
+  const opacity =
+    Number(controlOpacityInput.value) / 100;
+
+  const foreground = getContrastingColour(colour);
+
+  const foregroundRgb =
+    foreground === "#ffffff"
+      ? { r: 255, g: 255, b: 255 }
+      : { r: 0, g: 0, b: 0 };
+
+  const shadowColour =
+    foreground === "#ffffff"
+      ? { r: 0, g: 0, b: 0 }
+      : { r: 255, g: 255, b: 255 };
+
+  const interactionTarget =
+    foreground === "#ffffff" ? 255 : 0;
+
+  const surfaceColour = mixColour(
+    colour,
+    interactionTarget,
+    0.08,
+  );
+
+  const hoverColour = mixColour(
+    colour,
+    interactionTarget,
+    0.16,
+  );
+
+  const pressedColour = mixColour(
+    colour,
+    interactionTarget,
+    0.28,
+  );
+
+  const borderColour = mixColour(
+    colour,
+    interactionTarget,
+    0.4,
+  );
+
+  const focusBorderColour = mixColour(
+    colour,
+    interactionTarget,
+    0.58,
+  );
+
+  viewerApp.style.setProperty(
+    "--viewer-control-background",
+    toRgba(colour, opacity),
+  );
+
+  viewerApp.style.setProperty(
+    "--viewer-control-surface-background",
+    toRgba(surfaceColour, opacity),
+  );
+
+  viewerApp.style.setProperty(
+    "--viewer-control-hover-background",
+    toRgba(hoverColour, opacity),
+  );
+
+  viewerApp.style.setProperty(
+    "--viewer-control-pressed-background",
+    toRgba(pressedColour, opacity),
+  );
+
+  viewerApp.style.setProperty(
+    "--viewer-control-foreground",
+    foreground,
+  );
+
+  viewerApp.style.setProperty(
+    "--viewer-control-hover-foreground",
+    getContrastingColour(hoverColour),
+  );
+
+  viewerApp.style.setProperty(
+    "--viewer-control-pressed-foreground",
+    getContrastingColour(pressedColour),
+  );
+
+  viewerApp.style.setProperty(
+    "--viewer-control-muted-foreground",
+    toRgba(foregroundRgb, 0.7),
+  );
+
+  viewerApp.style.setProperty(
+    "--viewer-control-subtle-foreground",
+    toRgba(foregroundRgb, 0.55),
+  );
+
+  viewerApp.style.setProperty(
+    "--viewer-control-border",
+    toRgba(
+      borderColour,
+      Math.max(opacity, 0.7),
+    ),
+  );
+
+  viewerApp.style.setProperty(
+    "--viewer-control-focus-border",
+    toRgba(
+      focusBorderColour,
+      Math.max(opacity, 0.9),
+    ),
+  );
+
+  viewerApp.style.setProperty(
+    "--viewer-control-foreground-shadow",
+    toRgba(shadowColour, 0.75),
+  );
+
+  controlOpacityValue.textContent =
+    `${controlOpacityInput.value}%`;
+}
+
+themeSelect.addEventListener("change", () => {
+  updateControlAppearance();
+
+  scaleBarColourInput.value =
+    scaleBarThemeColours[themeSelect.value] ??
+    scaleBarThemeColours.dark;
+
+  updateScaleBarColour();
+  updateScaleBarOpacity();
+  updateGridAppearance();
+});
+
+controlOpacityInput.addEventListener("input", () => {
+  updateControlAppearance();
+});
+
+loadSettings();
+
+updateControlAppearance();
+
+let scaleBarEnabled = scaleBarEnabledInput.checked;
+
 function setViewerPanelOpen(open) {
+  if (open) {
+    setLayerEditorOpen(false);
+  }
+
   viewerPanel.classList.toggle("hidden", !open);
   viewerPanelToggle.classList.toggle("active", open);
   viewerPanelToggle.innerHTML = open
@@ -131,12 +814,18 @@ function setViewerPanelOpen(open) {
 }
 
 function setLayerEditorOpen(open) {
+  if (open) {
+    setViewerPanelOpen(false);
+  }
+
   layerEditor.classList.toggle("hidden", !open);
   layerEditorToggle.classList.toggle("active", open);
 }
 
-viewerPanelToggle.title = "Files";
-viewerPanelToggle.setAttribute("aria-label", "Files");
+function setSettingsPanelOpen(open) {
+  settingsPanel.classList.toggle("hidden", !open);
+  settingsToggle.classList.toggle("active", open);
+}
 
 setViewerPanelOpen(true);
 
@@ -149,6 +838,35 @@ layerEditorToggle.addEventListener("click", () => {
   const open = layerEditor.classList.contains("hidden");
   setLayerEditorOpen(open);
 });
+
+settingsToggle.addEventListener("click", () => {
+  const open = settingsPanel.classList.contains("hidden");
+  setSettingsPanelOpen(open);
+});
+
+settingsCloseButton.addEventListener("click", () => {
+  setSettingsPanelOpen(false);
+});
+
+for (const tab of settingsTabs) {
+  tab.addEventListener("click", () => {
+    const selectedTab = tab.dataset.settingsTab;
+
+    for (const otherTab of settingsTabs) {
+      otherTab.classList.toggle(
+        "active",
+        otherTab === tab,
+      );
+    }
+
+    for (const panel of settingsTabPanels) {
+      panel.classList.toggle(
+        "hidden",
+        panel.dataset.settingsPanel !== selectedTab,
+      );
+    }
+  });
+}
 
 let layersData = JSON.parse(mapElement.dataset.layers ?? "[]");
 let sessionId = null;
@@ -830,18 +1548,105 @@ const view = new View({
   resolution: resolutions[0],
 });
 
+const mouseWheelZoomPresets = {
+  low: {
+    deltaPerZoom: 600,
+    maxDelta: 1,
+  },
+
+  default: {
+    deltaPerZoom: 300,
+    maxDelta: 1,
+  },
+
+  high: {
+    deltaPerZoom: 150,
+    maxDelta: 2,
+  },
+};
+
+function createMouseWheelZoomInteraction() {
+  const preset =
+    mouseWheelZoomPresets[
+      mouseWheelZoomSensitivitySelect.value
+    ] ?? mouseWheelZoomPresets.default;
+
+  const interaction = new MouseWheelZoom({
+    maxDelta: preset.maxDelta,
+  });
+
+  // OpenLayers 10.10 internally uses 300 scroll-delta
+  // units per zoom level, but does not expose a public
+  // sensitivity option.
+  interaction.deltaPerZoom_ =
+    preset.deltaPerZoom;
+
+  interaction.setActive(
+    slideLayer.getSource() !== null,
+  );
+
+  return interaction;
+}
+
+let mouseWheelZoomInteraction =
+  createMouseWheelZoomInteraction();
+
+function createZoomControl() {
+  return new Zoom({
+    delta: Number(zoomButtonStepSelect.value),
+  });
+}
+
+let zoomControlInstance =
+  createZoomControl();
+
 const map = new Map({
   target: mapElement,
   layers,
   view,
+  controls: defaultControls({
+    zoom: false,
+    rotate: false,
+  }).extend([
+    zoomControlInstance,
+  ]),
+  interactions: defaultInteractions({
+    mouseWheelZoom: false,
+  }).extend([
+    mouseWheelZoomInteraction,
+  ]),
 });
 
-// Zoom level
-const zoomControl = mapElement.querySelector(".ol-zoom");
-const zoomOutButton = mapElement.querySelector(".ol-zoom-out");
+function updateMouseWheelZoomSensitivity() {
+  map.removeInteraction(
+    mouseWheelZoomInteraction,
+  );
 
-if (zoomControl === null || zoomOutButton === null) {
-  throw new Error("The OpenLayers zoom control could not be found.");
+  mouseWheelZoomInteraction =
+    createMouseWheelZoomInteraction();
+
+  map.addInteraction(
+    mouseWheelZoomInteraction,
+  );
+}
+
+mouseWheelZoomSensitivitySelect.addEventListener(
+  "change",
+  () => {
+    updateMouseWheelZoomSensitivity();
+  },
+);
+
+// Zoom level
+let zoomControl = zoomControlInstance.element;
+
+let zoomOutButton =
+  zoomControl.querySelector(".ol-zoom-out");
+
+if (zoomOutButton === null) {
+  throw new Error(
+    "The OpenLayers zoom control could not be found.",
+  );
 }
 
 const zoomLevel = document.createElement("input");
@@ -910,13 +1715,140 @@ zoomLevel.addEventListener("keydown", (event) => {
 
 updateZoomLevel();
 
-// Scalebar
-const scaleLineControl = new ScaleLine({
-  units: "metric",
-  minWidth: 100,
+function resetView() {
+  const source = slideLayer.getSource();
+
+  if (source === null) {
+    return;
+  }
+
+  const slideExtent = source
+    .getTileGrid()
+    .getExtent();
+
+  const currentView = map.getView();
+
+  currentView.setRotation(0);
+
+  currentView.fit(slideExtent, {
+    size: map.getSize(),
+  });
+}
+
+resetViewButton.addEventListener("click", () => {
+  resetView();
 });
 
+// Scalebar
+const scaleBarWidths = {
+  small: 70,
+  default: 100,
+  large: 140,
+};
+
+function createScaleLineControl() {
+  const minWidth =
+    scaleBarWidths[scaleBarSizeSelect.value] ??
+    scaleBarWidths.default;
+
+  return new ScaleLine({
+    units: scaleBarUnitsSelect.value,
+    minWidth,
+  });
+}
+
+let scaleLineControl = createScaleLineControl();
+
 map.addControl(scaleLineControl);
+
+function updateScaleBarVisibility() {
+  const hasSlide = slideLayer.getSource() !== null;
+
+  scaleLineControl.element.classList.toggle(
+    "viewer-control-hidden",
+    !hasSlide || !scaleBarEnabled,
+  );
+}
+
+scaleBarEnabledInput.addEventListener("change", () => {
+  scaleBarEnabled = scaleBarEnabledInput.checked;
+  updateScaleBarVisibility();
+});
+
+function updateScaleBarColour() {
+  const colour = scaleBarColourInput.value;
+
+  const scaleLineInner = scaleLineControl.element.querySelector(
+    ".ol-scale-line-inner",
+  );
+
+  if (scaleLineInner === null) {
+    return;
+  }
+
+  scaleLineInner.style.color = colour;
+  scaleLineInner.style.borderColor = colour;
+}
+
+scaleBarColourInput.addEventListener("input", () => {
+  updateScaleBarColour();
+  updateScaleBarOpacity();
+});
+
+function updateScaleBarOpacity() {
+  const opacity =
+    Number(scaleBarOpacityInput.value) / 100;
+
+  const scaleBarColour =
+    hexToRgb(scaleBarColourInput.value);
+
+  if (scaleBarColour === null) {
+    return;
+  }
+
+  const contrastColour =
+    getContrastingColour(scaleBarColour);
+
+  const backgroundColour =
+    contrastColour === "#ffffff"
+      ? { r: 255, g: 255, b: 255 }
+      : { r: 17, g: 17, b: 17 };
+
+  scaleLineControl.element.style.backgroundColor =
+    toRgba(backgroundColour, opacity);
+
+  scaleBarOpacityValue.textContent =
+    `${scaleBarOpacityInput.value}%`;
+}
+
+scaleBarOpacityInput.addEventListener("input", () => {
+  updateScaleBarOpacity();
+});
+
+function updateScaleBarSize() {
+  map.removeControl(scaleLineControl);
+
+  scaleLineControl = createScaleLineControl();
+
+  map.addControl(scaleLineControl);
+
+  window.scaleLineControl = scaleLineControl;
+
+  updateScaleBarVisibility();
+  updateScaleBarColour();
+  updateScaleBarOpacity();
+}
+
+scaleBarSizeSelect.addEventListener("change", () => {
+  updateScaleBarSize();
+});
+
+scaleBarUnitsSelect.addEventListener("change", () => {
+  scaleLineControl.setUnits(scaleBarUnitsSelect.value);
+});
+
+updateScaleBarColour();
+updateScaleBarOpacity();
 
 const overviewLayer = new TileLayer();
 
@@ -924,10 +1856,33 @@ if (baseSource !== null) {
   overviewLayer.setSource(baseSource);
 }
 
-const overviewMapWidth = 300;
-const overviewMapHeight = 250;
+const overviewMapSizes = {
+  small: {
+    width: 220,
+    height: 180,
+  },
+
+  default: {
+    width: 300,
+    height: 250,
+  },
+
+  large: {
+    width: 380,
+    height: 320,
+  },
+};
+
+function getOverviewMapSize() {
+  return (
+    overviewMapSizes[overviewMapSizeSelect.value] ??
+    overviewMapSizes.default
+  );
+}
 
 function createOverviewView(overviewProjection, overviewExtent) {
+  const overviewMapSize = getOverviewMapSize();
+
   const center = [
     (overviewExtent[0] + overviewExtent[2]) / 2,
     (overviewExtent[1] + overviewExtent[3]) / 2,
@@ -937,8 +1892,8 @@ function createOverviewView(overviewProjection, overviewExtent) {
   const height = overviewExtent[3] - overviewExtent[1];
 
   const resolution = Math.max(
-    width / overviewMapWidth,
-    height / overviewMapHeight,
+    width / overviewMapSize.width,
+    height / overviewMapSize.height,
   );
 
   const overviewView = new View({
@@ -991,6 +1946,50 @@ map.addControl(overviewMapControl);
 
 const overviewMap = overviewMapControl.getOverviewMap();
 
+function updateOverviewMapSize() {
+  const size = getOverviewMapSize();
+
+  overviewMapControl.element.style.setProperty(
+    "--overview-map-width",
+    `${size.width}px`,
+  );
+
+  overviewMapControl.element.style.setProperty(
+    "--overview-map-height",
+    `${size.height}px`,
+  );
+
+  overviewMap.updateSize();
+
+  const source = overviewLayer.getSource();
+
+  if (source !== null) {
+    const currentProjection =
+      map.getView().getProjection();
+
+    const currentExtent =
+      source.getTileGrid().getExtent();
+
+    overviewMap.setView(
+      createOverviewView(
+        currentProjection,
+        currentExtent,
+      ),
+    );
+  }
+
+  overviewMap.renderSync();
+}
+
+overviewMapSizeSelect.addEventListener(
+  "change",
+  () => {
+    updateOverviewMapSize();
+  },
+);
+
+updateOverviewMapSize();
+
 // Mouse position
 const coordinateFormat = (coordinate) => {
   const displayedCoordinate = [coordinate[0], -coordinate[1]];
@@ -1021,30 +2020,195 @@ const fullscreen = new FullScreen({
 
 map.addControl(fullscreen);
 
+const bottomControlsGroup = document.createElement("div");
+
+bottomControlsGroup.className =
+  "bottom-controls-group ol-unselectable";
+
+viewerApp.append(bottomControlsGroup);
+
+bottomControlsGroup.append(
+  resetViewControl,
+  zoomControl,
+  fullscreen.element,
+);
+
+function updateZoomButtonStep() {
+  map.removeControl(zoomControlInstance);
+
+  zoomControlInstance =
+    createZoomControl();
+
+  map.addControl(zoomControlInstance);
+
+  zoomControl = zoomControlInstance.element;
+
+  zoomOutButton =
+    zoomControl.querySelector(".ol-zoom-out");
+
+  if (zoomOutButton === null) {
+    throw new Error(
+      "The OpenLayers zoom control could not be found.",
+    );
+  }
+
+  zoomControl.insertBefore(
+    zoomLevel,
+    zoomOutButton,
+  );
+
+  bottomControlsGroup.insertBefore(
+    zoomControl,
+    fullscreen.element,
+  );
+
+  setViewerEnabled(
+    slideLayer.getSource() !== null,
+  );
+
+  updateControlVisibility();
+}
+
+zoomButtonStepSelect.addEventListener(
+  "change",
+  () => {
+    updateZoomButtonStep();
+  },
+);
+
 // Layer switcher
 const layerSwitcher = new LayerSwitcher();
 
 map.addControl(layerSwitcher);
 
 // Graticule
-const graticuleSpacing = 64;
+const gridSpacingValues = {
+  fine: 32,
+  default: 64,
+  coarse: 128,
+};
+
+function getGridSpacing() {
+  return (
+    gridSpacingValues[gridSpacingSelect.value] ??
+    gridSpacingValues.default
+  );
+}
+
 const graticuleMargin = 64;
+
+const gridThemeColours = {
+  light: {
+    line: { r: 255, g: 255, b: 255 },
+    label: "rgba(255, 255, 255, 1)",
+    outline: "rgba(20, 20, 20, 1)",
+  },
+
+  dark: {
+    line: { r: 20, g: 20, b: 20 },
+    label: "rgba(20, 20, 20, 1)",
+    outline: "rgba(255, 255, 255, 1)",
+  },
+
+  "light-contrast": {
+    line: { r: 0, g: 170, b: 200 },
+    label: "rgba(0, 170, 200, 1)",
+    outline: "rgba(20, 20, 20, 1)",
+  },
+
+  "dark-contrast": {
+    line: { r: 145, g: 55, b: 0 },
+    label: "rgba(145, 55, 0, 1)",
+    outline: "rgba(255, 255, 255, 1)",
+  },
+};
+
+function getGridTheme() {
+  if (gridThemeSelect.value !== "default") {
+    return gridThemeSelect.value;
+  }
+
+  if (themeSelect.value === "light") {
+    return "light";
+  }
+
+  if (themeSelect.value === "high-contrast") {
+    return "dark-contrast";
+  }
+
+  return "dark";
+}
+
+const graticuleTextStyle = new Text({
+  font: "12px Calibri,sans-serif",
+  fill: new Fill({
+    color: "rgba(0, 0, 0, 1)",
+  }),
+  stroke: new Stroke({
+    color: "rgba(255, 255, 255, 1)",
+    width: 3,
+  }),
+});
 
 const graticuleStyle = new Style({
   stroke: new Stroke({
     color: "rgba(0, 0, 0, 0.5)",
     width: 1,
   }),
-  text: new Text({
-    font: "12px Calibri,sans-serif",
-    fill: new Fill({
-      color: "rgba(0, 0, 0, 1)",
-    }),
-    stroke: new Stroke({
-      color: "rgba(255, 255, 255, 1)",
-      width: 3,
-    }),
-  }),
+  text: graticuleTextStyle,
+});
+
+function updateGridAppearance() {
+  const gridTheme = getGridTheme();
+
+  const colours =
+    gridThemeColours[gridTheme] ??
+    gridThemeColours.dark;
+
+  const opacity =
+    Number(gridOpacityInput.value) / 100;
+
+  const gridStroke = graticuleStyle.getStroke();
+  const gridText = graticuleTextStyle;
+
+  gridStroke.setColor(
+    toRgba(colours.line, opacity),
+  );
+
+  gridText
+    .getFill()
+    .setColor(colours.label);
+
+  gridText
+    .getStroke()
+    .setColor(colours.outline);
+
+  gridOpacityValue.textContent =
+    `${gridOpacityInput.value}%`;
+
+  map.renderSync();
+}
+
+function updateGridLabels() {
+  graticuleStyle.setText(
+    gridLabelsVisibleInput.checked
+      ? graticuleTextStyle
+      : null,
+  );
+
+  map.renderSync();
+}
+
+gridThemeSelect.addEventListener("change", () => {
+  updateGridAppearance();
+});
+
+gridOpacityInput.addEventListener("input", () => {
+  updateGridAppearance();
+});
+
+gridLabelsVisibleInput.addEventListener("change", () => {
+  updateGridLabels();
 });
 
 // Create graticules for the active slide projection.
@@ -1053,7 +2217,7 @@ function createGraticule(graticuleProjection) {
     projection: graticuleProjection,
     margin: graticuleMargin,
     style: graticuleStyle,
-    spacing: graticuleSpacing,
+    spacing: getGridSpacing(),
     formatCoord: (coordinate, position) => {
       if (position === "left" || position === "right") {
         coordinate = -Math.floor(coordinate);
@@ -1074,13 +2238,14 @@ function createGraticule(graticuleProjection) {
 let graticule = createGraticule(projection);
 
 // Screen-space graticule
-const screenSpaceGraticuleSpacing = graticuleSpacing;
 const screenSpaceGraticuleMargin = graticuleMargin;
 
 function createScreenSpaceGraticule(graticuleProjection) {
+  const spacing = getGridSpacing();
+
   return new Graticule({
     projection: graticuleProjection.getCode(),
-    spacing: screenSpaceGraticuleSpacing,
+    spacing,
     margin: screenSpaceGraticuleMargin,
     style: graticuleStyle,
     formatCoord(coordinate, position) {
@@ -1103,7 +2268,7 @@ function createScreenSpaceGraticule(graticuleProjection) {
       displayedCoordinate = Math.floor(
         displayedCoordinate /
           resolution /
-          screenSpaceGraticuleSpacing,
+          spacing,
       );
 
       if (position === "left" || position === "right") {
@@ -1128,6 +2293,9 @@ function createScreenSpaceGraticule(graticuleProjection) {
 
 let screenSpaceGraticule =
   createScreenSpaceGraticule(projection);
+
+updateGridAppearance();
+updateGridLabels();
 
 const graticuleToggle = new Toggle({
   html: '<i class="fas fa-ruler-combined"></i>',
@@ -1172,10 +2340,247 @@ const screenSpaceGraticuleToggle = new Toggle({
 
 map.addControl(screenSpaceGraticuleToggle);
 
+const viewerToolsGroup = document.createElement("div");
+
+viewerToolsGroup.className =
+  "viewer-tools-group ol-unselectable";
+
+map
+  .getOverlayContainerStopEvent()
+  .append(viewerToolsGroup);
+
+viewerToolsGroup.append(
+  rotate.element,
+  graticuleToggle.element,
+  screenSpaceGraticuleToggle.element,
+);
+
+function updateGridSpacing() {
+  const graticuleWasActive =
+    graticuleToggle.getActive();
+
+  const screenSpaceGraticuleWasActive =
+    screenSpaceGraticuleToggle.getActive();
+
+  graticule.setMap(null);
+  screenSpaceGraticule.setMap(null);
+
+  const projection = map.getView().getProjection();
+
+  graticule = createGraticule(projection);
+
+  screenSpaceGraticule =
+    createScreenSpaceGraticule(projection);
+
+  if (graticuleWasActive) {
+    graticule.setMap(map);
+  }
+
+  if (screenSpaceGraticuleWasActive) {
+    screenSpaceGraticule.setMap(map);
+  }
+
+  window.graticule = graticule;
+  window.screenSpaceGraticule =
+    screenSpaceGraticule;
+
+  map.renderSync();
+}
+
+gridSpacingSelect.addEventListener("change", () => {
+  updateGridSpacing();
+});
+
+function updateControlVisibility() {
+  const hasSlide = slideLayer.getSource() !== null;
+
+  zoomControl.classList.toggle(
+    "viewer-control-hidden",
+    !zoomVisibleInput.checked,
+  );
+
+  zoomLevel.classList.toggle(
+    "viewer-control-hidden",
+    !zoomLevelVisibleInput.checked,
+  );
+
+  rotate.element.classList.toggle(
+    "viewer-control-hidden",
+    !rotationVisibleInput.checked,
+  );
+
+  graticuleToggle.element.classList.toggle(
+    "viewer-control-hidden",
+    !graticuleVisibleInput.checked,
+  );
+
+  screenSpaceGraticuleToggle.element.classList.toggle(
+    "viewer-control-hidden",
+    !screenSpaceGraticuleVisibleInput.checked,
+  );
+
+  resetViewControl.classList.toggle(
+    "viewer-control-hidden",
+    !resetViewVisibleInput.checked,
+  );
+
+  fullscreen.element.classList.toggle(
+    "viewer-control-hidden",
+    !fullscreenVisibleInput.checked,
+  );
+
+  mousePositionControl.element.classList.toggle(
+    "viewer-control-hidden",
+    !hasSlide || !mousePositionVisibleInput.checked,
+  );
+
+  overviewMapControl.element.classList.toggle(
+    "viewer-control-hidden",
+    !hasSlide || !overviewMapVisibleInput.checked,
+  );
+
+  if (!graticuleVisibleInput.checked) {
+    graticuleToggle.setActive(false);
+    graticuleToggle.element.classList.remove("active");
+    graticule.setMap(null);
+  }
+
+  if (!screenSpaceGraticuleVisibleInput.checked) {
+    screenSpaceGraticuleToggle.setActive(false);
+    screenSpaceGraticuleToggle.element.classList.remove(
+      "active",
+    );
+    screenSpaceGraticule.setMap(null);
+  }
+
+  if (hasSlide && overviewMapVisibleInput.checked) {
+    requestAnimationFrame(() => {
+      overviewMap.updateSize();
+      overviewMap.renderSync();
+    });
+  }
+}
+
+for (const input of [
+  zoomVisibleInput,
+  zoomLevelVisibleInput,
+  rotationVisibleInput,
+  graticuleVisibleInput,
+  screenSpaceGraticuleVisibleInput,
+  resetViewVisibleInput,
+  fullscreenVisibleInput,
+  mousePositionVisibleInput,
+  overviewMapVisibleInput,
+]) {
+  input.addEventListener("change", () => {
+    updateControlVisibility();
+  });
+}
+
+function resetSettingsToDefaults() {
+  themeSelect.value = "dark";
+  overviewMapSizeSelect.value = "default";
+  mouseWheelZoomSensitivitySelect.value = "default";
+  zoomButtonStepSelect.value = "1";
+  gridThemeSelect.value = "default";
+  gridOpacityInput.value = "50";
+  gridSpacingSelect.value = "default";
+  gridLabelsVisibleInput.checked = true;
+  controlOpacityInput.value = "100";
+
+  for (const input of [
+    zoomVisibleInput,
+    zoomLevelVisibleInput,
+    rotationVisibleInput,
+    graticuleVisibleInput,
+    screenSpaceGraticuleVisibleInput,
+    resetViewVisibleInput,
+    fullscreenVisibleInput,
+    mousePositionVisibleInput,
+    overviewMapVisibleInput,
+  ]) {
+    input.checked = true;
+  }
+
+  scaleBarEnabledInput.checked = true;
+  scaleBarEnabled = true;
+
+  scaleBarColourInput.value = "#ffffff";
+  scaleBarOpacityInput.value = "100";
+  scaleBarSizeSelect.value = "default";
+  scaleBarUnitsSelect.value = "metric";
+
+  updateControlAppearance();
+  updateGridAppearance();
+  updateGridSpacing();
+  updateGridLabels();
+  updateControlVisibility();
+  updateOverviewMapSize();
+  updateMouseWheelZoomSensitivity();
+  updateZoomButtonStep();
+
+  updateScaleBarSize();
+  scaleLineControl.setUnits(scaleBarUnitsSelect.value);
+
+  updateScaleBarVisibility();
+  updateScaleBarColour();
+  updateScaleBarOpacity();
+
+  try {
+    window.localStorage.removeItem(
+      settingsStorageKey,
+    );
+  } catch {
+    // The defaults still apply if storage is unavailable.
+  }
+}
+
+resetDefaultsButton.addEventListener("click", () => {
+  resetSettingsToDefaults();
+});
+
+for (const input of [
+  themeSelect,
+  gridThemeSelect,
+  gridSpacingSelect,
+  gridLabelsVisibleInput,
+  zoomVisibleInput,
+  zoomLevelVisibleInput,
+  rotationVisibleInput,
+  graticuleVisibleInput,
+  screenSpaceGraticuleVisibleInput,
+  resetViewVisibleInput,
+  fullscreenVisibleInput,
+  mousePositionVisibleInput,
+  overviewMapVisibleInput,
+  overviewMapSizeSelect,
+  mouseWheelZoomSensitivitySelect,
+  zoomButtonStepSelect,
+
+  scaleBarEnabledInput,
+  scaleBarSizeSelect,
+  scaleBarUnitsSelect,
+]) {
+  input.addEventListener("change", () => {
+    saveSettings();
+  });
+}
+
+for (const input of [
+  controlOpacityInput,
+  gridOpacityInput,
+  scaleBarColourInput,
+  scaleBarOpacityInput,
+]) {
+  input.addEventListener("input", () => {
+    saveSettings();
+  });
+}
+
 // Enable or hide controls that require a loaded slide.
 function setViewerEnabled(enabled) {
-  const zoomInButton = mapElement.querySelector(".ol-zoom-in");
-  const zoomOutButton = mapElement.querySelector(".ol-zoom-out");
+  const zoomInButton = zoomControl.querySelector(".ol-zoom-in");
+  const zoomOutButton = zoomControl.querySelector(".ol-zoom-out");
   const rotateButton = rotate.element.querySelector("button");
   const graticuleButton =
     graticuleToggle.element.querySelector("button");
@@ -1188,6 +2593,7 @@ function setViewerEnabled(enabled) {
     rotateButton,
     graticuleButton,
     screenSpaceGraticuleButton,
+    resetViewButton,
   ]) {
     if (button !== null) {
       button.disabled = !enabled;
@@ -1195,17 +2601,24 @@ function setViewerEnabled(enabled) {
   }
   zoomLevel.disabled = !enabled;
 
+  zoomControl.classList.toggle(
+    "viewer-control-disabled",
+    !enabled,
+  );
+
+  mouseWheelZoomInteraction.setActive(enabled);
+
   scaleLineControl.element.classList.toggle(
     "viewer-control-hidden",
-    !enabled,
+    !enabled || !scaleBarEnabled,
   );
   mousePositionControl.element.classList.toggle(
     "viewer-control-hidden",
-    !enabled,
+    !enabled || !mousePositionVisibleInput.checked,
   );
   overviewMapControl.element.classList.toggle(
     "viewer-control-hidden",
-    !enabled,
+    !enabled || !overviewMapVisibleInput.checked,
   );
 
   if (!enabled) {
@@ -1229,6 +2642,7 @@ function setViewerEnabled(enabled) {
 }
 
 setViewerEnabled(baseSource !== null);
+updateControlVisibility();
 
 if (baseSource !== null) {
   map.getView().fit(extent);
