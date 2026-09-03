@@ -15292,259 +15292,8 @@ var fh = class extends Te {
 	getInteraction() {
 		return this.interaction_;
 	}
-};
-//#endregion
-//#region src/utils/colours.js
-function mh(e) {
-	let t = e.replace("#", "");
-	return /^[0-9a-fA-F]{6}$/.test(t) ? {
-		r: Number.parseInt(t.slice(0, 2), 16),
-		g: Number.parseInt(t.slice(2, 4), 16),
-		b: Number.parseInt(t.slice(4, 6), 16)
-	} : null;
-}
-function hh({ r: e, g: t, b: n }) {
-	let r = [
-		e,
-		t,
-		n
-	].map((e) => {
-		let t = e / 255;
-		return t <= .04045 ? t / 12.92 : ((t + .055) / 1.055) ** 2.4;
-	});
-	return .2126 * r[0] + .7152 * r[1] + .0722 * r[2];
-}
-function gh(e) {
-	let t = hh(e);
-	return 1.05 / (t + .05) >= (t + .05) / .05 ? "#ffffff" : "#000000";
-}
-function _h(e, t, n) {
-	return {
-		r: Math.round(e.r + (t - e.r) * n),
-		g: Math.round(e.g + (t - e.g) * n),
-		b: Math.round(e.b + (t - e.b) * n)
-	};
-}
-function vh(e, t) {
-	return `rgba(${e.r}, ${e.g}, ${e.b}, ${t})`;
-}
-//#endregion
-//#region src/utils/paths.js
-function yh(e) {
-	let t = e.split(/[\\/]/).pop() ?? e, n = t.lastIndexOf(".");
-	return n <= 0 ? t : t.slice(0, n);
-}
-//#endregion
-//#region src/main.js
-async function bh() {
-	let e = await fetch("/tileserver/session_id");
-	if (!e.ok) throw Error("Failed to create TileServer session.");
-	return (await e.json()).session_id;
-}
-async function xh(e) {
-	let t = new FormData();
-	if (t.append("slide_path", e), !(await fetch("/tileserver/slide", {
-		method: "PUT",
-		body: t
-	})).ok) throw Error(`Failed to load slide: ${e}`);
-	let n = await fetch("/tileserver/slide");
-	if (!n.ok) throw Error("Failed to retrieve slide metadata.");
-	return n.json();
-}
-async function Sh(e) {
-	let t = await fetch(`/tileserver/files/${e}`);
-	if (!t.ok) throw Error(`Failed to get configured ${e} files.`);
-	return t.json();
-}
-function Ch(e, t, n) {
-	return new dd({
-		url: `/tileserver/layer/slide/${e}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${n}`,
-		size: t.slide_dimensions,
-		crossOrigin: "anonymous",
-		zDirection: -1
-	});
-}
-var wh = document.getElementById("map"), Th = document.querySelector(".viewer-app"), Eh = document.getElementById("viewer-panel"), Dh = document.getElementById("viewer-panel-toggle"), Oh = document.getElementById("viewer-files"), kh = document.getElementById("layer-editor"), Ah = document.getElementById("layer-editor-toggle"), jh = document.getElementById("layer-editor-list"), Mh = document.getElementById("settings-panel"), Nh = document.getElementById("settings-toggle"), Ph = document.getElementById("settings-close"), Fh = document.querySelectorAll(".settings-tab"), Ih = document.querySelectorAll(".settings-tab-panel"), Lh = document.getElementById("settings-zoom-visible"), Rh = document.getElementById("settings-zoom-level-visible"), zh = document.getElementById("settings-rotation-visible"), Bh = document.getElementById("settings-graticule-visible"), Vh = document.getElementById("settings-screen-space-graticule-visible"), Hh = document.getElementById("reset-view-button"), Uh = document.querySelector(".reset-view-control"), Wh = document.getElementById("settings-reset-view-visible"), Gh = document.getElementById("settings-fullscreen-visible"), Kh = document.getElementById("settings-mouse-position-visible"), qh = document.getElementById("settings-overview-map-visible"), Jh = document.getElementById("settings-overview-map-size"), Yh = document.getElementById("settings-mouse-wheel-zoom-sensitivity"), Xh = document.getElementById("settings-zoom-button-step"), Zh = document.getElementById("settings-scale-bar-enabled"), Qh = document.getElementById("settings-theme"), $h = document.getElementById("settings-grid-theme"), eg = document.getElementById("settings-grid-opacity"), tg = document.getElementById("settings-grid-opacity-value"), ng = document.getElementById("settings-grid-spacing"), rg = document.getElementById("settings-grid-labels-visible"), ig = document.getElementById("settings-control-opacity"), ag = document.getElementById("settings-control-opacity-value"), og = document.getElementById("settings-reset-defaults"), sg = document.getElementById("settings-scale-bar-colour"), cg = document.getElementById("settings-scale-bar-opacity"), lg = document.getElementById("settings-scale-bar-opacity-value"), ug = document.getElementById("settings-scale-bar-size"), dg = document.getElementById("settings-scale-bar-units");
-if (wh === null || Th === null) throw Error("The OpenLayers viewer could not be found.");
-if (Eh === null || Dh === null || kh === null || Ah === null || jh === null || Mh === null || Nh === null || Ph === null || Lh === null || Rh === null || zh === null || Bh === null || Vh === null || Hh === null || Uh === null || Wh === null || Gh === null || Kh === null || qh === null || Jh === null || Yh === null || Xh === null || Qh === null || $h === null || eg === null || tg === null || ng === null || rg === null || ig === null || ag === null || og === null || Zh === null || sg === null || cg === null || lg === null || ug === null || dg === null || Oh === null) throw Error("The OpenLayers viewer controls could not be found.");
-var fg = "tiatoolbox-openlayers-settings";
-function pg() {
-	let e = {
-		theme: Qh.value,
-		interfaceOpacity: ig.value,
-		controls: {
-			zoom: Lh.checked,
-			zoomLevel: Rh.checked,
-			rotation: zh.checked,
-			graticule: Bh.checked,
-			screenSpaceGraticule: Vh.checked,
-			resetView: Wh.checked,
-			fullscreen: Gh.checked,
-			mousePosition: Kh.checked,
-			overviewMap: qh.checked
-		},
-		navigation: {
-			mouseWheelZoomSensitivity: Yh.value,
-			zoomButtonStep: Xh.value
-		},
-		overviewMap: { size: Jh.value },
-		grid: {
-			theme: $h.value,
-			opacity: eg.value,
-			spacing: ng.value,
-			labels: rg.checked
-		},
-		scaleBar: {
-			enabled: Zh.checked,
-			colour: sg.value,
-			opacity: cg.value,
-			size: ug.value,
-			units: dg.value
-		}
-	};
-	try {
-		window.localStorage.setItem(fg, JSON.stringify(e));
-	} catch {}
-}
-function mg() {
-	let e;
-	try {
-		let t = window.localStorage.getItem(fg);
-		if (t === null) return;
-		e = JSON.parse(t);
-	} catch {
-		return;
-	}
-	if (typeof e != "object" || !e) return;
-	[
-		"dark",
-		"light",
-		"high-contrast"
-	].includes(e.theme) && (Qh.value = e.theme), [
-		"40",
-		"45",
-		"50",
-		"55",
-		"60",
-		"65",
-		"70",
-		"75",
-		"80",
-		"85",
-		"90",
-		"95",
-		"100"
-	].includes(e.interfaceOpacity) && (ig.value = e.interfaceOpacity);
-	let t = e.controls;
-	typeof t == "object" && t && (typeof t.zoom == "boolean" && (Lh.checked = t.zoom), typeof t.zoomLevel == "boolean" && (Rh.checked = t.zoomLevel), typeof t.rotation == "boolean" && (zh.checked = t.rotation), typeof t.graticule == "boolean" && (Bh.checked = t.graticule), typeof t.screenSpaceGraticule == "boolean" && (Vh.checked = t.screenSpaceGraticule), typeof t.resetView == "boolean" && (Wh.checked = t.resetView), typeof t.fullscreen == "boolean" && (Gh.checked = t.fullscreen), typeof t.mousePosition == "boolean" && (Kh.checked = t.mousePosition), typeof t.overviewMap == "boolean" && (qh.checked = t.overviewMap));
-	let n = e.navigation;
-	typeof n == "object" && n && ([
-		"low",
-		"default",
-		"high"
-	].includes(n.mouseWheelZoomSensitivity) && (Yh.value = n.mouseWheelZoomSensitivity), [
-		"0.1",
-		"0.5",
-		"1",
-		"2"
-	].includes(n.zoomButtonStep) && (Xh.value = n.zoomButtonStep));
-	let r = e.overviewMap;
-	typeof r == "object" && r && [
-		"small",
-		"default",
-		"large"
-	].includes(r.size) && (Jh.value = r.size);
-	let i = e.grid;
-	if (typeof i == "object" && i) {
-		[
-			"default",
-			"light",
-			"dark",
-			"light-contrast",
-			"dark-contrast"
-		].includes(i.theme) && ($h.value = i.theme);
-		let e = Number(i.opacity);
-		Number.isFinite(e) && e >= 0 && e <= 100 && (eg.value = e.toString()), [
-			"fine",
-			"default",
-			"coarse"
-		].includes(i.spacing) && (ng.value = i.spacing), typeof i.labels == "boolean" && (rg.checked = i.labels);
-	}
-	let a = e.scaleBar;
-	if (typeof a == "object" && a) {
-		typeof a.enabled == "boolean" && (Zh.checked = a.enabled), typeof a.colour == "string" && /^#[0-9a-fA-F]{6}$/.test(a.colour) && (sg.value = a.colour);
-		let e = Number(a.opacity);
-		Number.isFinite(e) && e >= 0 && e <= 100 && (cg.value = e.toString()), [
-			"small",
-			"default",
-			"large"
-		].includes(a.size) && (ug.value = a.size), ["metric", "imperial"].includes(a.units) && (dg.value = a.units);
-	}
-}
-var hg = {
-	dark: "#111111",
-	light: "#f2f2f2",
-	"high-contrast": "#000000"
-}, gg = {
-	dark: "#ffffff",
-	light: "#000000",
-	"high-contrast": "#ffffff"
-};
-function _g() {
-	let e = mh(hg[Qh.value] ?? hg.dark);
-	if (e === null) return;
-	let t = Number(ig.value) / 100, n = gh(e), r = n === "#ffffff" ? {
-		r: 255,
-		g: 255,
-		b: 255
-	} : {
-		r: 0,
-		g: 0,
-		b: 0
-	}, i = n === "#ffffff" ? {
-		r: 0,
-		g: 0,
-		b: 0
-	} : {
-		r: 255,
-		g: 255,
-		b: 255
-	}, a = n === "#ffffff" ? 255 : 0, o = _h(e, a, .08), s = _h(e, a, .16), c = _h(e, a, .28), l = _h(e, a, .4), u = _h(e, a, .58);
-	Th.style.setProperty("--viewer-control-background", vh(e, t)), Th.style.setProperty("--viewer-control-surface-background", vh(o, t)), Th.style.setProperty("--viewer-control-hover-background", vh(s, t)), Th.style.setProperty("--viewer-control-pressed-background", vh(c, t)), Th.style.setProperty("--viewer-control-foreground", n), Th.style.setProperty("--viewer-control-hover-foreground", gh(s)), Th.style.setProperty("--viewer-control-pressed-foreground", gh(c)), Th.style.setProperty("--viewer-control-muted-foreground", vh(r, .7)), Th.style.setProperty("--viewer-control-subtle-foreground", vh(r, .55)), Th.style.setProperty("--viewer-control-border", vh(l, Math.max(t, .7))), Th.style.setProperty("--viewer-control-focus-border", vh(u, Math.max(t, .9))), Th.style.setProperty("--viewer-control-foreground-shadow", vh(i, .75)), ag.textContent = `${ig.value}%`;
-}
-Qh.addEventListener("change", () => {
-	_g(), sg.value = gg[Qh.value] ?? gg.dark, y_(), b_(), W_();
-}), ig.addEventListener("input", () => {
-	_g();
-}), mg(), _g();
-var vg = Zh.checked;
-function yg(e) {
-	if (e && bg(!1), Eh.classList.toggle("hidden", !e), Dh.classList.toggle("active", e), Dh.innerHTML = e ? "<i class=\"fas fa-folder-open\"></i>" : "<i class=\"fas fa-folder\"></i>", !e) for (let e of Eh.querySelectorAll(".viewer-file-select.open")) e.close?.();
-}
-function bg(e) {
-	e && yg(!1), kh.classList.toggle("hidden", !e), Ah.classList.toggle("active", e);
-}
-function xg(e) {
-	Mh.classList.toggle("hidden", !e), Nh.classList.toggle("active", e);
-}
-yg(!0), Dh.addEventListener("click", () => {
-	yg(Eh.classList.contains("hidden"));
-}), Ah.addEventListener("click", () => {
-	bg(kh.classList.contains("hidden"));
-}), Nh.addEventListener("click", () => {
-	xg(Mh.classList.contains("hidden"));
-}), Ph.addEventListener("click", () => {
-	xg(!1);
-});
-for (let e of Fh) e.addEventListener("click", () => {
-	let t = e.dataset.settingsTab;
-	for (let t of Fh) t.classList.toggle("active", t === e);
-	for (let e of Ih) e.classList.toggle("hidden", e.dataset.settingsPanel !== t);
-});
-var Sg = JSON.parse(wh.dataset.layers ?? "[]"), Cg = null, wg = Date.now(), Tg = Date.now(), Eg = null, Dg = null, Og = {}, kg = /* @__PURE__ */ new Set(), Ag = document.createElement("div");
-Ag.className = "viewer-file-selectors";
-var jg = 0;
-function Mg(e) {
+}, mh = 0;
+function hh(e) {
 	let t = document.createElement("div");
 	t.className = "viewer-file-select";
 	let n = document.createElement("button");
@@ -15556,7 +15305,7 @@ function Mg(e) {
 	let a = document.createElement("input");
 	a.type = "text", a.className = "viewer-file-select-search", a.placeholder = "Search", a.autocomplete = "off", a.spellcheck = !1, a.setAttribute("aria-label", `Search ${e.toLowerCase()}`);
 	let o = document.createElement("div");
-	o.className = "viewer-file-select-options", o.id = `viewer-file-select-${jg}`, o.setAttribute("role", "listbox"), jg += 1, n.setAttribute("aria-controls", o.id), a.setAttribute("aria-controls", o.id), i.append(a, o), t.append(n, i);
+	o.className = "viewer-file-select-options", o.id = `viewer-file-select-${mh}`, o.setAttribute("role", "listbox"), mh += 1, n.setAttribute("aria-controls", o.id), a.setAttribute("aria-controls", o.id), i.append(a, o), t.append(n, i);
 	let s = [], c = "", l = e, u = [], d = -1;
 	function f(e) {
 		t.classList.toggle("open", e), i.hidden = !e, n.setAttribute("aria-expanded", e.toString());
@@ -15649,8 +15398,258 @@ function Mg(e) {
 		t.contains(e.target) || _();
 	}), t.disabled = !0, t;
 }
-var Ng = Mg("Select slide"), Pg = Mg("Load overlay");
-Ag.append(Ng, Pg);
+//#endregion
+//#region src/utils/colours.js
+function gh(e) {
+	let t = e.replace("#", "");
+	return /^[0-9a-fA-F]{6}$/.test(t) ? {
+		r: Number.parseInt(t.slice(0, 2), 16),
+		g: Number.parseInt(t.slice(2, 4), 16),
+		b: Number.parseInt(t.slice(4, 6), 16)
+	} : null;
+}
+function _h({ r: e, g: t, b: n }) {
+	let r = [
+		e,
+		t,
+		n
+	].map((e) => {
+		let t = e / 255;
+		return t <= .04045 ? t / 12.92 : ((t + .055) / 1.055) ** 2.4;
+	});
+	return .2126 * r[0] + .7152 * r[1] + .0722 * r[2];
+}
+function vh(e) {
+	let t = _h(e);
+	return 1.05 / (t + .05) >= (t + .05) / .05 ? "#ffffff" : "#000000";
+}
+function yh(e, t, n) {
+	return {
+		r: Math.round(e.r + (t - e.r) * n),
+		g: Math.round(e.g + (t - e.g) * n),
+		b: Math.round(e.b + (t - e.b) * n)
+	};
+}
+function bh(e, t) {
+	return `rgba(${e.r}, ${e.g}, ${e.b}, ${t})`;
+}
+//#endregion
+//#region src/utils/paths.js
+function xh(e) {
+	let t = e.split(/[\\/]/).pop() ?? e, n = t.lastIndexOf(".");
+	return n <= 0 ? t : t.slice(0, n);
+}
+//#endregion
+//#region src/main.js
+async function Sh() {
+	let e = await fetch("/tileserver/session_id");
+	if (!e.ok) throw Error("Failed to create TileServer session.");
+	return (await e.json()).session_id;
+}
+async function Ch(e) {
+	let t = new FormData();
+	if (t.append("slide_path", e), !(await fetch("/tileserver/slide", {
+		method: "PUT",
+		body: t
+	})).ok) throw Error(`Failed to load slide: ${e}`);
+	let n = await fetch("/tileserver/slide");
+	if (!n.ok) throw Error("Failed to retrieve slide metadata.");
+	return n.json();
+}
+async function wh(e) {
+	let t = await fetch(`/tileserver/files/${e}`);
+	if (!t.ok) throw Error(`Failed to get configured ${e} files.`);
+	return t.json();
+}
+function Th(e, t, n) {
+	return new dd({
+		url: `/tileserver/layer/slide/${e}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${n}`,
+		size: t.slide_dimensions,
+		crossOrigin: "anonymous",
+		zDirection: -1
+	});
+}
+var Eh = document.getElementById("map"), Dh = document.querySelector(".viewer-app"), Oh = document.getElementById("viewer-panel"), kh = document.getElementById("viewer-panel-toggle"), Ah = document.getElementById("viewer-files"), jh = document.getElementById("layer-editor"), Mh = document.getElementById("layer-editor-toggle"), Nh = document.getElementById("layer-editor-list"), Ph = document.getElementById("settings-panel"), Fh = document.getElementById("settings-toggle"), Ih = document.getElementById("settings-close"), Lh = document.querySelectorAll(".settings-tab"), Rh = document.querySelectorAll(".settings-tab-panel"), zh = document.getElementById("settings-zoom-visible"), Bh = document.getElementById("settings-zoom-level-visible"), Vh = document.getElementById("settings-rotation-visible"), Hh = document.getElementById("settings-graticule-visible"), Uh = document.getElementById("settings-screen-space-graticule-visible"), Wh = document.getElementById("reset-view-button"), Gh = document.querySelector(".reset-view-control"), Kh = document.getElementById("settings-reset-view-visible"), qh = document.getElementById("settings-fullscreen-visible"), Jh = document.getElementById("settings-mouse-position-visible"), Yh = document.getElementById("settings-overview-map-visible"), Xh = document.getElementById("settings-overview-map-size"), Zh = document.getElementById("settings-mouse-wheel-zoom-sensitivity"), Qh = document.getElementById("settings-zoom-button-step"), $h = document.getElementById("settings-scale-bar-enabled"), eg = document.getElementById("settings-theme"), tg = document.getElementById("settings-grid-theme"), ng = document.getElementById("settings-grid-opacity"), rg = document.getElementById("settings-grid-opacity-value"), ig = document.getElementById("settings-grid-spacing"), ag = document.getElementById("settings-grid-labels-visible"), og = document.getElementById("settings-control-opacity"), sg = document.getElementById("settings-control-opacity-value"), cg = document.getElementById("settings-reset-defaults"), lg = document.getElementById("settings-scale-bar-colour"), ug = document.getElementById("settings-scale-bar-opacity"), dg = document.getElementById("settings-scale-bar-opacity-value"), fg = document.getElementById("settings-scale-bar-size"), pg = document.getElementById("settings-scale-bar-units");
+if (Eh === null || Dh === null) throw Error("The OpenLayers viewer could not be found.");
+if (Oh === null || kh === null || jh === null || Mh === null || Nh === null || Ph === null || Fh === null || Ih === null || zh === null || Bh === null || Vh === null || Hh === null || Uh === null || Wh === null || Gh === null || Kh === null || qh === null || Jh === null || Yh === null || Xh === null || Zh === null || Qh === null || eg === null || tg === null || ng === null || rg === null || ig === null || ag === null || og === null || sg === null || cg === null || $h === null || lg === null || ug === null || dg === null || fg === null || pg === null || Ah === null) throw Error("The OpenLayers viewer controls could not be found.");
+var mg = "tiatoolbox-openlayers-settings";
+function hg() {
+	let e = {
+		theme: eg.value,
+		interfaceOpacity: og.value,
+		controls: {
+			zoom: zh.checked,
+			zoomLevel: Bh.checked,
+			rotation: Vh.checked,
+			graticule: Hh.checked,
+			screenSpaceGraticule: Uh.checked,
+			resetView: Kh.checked,
+			fullscreen: qh.checked,
+			mousePosition: Jh.checked,
+			overviewMap: Yh.checked
+		},
+		navigation: {
+			mouseWheelZoomSensitivity: Zh.value,
+			zoomButtonStep: Qh.value
+		},
+		overviewMap: { size: Xh.value },
+		grid: {
+			theme: tg.value,
+			opacity: ng.value,
+			spacing: ig.value,
+			labels: ag.checked
+		},
+		scaleBar: {
+			enabled: $h.checked,
+			colour: lg.value,
+			opacity: ug.value,
+			size: fg.value,
+			units: pg.value
+		}
+	};
+	try {
+		window.localStorage.setItem(mg, JSON.stringify(e));
+	} catch {}
+}
+function gg() {
+	let e;
+	try {
+		let t = window.localStorage.getItem(mg);
+		if (t === null) return;
+		e = JSON.parse(t);
+	} catch {
+		return;
+	}
+	if (typeof e != "object" || !e) return;
+	[
+		"dark",
+		"light",
+		"high-contrast"
+	].includes(e.theme) && (eg.value = e.theme), [
+		"40",
+		"45",
+		"50",
+		"55",
+		"60",
+		"65",
+		"70",
+		"75",
+		"80",
+		"85",
+		"90",
+		"95",
+		"100"
+	].includes(e.interfaceOpacity) && (og.value = e.interfaceOpacity);
+	let t = e.controls;
+	typeof t == "object" && t && (typeof t.zoom == "boolean" && (zh.checked = t.zoom), typeof t.zoomLevel == "boolean" && (Bh.checked = t.zoomLevel), typeof t.rotation == "boolean" && (Vh.checked = t.rotation), typeof t.graticule == "boolean" && (Hh.checked = t.graticule), typeof t.screenSpaceGraticule == "boolean" && (Uh.checked = t.screenSpaceGraticule), typeof t.resetView == "boolean" && (Kh.checked = t.resetView), typeof t.fullscreen == "boolean" && (qh.checked = t.fullscreen), typeof t.mousePosition == "boolean" && (Jh.checked = t.mousePosition), typeof t.overviewMap == "boolean" && (Yh.checked = t.overviewMap));
+	let n = e.navigation;
+	typeof n == "object" && n && ([
+		"low",
+		"default",
+		"high"
+	].includes(n.mouseWheelZoomSensitivity) && (Zh.value = n.mouseWheelZoomSensitivity), [
+		"0.1",
+		"0.5",
+		"1",
+		"2"
+	].includes(n.zoomButtonStep) && (Qh.value = n.zoomButtonStep));
+	let r = e.overviewMap;
+	typeof r == "object" && r && [
+		"small",
+		"default",
+		"large"
+	].includes(r.size) && (Xh.value = r.size);
+	let i = e.grid;
+	if (typeof i == "object" && i) {
+		[
+			"default",
+			"light",
+			"dark",
+			"light-contrast",
+			"dark-contrast"
+		].includes(i.theme) && (tg.value = i.theme);
+		let e = Number(i.opacity);
+		Number.isFinite(e) && e >= 0 && e <= 100 && (ng.value = e.toString()), [
+			"fine",
+			"default",
+			"coarse"
+		].includes(i.spacing) && (ig.value = i.spacing), typeof i.labels == "boolean" && (ag.checked = i.labels);
+	}
+	let a = e.scaleBar;
+	if (typeof a == "object" && a) {
+		typeof a.enabled == "boolean" && ($h.checked = a.enabled), typeof a.colour == "string" && /^#[0-9a-fA-F]{6}$/.test(a.colour) && (lg.value = a.colour);
+		let e = Number(a.opacity);
+		Number.isFinite(e) && e >= 0 && e <= 100 && (ug.value = e.toString()), [
+			"small",
+			"default",
+			"large"
+		].includes(a.size) && (fg.value = a.size), ["metric", "imperial"].includes(a.units) && (pg.value = a.units);
+	}
+}
+var _g = {
+	dark: "#111111",
+	light: "#f2f2f2",
+	"high-contrast": "#000000"
+}, vg = {
+	dark: "#ffffff",
+	light: "#000000",
+	"high-contrast": "#ffffff"
+};
+function yg() {
+	let e = gh(_g[eg.value] ?? _g.dark);
+	if (e === null) return;
+	let t = Number(og.value) / 100, n = vh(e), r = n === "#ffffff" ? {
+		r: 255,
+		g: 255,
+		b: 255
+	} : {
+		r: 0,
+		g: 0,
+		b: 0
+	}, i = n === "#ffffff" ? {
+		r: 0,
+		g: 0,
+		b: 0
+	} : {
+		r: 255,
+		g: 255,
+		b: 255
+	}, a = n === "#ffffff" ? 255 : 0, o = yh(e, a, .08), s = yh(e, a, .16), c = yh(e, a, .28), l = yh(e, a, .4), u = yh(e, a, .58);
+	Dh.style.setProperty("--viewer-control-background", bh(e, t)), Dh.style.setProperty("--viewer-control-surface-background", bh(o, t)), Dh.style.setProperty("--viewer-control-hover-background", bh(s, t)), Dh.style.setProperty("--viewer-control-pressed-background", bh(c, t)), Dh.style.setProperty("--viewer-control-foreground", n), Dh.style.setProperty("--viewer-control-hover-foreground", vh(s)), Dh.style.setProperty("--viewer-control-pressed-foreground", vh(c)), Dh.style.setProperty("--viewer-control-muted-foreground", bh(r, .7)), Dh.style.setProperty("--viewer-control-subtle-foreground", bh(r, .55)), Dh.style.setProperty("--viewer-control-border", bh(l, Math.max(t, .7))), Dh.style.setProperty("--viewer-control-focus-border", bh(u, Math.max(t, .9))), Dh.style.setProperty("--viewer-control-foreground-shadow", bh(i, .75)), sg.textContent = `${og.value}%`;
+}
+eg.addEventListener("change", () => {
+	yg(), lg.value = vg[eg.value] ?? vg.dark, y_(), b_(), W_();
+}), og.addEventListener("input", () => {
+	yg();
+}), gg(), yg();
+var bg = $h.checked;
+function xg(e) {
+	if (e && Sg(!1), Oh.classList.toggle("hidden", !e), kh.classList.toggle("active", e), kh.innerHTML = e ? "<i class=\"fas fa-folder-open\"></i>" : "<i class=\"fas fa-folder\"></i>", !e) for (let e of Oh.querySelectorAll(".viewer-file-select.open")) e.close?.();
+}
+function Sg(e) {
+	e && xg(!1), jh.classList.toggle("hidden", !e), Mh.classList.toggle("active", e);
+}
+function Cg(e) {
+	Ph.classList.toggle("hidden", !e), Fh.classList.toggle("active", e);
+}
+xg(!0), kh.addEventListener("click", () => {
+	xg(Oh.classList.contains("hidden"));
+}), Mh.addEventListener("click", () => {
+	Sg(jh.classList.contains("hidden"));
+}), Fh.addEventListener("click", () => {
+	Cg(Ph.classList.contains("hidden"));
+}), Ih.addEventListener("click", () => {
+	Cg(!1);
+});
+for (let e of Lh) e.addEventListener("click", () => {
+	let t = e.dataset.settingsTab;
+	for (let t of Lh) t.classList.toggle("active", t === e);
+	for (let e of Rh) e.classList.toggle("hidden", e.dataset.settingsPanel !== t);
+});
+var wg = JSON.parse(Eh.dataset.layers ?? "[]"), Tg = null, Eg = Date.now(), Dg = Date.now(), Og = null, kg = null, Ag = {}, jg = /* @__PURE__ */ new Set(), Mg = document.createElement("div");
+Mg.className = "viewer-file-selectors";
+var Ng = hh("Select slide"), Pg = hh("Load overlay");
+Mg.append(Ng, Pg);
 var Fg = document.createElement("div");
 Fg.className = "viewer-file-actions";
 function Ig(e) {
@@ -15658,12 +15657,12 @@ function Ig(e) {
 	return t.type = "button", t.textContent = e, t;
 }
 var Lg = Ig("Clear Slide"), Rg = Ig("Clear Overlays");
-Lg.disabled = !0, Rg.disabled = !0, Fg.append(Lg, Rg), Oh.append(Ag, Fg);
+Lg.disabled = !0, Rg.disabled = !0, Fg.append(Lg, Rg), Ah.append(Mg, Fg);
 function zg(e, t, n) {
 	e.setFiles(t, n);
 }
 function Bg(e) {
-	let t = yh(e);
+	let t = xh(e);
 	return Ug.files.filter((e) => (e.name.split(/[\\/]/).pop() ?? e.name).includes(t));
 }
 function Vg() {
@@ -15671,20 +15670,20 @@ function Vg() {
 		zg(Pg, [], "No overlay directory configured");
 		return;
 	}
-	if (Dg === null) {
+	if (kg === null) {
 		zg(Pg, [], "Select slide first");
 		return;
 	}
-	let e = Bg(Dg);
+	let e = Bg(kg);
 	zg(Pg, e, e.length === 0 ? "No matching overlays" : "Load overlay");
 }
-var Hg = await Sh("slide"), Ug = await Sh("overlay");
+var Hg = await wh("slide"), Ug = await wh("overlay");
 zg(Ng, Hg.files, Hg.directory === null ? "No slide directory configured" : "Select slide"), Vg();
 function Wg(e) {
 	Ng.value = e;
 }
 function Gg() {
-	let e = Eg !== null, t = Object.keys(Og).length > 0, n = Dg !== null && Bg(Dg).length > 0;
+	let e = Og !== null, t = Object.keys(Ag).length > 0, n = kg !== null && Bg(kg).length > 0;
 	Lg.disabled = !e, Rg.disabled = !e || !t, Ng.disabled = Hg.files.length === 0, Pg.disabled = !e || !n;
 }
 function Kg(e) {
@@ -15737,19 +15736,19 @@ Ng.addEventListener("change", async (e) => {
 		Kg(!1);
 	}
 }), Gg();
-var qg = new URLSearchParams(window.location.search).get("slide") ?? (Sg.length === 0 ? Hg.files[0]?.path ?? null : null);
+var qg = new URLSearchParams(window.location.search).get("slide") ?? (wg.length === 0 ? Hg.files[0]?.path ?? null : null);
 if (qg !== null) {
-	Dg = qg, Cg = await bh();
-	let e = await xh(qg);
-	Eg = e, Wg(qg), Vg(), Sg = [{
+	kg = qg, Tg = await Sh();
+	let e = await Ch(qg);
+	Og = e, Wg(qg), Vg(), wg = [{
 		name: "slide",
-		url: `/tileserver/layer/slide/${Cg}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${wg}`,
+		url: `/tileserver/layer/slide/${Tg}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${Eg}`,
 		size: e.slide_dimensions,
 		mpp: e.mpp[0]
 	}];
-} else Sg.length === 0 && (Cg = await bh());
+} else wg.length === 0 && (Tg = await Sh());
 Gg();
-var Jg = Sg.map((e) => {
+var Jg = wg.map((e) => {
 	let t = new dd({
 		url: e.url,
 		size: e.size,
@@ -15769,7 +15768,7 @@ if (Xg !== null) {
 		code: "ZoomifyProjection",
 		units: "pixels",
 		extent: Qg,
-		metersPerUnit: Sg[0].mpp * 1e-6,
+		metersPerUnit: wg[0].mpp * 1e-6,
 		getPointResolution(e) {
 			return e;
 		}
@@ -15823,15 +15822,15 @@ var n_ = new ma({
 	}
 };
 function i_() {
-	let e = r_[Yh.value] ?? r_.default, t = new eo({ maxDelta: e.maxDelta });
+	let e = r_[Zh.value] ?? r_.default, t = new eo({ maxDelta: e.maxDelta });
 	return t.deltaPerZoom_ = e.deltaPerZoom, t.setActive(Yg.getSource() !== null), t;
 }
 var a_ = i_();
 function o_() {
-	return new Re({ delta: Number(Xh.value) });
+	return new Re({ delta: Number(Qh.value) });
 }
 var s_ = o_(), $ = new Rl({
-	target: wh,
+	target: Eh,
 	layers: Jg,
 	view: n_,
 	controls: Ge({
@@ -15843,7 +15842,7 @@ var s_ = o_(), $ = new Rl({
 function c_() {
 	$.removeInteraction(a_), a_ = i_(), $.addInteraction(a_);
 }
-Yh.addEventListener("change", () => {
+Zh.addEventListener("change", () => {
 	c_();
 });
 var l_ = s_.element, u_ = l_.querySelector(".ol-zoom-out");
@@ -15884,7 +15883,7 @@ function m_() {
 	let t = e.getTileGrid().getExtent(), n = $.getView();
 	n.setRotation(0), n.fit(t, { size: $.getSize() });
 }
-Hh.addEventListener("click", () => {
+Wh.addEventListener("click", () => {
 	m_();
 });
 var h_ = {
@@ -15893,9 +15892,9 @@ var h_ = {
 	large: 140
 };
 function g_() {
-	let e = h_[ug.value] ?? h_.default;
+	let e = h_[fg.value] ?? h_.default;
 	return new Jl({
-		units: dg.value,
+		units: pg.value,
 		minWidth: e
 	});
 }
@@ -15903,22 +15902,22 @@ var __ = g_();
 $.addControl(__);
 function v_() {
 	let e = Yg.getSource() !== null;
-	__.element.classList.toggle("viewer-control-hidden", !e || !vg);
+	__.element.classList.toggle("viewer-control-hidden", !e || !bg);
 }
-Zh.addEventListener("change", () => {
-	vg = Zh.checked, v_();
+$h.addEventListener("change", () => {
+	bg = $h.checked, v_();
 });
 function y_() {
-	let e = sg.value, t = __.element.querySelector(".ol-scale-line-inner");
+	let e = lg.value, t = __.element.querySelector(".ol-scale-line-inner");
 	t !== null && (t.style.color = e, t.style.borderColor = e);
 }
-sg.addEventListener("input", () => {
+lg.addEventListener("input", () => {
 	y_(), b_();
 });
 function b_() {
-	let e = Number(cg.value) / 100, t = mh(sg.value);
+	let e = Number(ug.value) / 100, t = gh(lg.value);
 	if (t === null) return;
-	let n = gh(t) === "#ffffff" ? {
+	let n = vh(t) === "#ffffff" ? {
 		r: 255,
 		g: 255,
 		b: 255
@@ -15927,18 +15926,18 @@ function b_() {
 		g: 17,
 		b: 17
 	};
-	__.element.style.backgroundColor = vh(n, e), lg.textContent = `${cg.value}%`;
+	__.element.style.backgroundColor = bh(n, e), dg.textContent = `${ug.value}%`;
 }
-cg.addEventListener("input", () => {
+ug.addEventListener("input", () => {
 	b_();
 });
 function x_() {
 	$.removeControl(__), __ = g_(), $.addControl(__), window.scaleLineControl = __, v_(), y_(), b_();
 }
-ug.addEventListener("change", () => {
+fg.addEventListener("change", () => {
 	x_();
-}), dg.addEventListener("change", () => {
-	__.setUnits(dg.value);
+}), pg.addEventListener("change", () => {
+	__.setUnits(pg.value);
 }), y_(), b_();
 var S_ = new Lu();
 Xg !== null && S_.setSource(Xg);
@@ -15957,7 +15956,7 @@ var C_ = {
 	}
 };
 function w_() {
-	return C_[Jh.value] ?? C_.default;
+	return C_[Xh.value] ?? C_.default;
 }
 function T_(e, t) {
 	let n = w_(), r = [(t[0] + t[2]) / 2, (t[1] + t[3]) / 2], i = t[2] - t[0], a = t[3] - t[1], o = Math.max(i / n.width, a / n.height), s = new ma({
@@ -15999,7 +15998,7 @@ function A_() {
 	}
 	k_.renderSync();
 }
-Jh.addEventListener("change", () => {
+Xh.addEventListener("change", () => {
 	A_();
 }), A_();
 var j_ = new Ir({
@@ -16013,15 +16012,15 @@ var M_ = new We({
 	className: "ol-rotate"
 });
 $.addControl(M_);
-var N_ = new Oe({ source: Th });
+var N_ = new Oe({ source: Dh });
 $.addControl(N_);
 var P_ = document.createElement("div");
-P_.className = "bottom-controls-group ol-unselectable", Th.append(P_), P_.append(Uh, l_, N_.element);
+P_.className = "bottom-controls-group ol-unselectable", Dh.append(P_), P_.append(Gh, l_, N_.element);
 function F_() {
 	if ($.removeControl(s_), s_ = o_(), $.addControl(s_), l_ = s_.element, u_ = l_.querySelector(".ol-zoom-out"), u_ === null) throw Error("The OpenLayers zoom control could not be found.");
 	l_.insertBefore(d_, u_), P_.insertBefore(l_, N_.element), rv(Yg.getSource() !== null), tv();
 }
-Xh.addEventListener("change", () => {
+Qh.addEventListener("change", () => {
 	F_();
 });
 var I_ = new dh();
@@ -16032,7 +16031,7 @@ var L_ = {
 	coarse: 128
 };
 function R_() {
-	return L_[ng.value] ?? L_.default;
+	return L_[ig.value] ?? L_.default;
 }
 var z_ = 64, B_ = {
 	light: {
@@ -16073,7 +16072,7 @@ var z_ = 64, B_ = {
 	}
 };
 function V_() {
-	return $h.value === "default" ? Qh.value === "light" ? "light" : Qh.value === "high-contrast" ? "dark-contrast" : "dark" : $h.value;
+	return tg.value === "default" ? eg.value === "light" ? "light" : eg.value === "high-contrast" ? "dark-contrast" : "dark" : tg.value;
 }
 var H_ = new Kc({
 	font: "12px Calibri,sans-serif",
@@ -16090,17 +16089,17 @@ var H_ = new Kc({
 	text: H_
 });
 function W_() {
-	let e = B_[V_()] ?? B_.dark, t = Number(eg.value) / 100, n = U_.getStroke(), r = H_;
-	n.setColor(vh(e.line, t)), r.getFill().setColor(e.label), r.getStroke().setColor(e.outline), tg.textContent = `${eg.value}%`, $.renderSync();
+	let e = B_[V_()] ?? B_.dark, t = Number(ng.value) / 100, n = U_.getStroke(), r = H_;
+	n.setColor(bh(e.line, t)), r.getFill().setColor(e.label), r.getStroke().setColor(e.outline), rg.textContent = `${ng.value}%`, $.renderSync();
 }
 function G_() {
-	U_.setText(rg.checked ? H_ : null), $.renderSync();
+	U_.setText(ag.checked ? H_ : null), $.renderSync();
 }
-$h.addEventListener("change", () => {
+tg.addEventListener("change", () => {
 	W_();
-}), eg.addEventListener("input", () => {
+}), ng.addEventListener("input", () => {
 	W_();
-}), rg.addEventListener("change", () => {
+}), ag.addEventListener("change", () => {
 	G_();
 });
 function K_(e) {
@@ -16161,79 +16160,79 @@ function ev() {
 	let n = $.getView().getProjection();
 	q_ = K_(n), X_ = Y_(n), e && q_.setMap($), t && X_.setMap($), window.graticule = q_, window.screenSpaceGraticule = X_, $.renderSync();
 }
-ng.addEventListener("change", () => {
+ig.addEventListener("change", () => {
 	ev();
 });
 function tv() {
 	let e = Yg.getSource() !== null;
-	l_.classList.toggle("viewer-control-hidden", !Lh.checked), d_.classList.toggle("viewer-control-hidden", !Rh.checked), M_.element.classList.toggle("viewer-control-hidden", !zh.checked), Z_.element.classList.toggle("viewer-control-hidden", !Bh.checked), Q_.element.classList.toggle("viewer-control-hidden", !Vh.checked), Uh.classList.toggle("viewer-control-hidden", !Wh.checked), N_.element.classList.toggle("viewer-control-hidden", !Gh.checked), j_.element.classList.toggle("viewer-control-hidden", !e || !Kh.checked), O_.element.classList.toggle("viewer-control-hidden", !e || !qh.checked), Bh.checked || (Z_.setActive(!1), Z_.element.classList.remove("active"), q_.setMap(null)), Vh.checked || (Q_.setActive(!1), Q_.element.classList.remove("active"), X_.setMap(null)), e && qh.checked && requestAnimationFrame(() => {
+	l_.classList.toggle("viewer-control-hidden", !zh.checked), d_.classList.toggle("viewer-control-hidden", !Bh.checked), M_.element.classList.toggle("viewer-control-hidden", !Vh.checked), Z_.element.classList.toggle("viewer-control-hidden", !Hh.checked), Q_.element.classList.toggle("viewer-control-hidden", !Uh.checked), Gh.classList.toggle("viewer-control-hidden", !Kh.checked), N_.element.classList.toggle("viewer-control-hidden", !qh.checked), j_.element.classList.toggle("viewer-control-hidden", !e || !Jh.checked), O_.element.classList.toggle("viewer-control-hidden", !e || !Yh.checked), Hh.checked || (Z_.setActive(!1), Z_.element.classList.remove("active"), q_.setMap(null)), Uh.checked || (Q_.setActive(!1), Q_.element.classList.remove("active"), X_.setMap(null)), e && Yh.checked && requestAnimationFrame(() => {
 		k_.updateSize(), k_.renderSync();
 	});
 }
 for (let e of [
-	Lh,
-	Rh,
 	zh,
 	Bh,
 	Vh,
-	Wh,
-	Gh,
+	Hh,
+	Uh,
 	Kh,
-	qh
+	qh,
+	Jh,
+	Yh
 ]) e.addEventListener("change", () => {
 	tv();
 });
 function nv() {
-	Qh.value = "dark", Jh.value = "default", Yh.value = "default", Xh.value = "1", $h.value = "default", eg.value = "50", ng.value = "default", rg.checked = !0, ig.value = "100";
+	eg.value = "dark", Xh.value = "default", Zh.value = "default", Qh.value = "1", tg.value = "default", ng.value = "50", ig.value = "default", ag.checked = !0, og.value = "100";
 	for (let e of [
-		Lh,
-		Rh,
 		zh,
 		Bh,
 		Vh,
-		Wh,
-		Gh,
+		Hh,
+		Uh,
 		Kh,
-		qh
+		qh,
+		Jh,
+		Yh
 	]) e.checked = !0;
-	Zh.checked = !0, vg = !0, sg.value = "#ffffff", cg.value = "100", ug.value = "default", dg.value = "metric", _g(), W_(), ev(), G_(), tv(), A_(), c_(), F_(), x_(), __.setUnits(dg.value), v_(), y_(), b_();
+	$h.checked = !0, bg = !0, lg.value = "#ffffff", ug.value = "100", fg.value = "default", pg.value = "metric", yg(), W_(), ev(), G_(), tv(), A_(), c_(), F_(), x_(), __.setUnits(pg.value), v_(), y_(), b_();
 	try {
-		window.localStorage.removeItem(fg);
+		window.localStorage.removeItem(mg);
 	} catch {}
 }
-og.addEventListener("click", () => {
+cg.addEventListener("click", () => {
 	nv();
 });
 for (let e of [
-	Qh,
-	$h,
-	ng,
-	rg,
-	Lh,
-	Rh,
+	eg,
+	tg,
+	ig,
+	ag,
 	zh,
 	Bh,
 	Vh,
-	Wh,
-	Gh,
+	Hh,
+	Uh,
 	Kh,
 	qh,
 	Jh,
 	Yh,
 	Xh,
 	Zh,
-	ug,
-	dg
+	Qh,
+	$h,
+	fg,
+	pg
 ]) e.addEventListener("change", () => {
-	pg();
+	hg();
 });
 for (let e of [
-	ig,
-	eg,
-	sg,
-	cg
+	og,
+	ng,
+	lg,
+	ug
 ]) e.addEventListener("input", () => {
-	pg();
+	hg();
 });
 function rv(e) {
 	let t = l_.querySelector(".ol-zoom-in"), n = l_.querySelector(".ol-zoom-out"), r = M_.element.querySelector("button"), i = Z_.element.querySelector("button"), a = Q_.element.querySelector("button");
@@ -16243,9 +16242,9 @@ function rv(e) {
 		r,
 		i,
 		a,
-		Hh
+		Wh
 	]) o !== null && (o.disabled = !e);
-	d_.disabled = !e, l_.classList.toggle("viewer-control-disabled", !e), a_.setActive(e), __.element.classList.toggle("viewer-control-hidden", !e || !vg), j_.element.classList.toggle("viewer-control-hidden", !e || !Kh.checked), O_.element.classList.toggle("viewer-control-hidden", !e || !qh.checked), e || (Z_.setActive(!1), Q_.setActive(!1), Z_.element.classList.remove("active"), Q_.element.classList.remove("active"), q_.setMap(null), X_.setMap(null)), e && requestAnimationFrame(() => {
+	d_.disabled = !e, l_.classList.toggle("viewer-control-disabled", !e), a_.setActive(e), __.element.classList.toggle("viewer-control-hidden", !e || !bg), j_.element.classList.toggle("viewer-control-hidden", !e || !Jh.checked), O_.element.classList.toggle("viewer-control-hidden", !e || !Yh.checked), e || (Z_.setActive(!1), Q_.setActive(!1), Z_.element.classList.remove("active"), Q_.element.classList.remove("active"), q_.setMap(null), X_.setMap(null)), e && requestAnimationFrame(() => {
 		k_.updateSize(), k_.renderSync();
 	});
 }
@@ -16258,13 +16257,13 @@ $.on("moveend", () => {
 	sv(), f_();
 });
 function iv() {
-	for (let e of Object.values(Og)) {
+	for (let e of Object.values(Ag)) {
 		e.setSource(null), $.removeLayer(e);
 		let t = Jg.indexOf(e);
 		t !== -1 && Jg.splice(t, 1);
 	}
-	for (let e of Object.keys(Og)) delete Og[e];
-	kg.clear(), fv(), Gg();
+	for (let e of Object.keys(Ag)) delete Ag[e];
+	jg.clear(), fv(), Gg();
 }
 async function av() {
 	if (!(await fetch("/tileserver/clear_overlays", { method: "PUT" })).ok) throw Error("Failed to clear overlays.");
@@ -16278,18 +16277,18 @@ function ov() {
 	};
 }
 function sv() {
-	if (Dg === null) return;
+	if (kg === null) return;
 	let e = $.getView(), t = e.getCenter(), n = e.getZoom();
 	if (t === void 0 || n === void 0) return;
 	let r = new URL(window.location.href);
-	r.searchParams.set("slide", Dg), r.searchParams.set("x", t[0].toFixed(2)), r.searchParams.set("y", t[1].toFixed(2)), r.searchParams.set("zoom", n.toString());
+	r.searchParams.set("slide", kg), r.searchParams.set("x", t[0].toFixed(2)), r.searchParams.set("y", t[1].toFixed(2)), r.searchParams.set("zoom", n.toString());
 	let i = r.searchParams.toString().replace(/%2F/gi, "/");
 	window.history.replaceState({}, "", `${r.pathname}?${i}${r.hash}`);
 }
 async function cv() {
-	if (Cg === null) throw Error("No TileServer session is available.");
+	if (Tg === null) throw Error("No TileServer session is available.");
 	if (!(await fetch("/tileserver/slide", { method: "DELETE" })).ok) throw Error("Failed to remove the current slide.");
-	iv(), Dg = null, Eg = null, Sg.length = 0, wg += 1, Tg += 1, Yg.setSource(null), S_.setSource(null), fv();
+	iv(), kg = null, Og = null, wg.length = 0, Eg += 1, Dg += 1, Yg.setSource(null), S_.setSource(null), fv();
 	let e = [
 		0,
 		-1,
@@ -16317,11 +16316,11 @@ async function cv() {
 	i.search = "", i.hash = "", window.history.replaceState({}, "", i), rv(!1), f_(), Gg();
 }
 async function lv(e) {
-	if (Cg === null) throw Error("Dynamic slide switching requires a TileServer session.");
+	if (Tg === null) throw Error("Dynamic slide switching requires a TileServer session.");
 	iv();
-	let t = await xh(e);
-	Eg = t, Dg = e, Wg(e), Vg(), Gg(), wg += 1;
-	let n = Ch(Cg, t, wg), r = n.getTileGrid(), i = r.getExtent(), a = r.getResolutions(), o = new on({
+	let t = await Ch(e);
+	Og = t, kg = e, Wg(e), Vg(), Gg(), Eg += 1;
+	let n = Th(Tg, t, Eg), r = n.getTileGrid(), i = r.getExtent(), a = r.getResolutions(), o = new on({
 		code: "ZoomifyProjection",
 		units: "pixels",
 		extent: i,
@@ -16346,10 +16345,10 @@ function uv() {
 	let e = [];
 	Yg.getSource() !== null && e.push({
 		id: "slide",
-		name: yh(Dg ?? "slide"),
+		name: xh(kg ?? "slide"),
 		layer: Yg
 	});
-	let t = Object.entries(Og).map(([e, t]) => ({
+	let t = Object.entries(Ag).map(([e, t]) => ({
 		id: e,
 		name: e,
 		layer: t
@@ -16366,11 +16365,11 @@ function dv(e, t) {
 	a.setZIndex(c), o.setZIndex(s), fv();
 }
 function fv() {
-	jh.replaceChildren();
+	Nh.replaceChildren();
 	let e = uv(), t = e.filter((e) => e.id !== "slide");
 	if (e.length === 0) {
 		let e = document.createElement("div");
-		e.className = "layer-editor-empty", e.textContent = "No layers loaded", jh.appendChild(e);
+		e.className = "layer-editor-empty", e.textContent = "No layers loaded", Nh.appendChild(e);
 		return;
 	}
 	e.forEach(({ id: e, name: n, layer: r }) => {
@@ -16409,19 +16408,19 @@ function fv() {
 		u.className = "layer-editor-value", u.textContent = `${Math.round(r.getOpacity() * 100)}%`, l.addEventListener("input", () => {
 			let e = Number(l.value);
 			r.setOpacity(e), u.textContent = `${Math.round(e * 100)}%`;
-		}), c.append(l, u), i.append(a, c), jh.appendChild(i);
+		}), c.append(l, u), i.append(a, c), Nh.appendChild(i);
 	});
 }
 fv();
 async function pv(e) {
-	if (Cg === null || Eg === null) throw Error("Dynamic overlay loading requires a loaded slide.");
+	if (Tg === null || Og === null) throw Error("Dynamic overlay loading requires a loaded slide.");
 	let t = e.split(".").pop().toLowerCase();
 	if (t === "npy" || t === "mha") throw Error("Registration overlays are not supported yet.");
 	let n = [
 		"db",
 		"dat",
 		"geojson"
-	].includes(t), r = yh(e);
+	].includes(t), r = xh(e);
 	if (r === "slide") throw Error("The overlay name \"slide\" is reserved.");
 	let i = new FormData();
 	i.append("overlay_path", e), i.append("layer_name", r);
@@ -16431,34 +16430,34 @@ async function pv(e) {
 	});
 	if (!a.ok) throw Error(`Failed to load overlay: ${e}`);
 	let o = await a.json();
-	n ? kg.add(r) : kg.delete(r), Tg += 1;
+	n ? jg.add(r) : jg.delete(r), Dg += 1;
 	let s = new dd({
-		url: `/tileserver/layer/${encodeURIComponent(r)}/${Cg}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${Tg}`,
-		size: Eg.slide_dimensions,
+		url: `/tileserver/layer/${encodeURIComponent(r)}/${Tg}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${Dg}`,
+		size: Og.slide_dimensions,
 		crossOrigin: "anonymous",
 		zDirection: -1
 	});
-	if (Og[r] !== void 0) Og[r].setSource(s), Og[r].setVisible(!0);
+	if (Ag[r] !== void 0) Ag[r].setSource(s), Ag[r].setVisible(!0);
 	else {
-		let e = [Yg, ...Object.values(Og)], t = Math.max(...e.map((e) => e.getZIndex() ?? 0)), n = new Lu({
+		let e = [Yg, ...Object.values(Ag)], t = Math.max(...e.map((e) => e.getZIndex() ?? 0)), n = new Lu({
 			title: r,
 			source: s,
 			opacity: .75
 		});
-		n.setZIndex(t + 1), Og[r] = n, $.addLayer(n), Jg.push(n);
+		n.setZIndex(t + 1), Ag[r] = n, $.addLayer(n), Jg.push(n);
 	}
 	return fv(), Gg(), o;
 }
 async function mv(e) {
-	let t = Og[e];
+	let t = Ag[e];
 	if (t === void 0) throw Error(`Overlay is not loaded: ${e}`);
 	let n = t.getSource();
 	if (t.setVisible(!1), t.setSource(null), $.removeLayer(t), !(await fetch(`/tileserver/overlay/${encodeURIComponent(e)}`, { method: "DELETE" })).ok) throw t.setSource(n), t.setVisible(!0), $.addLayer(t), Error(`Failed to remove overlay: ${e}`);
 	let r = Jg.indexOf(t);
-	r !== -1 && Jg.splice(r, 1), kg.delete(e), delete Og[e], fv(), Gg();
+	r !== -1 && Jg.splice(r, 1), jg.delete(e), delete Ag[e], fv(), Gg();
 }
 async function hv(e) {
-	if (kg.size === 0) throw Error("No annotation overlay is loaded.");
+	if (jg.size === 0) throw Error("No annotation overlay is loaded.");
 	let t = new FormData();
 	if (t.append("cmap", JSON.stringify({
 		keys: Object.keys(e),
@@ -16467,13 +16466,13 @@ async function hv(e) {
 		method: "PUT",
 		body: t
 	})).ok) throw Error("Failed to update annotation colours.");
-	Tg += 1;
-	for (let e of kg) {
-		let t = Og[e];
+	Dg += 1;
+	for (let e of jg) {
+		let t = Ag[e];
 		if (t === void 0) continue;
 		let n = new dd({
-			url: `/tileserver/layer/${encodeURIComponent(e)}/${Cg}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${Tg}`,
-			size: Eg.slide_dimensions,
+			url: `/tileserver/layer/${encodeURIComponent(e)}/${Tg}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${Dg}`,
+			size: Og.slide_dimensions,
 			crossOrigin: "anonymous",
 			zDirection: -1
 		});
@@ -16488,11 +16487,11 @@ Object.assign(window, {
 	graticuleToggle: Z_,
 	layerSwitcher: I_,
 	layers: Jg,
-	layersData: Sg,
+	layersData: wg,
 	loadOverlay: pv,
 	map: $,
 	mousePositionControl: j_,
-	overlayLayers: Og,
+	overlayLayers: Ag,
 	overviewMapControl: O_,
 	projection: $g,
 	removeOverlay: mv,
