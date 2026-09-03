@@ -15537,7 +15537,7 @@ function $h(e) {
 	let t = e.split(/[\\/]/).pop() ?? e, n = t.lastIndexOf(".");
 	return n <= 0 ? t : t.slice(0, n);
 }
-var eg = new URLSearchParams(window.location.search).get("slide");
+var eg = new URLSearchParams(window.location.search).get("slide") ?? (Oh.length === 0 ? Jh.files[0]?.path ?? null : null);
 if (eg !== null) {
 	Nh = eg, kh = await mh();
 	let e = await hh(eg);

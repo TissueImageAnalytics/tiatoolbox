@@ -704,7 +704,12 @@ function getFileStem(filePath) {
 
 // Dynamic slide loading
 const params = new URLSearchParams(window.location.search);
-const slidePath = params.get("slide");
+
+const slidePath =
+  params.get("slide") ??
+  (layersData.length === 0
+    ? configuredSlides.files[0]?.path ?? null
+    : null);
 
 if (slidePath !== null) {
   currentSlidePath = slidePath;
