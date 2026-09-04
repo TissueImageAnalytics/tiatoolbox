@@ -35,7 +35,9 @@ import {
 import {
   createOverviewMapController,
 } from "./controls/overview-map.js";
-import { createFileSelect } from "./components/file-select.js";
+import {
+  createFilesPanelController,
+} from "./panels/files.js";
 import {
   createLayersPanelController,
 } from "./panels/layers.js";
@@ -710,26 +712,6 @@ loadSettings();
 
 updateControlAppearance();
 
-function setViewerPanelOpen(open) {
-  if (open) {
-    layersPanelController.setOpen(false);
-  }
-
-  viewerPanel.classList.toggle("hidden", !open);
-  viewerPanelToggle.classList.toggle("active", open);
-  viewerPanelToggle.innerHTML = open
-    ? '<i class="fas fa-folder-open"></i>'
-    : '<i class="fas fa-folder"></i>';
-
-  if (!open) {
-    for (const select of viewerPanel.querySelectorAll(
-      ".viewer-file-select.open",
-    )) {
-      select.close?.();
-    }
-  }
-}
-
 function setSettingsPanelOpen(open) {
   settingsPanel.classList.toggle("hidden", !open);
   settingsToggle.classList.toggle("active", open);
@@ -753,16 +735,9 @@ const layersPanelController =
       removeOverlay(layerId),
 
     onOpen() {
-      setViewerPanelOpen(false);
+      filesPanelController.setOpen(false);
     },
   });
-
-setViewerPanelOpen(true);
-
-viewerPanelToggle.addEventListener("click", () => {
-  const open = viewerPanel.classList.contains("hidden");
-  setViewerPanelOpen(open);
-});
 
 settingsToggle.addEventListener("click", () => {
   const open = settingsPanel.classList.contains("hidden");
@@ -802,223 +777,51 @@ let currentSlidePath = null;
 const overlayLayers = {};
 const annotationLayerNames = new Set();
 
-const fileSelectors = document.createElement("div");
-fileSelectors.className = "viewer-file-selectors";
-
-const slideSelect = createFileSelect("Select slide");
-const overlaySelect = createFileSelect("Load overlay");
-
-fileSelectors.append(
-  slideSelect,
-  overlaySelect,
-);
-
-const fileActions = document.createElement("div");
-fileActions.className = "viewer-file-actions";
-
-function createFileActionButton(label) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.textContent = label;
-  return button;
-}
-
-const clearSlideButton =
-  createFileActionButton("Clear Slide");
-
-const clearOverlaysButton =
-  createFileActionButton("Clear Overlays");
-
-clearSlideButton.disabled = true;
-clearOverlaysButton.disabled = true;
-
-fileActions.append(
-  clearSlideButton,
-  clearOverlaysButton,
-);
-
-viewerFiles.append(
-  fileSelectors,
-  fileActions,
-);
-
-function populateFileSelect(
-  select,
-  files,
-  placeholder,
-) {
-  select.setFiles(files, placeholder);
-}
-
-function getMatchingOverlays(slidePath) {
-  const slideStem = getFileStem(slidePath);
-
-  return configuredOverlays.files.filter((file) => {
-    const fileName =
-      file.name.split(/[\\/]/).pop() ?? file.name;
-
-    return fileName.includes(slideStem);
-  });
-}
-
-function updateOverlaySelect() {
-  if (configuredOverlays.directory === null) {
-    populateFileSelect(
-      overlaySelect,
-      [],
-      "No overlay directory configured",
-    );
-    return;
-  }
-
-  if (currentSlidePath === null) {
-    populateFileSelect(
-      overlaySelect,
-      [],
-      "Select slide first",
-    );
-    return;
-  }
-
-  const matchingOverlays =
-    getMatchingOverlays(currentSlidePath);
-
-  populateFileSelect(
-    overlaySelect,
-    matchingOverlays,
-    matchingOverlays.length === 0
-      ? "No matching overlays"
-      : "Load overlay",
-  );
-}
-
 const configuredSlides =
   await getConfiguredFiles("slide");
 
 const configuredOverlays =
   await getConfiguredFiles("overlay");
 
-populateFileSelect(
-  slideSelect,
-  configuredSlides.files,
-  configuredSlides.directory === null
-    ? "No slide directory configured"
-    : "Select slide",
-);
+const filesPanelController =
+  createFilesPanelController({
+    panel: viewerPanel,
+    toggle: viewerPanelToggle,
+    container: viewerFiles,
+    configuredSlides,
+    configuredOverlays,
 
-updateOverlaySelect();
+    getCurrentSlidePath: () =>
+      currentSlidePath,
 
-function updateSlideSelect(filePath) {
-  slideSelect.value = filePath;
-}
+    hasSlide: () =>
+      currentSlideInfo !== null,
 
-function updateFileActionState() {
-  const hasSlide = currentSlideInfo !== null;
-  const hasOverlays =
-    Object.keys(overlayLayers).length > 0;
-  const hasMatchingOverlays =
-    currentSlidePath !== null &&
-    getMatchingOverlays(currentSlidePath).length > 0;
+    hasOverlays: () =>
+      Object.keys(
+        overlayLayers,
+      ).length > 0,
 
-  clearSlideButton.disabled = !hasSlide;
-  clearOverlaysButton.disabled =
-    !hasSlide || !hasOverlays;
+    onSlideSelected: (filePath) =>
+      switchSlide(filePath),
 
-  slideSelect.disabled =
-    configuredSlides.files.length === 0;
+    onOverlaySelected: (filePath) =>
+      loadOverlay(filePath),
 
-  overlaySelect.disabled =
-    !hasSlide || !hasMatchingOverlays;
-}
+    onClearSlide: () =>
+      removeSlide(),
 
-function setFileActionsBusy(busy) {
-  if (!busy) {
-    updateFileActionState();
-    return;
-  }
+    onClearOverlays: () =>
+      clearOverlays(),
 
-  slideSelect.disabled = true;
-  overlaySelect.disabled = true;
-  clearSlideButton.disabled = true;
-  clearOverlaysButton.disabled = true;
-}
+    onOpen() {
+      layersPanelController.setOpen(
+        false,
+      );
+    },
+  });
 
-slideSelect.addEventListener("change", async (event) => {
-  const filePath =
-    event.detail ?? slideSelect.value;
-
-  if (filePath === "") {
-    return;
-  }
-
-  setFileActionsBusy(true);
-
-  try {
-    await switchSlide(filePath);
-    overlaySelect.value = "";
-  } catch (error) {
-    console.error(error);
-  } finally {
-    setFileActionsBusy(false);
-  }
-});
-
-overlaySelect.addEventListener(
-  "change",
-  async (event) => {
-    const filePath =
-      event.detail ?? overlaySelect.value;
-
-    if (filePath === "") {
-      return;
-    }
-
-    setFileActionsBusy(true);
-
-    try {
-      await loadOverlay(filePath);
-      overlaySelect.value = "";
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setFileActionsBusy(false);
-    }
-  },
-);
-
-clearSlideButton.addEventListener("click", async () => {
-  setFileActionsBusy(true);
-
-  try {
-    await removeSlide();
-
-    slideSelect.value = "";
-    overlaySelect.value = "";
-    updateOverlaySelect();
-  } catch (error) {
-    console.error(error);
-  } finally {
-    setFileActionsBusy(false);
-  }
-});
-
-clearOverlaysButton.addEventListener(
-  "click",
-  async () => {
-    setFileActionsBusy(true);
-
-    try {
-      await clearOverlays();
-      overlaySelect.value = "";
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setFileActionsBusy(false);
-    }
-  },
-);
-
-updateFileActionState();
+filesPanelController.setOpen(true);
 
 // Dynamic slide loading
 const params = new URLSearchParams(window.location.search);
@@ -1035,8 +838,10 @@ if (slidePath !== null) {
   const slideInfo = await loadSlide(slidePath);
 
   currentSlideInfo = slideInfo;
-  updateSlideSelect(slidePath);
-  updateOverlaySelect();
+  filesPanelController.setSlide(
+    slidePath,
+  );
+  filesPanelController.updateOverlaySelect();
 
   layersData = [
     {
@@ -1052,7 +857,7 @@ if (slidePath !== null) {
   sessionId = await createSession();
 }
 
-updateFileActionState();
+filesPanelController.updateActionState();
 
 const layers = layersData.map((layer) => {
   const source = new Zoomify({
@@ -1445,14 +1250,14 @@ function clearOverlayLayers() {
   annotationLayerNames.clear();
 
   layersPanelController.render();
-  updateFileActionState();
+  filesPanelController.updateActionState();
 }
 
 async function clearOverlays() {
   await clearTileServerOverlays();
 
   clearOverlayLayers();
-  updateFileActionState();
+  filesPanelController.updateActionState();
 }
 
 function getUrlViewState() {
@@ -1579,7 +1384,7 @@ async function removeSlide() {
 
   setViewerEnabled(false);
   mapControlsController.updateZoomLevel();
-  updateFileActionState();
+  filesPanelController.updateActionState();
 }
 
 // Slide switching
@@ -1593,9 +1398,14 @@ async function switchSlide(slidePath) {
   const slideInfo = await loadSlide(slidePath);
   currentSlideInfo = slideInfo;
   currentSlidePath = slidePath;
-  updateSlideSelect(slidePath);
-  updateOverlaySelect();
-  updateFileActionState();
+
+  filesPanelController.setSlide(
+    slidePath,
+  );
+
+  filesPanelController.updateOverlaySelect();
+
+  filesPanelController.updateActionState();
 
   slideVersion += 1;
 
@@ -1746,7 +1556,8 @@ async function loadOverlay(overlayPath) {
   }
 
   layersPanelController.render();
-  updateFileActionState();
+
+  filesPanelController.updateActionState();
 
   return result;
 }
@@ -1784,7 +1595,7 @@ async function removeOverlay(layerName) {
   delete overlayLayers[layerName];
 
   layersPanelController.render();
-  updateFileActionState();
+  filesPanelController.updateActionState();
 }
 
 async function setAnnotationColors(colorMap) {
