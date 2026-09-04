@@ -8,7 +8,6 @@ import { defaults as defaultControls } from "ol/control/defaults.js";
 import MousePosition from "ol/control/MousePosition.js";
 import OverviewMap from "ol/control/OverviewMap.js";
 import Rotate from "ol/control/Rotate.js";
-import ScaleLine from "ol/control/ScaleLine.js";
 import { format as formatCoordinate } from "ol/coordinate.js";
 import TileLayer from "ol/layer/Tile.js";
 import Map from "ol/Map.js";
@@ -37,6 +36,9 @@ import {
   removeSlide as removeTileServerSlide,
   setAnnotationColors as setTileServerAnnotationColors,
 } from "./api/tileserver.js";
+import {
+  createScaleBarController,
+} from "./controls/scale-bar.js";
 import { createFileSelect } from "./components/file-select.js";
 import {
   getContrastingColour,
@@ -696,8 +698,8 @@ themeSelect.addEventListener("change", () => {
     scaleBarThemeColours[themeSelect.value] ??
     scaleBarThemeColours.dark;
 
-  updateScaleBarColour();
-  updateScaleBarOpacity();
+  scaleBarController.updateColour();
+  scaleBarController.updateOpacity();
   updateGridAppearance();
 });
 
@@ -708,8 +710,6 @@ controlOpacityInput.addEventListener("input", () => {
 loadSettings();
 
 updateControlAppearance();
-
-let scaleBarEnabled = scaleBarEnabledInput.checked;
 
 function setViewerPanelOpen(open) {
   if (open) {
@@ -1332,116 +1332,24 @@ resetViewButton.addEventListener("click", () => {
   resetView();
 });
 
-// Scalebar
-const scaleBarWidths = {
-  small: 70,
-  default: 100,
-  large: 140,
-};
+// Scale bar
+let scaleLineControl = null;
 
-function createScaleLineControl() {
-  const minWidth =
-    scaleBarWidths[scaleBarSizeSelect.value] ??
-    scaleBarWidths.default;
-
-  return new ScaleLine({
-    units: scaleBarUnitsSelect.value,
-    minWidth,
+const scaleBarController =
+  createScaleBarController({
+    map,
+    hasSlide: () => slideLayer.getSource() !== null,
+    enabledInput: scaleBarEnabledInput,
+    colourInput: scaleBarColourInput,
+    opacityInput: scaleBarOpacityInput,
+    opacityValue: scaleBarOpacityValue,
+    sizeSelect: scaleBarSizeSelect,
+    unitsSelect: scaleBarUnitsSelect,
+    onControlChange(control) {
+      scaleLineControl = control;
+      window.scaleLineControl = control;
+    },
   });
-}
-
-let scaleLineControl = createScaleLineControl();
-
-map.addControl(scaleLineControl);
-
-function updateScaleBarVisibility() {
-  const hasSlide = slideLayer.getSource() !== null;
-
-  scaleLineControl.element.classList.toggle(
-    "viewer-control-hidden",
-    !hasSlide || !scaleBarEnabled,
-  );
-}
-
-scaleBarEnabledInput.addEventListener("change", () => {
-  scaleBarEnabled = scaleBarEnabledInput.checked;
-  updateScaleBarVisibility();
-});
-
-function updateScaleBarColour() {
-  const colour = scaleBarColourInput.value;
-
-  const scaleLineInner = scaleLineControl.element.querySelector(
-    ".ol-scale-line-inner",
-  );
-
-  if (scaleLineInner === null) {
-    return;
-  }
-
-  scaleLineInner.style.color = colour;
-  scaleLineInner.style.borderColor = colour;
-}
-
-scaleBarColourInput.addEventListener("input", () => {
-  updateScaleBarColour();
-  updateScaleBarOpacity();
-});
-
-function updateScaleBarOpacity() {
-  const opacity =
-    Number(scaleBarOpacityInput.value) / 100;
-
-  const scaleBarColour =
-    hexToRgb(scaleBarColourInput.value);
-
-  if (scaleBarColour === null) {
-    return;
-  }
-
-  const contrastColour =
-    getContrastingColour(scaleBarColour);
-
-  const backgroundColour =
-    contrastColour === "#ffffff"
-      ? { r: 255, g: 255, b: 255 }
-      : { r: 17, g: 17, b: 17 };
-
-  scaleLineControl.element.style.backgroundColor =
-    toRgba(backgroundColour, opacity);
-
-  scaleBarOpacityValue.textContent =
-    `${scaleBarOpacityInput.value}%`;
-}
-
-scaleBarOpacityInput.addEventListener("input", () => {
-  updateScaleBarOpacity();
-});
-
-function updateScaleBarSize() {
-  map.removeControl(scaleLineControl);
-
-  scaleLineControl = createScaleLineControl();
-
-  map.addControl(scaleLineControl);
-
-  window.scaleLineControl = scaleLineControl;
-
-  updateScaleBarVisibility();
-  updateScaleBarColour();
-  updateScaleBarOpacity();
-}
-
-scaleBarSizeSelect.addEventListener("change", () => {
-  updateScaleBarSize();
-});
-
-scaleBarUnitsSelect.addEventListener("change", () => {
-  scaleLineControl.setUnits(scaleBarUnitsSelect.value);
-});
-
-updateScaleBarColour();
-updateScaleBarOpacity();
 
 const overviewLayer = new TileLayer();
 
@@ -2096,7 +2004,6 @@ function resetSettingsToDefaults() {
   }
 
   scaleBarEnabledInput.checked = true;
-  scaleBarEnabled = true;
 
   scaleBarColourInput.value = "#ffffff";
   scaleBarOpacityInput.value = "100";
@@ -2112,12 +2019,12 @@ function resetSettingsToDefaults() {
   updateMouseWheelZoomSensitivity();
   updateZoomButtonStep();
 
-  updateScaleBarSize();
-  scaleLineControl.setUnits(scaleBarUnitsSelect.value);
+  scaleBarController.updateSize();
+  scaleBarController.updateUnits();
 
-  updateScaleBarVisibility();
-  updateScaleBarColour();
-  updateScaleBarOpacity();
+  scaleBarController.updateVisibility();
+  scaleBarController.updateColour();
+  scaleBarController.updateOpacity();
 
   try {
     window.localStorage.removeItem(
@@ -2201,10 +2108,8 @@ function setViewerEnabled(enabled) {
 
   mouseWheelZoomInteraction.setActive(enabled);
 
-  scaleLineControl.element.classList.toggle(
-    "viewer-control-hidden",
-    !enabled || !scaleBarEnabled,
-  );
+  scaleBarController.setViewerEnabled(enabled);
+
   mousePositionControl.element.classList.toggle(
     "viewer-control-hidden",
     !enabled || !mousePositionVisibleInput.checked,
