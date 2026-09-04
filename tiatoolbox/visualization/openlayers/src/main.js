@@ -44,12 +44,6 @@ import {
 import {
   createSettingsPanelController,
 } from "./panels/settings.js";
-import {
-  getContrastingColour,
-  hexToRgb,
-  mixColour,
-  toRgba,
-} from "./utils/colours.js";
 import { getFileStem } from "./utils/paths.js";
 
 // Create a Zoomify source with versions to avoid reusing tiles from an old slide.
@@ -268,149 +262,15 @@ if (
   throw new Error("The OpenLayers viewer controls could not be found.");
 }
 
-const interfaceThemeColours = {
-  dark: "#111111",
-  light: "#f2f2f2",
-  "high-contrast": "#000000",
-};
-
 const scaleBarThemeColours = {
   dark: "#ffffff",
   light: "#000000",
   "high-contrast": "#ffffff",
 };
 
-function updateControlAppearance() {
-  const themeColour =
-    interfaceThemeColours[themeSelect.value] ??
-    interfaceThemeColours.dark;
-
-  const colour = hexToRgb(themeColour);
-
-  if (colour === null) {
-    return;
-  }
-
-  const opacity =
-    Number(controlOpacityInput.value) / 100;
-
-  const foreground = getContrastingColour(colour);
-
-  const foregroundRgb =
-    foreground === "#ffffff"
-      ? { r: 255, g: 255, b: 255 }
-      : { r: 0, g: 0, b: 0 };
-
-  const shadowColour =
-    foreground === "#ffffff"
-      ? { r: 0, g: 0, b: 0 }
-      : { r: 255, g: 255, b: 255 };
-
-  const interactionTarget =
-    foreground === "#ffffff" ? 255 : 0;
-
-  const surfaceColour = mixColour(
-    colour,
-    interactionTarget,
-    0.08,
-  );
-
-  const hoverColour = mixColour(
-    colour,
-    interactionTarget,
-    0.16,
-  );
-
-  const pressedColour = mixColour(
-    colour,
-    interactionTarget,
-    0.28,
-  );
-
-  const borderColour = mixColour(
-    colour,
-    interactionTarget,
-    0.4,
-  );
-
-  const focusBorderColour = mixColour(
-    colour,
-    interactionTarget,
-    0.58,
-  );
-
-  viewerApp.style.setProperty(
-    "--viewer-control-background",
-    toRgba(colour, opacity),
-  );
-
-  viewerApp.style.setProperty(
-    "--viewer-control-surface-background",
-    toRgba(surfaceColour, opacity),
-  );
-
-  viewerApp.style.setProperty(
-    "--viewer-control-hover-background",
-    toRgba(hoverColour, opacity),
-  );
-
-  viewerApp.style.setProperty(
-    "--viewer-control-pressed-background",
-    toRgba(pressedColour, opacity),
-  );
-
-  viewerApp.style.setProperty(
-    "--viewer-control-foreground",
-    foreground,
-  );
-
-  viewerApp.style.setProperty(
-    "--viewer-control-hover-foreground",
-    getContrastingColour(hoverColour),
-  );
-
-  viewerApp.style.setProperty(
-    "--viewer-control-pressed-foreground",
-    getContrastingColour(pressedColour),
-  );
-
-  viewerApp.style.setProperty(
-    "--viewer-control-muted-foreground",
-    toRgba(foregroundRgb, 0.7),
-  );
-
-  viewerApp.style.setProperty(
-    "--viewer-control-subtle-foreground",
-    toRgba(foregroundRgb, 0.55),
-  );
-
-  viewerApp.style.setProperty(
-    "--viewer-control-border",
-    toRgba(
-      borderColour,
-      Math.max(opacity, 0.7),
-    ),
-  );
-
-  viewerApp.style.setProperty(
-    "--viewer-control-focus-border",
-    toRgba(
-      focusBorderColour,
-      Math.max(opacity, 0.9),
-    ),
-  );
-
-  viewerApp.style.setProperty(
-    "--viewer-control-foreground-shadow",
-    toRgba(shadowColour, 0.75),
-  );
-
-  controlOpacityValue.textContent =
-    `${controlOpacityInput.value}%`;
-}
-
 const settingsPanelController =
   createSettingsPanelController({
+    viewerApp,
     panel: settingsPanel,
     toggle: settingsToggle,
     closeButton: settingsCloseButton,
@@ -420,6 +280,7 @@ const settingsPanelController =
     resetDefaultsButton,
     themeSelect,
     controlOpacityInput,
+    controlOpacityValue,
     zoomVisibleInput,
     zoomLevelVisibleInput,
     rotationVisibleInput,
@@ -443,8 +304,6 @@ const settingsPanelController =
     scaleBarUnitsSelect,
 
     onThemeChange() {
-      updateControlAppearance();
-
       scaleBarColourInput.value =
         scaleBarThemeColours[
           themeSelect.value
@@ -455,10 +314,6 @@ const settingsPanelController =
       scaleBarController.updateOpacity();
 
       gridController.updateAppearance();
-    },
-
-    onInterfaceOpacityInput() {
-      updateControlAppearance();
     },
 
     onControlVisibilityChange() {
@@ -472,7 +327,7 @@ const settingsPanelController =
 
 settingsPanelController.load();
 
-updateControlAppearance();
+settingsPanelController.updateAppearance();
 
 const layersPanelController =
   createLayersPanelController({
@@ -818,7 +673,7 @@ function updateControlVisibility() {
 function resetSettingsToDefaults() {
   settingsPanelController.resetValues();
 
-  updateControlAppearance();
+  settingsPanelController.updateAppearance();
 
   gridController.updateAppearance();
   gridController.updateSpacing();
