@@ -27,6 +27,16 @@ import Toggle from "ol-ext/control/Toggle.js";
 
 import MouseWheelZoom from "ol/interaction/MouseWheelZoom.js";
 import { defaults as defaultInteractions } from "ol/interaction/defaults.js";
+import {
+  clearOverlays as clearTileServerOverlays,
+  createSession,
+  getConfiguredFiles,
+  loadOverlay as loadTileServerOverlay,
+  loadSlide,
+  removeOverlay as removeTileServerOverlay,
+  removeSlide as removeTileServerSlide,
+  setAnnotationColors as setTileServerAnnotationColors,
+} from "./api/tileserver.js";
 import { createFileSelect } from "./components/file-select.js";
 import {
   getContrastingColour,
@@ -35,53 +45,6 @@ import {
   toRgba,
 } from "./utils/colours.js";
 import { getFileStem } from "./utils/paths.js";
-
-// Initialise the TileServer session used for dynamic slide loading.
-async function createSession() {
-  const response = await fetch("/tileserver/session_id");
-
-  if (!response.ok) {
-    throw new Error("Failed to create TileServer session.");
-  }
-
-  const data = await response.json();
-
-  return data.session_id;
-}
-
-// Load a slide into the current TileServer session and return its metadata.
-async function loadSlide(slidePath) {
-  const formData = new FormData();
-  formData.append("slide_path", slidePath);
-
-  const loadResponse = await fetch("/tileserver/slide", {
-    method: "PUT",
-    body: formData,
-  });
-
-  if (!loadResponse.ok) {
-    throw new Error(`Failed to load slide: ${slidePath}`);
-  }
-
-  const metadataResponse = await fetch("/tileserver/slide");
-
-  if (!metadataResponse.ok) {
-    throw new Error("Failed to retrieve slide metadata.");
-  }
-
-  return metadataResponse.json();
-}
-
-// Get files from a directory configured when TileServer was launched.
-async function getConfiguredFiles(kind) {
-  const response = await fetch(`/tileserver/files/${kind}`);
-
-  if (!response.ok) {
-    throw new Error(`Failed to get configured ${kind} files.`);
-  }
-
-  return response.json();
-}
 
 // Create a Zoomify source with versions to avoid reusing tiles from an old slide.
 function createSlideSource(sessionId, slideInfo, version) {
@@ -2313,13 +2276,7 @@ function clearOverlayLayers() {
 }
 
 async function clearOverlays() {
-  const response = await fetch("/tileserver/clear_overlays", {
-    method: "PUT",
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to clear overlays.");
-  }
+  await clearTileServerOverlays();
 
   clearOverlayLayers();
   updateFileActionState();
@@ -2388,13 +2345,7 @@ async function removeSlide() {
     throw new Error("No TileServer session is available.");
   }
 
-  const response = await fetch("/tileserver/slide", {
-    method: "DELETE",
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to remove the current slide.");
-  }
+  await removeTileServerSlide();
 
   clearOverlayLayers();
 
@@ -2791,20 +2742,10 @@ async function loadOverlay(overlayPath) {
     );
   }
 
-  const formData = new FormData();
-  formData.append("overlay_path", overlayPath);
-  formData.append("layer_name", layerName);
-
-  const response = await fetch("/tileserver/overlay", {
-    method: "PUT",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to load overlay: ${overlayPath}`);
-  }
-
-  const result = await response.json();
+  const result = await loadTileServerOverlay(
+    overlayPath,
+    layerName,
+  );
 
   if (isAnnotation) {
     annotationLayerNames.add(layerName);
@@ -2873,19 +2814,14 @@ async function removeOverlay(layerName) {
   overlayLayer.setSource(null);
   map.removeLayer(overlayLayer);
 
-  const response = await fetch(
-    `/tileserver/overlay/${encodeURIComponent(layerName)}`,
-    {
-      method: "DELETE",
-    },
-  );
-
-  if (!response.ok) {
+  try {
+    await removeTileServerOverlay(layerName);
+  } catch (error) {
     overlayLayer.setSource(source);
     overlayLayer.setVisible(true);
     map.addLayer(overlayLayer);
 
-    throw new Error(`Failed to remove overlay: ${layerName}`);
+    throw error;
   }
 
   const layerIndex = layers.indexOf(overlayLayer);
@@ -2906,23 +2842,7 @@ async function setAnnotationColors(colorMap) {
     throw new Error("No annotation overlay is loaded.");
   }
 
-  const formData = new FormData();
-  formData.append(
-    "cmap",
-    JSON.stringify({
-      keys: Object.keys(colorMap),
-      values: Object.values(colorMap),
-    }),
-  );
-
-  const response = await fetch("/tileserver/cmap", {
-    method: "PUT",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to update annotation colours.");
-  }
+  await setTileServerAnnotationColors(colorMap);
 
   overlayVersion += 1;
 
