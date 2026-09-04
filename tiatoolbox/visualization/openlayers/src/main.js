@@ -6,7 +6,6 @@ import FullScreen from "ol/control/FullScreen.js";
 import Zoom from "ol/control/Zoom.js";
 import { defaults as defaultControls } from "ol/control/defaults.js";
 import MousePosition from "ol/control/MousePosition.js";
-import OverviewMap from "ol/control/OverviewMap.js";
 import Rotate from "ol/control/Rotate.js";
 import { format as formatCoordinate } from "ol/coordinate.js";
 import TileLayer from "ol/layer/Tile.js";
@@ -39,6 +38,9 @@ import {
 import {
   createScaleBarController,
 } from "./controls/scale-bar.js";
+import {
+  createOverviewMapController,
+} from "./controls/overview-map.js";
 import { createFileSelect } from "./components/file-select.js";
 import {
   getContrastingColour,
@@ -1351,145 +1353,20 @@ const scaleBarController =
     },
   });
 
-const overviewLayer = new TileLayer();
-
-if (baseSource !== null) {
-  overviewLayer.setSource(baseSource);
-}
-
-const overviewMapSizes = {
-  small: {
-    width: 220,
-    height: 180,
-  },
-
-  default: {
-    width: 300,
-    height: 250,
-  },
-
-  large: {
-    width: 380,
-    height: 320,
-  },
-};
-
-function getOverviewMapSize() {
-  return (
-    overviewMapSizes[overviewMapSizeSelect.value] ??
-    overviewMapSizes.default
-  );
-}
-
-function createOverviewView(overviewProjection, overviewExtent) {
-  const overviewMapSize = getOverviewMapSize();
-
-  const center = [
-    (overviewExtent[0] + overviewExtent[2]) / 2,
-    (overviewExtent[1] + overviewExtent[3]) / 2,
-  ];
-
-  const width = overviewExtent[2] - overviewExtent[0];
-  const height = overviewExtent[3] - overviewExtent[1];
-
-  const resolution = Math.max(
-    width / overviewMapSize.width,
-    height / overviewMapSize.height,
-  );
-
-  const overviewView = new View({
-    projection: overviewProjection,
-    center,
-    resolution,
-    resolutions: [resolution],
-    constrainOnlyCenter: true,
-  });
-
-  overviewView.on("change:center", () => {
-    const currentCenter = overviewView.getCenter();
-
-    if (
-      currentCenter !== undefined &&
-      (currentCenter[0] !== center[0] ||
-        currentCenter[1] !== center[1])
-    ) {
-      overviewView.setCenter(center);
-    }
-  });
-
-  return overviewView;
-}
-
 // Overview map
-const overviewCollapseLabel = document.createElement("span");
-overviewCollapseLabel.className = "overview-toggle-icon";
-overviewCollapseLabel.innerHTML =
-  '<i class="fas fa-chevron-up"></i>';
+const overviewMapController =
+  createOverviewMapController({
+    map,
+    source: baseSource,
+    projection,
+    extent,
+    sizeSelect: overviewMapSizeSelect,
+    visibleInput: overviewMapVisibleInput,
+    hasSlide: () => slideLayer.getSource() !== null,
+  });
 
-const overviewExpandLabel = document.createElement("span");
-overviewExpandLabel.className = "overview-toggle-icon";
-overviewExpandLabel.innerHTML =
-  '<i class="fas fa-chevron-down"></i>';
-
-const overviewMapControl = new OverviewMap({
-  className: "ol-overviewmap ol-custom-overviewmap",
-  layers: [overviewLayer],
-  collapsed: false,
-  collapsible: true,
-  collapseLabel: overviewCollapseLabel,
-  label: overviewExpandLabel,
-  rotateWithView: false,
-  tipLabel: "Toggle overview map",
-  view: createOverviewView(projection, extent),
-});
-
-map.addControl(overviewMapControl);
-
-const overviewMap = overviewMapControl.getOverviewMap();
-
-function updateOverviewMapSize() {
-  const size = getOverviewMapSize();
-
-  overviewMapControl.element.style.setProperty(
-    "--overview-map-width",
-    `${size.width}px`,
-  );
-
-  overviewMapControl.element.style.setProperty(
-    "--overview-map-height",
-    `${size.height}px`,
-  );
-
-  overviewMap.updateSize();
-
-  const source = overviewLayer.getSource();
-
-  if (source !== null) {
-    const currentProjection =
-      map.getView().getProjection();
-
-    const currentExtent =
-      source.getTileGrid().getExtent();
-
-    overviewMap.setView(
-      createOverviewView(
-        currentProjection,
-        currentExtent,
-      ),
-    );
-  }
-
-  overviewMap.renderSync();
-}
-
-overviewMapSizeSelect.addEventListener(
-  "change",
-  () => {
-    updateOverviewMapSize();
-  },
-);
-
-updateOverviewMapSize();
+const overviewMapControl =
+  overviewMapController.control;
 
 // Mouse position
 const coordinateFormat = (coordinate) => {
@@ -1935,10 +1812,12 @@ function updateControlVisibility() {
     !hasSlide || !mousePositionVisibleInput.checked,
   );
 
-  overviewMapControl.element.classList.toggle(
+  mousePositionControl.element.classList.toggle(
     "viewer-control-hidden",
-    !hasSlide || !overviewMapVisibleInput.checked,
+    !hasSlide || !mousePositionVisibleInput.checked,
   );
+
+  overviewMapController.updateVisibility();
 
   if (!graticuleVisibleInput.checked) {
     graticuleToggle.setActive(false);
@@ -1952,13 +1831,6 @@ function updateControlVisibility() {
       "active",
     );
     screenSpaceGraticule.setMap(null);
-  }
-
-  if (hasSlide && overviewMapVisibleInput.checked) {
-    requestAnimationFrame(() => {
-      overviewMap.updateSize();
-      overviewMap.renderSync();
-    });
   }
 }
 
@@ -2015,7 +1887,7 @@ function resetSettingsToDefaults() {
   updateGridSpacing();
   updateGridLabels();
   updateControlVisibility();
-  updateOverviewMapSize();
+  overviewMapController.updateSize();
   updateMouseWheelZoomSensitivity();
   updateZoomButtonStep();
 
@@ -2114,10 +1986,8 @@ function setViewerEnabled(enabled) {
     "viewer-control-hidden",
     !enabled || !mousePositionVisibleInput.checked,
   );
-  overviewMapControl.element.classList.toggle(
-    "viewer-control-hidden",
-    !enabled || !overviewMapVisibleInput.checked,
-  );
+
+  overviewMapController.setViewerEnabled(enabled);
 
   if (!enabled) {
     graticuleToggle.setActive(false);
@@ -2128,14 +1998,6 @@ function setViewerEnabled(enabled) {
 
     graticule.setMap(null);
     screenSpaceGraticule.setMap(null);
-  }
-
-
-  if (enabled) {
-    requestAnimationFrame(() => {
-      overviewMap.updateSize();
-      overviewMap.renderSync();
-    });
   }
 }
 
@@ -2262,7 +2124,7 @@ async function removeSlide() {
   overlayVersion += 1;
 
   slideLayer.setSource(null);
-  overviewLayer.setSource(null);
+  overviewMapController.setSource(null);
 
   updateLayerEditor();
 
@@ -2291,8 +2153,9 @@ async function removeSlide() {
 
   map.setView(emptyView);
 
-  overviewMap.setView(
-    createOverviewView(emptyProjection, emptyExtent),
+  overviewMapController.setView(
+    emptyProjection,
+    emptyExtent,
   );
 
   graticuleToggle.setActive(false);
@@ -2381,8 +2244,9 @@ async function switchSlide(slidePath) {
 
   map.setView(newView);
 
-  overviewMap.setView(
-    createOverviewView(newProjection, newExtent),
+  overviewMapController.setView(
+    newProjection,
+    newExtent,
   );
 
   const graticuleWasActive = graticuleToggle.getActive();
@@ -2406,7 +2270,7 @@ async function switchSlide(slidePath) {
   }
 
   slideLayer.setSource(source);
-  overviewLayer.setSource(source);
+  overviewMapController.setSource(source);
 
   updateLayerEditor();
 
