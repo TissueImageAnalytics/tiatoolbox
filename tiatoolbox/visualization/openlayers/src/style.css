@@ -12,6 +12,28 @@ body {
 
 
 .viewer-app {
+    --viewer-control-background: rgba(17, 17, 17, 1);
+    --viewer-control-surface-background: rgba(34, 34, 34, 1);
+    --viewer-control-hover-background: rgba(51, 51, 51, 1);
+    --viewer-control-pressed-background: rgba(85, 85, 85, 1);
+
+    --viewer-control-selected-background: #163a59;
+    --viewer-control-selected-hover-background: #1f5278;
+    --viewer-control-selected-pressed-background: #555555;
+
+    --viewer-control-foreground: #ffffff;
+    --viewer-control-hover-foreground: #ffffff;
+    --viewer-control-pressed-foreground: #ffffff;
+    --viewer-control-selected-foreground: #ffffff;
+
+    --viewer-control-muted-foreground: rgba(255, 255, 255, 0.7);
+    --viewer-control-subtle-foreground: rgba(255, 255, 255, 0.55);
+
+    --viewer-control-border: rgba(85, 85, 85, 0.8);
+    --viewer-control-focus-border: rgba(120, 120, 120, 0.95);
+
+    --viewer-control-foreground-shadow: rgba(0, 0, 0, 0.75);
+
     position: relative;
     width: 100%;
     height: 100%;
@@ -46,10 +68,12 @@ body {
 .ol-full-screen,
 .ol-graticule,
 .ol-screen-space-graticule,
+.reset-view-control,
 .viewer-panel-control,
-.layer-editor-control {
+.layer-editor-control,
+.settings-control {
     padding: 0;
-    background: #111111;
+    background: var(--viewer-control-background);
     border-radius: 4px;
     overflow: hidden;
     box-shadow: 0 2px 7px rgba(0, 0, 0, 0.3);
@@ -63,9 +87,11 @@ body {
 .ol-full-screen:hover,
 .ol-graticule:hover,
 .ol-screen-space-graticule:hover,
+.reset-view-control:hover,
 .viewer-panel-control:hover,
-.layer-editor-control:hover {
-    background: #111111;
+.layer-editor-control:hover,
+.settings-control:hover {
+    background: var(--viewer-control-background);
 }
 
 
@@ -76,14 +102,16 @@ body {
 .ol-full-screen button,
 .ol-graticule button,
 .ol-screen-space-graticule button,
+.reset-view-control button,
 .viewer-panel-control button,
-.layer-editor-control button {
+.layer-editor-control button,
+.settings-control button {
     width: 32px;
     height: 32px;
     margin: 0;
     border: 0;
-    background: #111111;
-    color: #ffffff;
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
     cursor: pointer;
 }
 
@@ -93,10 +121,12 @@ body {
 .ol-full-screen button:hover:not(:disabled),
 .ol-graticule button:hover:not(:disabled),
 .ol-screen-space-graticule button:hover:not(:disabled),
+.reset-view-control button:hover:not(:disabled),
 .viewer-panel-control button:hover:not(:disabled),
-.layer-editor-control button:hover:not(:disabled) {
-    background: #333333;
-    color: #ffffff;
+.layer-editor-control button:hover:not(:disabled),
+.settings-control button:hover:not(:disabled) {
+    background: var(--viewer-control-hover-background);
+    color: var(--viewer-control-hover-foreground);
     outline: none;
     border-radius: 4px;
 }
@@ -107,10 +137,12 @@ body {
 .ol-full-screen button:active:not(:disabled),
 .ol-graticule button:active:not(:disabled),
 .ol-screen-space-graticule button:active:not(:disabled),
+.reset-view-control button:active:not(:disabled),
 .viewer-panel-control button:active:not(:disabled),
-.layer-editor-control button:active:not(:disabled) {
-    background: #555555;
-    color: #ffffff;
+.layer-editor-control button:active:not(:disabled),
+.settings-control button:active:not(:disabled) {
+    background: var(--viewer-control-pressed-background);
+    color: var(--viewer-control-pressed-foreground);
     outline: none;
     border-radius: 4px;
 }
@@ -126,8 +158,8 @@ body {
 .ol-control.ol-toggle button:disabled:hover,
 .ol-control.ol-toggle button:disabled:active,
 .ol-control.ol-toggle button:disabled:focus {
-    background: #111111;
-    color: #ffffff;
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
     opacity: 0.4;
     cursor: default;
     outline: none;
@@ -145,19 +177,27 @@ body {
 /* Zoom */
 
 .ol-zoom {
-    top: auto;
-    bottom: 8px;
-    left: 50%;
-    right: auto;
-
     display: flex;
     flex-direction: row;
+}
 
-    transform: translateX(-50%);
+
+.ol-zoom.viewer-control-disabled {
+    opacity: 0.4;
+}
+
+
+.ol-zoom.viewer-control-disabled button:disabled,
+.ol-zoom.viewer-control-disabled button:disabled:hover,
+.ol-zoom.viewer-control-disabled button:disabled:active,
+.ol-zoom.viewer-control-disabled button:disabled:focus {
+    background: transparent;
+    opacity: 1;
 }
 
 
 .ol-zoom button {
+    background: transparent;
     border-radius: 0;
 }
 
@@ -184,11 +224,13 @@ body {
     margin: 4px 3px;
     padding: 0 3px;
 
-    border: 1px solid #555555;
+    border: 1px solid var(--viewer-control-border);
     border-radius: 3px;
 
-    background: #222222;
-    color: #ffffff;
+    background: var(--viewer-control-surface-background);
+    color: var(--viewer-control-foreground);
+
+    text-shadow: 0 0 2px var(--viewer-control-foreground-shadow);
 
     font-family: inherit;
     font-size: 11px;
@@ -207,19 +249,20 @@ body {
 
 
 .ol-zoom-level:hover:not(:disabled) {
-    border-color: #777777;
+    border-color: var(--viewer-control-focus-border);
 }
 
 
 .ol-zoom-level:focus {
-    border-color: #888888;
+    border-color: var(--viewer-control-focus-border);
     outline: none;
-    background: #2a2a2a;
+    background: var(--viewer-control-hover-background);
 }
 
 
 .ol-zoom-level:disabled {
-    opacity: 0.4;
+    background: transparent;
+    opacity: 1;
     cursor: default;
 }
 
@@ -237,23 +280,26 @@ body {
 }
 
 
-/* Layer editor control */
+/* Settings control */
 
-.layer-editor-control {
-    top: 188px;
-    left: 8px;
-    right: auto;
+.settings-control,
+.settings-control:hover {
+    top: 8px;
+    right: 8px;
+    left: auto;
+    z-index: 1002;
+    background: transparent;
 }
 
 
-.layer-editor-control button,
-.layer-editor-control button:hover,
-.layer-editor-control button:active,
-.layer-editor-control button:focus,
-.layer-editor-control button.active,
-.layer-editor-control button.active:hover,
-.layer-editor-control button.active:active,
-.layer-editor-control button.active:focus {
+.settings-control button,
+.settings-control button:hover,
+.settings-control button:active,
+.settings-control button:focus,
+.settings-control button.active,
+.settings-control button.active:hover,
+.settings-control button.active:active,
+.settings-control button.active:focus {
     border-radius: 4px;
 }
 
@@ -262,15 +308,17 @@ body {
 
 .layer-editor {
     position: absolute;
-    top: 188px;
-    left: 50px;
+    top: 8px;
+    left: 48px;
     z-index: 1000;
     width: 240px;
     box-sizing: border-box;
     overflow: hidden;
 
-    background: #111111;
-    color: #ffffff;
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+
+    text-shadow: 0 0 2px var(--viewer-control-foreground-shadow);
 
     border-radius: 10px;
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
@@ -282,9 +330,10 @@ body {
 }
 
 
-.layer-editor-header {
+.layer-editor-header,
+.viewer-panel-header {
     padding: 12px 14px;
-    border-bottom: 1px solid #333333;
+    border-bottom: 1px solid var(--viewer-control-border);
     font-size: 13px;
     font-weight: 600;
 }
@@ -296,7 +345,7 @@ body {
 
 
 .layer-editor-empty {
-    color: #cccccc;
+    color: var(--viewer-control-muted-foreground);
     font-size: 12px;
 }
 
@@ -322,7 +371,7 @@ body {
 .layer-editor-visibility {
     flex-shrink: 0;
     margin: 0;
-    accent-color: #1f5278;
+    accent-color: var(--viewer-control-selected-background);
     cursor: pointer;
 }
 
@@ -332,7 +381,7 @@ body {
     flex: 1;
     overflow: hidden;
 
-    color: #ffffff;
+    color: var(--viewer-control-foreground);
 
     font-size: 12px;
     text-overflow: ellipsis;
@@ -355,8 +404,8 @@ body {
     border: 0;
     border-radius: 4px;
 
-    background: #222222;
-    color: #ffffff;
+    background: var(--viewer-control-surface-background);
+    color: var(--viewer-control-foreground);
 
     font-size: 9px;
     cursor: pointer;
@@ -364,27 +413,27 @@ body {
 
 
 .layer-editor-order button:hover:not(:disabled) {
-    background: #333333;
-    color: #ffffff;
+    background: var(--viewer-control-hover-background);
+    color: var(--viewer-control-hover-foreground);
     outline: none;
 }
 
 
 .layer-editor-order button:active:not(:disabled) {
-    background: #555555;
-    color: #ffffff;
+    background: var(--viewer-control-pressed-background);
+    color: var(--viewer-control-pressed-foreground);
     outline: none;
 }
 
 
 .layer-editor-order button:focus {
-    color: #ffffff;
+    color: var(--viewer-control-foreground);
     outline: none;
 }
 
 
 .layer-editor-order button:disabled {
-    color: #555555;
+    color: var(--viewer-control-subtle-foreground);
     cursor: default;
     pointer-events: none;
     outline: none;
@@ -403,7 +452,7 @@ body {
     flex: 1;
     margin: 0;
 
-    accent-color: #1f5278;
+    accent-color: var(--viewer-control-selected-background);
     cursor: pointer;
 }
 
@@ -412,7 +461,7 @@ body {
     width: 32px;
     flex-shrink: 0;
 
-    color: #aaaaaa;
+    color: var(--viewer-control-muted-foreground);
 
     font-size: 11px;
     text-align: right;
@@ -421,108 +470,561 @@ body {
 
 /* Viewer tools */
 
-.ol-rotate,
-.ol-graticule,
-.ol-screen-space-graticule {
+.viewer-tools-group {
+    position: absolute;
+    top: 80px;
     left: 8px;
-    right: auto;
-    border-radius: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    width: 32px;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.3);
 }
 
-.ol-rotate {
-    top: 66px;
-    border-radius: 4px 4px 0 0;
-}
 
-
-.ol-full-screen {
+.viewer-tools-group .ol-rotate,
+.viewer-tools-group .ol-graticule,
+.viewer-tools-group .ol-screen-space-graticule {
+    position: static;
     top: auto;
-    bottom: 8px;
-    left: calc(50% + 64px);
     right: auto;
+    bottom: auto;
+    left: auto;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+
+.viewer-tools-group .ol-rotate:hover,
+.viewer-tools-group .ol-graticule:hover,
+.viewer-tools-group .ol-screen-space-graticule:hover {
+    background: transparent;
+}
+
+
+.viewer-tools-group button {
+    border-radius: 0 !important;
+}
+
+
+.reset-view-control {
+    background: transparent;
     border-radius: 4px;
 }
 
 
-.ol-graticule {
-    top: 98px;
-}
-
-.ol-screen-space-graticule {
-    top: 130px;
-    border-radius: 0 0 4px 4px;
+.reset-view-control:hover {
+    background: transparent;
 }
 
 
-.ol-rotate button,
-.ol-full-screen button,
-.ol-graticule button,
-.ol-screen-space-graticule button {
-    border-radius: 0;
+.ol-full-screen {
+    background: transparent;
+    border-radius: 4px;
 }
 
 
-.ol-rotate button,
-.ol-rotate button:hover,
-.ol-rotate button:active,
-.ol-rotate button:focus {
-    border-radius: 4px 4px 0 0;
-}
-
-
-.ol-graticule button,
-.ol-graticule button:hover,
-.ol-graticule button:active,
-.ol-graticule button:focus {
-    border-radius: 0;
-}
-
-
-.ol-screen-space-graticule button,
-.ol-screen-space-graticule button:hover,
-.ol-screen-space-graticule button:active,
-.ol-screen-space-graticule button:focus {
-    border-radius: 0 0 4px 4px;
+.ol-full-screen:hover {
+    background: transparent;
 }
 
 
 .ol-full-screen button,
 .ol-full-screen button:hover,
 .ol-full-screen button:active,
-.ol-full-screen button:focus {
+.ol-full-screen button:focus,
+.reset-view-control button,
+.reset-view-control button:hover,
+.reset-view-control button:active,
+.reset-view-control button:focus {
     border-radius: 4px;
 }
 
 
-.ol-full-screen button {
+.ol-full-screen button,
+.reset-view-control button {
     display: flex;
     align-items: center;
     justify-content: center;
-
     padding: 0;
     font-size: 16px;
     line-height: 1;
 }
 
 
-/* Viewer panel control */
+/* Bottom viewer controls */
 
-.viewer-panel-control {
-    top: 8px;
-    left: 8px;
-    right: auto;
+.bottom-controls-group {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transform: translateX(-50%);
 }
 
 
-.viewer-panel-control button,
-.viewer-panel-control button:hover,
-.viewer-panel-control button:active,
-.viewer-panel-control button:focus,
-.viewer-panel-control button.active,
-.viewer-panel-control button.active:hover,
-.viewer-panel-control button.active:active,
-.viewer-panel-control button.active:focus {
+.bottom-controls-group .reset-view-control,
+.bottom-controls-group .ol-zoom,
+.bottom-controls-group .ol-full-screen {
+    position: static;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    margin: 0;
+    transform: none;
+}
+
+
+/* Settings panel */
+
+.settings-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 1100;
+
+    width: 720px;
+    height: 480px;
+    max-width: calc(100vw - 80px);
+    max-height: calc(100vh - 80px);
+    box-sizing: border-box;
+    overflow: hidden;
+
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+
+    text-shadow: 0 0 2px var(--viewer-control-foreground-shadow);
+
+    border-radius: 10px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+
+    transform: translate(-50%, -50%);
+}
+
+
+.settings-panel.hidden {
+    display: none;
+}
+
+
+.settings-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px 8px 18px;
+    border-bottom: 1px solid var(--viewer-control-border);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+
+.settings-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
     border-radius: 4px;
+    background: transparent;
+    color: var(--viewer-control-foreground);
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+
+.settings-close:hover {
+    background: var(--viewer-control-hover-background);
+    color: var(--viewer-control-hover-foreground);
+}
+
+
+.settings-close:active {
+    background: var(--viewer-control-pressed-background);
+    color: var(--viewer-control-pressed-foreground);
+}
+
+
+.settings-close:focus {
+    outline: none;
+}
+
+
+/* Settings tabs */
+
+.settings-tabs {
+    display: flex;
+
+    padding: 0 18px;
+
+    border-bottom: 1px solid var(--viewer-control-border);
+}
+
+
+.settings-tab {
+    padding: 11px 16px;
+
+    border: 0;
+    border-bottom: 2px solid transparent;
+
+    background: transparent;
+    color: var(--viewer-control-muted-foreground);
+
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+
+.settings-tab:hover {
+    color: var(--viewer-control-hover-foreground);
+    background: var(--viewer-control-hover-background);
+}
+
+
+.settings-tab.active {
+    border-bottom-color: var(--viewer-control-selected-background);
+    color: var(--viewer-control-selected-foreground);
+    background: var(--viewer-control-selected-background);
+}
+
+
+.settings-tab:focus {
+    outline: none;
+}
+
+
+/* Settings content */
+
+.settings-panel-body {
+    height: calc(100% - 83px);
+    overflow-y: auto;
+}
+
+
+.settings-tab-panel {
+    padding: 0 20px 20px;
+}
+
+
+.settings-tab-panel.hidden {
+    display: none;
+}
+
+
+.settings-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+
+    padding: 16px 0;
+
+    border-bottom: 1px solid var(--viewer-control-border);
+}
+
+
+.settings-option:last-child {
+    border-bottom: 0;
+}
+
+
+.settings-option-text {
+    min-width: 0;
+}
+
+
+.settings-option-label {
+    margin-bottom: 3px;
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+
+.settings-option-description {
+    color: var(--viewer-control-muted-foreground);
+
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+
+/* Settings switch */
+
+.settings-switch {
+    position: relative;
+
+    width: 38px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+
+.settings-switch input {
+    position: absolute;
+
+    width: 0;
+    height: 0;
+
+    opacity: 0;
+}
+
+
+.settings-switch-slider {
+    position: absolute;
+    inset: 0;
+
+    background: var(--viewer-control-surface-background);
+
+    border-radius: 10px;
+
+    cursor: pointer;
+
+    transition: background 150ms ease;
+}
+
+
+.settings-switch-slider::before {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+
+    width: 14px;
+    height: 14px;
+
+    background: var(--viewer-control-foreground);
+
+    border-radius: 50%;
+
+    content: "";
+
+    transition: transform 150ms ease;
+}
+
+
+.settings-switch input:checked + .settings-switch-slider {
+    background: var(--viewer-control-selected-background);
+}
+
+
+.settings-switch input:checked + .settings-switch-slider::before {
+    transform: translateX(18px);
+}
+
+
+.settings-switch input:focus-visible + .settings-switch-slider {
+    outline: 2px solid var(--viewer-control-focus-border);
+    outline-offset: 2px;
+}
+
+
+/* Settings colour */
+
+.settings-colour-input {
+    width: 38px;
+    height: 28px;
+    flex-shrink: 0;
+    padding: 2px;
+
+    border: 1px solid var(--viewer-control-border);
+    border-radius: 4px;
+
+    background: var(--viewer-control-surface-background);
+
+    cursor: pointer;
+}
+
+
+.settings-colour-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+
+.settings-colour-input::-webkit-color-swatch {
+    border: 0;
+    border-radius: 2px;
+}
+
+
+.settings-colour-input::-moz-color-swatch {
+    border: 0;
+    border-radius: 2px;
+}
+
+
+/* Settings select */
+
+.settings-select {
+    width: 150px;
+    height: 30px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+
+    padding: 4px 8px;
+
+    border: 1px solid var(--viewer-control-border);
+    border-radius: 4px;
+
+    background: var(--viewer-control-surface-background);
+    color: var(--viewer-control-foreground);
+
+    font-family: inherit;
+    font-size: 11px;
+
+    cursor: pointer;
+}
+
+
+.settings-select:hover {
+    border-color: var(--viewer-control-focus-border);
+}
+
+
+.settings-select:focus {
+    border-color: var(--viewer-control-focus-border);
+    outline: none;
+}
+
+
+/* Settings reset button */
+
+.settings-reset-button {
+    height: 30px;
+    flex-shrink: 0;
+    padding: 4px 10px;
+
+    border: 1px solid var(--viewer-control-border);
+    border-radius: 4px;
+
+    background: var(--viewer-control-surface-background);
+    color: var(--viewer-control-foreground);
+
+    font-family: inherit;
+    font-size: 11px;
+
+    cursor: pointer;
+}
+
+
+.settings-reset-button:hover {
+    background: var(--viewer-control-hover-background);
+    color: var(--viewer-control-hover-foreground);
+}
+
+
+.settings-reset-button:active {
+    background: var(--viewer-control-pressed-background);
+    color: var(--viewer-control-pressed-foreground);
+}
+
+
+.settings-reset-button:focus {
+    border-color: var(--viewer-control-focus-border);
+    outline: none;
+}
+
+
+/* Settings range */
+
+.settings-range-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    width: 190px;
+    flex-shrink: 0;
+}
+
+
+.settings-range {
+    min-width: 0;
+    flex: 1;
+    margin: 0;
+
+    accent-color: var(--viewer-control-selected-background);
+
+    cursor: pointer;
+}
+
+
+.settings-range-value {
+    width: 34px;
+    flex-shrink: 0;
+
+    color: var(--viewer-control-muted-foreground);
+
+    font-size: 11px;
+    text-align: right;
+}
+
+
+/* Files and Layers controls */
+
+.left-panel-controls {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    width: 32px;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.3);
+}
+
+
+.left-panel-controls .viewer-panel-control,
+.left-panel-controls .layer-editor-control {
+    position: static;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    margin: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+
+.left-panel-controls .viewer-panel-control:hover,
+.left-panel-controls .layer-editor-control:hover {
+    background: transparent;
+}
+
+
+.left-panel-controls .viewer-panel-control button,
+.left-panel-controls .viewer-panel-control button:hover,
+.left-panel-controls .viewer-panel-control button:active,
+.left-panel-controls .viewer-panel-control button:focus,
+.left-panel-controls .viewer-panel-control button.active,
+.left-panel-controls .viewer-panel-control button.active:hover,
+.left-panel-controls .viewer-panel-control button.active:active,
+.left-panel-controls .viewer-panel-control button.active:focus,
+.left-panel-controls .layer-editor-control button,
+.left-panel-controls .layer-editor-control button:hover,
+.left-panel-controls .layer-editor-control button:active,
+.left-panel-controls .layer-editor-control button:focus,
+.left-panel-controls .layer-editor-control button.active,
+.left-panel-controls .layer-editor-control button.active:hover,
+.left-panel-controls .layer-editor-control button.active:active,
+.left-panel-controls .layer-editor-control button.active:focus {
+    border-radius: 0;
 }
 
 
@@ -531,15 +1033,17 @@ body {
 .viewer-panel {
     position: absolute;
     top: 8px;
-    left: 50px;
+    left: 48px;
     z-index: 1000;
     width: 240px;
     max-height: 170px;
     box-sizing: border-box;
     overflow: visible;
 
-    background: #111111;
-    color: #ffffff;
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+
+    text-shadow: 0 0 2px var(--viewer-control-foreground-shadow);
 
     border-radius: 10px;
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
@@ -551,16 +1055,9 @@ body {
 }
 
 
-.viewer-panel-header {
-    padding: 9px 12px;
-    font-weight: 600;
-    border-bottom: 1px solid #333333;
-}
-
-
 .viewer-panel-section {
     padding: 9px 12px;
-    border-bottom: 1px solid #333333;
+    border-bottom: 1px solid var(--viewer-control-border);
 }
 
 
@@ -596,11 +1093,13 @@ body {
     box-sizing: border-box;
     padding: 5px 24px 5px 7px;
 
-    border: 1px solid #444444;
+    border: 1px solid var(--viewer-control-border);
     border-radius: 4px;
 
-    background: #222222;
-    color: #ffffff;
+    background: var(--viewer-control-surface-background);
+    color: var(--viewer-control-foreground);
+
+    text-shadow: 0 0 2px var(--viewer-control-foreground-shadow);
 
     font-family: inherit;
     font-size: 11px;
@@ -618,8 +1117,8 @@ body {
     width: 5px;
     height: 5px;
 
-    border-right: 1px solid #aaaaaa;
-    border-bottom: 1px solid #aaaaaa;
+    border-right: 1px solid var(--viewer-control-muted-foreground);
+    border-bottom: 1px solid var(--viewer-control-muted-foreground);
 
     content: "";
     transform: rotate(45deg);
@@ -634,12 +1133,12 @@ body {
 
 
 .viewer-file-select-button:hover:not(:disabled) {
-    background: #333333;
+    background: var(--viewer-control-hover-background);
 }
 
 
 .viewer-file-select-button:focus {
-    border-color: #666666;
+    border-color: var(--viewer-control-focus-border);
     outline: none;
 }
 
@@ -675,10 +1174,10 @@ body {
     box-sizing: border-box;
     padding: 5px;
 
-    border: 1px solid #444444;
+    border: 1px solid var(--viewer-control-border);
     border-radius: 4px;
 
-    background: #222222;
+    background: var(--viewer-control-surface-background);
 
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
 }
@@ -691,11 +1190,13 @@ body {
     box-sizing: border-box;
     padding: 5px 7px;
 
-    border: 1px solid #444444;
+    border: 1px solid var(--viewer-control-border);
     border-radius: 3px;
 
-    background: #111111;
-    color: #ffffff;
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+
+    text-shadow: 0 0 2px var(--viewer-control-foreground-shadow);
 
     font-family: inherit;
     font-size: 11px;
@@ -703,13 +1204,13 @@ body {
 
 
 .viewer-file-select-search::placeholder {
-    color: #888888;
+    color: var(--viewer-control-subtle-foreground);
     opacity: 1;
 }
 
 
 .viewer-file-select-search:focus {
-    border-color: #666666;
+    border-color: var(--viewer-control-focus-border);
     outline: none;
 }
 
@@ -734,7 +1235,7 @@ body {
     border-radius: 3px;
 
     background: transparent;
-    color: #ffffff;
+    color: var(--viewer-control-foreground);
 
     font-family: inherit;
     font-size: 11px;
@@ -748,18 +1249,21 @@ body {
 
 .viewer-file-select-option:hover,
 .viewer-file-select-option.active {
-    background: #333333;
+    background: var(--viewer-control-hover-background);
+    color: var(--viewer-control-hover-foreground);
 }
 
 
 .viewer-file-select-option.selected {
-    background: #2a2a2a;
+    background: var(--viewer-control-selected-background);
+    color: var(--viewer-control-selected-foreground);
 }
 
 
 .viewer-file-select-option.selected:hover,
 .viewer-file-select-option.selected.active {
-    background: #333333;
+    background: var(--viewer-control-selected-hover-background);
+    color: var(--viewer-control-selected-foreground);
 }
 
 
@@ -771,7 +1275,7 @@ body {
 .viewer-file-select-empty {
     padding: 6px 7px;
 
-    color: #888888;
+    color: var(--viewer-control-subtle-foreground);
 
     font-size: 11px;
 }
@@ -792,8 +1296,8 @@ body {
     border: 0;
     border-radius: 4px;
 
-    background: #222222;
-    color: #ffffff;
+    background: var(--viewer-control-surface-background);
+    color: var(--viewer-control-foreground);
 
     font-size: 11px;
     cursor: pointer;
@@ -801,12 +1305,14 @@ body {
 
 
 .viewer-file-actions button:hover:not(:disabled) {
-    background: #333333;
+    background: var(--viewer-control-hover-background);
+    color: var(--viewer-control-hover-foreground);
 }
 
 
 .viewer-file-actions button:active:not(:disabled) {
-    background: #555555;
+    background: var(--viewer-control-pressed-background);
+    color: var(--viewer-control-pressed-foreground);
 }
 
 
@@ -819,13 +1325,16 @@ body {
 /* Overview map */
 
 .map .ol-custom-overviewmap {
+    --overview-map-width: 300px;
+    --overview-map-height: 250px;
+
     top: 8px;
     right: 8px;
     bottom: auto;
     left: auto;
 
-    width: 300px;
-    height: 284px;
+    width: var(--overview-map-width);
+    height: calc(var(--overview-map-height) + 42px);
 
     padding: 0;
     background: transparent;
@@ -843,8 +1352,8 @@ body {
 /* Collapsed overview */
 
 .map .ol-custom-overviewmap.ol-collapsed {
-    width: 28px;
-    height: 28px;
+    width: 72px;
+    height: 32px;
 }
 
 
@@ -854,19 +1363,19 @@ body {
 .map .ol-custom-overviewmap.ol-collapsed .ol-overviewmap-map {
     position: absolute;
 
-    top: 32px;
+    top: 40px;
     right: 0;
 
     display: block;
 
-    width: 300px;
-    height: 250px;
+    width: var(--overview-map-width);
+    height: var(--overview-map-height);
     box-sizing: border-box;
     margin: 0;
 
     background: #ffffff;
 
-    border: 2px solid #444444;
+    border: 2px solid var(--viewer-control-border);
     border-radius: 4px;
 
     overflow: hidden;
@@ -912,18 +1421,18 @@ body {
     position: absolute;
 
     top: 0;
-    right: 0;
+    right: 40px;
     bottom: auto;
     left: auto;
 
     z-index: 2;
 
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     margin: 0;
 
-    background: #111111;
-    color: #ffffff;
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
 
     border: 0;
     border-radius: 4px;
@@ -933,21 +1442,21 @@ body {
 
 
 .map .ol-custom-overviewmap button:hover {
-    background: #333333;
-    color: #ffffff;
+    background: var(--viewer-control-hover-background);
+    color: var(--viewer-control-hover-foreground);
     outline: none;
 }
 
 
 .map .ol-custom-overviewmap button:active {
-    background: #555555;
-    color: #ffffff;
+    background: var(--viewer-control-pressed-background);
+    color: var(--viewer-control-pressed-foreground);
     outline: none;
 }
 
 
 .map .ol-custom-overviewmap button:focus {
-    color: #ffffff;
+    color: var(--viewer-control-foreground);
     outline: none;
 }
 
@@ -972,24 +1481,17 @@ body {
     bottom: 8px;
     left: 8px;
     padding: 5px 8px;
-
-    background: rgba(17, 17, 17, 0.55);
-
+    background: var(--viewer-control-background);
     border-radius: 4px;
     box-shadow: 0 2px 7px rgba(0, 0, 0, 0.25);
-
     font-family: "Calibri", sans-serif;
 }
 
-
 .ol-scale-line-inner {
     margin: 0;
-
-    border: 1px solid #ffffff;
+    border: 1px solid var(--viewer-control-foreground);
     border-bottom: 0;
-
-    color: #ffffff;
-
+    color: var(--viewer-control-foreground);
     font-size: 14px;
     line-height: 1.2;
 }
@@ -1008,8 +1510,10 @@ body {
 
     padding: 6px 9px;
 
-    background: #111111;
-    color: #ffffff;
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+
+    text-shadow: 0 0 2px var(--viewer-control-foreground-shadow);
 
     border-radius: 4px;
     box-shadow: 0 2px 7px rgba(0, 0, 0, 0.3);
@@ -1019,17 +1523,34 @@ body {
 }
 
 
-/* Remove persistent OpenLayers focus styling */
+/* Remove persistent mouse-focus styling */
 
-.ol-zoom button:focus,
-.ol-rotate button:focus,
-.ol-full-screen button:focus,
-.ol-graticule button:focus,
-.ol-screen-space-graticule button:focus,
-.viewer-panel-control button:focus,
-.layer-editor-control button:focus {
-    color: #ffffff;
+.ol-zoom button:focus:not(:active):not(:disabled) {
+    background: transparent;
+    color: var(--viewer-control-foreground);
     outline: none;
+    box-shadow: none;
+}
+
+.ol-rotate button:focus:not(:active):not(:disabled),
+.reset-view-control button:focus:not(:active):not(:disabled),
+.map .ol-custom-overviewmap button:focus:not(:active) {
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+    outline: none;
+    box-shadow: none;
+}
+
+.ol-graticule:not(.active) button:focus:not(:active):not(:disabled),
+.ol-screen-space-graticule:not(.active) button:focus:not(:active):not(:disabled),
+.ol-full-screen button:not(.ol-full-screen-true):focus:not(:active),
+.viewer-panel-control button:not(.active):focus:not(:active),
+.layer-editor-control button:not(.active):focus:not(:active),
+.settings-control button:not(.active):focus:not(:active) {
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+    outline: none;
+    box-shadow: none;
 }
 
 
@@ -1039,8 +1560,10 @@ body {
 .ol-screen-space-graticule.active button,
 .ol-full-screen button.ol-full-screen-true,
 .viewer-panel-control button.active,
-.layer-editor-control button.active {
-    background: #163a59;
+.layer-editor-control button.active,
+.settings-control button.active {
+    background: var(--viewer-control-selected-background);
+    color: var(--viewer-control-selected-foreground);
 }
 
 
@@ -1048,8 +1571,10 @@ body {
 .ol-screen-space-graticule.active button:hover,
 .ol-full-screen button.ol-full-screen-true:hover,
 .viewer-panel-control button.active:hover,
-.layer-editor-control button.active:hover {
-    background: #1f5278;
+.layer-editor-control button.active:hover,
+.settings-control button.active:hover {
+    background: var(--viewer-control-selected-hover-background);
+    color: var(--viewer-control-selected-foreground);
 }
 
 
@@ -1057,8 +1582,10 @@ body {
 .ol-screen-space-graticule.active button:active,
 .ol-full-screen button.ol-full-screen-true:active,
 .viewer-panel-control button.active:active,
-.layer-editor-control button.active:active {
-    background: #555555;
+.layer-editor-control button.active:active,
+.settings-control button.active:active {
+    background: var(--viewer-control-selected-pressed-background);
+    color: var(--viewer-control-selected-foreground);
 }
 
 
