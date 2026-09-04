@@ -2,12 +2,7 @@ import "ol/ol.css";
 import "ol-ext/dist/ol-ext.css";
 import "./style.css";
 
-import FullScreen from "ol/control/FullScreen.js";
-import Zoom from "ol/control/Zoom.js";
 import { defaults as defaultControls } from "ol/control/defaults.js";
-import MousePosition from "ol/control/MousePosition.js";
-import Rotate from "ol/control/Rotate.js";
-import { format as formatCoordinate } from "ol/coordinate.js";
 import TileLayer from "ol/layer/Tile.js";
 import Map from "ol/Map.js";
 import Projection from "ol/proj/Projection.js";
@@ -23,7 +18,6 @@ import Graticule from "ol-ext/control/Graticule.js";
 import LayerSwitcher from "ol-ext/control/LayerSwitcher.js";
 import Toggle from "ol-ext/control/Toggle.js";
 
-import MouseWheelZoom from "ol/interaction/MouseWheelZoom.js";
 import { defaults as defaultInteractions } from "ol/interaction/defaults.js";
 import {
   clearOverlays as clearTileServerOverlays,
@@ -35,6 +29,9 @@ import {
   removeSlide as removeTileServerSlide,
   setAnnotationColors as setTileServerAnnotationColors,
 } from "./api/tileserver.js";
+import {
+  createMapControlsController,
+} from "./controls/map-controls.js";
 import {
   createScaleBarController,
 } from "./controls/scale-bar.js";
@@ -1143,58 +1140,6 @@ const view = new View({
   resolution: resolutions[0],
 });
 
-const mouseWheelZoomPresets = {
-  low: {
-    deltaPerZoom: 600,
-    maxDelta: 1,
-  },
-
-  default: {
-    deltaPerZoom: 300,
-    maxDelta: 1,
-  },
-
-  high: {
-    deltaPerZoom: 150,
-    maxDelta: 2,
-  },
-};
-
-function createMouseWheelZoomInteraction() {
-  const preset =
-    mouseWheelZoomPresets[
-      mouseWheelZoomSensitivitySelect.value
-    ] ?? mouseWheelZoomPresets.default;
-
-  const interaction = new MouseWheelZoom({
-    maxDelta: preset.maxDelta,
-  });
-
-  // OpenLayers 10.10 internally uses 300 scroll-delta
-  // units per zoom level, but does not expose a public
-  // sensitivity option.
-  interaction.deltaPerZoom_ =
-    preset.deltaPerZoom;
-
-  interaction.setActive(
-    slideLayer.getSource() !== null,
-  );
-
-  return interaction;
-}
-
-let mouseWheelZoomInteraction =
-  createMouseWheelZoomInteraction();
-
-function createZoomControl() {
-  return new Zoom({
-    delta: Number(zoomButtonStepSelect.value),
-  });
-}
-
-let zoomControlInstance =
-  createZoomControl();
-
 const map = new Map({
   target: mapElement,
   layers,
@@ -1202,137 +1147,35 @@ const map = new Map({
   controls: defaultControls({
     zoom: false,
     rotate: false,
-  }).extend([
-    zoomControlInstance,
-  ]),
+  }),
   interactions: defaultInteractions({
     mouseWheelZoom: false,
-  }).extend([
-    mouseWheelZoomInteraction,
-  ]),
+  }),
 });
 
-function updateMouseWheelZoomSensitivity() {
-  map.removeInteraction(
-    mouseWheelZoomInteraction,
-  );
-
-  mouseWheelZoomInteraction =
-    createMouseWheelZoomInteraction();
-
-  map.addInteraction(
-    mouseWheelZoomInteraction,
-  );
-}
-
-mouseWheelZoomSensitivitySelect.addEventListener(
-  "change",
-  () => {
-    updateMouseWheelZoomSensitivity();
-  },
-);
-
-// Zoom level
-let zoomControl = zoomControlInstance.element;
-
-let zoomOutButton =
-  zoomControl.querySelector(".ol-zoom-out");
-
-if (zoomOutButton === null) {
-  throw new Error(
-    "The OpenLayers zoom control could not be found.",
-  );
-}
-
-const zoomLevel = document.createElement("input");
-
-zoomLevel.type = "number";
-zoomLevel.className = "ol-zoom-level";
-zoomLevel.step = "1";
-zoomLevel.setAttribute("aria-label", "Zoom level");
-zoomLevel.title = "Zoom level";
-
-zoomControl.insertBefore(zoomLevel, zoomOutButton);
-
-function updateZoomLevel() {
-  const zoom = map.getView().getZoom();
-
-  if (zoom === undefined) {
-    zoomLevel.value = "";
-    return;
-  }
-
-  zoomLevel.value = Number.isInteger(zoom)
-    ? zoom.toString()
-    : zoom.toFixed(1);
-}
-
-function applyZoomLevel() {
-  const zoom = Number.parseFloat(zoomLevel.value);
-
-  if (!Number.isFinite(zoom)) {
-    updateZoomLevel();
-    return;
-  }
-
-  const view = map.getView();
-
-  const clampedZoom = Math.min(
-    Math.max(zoom, view.getMinZoom()),
-    view.getMaxZoom(),
-  );
-
-  view.setZoom(clampedZoom);
-  updateZoomLevel();
-}
-
-zoomLevel.addEventListener("focus", () => {
-  zoomLevel.select();
-});
-
-zoomLevel.addEventListener("blur", () => {
-  applyZoomLevel();
-});
-
-zoomLevel.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    zoomLevel.blur();
-    return;
-  }
-
-  if (event.key === "Escape") {
-    event.preventDefault();
-    updateZoomLevel();
-    zoomLevel.blur();
-  }
-});
-
-updateZoomLevel();
-
-function resetView() {
-  const source = slideLayer.getSource();
-
-  if (source === null) {
-    return;
-  }
-
-  const slideExtent = source
-    .getTileGrid()
-    .getExtent();
-
-  const currentView = map.getView();
-
-  currentView.setRotation(0);
-
-  currentView.fit(slideExtent, {
-    size: map.getSize(),
+const mapControlsController =
+  createMapControlsController({
+    map,
+    viewerApp,
+    getSlideSource: () =>
+      slideLayer.getSource(),
+    zoomVisibleInput,
+    zoomLevelVisibleInput,
+    rotationVisibleInput,
+    resetViewButton,
+    resetViewControl,
+    resetViewVisibleInput,
+    fullscreenVisibleInput,
+    mousePositionVisibleInput,
+    mouseWheelZoomSensitivitySelect,
+    zoomButtonStepSelect,
   });
-}
 
-resetViewButton.addEventListener("click", () => {
-  resetView();
-});
+const {
+  fullscreen,
+  mousePositionControl,
+  rotate,
+} = mapControlsController;
 
 // Scale bar
 let scaleLineControl = null;
@@ -1367,92 +1210,6 @@ const overviewMapController =
 
 const overviewMapControl =
   overviewMapController.control;
-
-// Mouse position
-const coordinateFormat = (coordinate) => {
-  const displayedCoordinate = [coordinate[0], -coordinate[1]];
-
-  return formatCoordinate(displayedCoordinate, "{x}, {y}", 0);
-};
-
-const mousePositionControl = new MousePosition({
-  coordinateFormat,
-  className: "ol-mouse-position",
-  placeholder: "\u00a0",
-});
-
-map.addControl(mousePositionControl);
-
-// Rotation reset
-const rotate = new Rotate({
-  autoHide: false,
-  className: "ol-rotate",
-});
-
-map.addControl(rotate);
-
-// Fullscreen
-const fullscreen = new FullScreen({
-  source: viewerApp,
-});
-
-map.addControl(fullscreen);
-
-const bottomControlsGroup = document.createElement("div");
-
-bottomControlsGroup.className =
-  "bottom-controls-group ol-unselectable";
-
-viewerApp.append(bottomControlsGroup);
-
-bottomControlsGroup.append(
-  resetViewControl,
-  zoomControl,
-  fullscreen.element,
-);
-
-function updateZoomButtonStep() {
-  map.removeControl(zoomControlInstance);
-
-  zoomControlInstance =
-    createZoomControl();
-
-  map.addControl(zoomControlInstance);
-
-  zoomControl = zoomControlInstance.element;
-
-  zoomOutButton =
-    zoomControl.querySelector(".ol-zoom-out");
-
-  if (zoomOutButton === null) {
-    throw new Error(
-      "The OpenLayers zoom control could not be found.",
-    );
-  }
-
-  zoomControl.insertBefore(
-    zoomLevel,
-    zoomOutButton,
-  );
-
-  bottomControlsGroup.insertBefore(
-    zoomControl,
-    fullscreen.element,
-  );
-
-  setViewerEnabled(
-    slideLayer.getSource() !== null,
-  );
-
-  updateControlVisibility();
-}
-
-zoomButtonStepSelect.addEventListener(
-  "change",
-  () => {
-    updateZoomButtonStep();
-  },
-);
 
 // Layer switcher
 const layerSwitcher = new LayerSwitcher();
@@ -1770,22 +1527,7 @@ gridSpacingSelect.addEventListener("change", () => {
 });
 
 function updateControlVisibility() {
-  const hasSlide = slideLayer.getSource() !== null;
-
-  zoomControl.classList.toggle(
-    "viewer-control-hidden",
-    !zoomVisibleInput.checked,
-  );
-
-  zoomLevel.classList.toggle(
-    "viewer-control-hidden",
-    !zoomLevelVisibleInput.checked,
-  );
-
-  rotate.element.classList.toggle(
-    "viewer-control-hidden",
-    !rotationVisibleInput.checked,
-  );
+  mapControlsController.updateVisibility();
 
   graticuleToggle.element.classList.toggle(
     "viewer-control-hidden",
@@ -1797,31 +1539,13 @@ function updateControlVisibility() {
     !screenSpaceGraticuleVisibleInput.checked,
   );
 
-  resetViewControl.classList.toggle(
-    "viewer-control-hidden",
-    !resetViewVisibleInput.checked,
-  );
-
-  fullscreen.element.classList.toggle(
-    "viewer-control-hidden",
-    !fullscreenVisibleInput.checked,
-  );
-
-  mousePositionControl.element.classList.toggle(
-    "viewer-control-hidden",
-    !hasSlide || !mousePositionVisibleInput.checked,
-  );
-
-  mousePositionControl.element.classList.toggle(
-    "viewer-control-hidden",
-    !hasSlide || !mousePositionVisibleInput.checked,
-  );
-
   overviewMapController.updateVisibility();
 
   if (!graticuleVisibleInput.checked) {
     graticuleToggle.setActive(false);
-    graticuleToggle.element.classList.remove("active");
+    graticuleToggle.element.classList.remove(
+      "active",
+    );
     graticule.setMap(null);
   }
 
@@ -1888,8 +1612,8 @@ function resetSettingsToDefaults() {
   updateGridLabels();
   updateControlVisibility();
   overviewMapController.updateSize();
-  updateMouseWheelZoomSensitivity();
-  updateZoomButtonStep();
+  mapControlsController.updateMouseWheelZoomSensitivity();
+  mapControlsController.updateZoomButtonStep();
 
   scaleBarController.updateSize();
   scaleBarController.updateUnits();
@@ -1951,50 +1675,38 @@ for (const input of [
 
 // Enable or hide controls that require a loaded slide.
 function setViewerEnabled(enabled) {
-  const zoomInButton = zoomControl.querySelector(".ol-zoom-in");
-  const zoomOutButton = zoomControl.querySelector(".ol-zoom-out");
-  const rotateButton = rotate.element.querySelector("button");
   const graticuleButton =
     graticuleToggle.element.querySelector("button");
+
   const screenSpaceGraticuleButton =
-    screenSpaceGraticuleToggle.element.querySelector("button");
+    screenSpaceGraticuleToggle.element.querySelector(
+      "button",
+    );
 
   for (const button of [
-    zoomInButton,
-    zoomOutButton,
-    rotateButton,
     graticuleButton,
     screenSpaceGraticuleButton,
-    resetViewButton,
   ]) {
     if (button !== null) {
       button.disabled = !enabled;
     }
   }
-  zoomLevel.disabled = !enabled;
 
-  zoomControl.classList.toggle(
-    "viewer-control-disabled",
-    !enabled,
-  );
-
-  mouseWheelZoomInteraction.setActive(enabled);
-
+  mapControlsController.setViewerEnabled(enabled);
   scaleBarController.setViewerEnabled(enabled);
-
-  mousePositionControl.element.classList.toggle(
-    "viewer-control-hidden",
-    !enabled || !mousePositionVisibleInput.checked,
-  );
-
   overviewMapController.setViewerEnabled(enabled);
 
   if (!enabled) {
     graticuleToggle.setActive(false);
     screenSpaceGraticuleToggle.setActive(false);
 
-    graticuleToggle.element.classList.remove("active");
-    screenSpaceGraticuleToggle.element.classList.remove("active");
+    graticuleToggle.element.classList.remove(
+      "active",
+    );
+
+    screenSpaceGraticuleToggle.element.classList.remove(
+      "active",
+    );
 
     graticule.setMap(null);
     screenSpaceGraticule.setMap(null);
@@ -2017,7 +1729,7 @@ if (baseSource !== null) {
 
 map.on("moveend", () => {
   updateUrlState();
-  updateZoomLevel();
+  mapControlsController.updateZoomLevel();
 });
 
 function clearOverlayLayers() {
@@ -2181,7 +1893,7 @@ async function removeSlide() {
   window.history.replaceState({}, "", url);
 
   setViewerEnabled(false);
-  updateZoomLevel();
+  mapControlsController.updateZoomLevel();
   updateFileActionState();
 }
 
@@ -2279,7 +1991,7 @@ async function switchSlide(slidePath) {
 
   setViewerEnabled(true);
   updateUrlState();
-  updateZoomLevel();
+  mapControlsController.updateZoomLevel();
 }
 
 function getLayerEditorEntries() {
