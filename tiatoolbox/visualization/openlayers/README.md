@@ -189,11 +189,17 @@ tiatoolbox/data/visualization/templates/index_legacy.html
 
 ### Experimental viewer
 
-The experimental viewer files are:
+The experimental viewer source is split into the following files and directories:
 
-- `src/main.js` contains the dynamic OpenLayers viewer used by
-  `visualize-beta`.
-- `src/style.css` contains the experimental viewer styling.
+- `src/main.js` contains the main viewer logic and coordinates the map, slides,
+  overlays and other frontend modules.
+- `src/api/` contains communication with the TileServer.
+- `src/components/` contains reusable interface components.
+- `src/controls/` contains the OpenLayers viewer controls.
+- `src/panels/` contains the Files, Layers and Settings panels.
+- `src/utils/` contains shared helper functions.
+- `src/style.css` imports the experimental viewer styles.
+- `src/styles/` contains the viewer styles, split into separate files.
 - `vite.config.js` defines how the experimental viewer is built.
 
 The generated files for the experimental viewer are:
@@ -277,8 +283,8 @@ The legacy build does not remove the generated experimental viewer files.
 
 ### Building the experimental viewer
 
-After changing `src/main.js` or `src/style.css`, rebuild the experimental
-viewer with:
+After changing any of the experimental frontend source files under `src/`,
+rebuild the experimental viewer with:
 
 ```bash
 npm run build
