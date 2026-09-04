@@ -47,9 +47,8 @@ function createMapControlsController({
       maxDelta: preset.maxDelta,
     });
 
-    // OpenLayers 10.10 internally uses 300 scroll-delta
-    // units per zoom level, but does not expose a public
-    // sensitivity option.
+    // OpenLayers does not expose mouse-wheel sensitivity publicly.
+    // deltaPerZoom_ is private API, so verify this when upgrading OpenLayers.
     interaction.deltaPerZoom_ =
       preset.deltaPerZoom;
 

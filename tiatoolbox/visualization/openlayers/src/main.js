@@ -268,6 +268,8 @@ const scaleBarThemeColours = {
   "high-contrast": "#ffffff",
 };
 
+// Load persisted settings before creating controls that depend on them.
+// Settings events are bound after all feature controllers are created.
 const settingsPanelController =
   createSettingsPanelController({
     viewerApp,
