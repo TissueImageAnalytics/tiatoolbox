@@ -2433,6 +2433,32 @@ def test_semantic_segmentation_returns_json_dict() -> None:
         assert feature["class_value"] in class_dict
 
 
+def test_semantic_segmentation_qupath_json_preserves_holes() -> None:
+    """Nested tissue classes should become holes in the surrounding polygon."""
+    preds_np = np.ones((16, 16), dtype=np.uint8)
+    preds_np[5:11, 5:11] = 2
+
+    qupath_json = _semantic_segmentations_as_qupath_json(
+        layer_list=[1, 2],
+        preds=da.from_array(preds_np, chunks=(16, 16)),
+        scale_factor=(1.0, 1.0),
+        class_dict={1: "Stroma", 2: "Tumour"},
+        save_path=None,
+        verbose=False,
+    )
+
+    stroma = [feat for feat in qupath_json["features"] if feat["class_value"] == 1]
+    tumour = [feat for feat in qupath_json["features"] if feat["class_value"] == 2]
+
+    assert len(stroma) == 1
+    assert len(tumour) == 1
+    stroma_geom = stroma[0]["geometry"]
+    assert stroma_geom["type"] == "Polygon"
+    assert len(stroma_geom["coordinates"]) == 2
+    assert tumour[0]["geometry"]["type"] == "Polygon"
+    assert len(tumour[0]["geometry"]["coordinates"]) == 1
+
+
 def test_dict_to_store_patch_predictions_returns_qupath_json() -> None:
     """Test for dict_to_store_patch_predictions QuPath JSON dict."""
     # Fake patch output
