@@ -2433,6 +2433,25 @@ def test_semantic_segmentation_returns_json_dict() -> None:
         assert feature["class_value"] in class_dict
 
 
+def test_semantic_segmentation_qupath_json_skips_empty_classes() -> None:
+    """Classes with no pixels should be skipped when contour hierarchy is None."""
+    preds_np = np.ones((8, 8), dtype=np.uint8)
+
+    qupath_json = _semantic_segmentations_as_qupath_json(
+        layer_list=[1, 2],
+        preds=da.from_array(preds_np, chunks=(8, 8)),
+        scale_factor=(1.0, 1.0),
+        class_dict={1: "Stroma", 2: "Tumour"},
+        save_path=None,
+        verbose=False,
+    )
+
+    assert qupath_json["type"] == "FeatureCollection"
+    assert len(qupath_json["features"]) == 1
+    assert qupath_json["features"][0]["class_value"] == 1
+    assert qupath_json["features"][0]["name"] == "Stroma"
+
+
 def test_semantic_segmentation_qupath_json_preserves_holes() -> None:
     """Nested tissue classes should become holes in the surrounding polygon."""
     preds_np = np.ones((16, 16), dtype=np.uint8)
