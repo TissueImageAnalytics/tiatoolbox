@@ -161,11 +161,20 @@ describe("loadSlide", () => {
 });
 
 describe("getConfiguredFiles", () => {
-    it("returns configured files", async () => {
-        const files = [
-            "/slides/CMU-1.svs",
-            "/slides/CMU-2.svs",
-        ];
+    it("returns configured slide files", async () => {
+        const files = {
+            directory: "slides",
+            files: [
+                {
+                    name: "CMU-1.svs",
+                    path: "slides/CMU-1.svs",
+                },
+                {
+                    name: "CMU-2.svs",
+                    path: "slides/CMU-2.svs",
+                },
+            ],
+        };
 
         const fetchMock = vi.fn().mockResolvedValue(
             mockResponse({
@@ -176,15 +185,15 @@ describe("getConfiguredFiles", () => {
         vi.stubGlobal("fetch", fetchMock);
 
         await expect(
-            getConfiguredFiles("slides"),
+            getConfiguredFiles("slide"),
         ).resolves.toEqual(files);
 
         expect(fetchMock).toHaveBeenCalledWith(
-            "/tileserver/files/slides",
+            "/tileserver/files/slide",
         );
     });
 
-    it("throws when configured files cannot be retrieved", async () => {
+    it("throws when configured overlay files cannot be retrieved", async () => {
         vi.stubGlobal(
             "fetch",
             vi.fn().mockResolvedValue(
@@ -195,9 +204,9 @@ describe("getConfiguredFiles", () => {
         );
 
         await expect(
-            getConfiguredFiles("overlays"),
+            getConfiguredFiles("overlay"),
         ).rejects.toThrow(
-            "Failed to get configured overlays files.",
+            "Failed to get configured overlay files.",
         );
     });
 });
