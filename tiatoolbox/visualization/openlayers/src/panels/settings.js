@@ -14,6 +14,7 @@ const interfaceThemeColours = {
 const settingsStorageKey =
     "tiatoolbox-openlayers-settings";
 
+// Manage panel state, persisted settings, defaults, appearance and events.
 function createSettingsPanelController({
     viewerApp,
     panel,

@@ -41,6 +41,7 @@ const gridThemeColours = {
     },
 };
 
+// Manage world-coordinate and screen-space graticules and their settings.
 function createGridController({
     map,
     projection,

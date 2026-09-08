@@ -5,6 +5,7 @@ import Zoom from "ol/control/Zoom.js";
 import { format as formatCoordinate } from "ol/coordinate.js";
 import MouseWheelZoom from "ol/interaction/MouseWheelZoom.js";
 
+// Manage map navigation controls and settings that depend on the loaded slide.
 function createMapControlsController({
     map,
     viewerApp,

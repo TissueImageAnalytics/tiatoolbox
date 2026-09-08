@@ -1,3 +1,4 @@
+// Create a searchable, keyboard-accessible file selector for configured files.
 let fileSelectId = 0;
 
 function createFileSelect(placeholder) {

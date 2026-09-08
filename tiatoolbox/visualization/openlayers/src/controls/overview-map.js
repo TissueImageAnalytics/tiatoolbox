@@ -17,6 +17,7 @@ const overviewMapSizes = {
     },
 };
 
+// Manage the overview map source, view, size, refresh and visibility.
 function createOverviewMapController({
     map,
     source,

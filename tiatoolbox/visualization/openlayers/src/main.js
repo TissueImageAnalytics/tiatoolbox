@@ -408,7 +408,7 @@ const filesPanelController =
 
 filesPanelController.setOpen(true);
 
-// Dynamic slide loading
+// Resolve and load the initial slide for dynamic TileServer mode.
 const params = new URLSearchParams(window.location.search);
 
 const slidePath =
@@ -506,7 +506,7 @@ if (baseSource !== null) {
     });
 }
 
-// Restricting permitted margin around slide
+// Pad the view extent so users can pan slightly beyond the slide.
 const viewExtentMargin = 0.1;
 
 function getPaddedExtent(slideExtent) {
@@ -884,7 +884,7 @@ async function removeSlide() {
     filesPanelController.updateActionState();
 }
 
-// Slide switching
+// Replace the current slide and rebuild its source, projection and view.
 async function switchSlide(slidePath) {
     if (sessionId === null) {
         throw new Error("Dynamic slide switching requires a TileServer session.");
@@ -925,7 +925,7 @@ async function switchSlide(slidePath) {
 
     addProjection(newProjection);
 
-    // View
+    // Rebuild the view for the new slide extent and projection.
     const newCenter = [
         (newExtent[0] + newExtent[2]) / 2,
         (newExtent[1] + newExtent[3]) / 2,
@@ -1075,6 +1075,7 @@ async function removeOverlay(layerName) {
     try {
         await removeTileServerOverlay(layerName);
     } catch (error) {
+        // Restore the frontend layer if the TileServer removal fails.
         overlayLayer.setSource(source);
         overlayLayer.setVisible(true);
         map.addLayer(overlayLayer);

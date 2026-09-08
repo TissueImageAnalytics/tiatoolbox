@@ -1,5 +1,6 @@
 import { getFileStem } from "../utils/paths.js";
 
+// Manage layer visibility, opacity, ordering, removal and panel state.
 function createLayersPanelController({
     panel,
     toggle,
