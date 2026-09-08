@@ -1,315 +1,315 @@
 let fileSelectId = 0;
 
 function createFileSelect(placeholder) {
-  const select = document.createElement("div");
-  select.className = "viewer-file-select";
+    const select = document.createElement("div");
+    select.className = "viewer-file-select";
 
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "viewer-file-select-button";
-  button.setAttribute("aria-haspopup", "listbox");
-  button.setAttribute("aria-expanded", "false");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "viewer-file-select-button";
+    button.setAttribute("aria-haspopup", "listbox");
+    button.setAttribute("aria-expanded", "false");
 
-  const label = document.createElement("span");
-  label.className = "viewer-file-select-label";
-  label.textContent = placeholder;
+    const label = document.createElement("span");
+    label.className = "viewer-file-select-label";
+    label.textContent = placeholder;
 
-  button.append(label);
+    button.append(label);
 
-  const menu = document.createElement("div");
-  menu.className = "viewer-file-select-menu";
-  menu.hidden = true;
+    const menu = document.createElement("div");
+    menu.className = "viewer-file-select-menu";
+    menu.hidden = true;
 
-  const search = document.createElement("input");
-  search.type = "text";
-  search.className = "viewer-file-select-search";
-  search.placeholder = "Search";
-  search.autocomplete = "off";
-  search.spellcheck = false;
-  search.setAttribute(
-    "aria-label",
-    `Search ${placeholder.toLowerCase()}`,
-  );
-
-  const options = document.createElement("div");
-  options.className = "viewer-file-select-options";
-  options.id = `viewer-file-select-${fileSelectId}`;
-  options.setAttribute("role", "listbox");
-
-  fileSelectId += 1;
-
-  button.setAttribute("aria-controls", options.id);
-  search.setAttribute("aria-controls", options.id);
-
-  menu.append(search, options);
-  select.append(button, menu);
-
-  let files = [];
-  let selectedPath = "";
-  let currentPlaceholder = placeholder;
-  let filteredFiles = [];
-  let activeIndex = -1;
-
-  function setExpanded(expanded) {
-    select.classList.toggle("open", expanded);
-    menu.hidden = !expanded;
-    button.setAttribute(
-      "aria-expanded",
-      expanded.toString(),
-    );
-  }
-
-  function updateLabel() {
-    if (selectedPath === "") {
-      label.textContent = currentPlaceholder;
-      label.title = "";
-      return;
-    }
-
-    const selectedFile = files.find(
-      (file) => file.path === selectedPath,
+    const search = document.createElement("input");
+    search.type = "text";
+    search.className = "viewer-file-select-search";
+    search.placeholder = "Search";
+    search.autocomplete = "off";
+    search.spellcheck = false;
+    search.setAttribute(
+        "aria-label",
+        `Search ${placeholder.toLowerCase()}`,
     );
 
-    const fileName =
-      selectedFile?.name ??
-      selectedPath.split(/[\\/]/).pop() ??
-      selectedPath;
+    const options = document.createElement("div");
+    options.className = "viewer-file-select-options";
+    options.id = `viewer-file-select-${fileSelectId}`;
+    options.setAttribute("role", "listbox");
 
-    label.textContent = fileName;
-    label.title = selectedPath;
-  }
+    fileSelectId += 1;
 
-  function selectFile(file) {
-    selectedPath = file.path;
-    updateLabel();
-    close();
+    button.setAttribute("aria-controls", options.id);
+    search.setAttribute("aria-controls", options.id);
 
-    select.dispatchEvent(
-      new CustomEvent("change", {
-        detail: file.path,
-      }),
-    );
-  }
+    menu.append(search, options);
+    select.append(button, menu);
 
-  function renderOptions() {
-    const query = search.value
-      .trim()
-      .toLocaleLowerCase();
+    let files = [];
+    let selectedPath = "";
+    let currentPlaceholder = placeholder;
+    let filteredFiles = [];
+    let activeIndex = -1;
 
-    filteredFiles = files.filter(
-      (file) =>
-        file.name
-          .toLocaleLowerCase()
-          .includes(query),
-    );
-
-    options.replaceChildren();
-
-    if (filteredFiles.length === 0) {
-      const empty = document.createElement("div");
-      empty.className = "viewer-file-select-empty";
-      empty.textContent = "No matches";
-      options.append(empty);
-      return;
+    function setExpanded(expanded) {
+        select.classList.toggle("open", expanded);
+        menu.hidden = !expanded;
+        button.setAttribute(
+            "aria-expanded",
+            expanded.toString(),
+        );
     }
 
-    filteredFiles.forEach((file, index) => {
-      const option = document.createElement("button");
+    function updateLabel() {
+        if (selectedPath === "") {
+            label.textContent = currentPlaceholder;
+            label.title = "";
+            return;
+        }
 
-      option.type = "button";
-      option.className =
-        "viewer-file-select-option";
-      option.textContent = file.name;
-      option.title = file.path;
-      option.setAttribute("role", "option");
-      option.setAttribute(
-        "aria-selected",
-        (file.path === selectedPath).toString(),
-      );
+        const selectedFile = files.find(
+            (file) => file.path === selectedPath,
+        );
 
-      if (file.path === selectedPath) {
-        option.classList.add("selected");
-      }
+        const fileName =
+            selectedFile?.name ??
+            selectedPath.split(/[\\/]/).pop() ??
+            selectedPath;
 
-      if (index === activeIndex) {
-        option.classList.add("active");
-      }
-
-      option.addEventListener("mousedown", (event) => {
-        event.preventDefault();
-      });
-
-      option.addEventListener("click", (event) => {
-        event.stopPropagation();
-        selectFile(file);
-      });
-
-      options.append(option);
-    });
-
-    options
-      .querySelector(
-        ".viewer-file-select-option.active",
-      )
-      ?.scrollIntoView({
-        block: "nearest",
-      });
-  }
-
-  function open() {
-    if (button.disabled || files.length === 0) {
-      return;
+        label.textContent = fileName;
+        label.title = selectedPath;
     }
 
-    for (const otherSelect of document.querySelectorAll(
-      ".viewer-file-select.open",
-    )) {
-      if (otherSelect !== select) {
-        otherSelect.close?.();
-      }
-    }
-
-    search.value = "";
-    activeIndex = -1;
-    renderOptions();
-    setExpanded(true);
-
-    requestAnimationFrame(() => {
-      search.focus();
-    });
-  }
-
-  function close() {
-    search.value = "";
-    activeIndex = -1;
-    setExpanded(false);
-  }
-
-  select.close = close;
-
-  select.setFiles = (
-    newFiles,
-    newPlaceholder,
-  ) => {
-    files = newFiles;
-    selectedPath = "";
-    currentPlaceholder = newPlaceholder;
-
-    updateLabel();
-    close();
-
-    select.disabled = files.length === 0;
-  };
-
-  Object.defineProperty(select, "value", {
-    get() {
-      return selectedPath;
-    },
-    set(filePath) {
-      selectedPath = filePath;
-      updateLabel();
-      close();
-    },
-  });
-
-  Object.defineProperty(select, "disabled", {
-    get() {
-      return button.disabled;
-    },
-    set(disabled) {
-      button.disabled = disabled;
-
-      select.classList.toggle(
-        "disabled",
-        disabled,
-      );
-
-      if (disabled) {
+    function selectFile(file) {
+        selectedPath = file.path;
+        updateLabel();
         close();
-      }
-    },
-  });
 
-  button.addEventListener("click", () => {
-    if (select.classList.contains("open")) {
-      close();
-      return;
+        select.dispatchEvent(
+            new CustomEvent("change", {
+                detail: file.path,
+            }),
+        );
     }
 
-    open();
-  });
+    function renderOptions() {
+        const query = search.value
+            .trim()
+            .toLocaleLowerCase();
 
-  button.addEventListener("keydown", (event) => {
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      open();
+        filteredFiles = files.filter(
+            (file) =>
+                file.name
+                    .toLocaleLowerCase()
+                    .includes(query),
+        );
+
+        options.replaceChildren();
+
+        if (filteredFiles.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "viewer-file-select-empty";
+            empty.textContent = "No matches";
+            options.append(empty);
+            return;
+        }
+
+        filteredFiles.forEach((file, index) => {
+            const option = document.createElement("button");
+
+            option.type = "button";
+            option.className =
+                "viewer-file-select-option";
+            option.textContent = file.name;
+            option.title = file.path;
+            option.setAttribute("role", "option");
+            option.setAttribute(
+                "aria-selected",
+                (file.path === selectedPath).toString(),
+            );
+
+            if (file.path === selectedPath) {
+                option.classList.add("selected");
+            }
+
+            if (index === activeIndex) {
+                option.classList.add("active");
+            }
+
+            option.addEventListener("mousedown", (event) => {
+                event.preventDefault();
+            });
+
+            option.addEventListener("click", (event) => {
+                event.stopPropagation();
+                selectFile(file);
+            });
+
+            options.append(option);
+        });
+
+        options
+            .querySelector(
+                ".viewer-file-select-option.active",
+            )
+            ?.scrollIntoView({
+                block: "nearest",
+            });
     }
-  });
 
-  search.addEventListener("input", () => {
-    activeIndex = -1;
-    renderOptions();
-  });
+    function open() {
+        if (button.disabled || files.length === 0) {
+            return;
+        }
 
-  search.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      close();
-      button.focus();
-      return;
+        for (const otherSelect of document.querySelectorAll(
+            ".viewer-file-select.open",
+        )) {
+            if (otherSelect !== select) {
+                otherSelect.close?.();
+            }
+        }
+
+        search.value = "";
+        activeIndex = -1;
+        renderOptions();
+        setExpanded(true);
+
+        requestAnimationFrame(() => {
+            search.focus();
+        });
     }
 
-    if (filteredFiles.length === 0) {
-      return;
+    function close() {
+        search.value = "";
+        activeIndex = -1;
+        setExpanded(false);
     }
 
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
+    select.close = close;
 
-      activeIndex = Math.min(
-        activeIndex + 1,
-        filteredFiles.length - 1,
-      );
+    select.setFiles = (
+        newFiles,
+        newPlaceholder,
+    ) => {
+        files = newFiles;
+        selectedPath = "";
+        currentPlaceholder = newPlaceholder;
 
-      renderOptions();
-      return;
-    }
+        updateLabel();
+        close();
 
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
+        select.disabled = files.length === 0;
+    };
 
-      activeIndex =
-        activeIndex <= 0
-          ? filteredFiles.length - 1
-          : activeIndex - 1;
+    Object.defineProperty(select, "value", {
+        get() {
+            return selectedPath;
+        },
+        set(filePath) {
+            selectedPath = filePath;
+            updateLabel();
+            close();
+        },
+    });
 
-      renderOptions();
-      return;
-    }
+    Object.defineProperty(select, "disabled", {
+        get() {
+            return button.disabled;
+        },
+        set(disabled) {
+            button.disabled = disabled;
 
-    if (event.key === "Enter") {
-      event.preventDefault();
+            select.classList.toggle(
+                "disabled",
+                disabled,
+            );
 
-      const index =
-        activeIndex >= 0 ? activeIndex : 0;
+            if (disabled) {
+                close();
+            }
+        },
+    });
 
-      const file = filteredFiles[index];
+    button.addEventListener("click", () => {
+        if (select.classList.contains("open")) {
+            close();
+            return;
+        }
 
-      if (file !== undefined) {
-        selectFile(file);
-      }
-    }
-  });
+        open();
+    });
 
-  document.addEventListener("click", (event) => {
-    if (!select.contains(event.target)) {
-      close();
-    }
-  });
+    button.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowDown") {
+            event.preventDefault();
+            open();
+        }
+    });
 
-  select.disabled = true;
+    search.addEventListener("input", () => {
+        activeIndex = -1;
+        renderOptions();
+    });
 
-  return select;
+    search.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            event.preventDefault();
+            close();
+            button.focus();
+            return;
+        }
+
+        if (filteredFiles.length === 0) {
+            return;
+        }
+
+        if (event.key === "ArrowDown") {
+            event.preventDefault();
+
+            activeIndex = Math.min(
+                activeIndex + 1,
+                filteredFiles.length - 1,
+            );
+
+            renderOptions();
+            return;
+        }
+
+        if (event.key === "ArrowUp") {
+            event.preventDefault();
+
+            activeIndex =
+                activeIndex <= 0
+                    ? filteredFiles.length - 1
+                    : activeIndex - 1;
+
+            renderOptions();
+            return;
+        }
+
+        if (event.key === "Enter") {
+            event.preventDefault();
+
+            const index =
+                activeIndex >= 0 ? activeIndex : 0;
+
+            const file = filteredFiles[index];
+
+            if (file !== undefined) {
+                selectFile(file);
+            }
+        }
+    });
+
+    document.addEventListener("click", (event) => {
+        if (!select.contains(event.target)) {
+            close();
+        }
+    });
+
+    select.disabled = true;
+
+    return select;
 }
 
 export { createFileSelect };
