@@ -47,8 +47,9 @@ describe("createSession", () => {
             createSession(),
         ).resolves.toBe("test-session");
 
-        expect(fetchMock).toHaveBeenCalledOnce();
-        expect(fetchMock).toHaveBeenCalledWith(
+        expect(
+            fetchMock,
+        ).toHaveBeenCalledExactlyOnceWith(
             "/tileserver/session_id",
         );
     });

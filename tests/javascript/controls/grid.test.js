@@ -372,11 +372,7 @@ describe("initialisation", () => {
 
         expect(
             onGraticulesChange,
-        ).toHaveBeenCalledOnce();
-
-        expect(
-            onGraticulesChange,
-        ).toHaveBeenCalledWith(
+        ).toHaveBeenCalledExactlyOnceWith(
             graticule,
             screenSpaceGraticule,
         );

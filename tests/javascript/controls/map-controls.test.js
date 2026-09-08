@@ -359,11 +359,7 @@ describe("initialisation", () => {
 
         expect(
             map.addInteraction,
-        ).toHaveBeenCalledOnce();
-
-        expect(
-            map.addInteraction,
-        ).toHaveBeenCalledWith(
+        ).toHaveBeenCalledExactlyOnceWith(
             mouseWheelInteraction,
         );
 
@@ -560,11 +556,7 @@ describe("zoom level input", () => {
 
         expect(
             view.setZoom,
-        ).toHaveBeenCalledOnce();
-
-        expect(
-            view.setZoom,
-        ).toHaveBeenCalledWith(
+        ).toHaveBeenCalledExactlyOnceWith(
             6.5,
         );
 
@@ -724,21 +716,13 @@ describe("reset view", () => {
 
         expect(
             view.setRotation,
-        ).toHaveBeenCalledOnce();
-
-        expect(
-            view.setRotation,
-        ).toHaveBeenCalledWith(
+        ).toHaveBeenCalledExactlyOnceWith(
             0,
         );
 
         expect(
             view.fit,
-        ).toHaveBeenCalledOnce();
-
-        expect(
-            view.fit,
-        ).toHaveBeenCalledWith(
+        ).toHaveBeenCalledExactlyOnceWith(
             [
                 0,
                 0,
@@ -1185,11 +1169,7 @@ describe("mouse wheel zoom sensitivity", () => {
 
         expect(
             map.removeInteraction,
-        ).toHaveBeenCalledOnce();
-
-        expect(
-            map.removeInteraction,
-        ).toHaveBeenCalledWith(
+        ).toHaveBeenCalledExactlyOnceWith(
             mouseWheelInteraction,
         );
 
@@ -1286,11 +1266,7 @@ describe("zoom button step", () => {
 
         expect(
             map.removeControl,
-        ).toHaveBeenCalledOnce();
-
-        expect(
-            map.removeControl,
-        ).toHaveBeenCalledWith(
+        ).toHaveBeenCalledExactlyOnceWith(
             zoomControlInstance,
         );
 

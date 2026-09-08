@@ -593,11 +593,7 @@ describe("layer controls", () => {
 
         expect(
             onRemoveLayer,
-        ).toHaveBeenCalledOnce();
-
-        expect(
-            onRemoveLayer,
-        ).toHaveBeenCalledWith(
+        ).toHaveBeenCalledExactlyOnceWith(
             "Tumour",
         );
     });

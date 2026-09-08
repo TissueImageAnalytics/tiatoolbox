@@ -251,11 +251,7 @@ describe("initialisation", () => {
 
         expect(
             map.addControl,
-        ).toHaveBeenCalledOnce();
-
-        expect(
-            map.addControl,
-        ).toHaveBeenCalledWith(
+        ).toHaveBeenCalledExactlyOnceWith(
             control,
         );
 

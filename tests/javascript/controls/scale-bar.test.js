@@ -225,21 +225,13 @@ describe("initialisation", () => {
 
         expect(
             map.addControl,
-        ).toHaveBeenCalledOnce();
-
-        expect(
-            map.addControl,
-        ).toHaveBeenCalledWith(
+        ).toHaveBeenCalledExactlyOnceWith(
             control,
         );
 
         expect(
             onControlChange,
-        ).toHaveBeenCalledOnce();
-
-        expect(
-            onControlChange,
-        ).toHaveBeenCalledWith(
+        ).toHaveBeenCalledExactlyOnceWith(
             control,
         );
     });
@@ -619,11 +611,7 @@ describe("size and units", () => {
 
         expect(
             map.removeControl,
-        ).toHaveBeenCalledOnce();
-
-        expect(
-            map.removeControl,
-        ).toHaveBeenCalledWith(
+        ).toHaveBeenCalledExactlyOnceWith(
             originalControl,
         );
 
