@@ -1,0 +1,61 @@
+.layer-editor-header,
+.viewer-panel-header {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--viewer-control-border);
+    font-size: 13px;
+    font-weight: 600;
+}
+/* Files and Layers controls */
+
+.left-panel-controls {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    width: 32px;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.3);
+}
+
+
+.left-panel-controls .viewer-panel-control,
+.left-panel-controls .layer-editor-control {
+    position: static;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    margin: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+
+.left-panel-controls .viewer-panel-control:hover,
+.left-panel-controls .layer-editor-control:hover {
+    background: transparent;
+}
+
+
+.left-panel-controls .viewer-panel-control button,
+.left-panel-controls .viewer-panel-control button:hover,
+.left-panel-controls .viewer-panel-control button:active,
+.left-panel-controls .viewer-panel-control button:focus,
+.left-panel-controls .viewer-panel-control button.active,
+.left-panel-controls .viewer-panel-control button.active:hover,
+.left-panel-controls .viewer-panel-control button.active:active,
+.left-panel-controls .viewer-panel-control button.active:focus,
+.left-panel-controls .layer-editor-control button,
+.left-panel-controls .layer-editor-control button:hover,
+.left-panel-controls .layer-editor-control button:active,
+.left-panel-controls .layer-editor-control button:focus,
+.left-panel-controls .layer-editor-control button.active,
+.left-panel-controls .layer-editor-control button.active:hover,
+.left-panel-controls .layer-editor-control button.active:active,
+.left-panel-controls .layer-editor-control button.active:focus {
+    border-radius: 0;
+}
