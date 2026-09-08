@@ -9,7 +9,7 @@ export default defineConfig({
 
     test: {
         environment: "jsdom",
-        dir: "../../../tests/openlayers",
+        dir: "../../../tests/javascript",
         include: ["**/*.test.js"],
         clearMocks: true,
         restoreMocks: true,
