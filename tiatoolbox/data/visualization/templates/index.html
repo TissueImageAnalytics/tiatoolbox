@@ -23,13 +23,49 @@
             data-layers="{{ layers }}"
         ></div>
 
-        <div class="layer-editor-control ol-unselectable ol-control">
+        <div class="reset-view-control ol-unselectable ol-control">
             <button
-                id="layer-editor-toggle"
+                id="reset-view-button"
                 type="button"
-                title="Toggle layer editor"
+                title="Reset view"
+                aria-label="Reset view"
             >
-                <i class="fas fa-sliders-h"></i>
+                <i class="fas fa-home"></i>
+            </button>
+        </div>
+
+        <div class="left-panel-controls ol-unselectable">
+            <div class="viewer-panel-control ol-control">
+                <button
+                    id="viewer-panel-toggle"
+                    type="button"
+                    title="Files"
+                    aria-label="Files"
+                >
+                    <i class="fas fa-folder-open"></i>
+                </button>
+            </div>
+
+            <div class="layer-editor-control ol-control">
+                <button
+                    id="layer-editor-toggle"
+                    type="button"
+                    title="Layers"
+                    aria-label="Layers"
+                >
+                    <i class="fas fa-sliders-h"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="settings-control ol-unselectable ol-control">
+            <button
+                id="settings-toggle"
+                type="button"
+                title="Settings"
+                aria-label="Settings"
+            >
+                <i class="fas fa-cog"></i>
             </button>
         </div>
 
@@ -45,15 +81,671 @@
             </div>
         </aside>
 
-        <div class="viewer-panel-control ol-unselectable ol-control">
-            <button
-                id="viewer-panel-toggle"
-                type="button"
-                title="Toggle viewer panel"
-            >
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
+        <aside id="settings-panel" class="settings-panel hidden">
+            <div class="settings-panel-header">
+                <span>Settings</span>
+
+                <button
+                    id="settings-close"
+                    class="settings-close"
+                    type="button"
+                    title="Close settings"
+                    aria-label="Close settings"
+                >
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="settings-tabs">
+                <button
+                    class="settings-tab active"
+                    type="button"
+                    data-settings-tab="appearance"
+                >
+                    Appearance
+                </button>
+
+                <button
+                    class="settings-tab"
+                    type="button"
+                    data-settings-tab="controls"
+                >
+                    Controls
+                </button>
+
+                <button
+                    class="settings-tab"
+                    type="button"
+                    data-settings-tab="navigation"
+                >
+                    Navigation
+                </button>
+
+                <button
+                    class="settings-tab"
+                    type="button"
+                    data-settings-tab="scale-bar"
+                >
+                    Scale Bar
+                </button>
+
+                <button
+                    class="settings-tab"
+                    type="button"
+                    data-settings-tab="grid-coordinates"
+                >
+                    Grid & Coordinates
+                </button>
+            </div>
+
+            <div class="settings-panel-body">
+                <section
+                    class="settings-tab-panel"
+                    data-settings-panel="appearance"
+                >
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Theme
+                            </div>
+                            <div class="settings-option-description">
+                                Change the appearance of the viewer interface.
+                            </div>
+                        </div>
+
+                        <select
+                            id="settings-theme"
+                            class="settings-select"
+                            aria-label="Interface theme"
+                        >
+                            <option value="dark" selected>
+                                Dark
+                            </option>
+                            <option value="light">
+                                Light
+                            </option>
+                            <option value="high-contrast">
+                                High Contrast
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Interface opacity
+                            </div>
+                            <div class="settings-option-description">
+                                Adjust the background opacity of the viewer controls and panels.
+                            </div>
+                        </div>
+
+                        <div class="settings-range-control">
+                            <input
+                                id="settings-control-opacity"
+                                class="settings-range"
+                                type="range"
+                                min="40"
+                                max="100"
+                                step="5"
+                                value="100"
+                                aria-label="Interface opacity"
+                            >
+                            <span
+                                id="settings-control-opacity-value"
+                                class="settings-range-value"
+                            >
+                                100%
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Reset settings
+                            </div>
+                            <div class="settings-option-description">
+                                Restore all viewer settings to their default values.
+                            </div>
+                        </div>
+
+                        <button
+                            id="settings-reset-defaults"
+                            class="settings-reset-button"
+                            type="button"
+                        >
+                            Reset to defaults
+                        </button>
+                    </div>
+                </section>
+
+                <section
+                    class="settings-tab-panel hidden"
+                    data-settings-panel="controls"
+                >
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Zoom
+                            </div>
+                            <div class="settings-option-description">
+                                Show the zoom controls.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-zoom-visible"
+                                type="checkbox"
+                                aria-label="Show zoom controls"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Editable zoom level
+                            </div>
+                            <div class="settings-option-description">
+                                Show the editable zoom level box.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-zoom-level-visible"
+                                type="checkbox"
+                                aria-label="Show editable zoom level"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Rotation
+                            </div>
+                            <div class="settings-option-description">
+                                Show the rotation reset control.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-rotation-visible"
+                                type="checkbox"
+                                aria-label="Show rotation control"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Graticule
+                            </div>
+                            <div class="settings-option-description">
+                                Show the graticule control.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-graticule-visible"
+                                type="checkbox"
+                                aria-label="Show graticule control"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Screen-space graticule
+                            </div>
+                            <div class="settings-option-description">
+                                Show the screen-space graticule control.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-screen-space-graticule-visible"
+                                type="checkbox"
+                                aria-label="Show screen-space graticule control"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Reset view
+                            </div>
+                            <div class="settings-option-description">
+                                Show the reset view control.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-reset-view-visible"
+                                type="checkbox"
+                                aria-label="Show reset view control"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Fullscreen
+                            </div>
+                            <div class="settings-option-description">
+                                Show the fullscreen control.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-fullscreen-visible"
+                                type="checkbox"
+                                aria-label="Show fullscreen control"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Mouse coordinates
+                            </div>
+                            <div class="settings-option-description">
+                                Show the mouse coordinates.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-mouse-position-visible"
+                                type="checkbox"
+                                aria-label="Show mouse coordinates"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Overview map
+                            </div>
+                            <div class="settings-option-description">
+                                Show the overview map.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-overview-map-visible"
+                                type="checkbox"
+                                aria-label="Show overview map"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Overview map size
+                            </div>
+                            <div class="settings-option-description">
+                                Change the size of the overview map.
+                            </div>
+                        </div>
+
+                        <select
+                            id="settings-overview-map-size"
+                            class="settings-select"
+                            aria-label="Overview map size"
+                        >
+                            <option value="small">
+                                Small
+                            </option>
+                            <option value="default" selected>
+                                Default
+                            </option>
+                            <option value="large">
+                                Large
+                            </option>
+                        </select>
+                    </div>
+                </section>
+
+                <section
+                    class="settings-tab-panel hidden"
+                    data-settings-panel="navigation"
+                >
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Mouse-wheel zoom sensitivity
+                            </div>
+                            <div class="settings-option-description">
+                                Adjust how strongly the viewer zooms when using the mouse wheel.
+                            </div>
+                        </div>
+
+                        <select
+                            id="settings-mouse-wheel-zoom-sensitivity"
+                            class="settings-select"
+                            aria-label="Mouse-wheel zoom sensitivity"
+                        >
+                            <option value="low">
+                                Low
+                            </option>
+                            <option value="default" selected>
+                                Default
+                            </option>
+                            <option value="high">
+                                High
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Zoom button step
+                            </div>
+                            <div class="settings-option-description">
+                                Set how many zoom levels the + and − buttons move per click.
+                            </div>
+                        </div>
+
+                        <select
+                            id="settings-zoom-button-step"
+                            class="settings-select"
+                            aria-label="Zoom button step"
+                        >
+                            <option value="0.1">
+                                0.1x
+                            </option>
+                            <option value="0.5">
+                                0.5x
+                            </option>
+                            <option value="1" selected>
+                                1x
+                            </option>
+                            <option value="2">
+                                2x
+                            </option>
+                        </select>
+                    </div>
+                </section>
+
+                <section
+                    class="settings-tab-panel hidden"
+                    data-settings-panel="scale-bar"
+                >
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Show scale bar
+                            </div>
+                            <div class="settings-option-description">
+                                Display the scale bar on the viewer.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-scale-bar-enabled"
+                                type="checkbox"
+                                aria-label="Show scale bar"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Colour
+                            </div>
+                            <div class="settings-option-description">
+                                Change the colour of the scale bar and text.
+                            </div>
+                        </div>
+
+                        <input
+                            id="settings-scale-bar-colour"
+                            class="settings-colour-input"
+                            type="color"
+                            value="#ffffff"
+                            aria-label="Scale bar colour"
+                        >
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Background opacity
+                            </div>
+                            <div class="settings-option-description">
+                                Adjust the opacity of the scale bar background.
+                            </div>
+                        </div>
+
+                        <div class="settings-range-control">
+                            <input
+                                id="settings-scale-bar-opacity"
+                                class="settings-range"
+                                type="range"
+                                min="0"
+                                max="100"
+                                step="5"
+                                value="100"
+                                aria-label="Scale bar background opacity"
+                            >
+                            <span
+                                id="settings-scale-bar-opacity-value"
+                                class="settings-range-value"
+                            >
+                                100%
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Size
+                            </div>
+                            <div class="settings-option-description">
+                                Change the size of the scale bar.
+                            </div>
+                        </div>
+
+                        <select
+                            id="settings-scale-bar-size"
+                            class="settings-select"
+                            aria-label="Scale bar size"
+                        >
+                            <option value="small">
+                                Small
+                            </option>
+                            <option value="default" selected>
+                                Default
+                            </option>
+                            <option value="large">
+                                Large
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Units
+                            </div>
+                            <div class="settings-option-description">
+                                Change the measurement units used by the scale bar.
+                            </div>
+                        </div>
+
+                        <select
+                            id="settings-scale-bar-units"
+                            class="settings-select"
+                            aria-label="Scale bar units"
+                        >
+                            <option value="metric" selected>
+                                Metric
+                            </option>
+                            <option value="imperial">
+                                Imperial
+                            </option>
+                        </select>
+                    </div>
+                </section>
+
+                <section
+                    class="settings-tab-panel hidden"
+                    data-settings-panel="grid-coordinates"
+                >
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Grid theme
+                            </div>
+                            <div class="settings-option-description">
+                                Change the appearance of the grid and its labels.
+                            </div>
+                        </div>
+
+                        <select
+                            id="settings-grid-theme"
+                            class="settings-select"
+                            aria-label="Grid theme"
+                        >
+                            <option value="default" selected>
+                                Default
+                            </option>
+                            <option value="light">
+                                Light
+                            </option>
+                            <option value="dark">
+                                Dark
+                            </option>
+                            <option value="light-contrast">
+                                Light Contrast
+                            </option>
+                            <option value="dark-contrast">
+                                Dark Contrast
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Grid opacity
+                            </div>
+                            <div class="settings-option-description">
+                                Adjust the opacity of the grid lines.
+                            </div>
+                        </div>
+
+                        <div class="settings-range-control">
+                            <input
+                                id="settings-grid-opacity"
+                                class="settings-range"
+                                type="range"
+                                min="0"
+                                max="100"
+                                step="5"
+                                value="50"
+                                aria-label="Grid opacity"
+                            >
+                            <span
+                                id="settings-grid-opacity-value"
+                                class="settings-range-value"
+                            >
+                                50%
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Grid spacing
+                            </div>
+                            <div class="settings-option-description">
+                                Change the spacing between grid lines.
+                            </div>
+                        </div>
+
+                        <select
+                            id="settings-grid-spacing"
+                            class="settings-select"
+                            aria-label="Grid spacing"
+                        >
+                            <option value="fine">
+                                Fine
+                            </option>
+                            <option value="default" selected>
+                                Default
+                            </option>
+                            <option value="coarse">
+                                Coarse
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Show grid labels
+                            </div>
+                            <div class="settings-option-description">
+                                Show coordinate labels on the grid.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-grid-labels-visible"
+                                type="checkbox"
+                                aria-label="Show grid labels"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+                </section>
+            </div>
+        </aside>
 
         <aside id="viewer-panel" class="viewer-panel">
             <div class="viewer-panel-header">
