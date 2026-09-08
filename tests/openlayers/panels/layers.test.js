@@ -1,732 +1,732 @@
 import {
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
 } from "vitest";
 
 import {
-  createLayersPanelController,
+    createLayersPanelController,
 } from "../../../tiatoolbox/visualization/openlayers/src/panels/layers.js";
 
 function createLayer({
-  source = {},
-  visible = true,
-  opacity = 1,
-  zIndex = 0,
+    source = {},
+    visible = true,
+    opacity = 1,
+    zIndex = 0,
 } = {}) {
-  let currentVisible = visible;
-  let currentOpacity = opacity;
-  let currentZIndex = zIndex;
+    let currentVisible = visible;
+    let currentOpacity = opacity;
+    let currentZIndex = zIndex;
 
-  return {
-    getSource: vi.fn(
-      () => source,
-    ),
+    return {
+        getSource: vi.fn(
+            () => source,
+        ),
 
-    getVisible: vi.fn(
-      () => currentVisible,
-    ),
+        getVisible: vi.fn(
+            () => currentVisible,
+        ),
 
-    setVisible: vi.fn(
-      (newVisible) => {
-        currentVisible =
-          newVisible;
-      },
-    ),
+        setVisible: vi.fn(
+            (newVisible) => {
+                currentVisible =
+                    newVisible;
+            },
+        ),
 
-    getOpacity: vi.fn(
-      () => currentOpacity,
-    ),
+        getOpacity: vi.fn(
+            () => currentOpacity,
+        ),
 
-    setOpacity: vi.fn(
-      (newOpacity) => {
-        currentOpacity =
-          newOpacity;
-      },
-    ),
+        setOpacity: vi.fn(
+            (newOpacity) => {
+                currentOpacity =
+                    newOpacity;
+            },
+        ),
 
-    getZIndex: vi.fn(
-      () => currentZIndex,
-    ),
+        getZIndex: vi.fn(
+            () => currentZIndex,
+        ),
 
-    setZIndex: vi.fn(
-      (newZIndex) => {
-        currentZIndex =
-          newZIndex;
-      },
-    ),
-  };
+        setZIndex: vi.fn(
+            (newZIndex) => {
+                currentZIndex =
+                    newZIndex;
+            },
+        ),
+    };
 }
 
 function createHarness({
-  slideLayer =
-    createLayer(),
-  currentSlidePath =
-    "/slides/CMU-1.svs",
-  overlayLayers = {},
-  onRemoveLayer,
-  onOpen,
+    slideLayer =
+        createLayer(),
+    currentSlidePath =
+        "/slides/CMU-1.svs",
+    overlayLayers = {},
+    onRemoveLayer,
+    onOpen,
 } = {}) {
-  const panel =
-    document.createElement(
-      "div",
+    const panel =
+        document.createElement(
+            "div",
+        );
+
+    panel.className = "hidden";
+
+    const toggle =
+        document.createElement(
+            "button",
+        );
+
+    const list =
+        document.createElement(
+            "div",
+        );
+
+    panel.append(list);
+
+    document.body.append(
+        toggle,
+        panel,
     );
 
-  panel.className = "hidden";
+    const removeLayer =
+        onRemoveLayer ??
+        vi.fn().mockResolvedValue(
+            undefined,
+        );
 
-  const toggle =
-    document.createElement(
-      "button",
-    );
+    const open =
+        onOpen ?? vi.fn();
 
-  const list =
-    document.createElement(
-      "div",
-    );
+    const controller =
+        createLayersPanelController({
+            panel,
+            toggle,
+            list,
+            getSlideLayer: () =>
+                slideLayer,
+            getCurrentSlidePath: () =>
+                currentSlidePath,
+            getOverlayLayers: () =>
+                overlayLayers,
+            onRemoveLayer:
+                removeLayer,
+            onOpen: open,
+        });
 
-  panel.append(list);
-
-  document.body.append(
-    toggle,
-    panel,
-  );
-
-  const removeLayer =
-    onRemoveLayer ??
-    vi.fn().mockResolvedValue(
-      undefined,
-    );
-
-  const open =
-    onOpen ?? vi.fn();
-
-  const controller =
-    createLayersPanelController({
-      panel,
-      toggle,
-      list,
-      getSlideLayer: () =>
+    return {
+        panel,
+        toggle,
+        list,
+        controller,
         slideLayer,
-      getCurrentSlidePath: () =>
-        currentSlidePath,
-      getOverlayLayers: () =>
         overlayLayers,
-      onRemoveLayer:
-        removeLayer,
-      onOpen: open,
-    });
-
-  return {
-    panel,
-    toggle,
-    list,
-    controller,
-    slideLayer,
-    overlayLayers,
-    onRemoveLayer:
-      removeLayer,
-    onOpen: open,
-  };
+        onRemoveLayer:
+            removeLayer,
+        onOpen: open,
+    };
 }
 
 function getItems(list) {
-  return [
-    ...list.querySelectorAll(
-      ".layer-editor-item",
-    ),
-  ];
+    return [
+        ...list.querySelectorAll(
+            ".layer-editor-item",
+        ),
+    ];
 }
 
 function getItemName(item) {
-  return item.querySelector(
-    ".layer-editor-name",
-  ).textContent;
+    return item.querySelector(
+        ".layer-editor-name",
+    ).textContent;
 }
 
 function getItemByName(
-  list,
-  layerName,
+    list,
+    layerName,
 ) {
-  return getItems(list).find(
-    (item) =>
-      getItemName(item) ===
-      layerName,
-  );
+    return getItems(list).find(
+        (item) =>
+            getItemName(item) ===
+            layerName,
+    );
 }
 
 async function flushPromises() {
-  await Promise.resolve();
-  await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
 }
 
 beforeEach(() => {
-  document.body.replaceChildren();
+    document.body.replaceChildren();
 });
 
 describe("rendering", () => {
-  it("shows an empty state when no layers are loaded", () => {
-    const {
-      list,
-      controller,
-    } = createHarness({
-      slideLayer:
-        createLayer({
-          source: null,
-        }),
+    it("shows an empty state when no layers are loaded", () => {
+        const {
+            list,
+            controller,
+        } = createHarness({
+            slideLayer:
+                createLayer({
+                    source: null,
+                }),
+        });
+
+        controller.render();
+
+        expect(
+            getItems(list),
+        ).toHaveLength(0);
+
+        expect(
+            list.querySelector(
+                ".layer-editor-empty",
+            ).textContent,
+        ).toBe("No layers loaded");
     });
 
-    controller.render();
+    it("renders the slide first and overlays in z-index order", () => {
+        const lowerOverlay =
+            createLayer({
+                zIndex: 10,
+            });
 
-    expect(
-      getItems(list),
-    ).toHaveLength(0);
+        const upperOverlay =
+            createLayer({
+                zIndex: 20,
+            });
 
-    expect(
-      list.querySelector(
-        ".layer-editor-empty",
-      ).textContent,
-    ).toBe("No layers loaded");
-  });
+        const {
+            list,
+            controller,
+        } = createHarness({
+            overlayLayers: {
+                Upper: upperOverlay,
+                Lower: lowerOverlay,
+            },
+        });
 
-  it("renders the slide first and overlays in z-index order", () => {
-    const lowerOverlay =
-      createLayer({
-        zIndex: 10,
-      });
+        controller.render();
 
-    const upperOverlay =
-      createLayer({
-        zIndex: 20,
-      });
-
-    const {
-      list,
-      controller,
-    } = createHarness({
-      overlayLayers: {
-        Upper: upperOverlay,
-        Lower: lowerOverlay,
-      },
+        expect(
+            getItems(list).map(
+                getItemName,
+            ),
+        ).toEqual([
+            "CMU-1",
+            "Lower",
+            "Upper",
+        ]);
     });
 
-    controller.render();
+    it("uses a fallback name when the slide path is unavailable", () => {
+        const {
+            list,
+            controller,
+        } = createHarness({
+            currentSlidePath: null,
+        });
 
-    expect(
-      getItems(list).map(
-        getItemName,
-      ),
-    ).toEqual([
-      "CMU-1",
-      "Lower",
-      "Upper",
-    ]);
-  });
+        controller.render();
 
-  it("uses a fallback name when the slide path is unavailable", () => {
-    const {
-      list,
-      controller,
-    } = createHarness({
-      currentSlidePath: null,
+        expect(
+            getItemName(
+                getItems(list)[0],
+            ),
+        ).toBe("slide");
     });
 
-    controller.render();
+    it("only gives overlays ordering and removal controls", () => {
+        const first =
+            createLayer({
+                zIndex: 10,
+            });
 
-    expect(
-      getItemName(
-        getItems(list)[0],
-      ),
-    ).toBe("slide");
-  });
+        const second =
+            createLayer({
+                zIndex: 20,
+            });
 
-  it("only gives overlays ordering and removal controls", () => {
-    const first =
-      createLayer({
-        zIndex: 10,
-      });
+        const {
+            list,
+            controller,
+        } = createHarness({
+            overlayLayers: {
+                First: first,
+                Second: second,
+            },
+        });
 
-    const second =
-      createLayer({
-        zIndex: 20,
-      });
+        controller.render();
 
-    const {
-      list,
-      controller,
-    } = createHarness({
-      overlayLayers: {
-        First: first,
-        Second: second,
-      },
+        const slideItem =
+            getItemByName(
+                list,
+                "CMU-1",
+            );
+
+        expect(
+            slideItem.querySelector(
+                ".layer-editor-order",
+            ),
+        ).toBeNull();
+
+        const firstItem =
+            getItemByName(
+                list,
+                "First",
+            );
+
+        const secondItem =
+            getItemByName(
+                list,
+                "Second",
+            );
+
+        const firstButtons = [
+            ...firstItem.querySelectorAll(
+                ".layer-editor-order button",
+            ),
+        ];
+
+        const secondButtons = [
+            ...secondItem.querySelectorAll(
+                ".layer-editor-order button",
+            ),
+        ];
+
+        expect(firstButtons).toHaveLength(
+            3,
+        );
+        expect(secondButtons).toHaveLength(
+            3,
+        );
+
+        expect(
+            firstButtons[0].title,
+        ).toBe("Move layer up");
+        expect(
+            firstButtons[0].disabled,
+        ).toBe(true);
+
+        expect(
+            firstButtons[1].disabled,
+        ).toBe(false);
+
+        expect(
+            secondButtons[0].disabled,
+        ).toBe(false);
+
+        expect(
+            secondButtons[1].disabled,
+        ).toBe(true);
+
+        expect(
+            secondButtons[2].title,
+        ).toBe("Remove Second");
     });
-
-    controller.render();
-
-    const slideItem =
-      getItemByName(
-        list,
-        "CMU-1",
-      );
-
-    expect(
-      slideItem.querySelector(
-        ".layer-editor-order",
-      ),
-    ).toBeNull();
-
-    const firstItem =
-      getItemByName(
-        list,
-        "First",
-      );
-
-    const secondItem =
-      getItemByName(
-        list,
-        "Second",
-      );
-
-    const firstButtons = [
-      ...firstItem.querySelectorAll(
-        ".layer-editor-order button",
-      ),
-    ];
-
-    const secondButtons = [
-      ...secondItem.querySelectorAll(
-        ".layer-editor-order button",
-      ),
-    ];
-
-    expect(firstButtons).toHaveLength(
-      3,
-    );
-    expect(secondButtons).toHaveLength(
-      3,
-    );
-
-    expect(
-      firstButtons[0].title,
-    ).toBe("Move layer up");
-    expect(
-      firstButtons[0].disabled,
-    ).toBe(true);
-
-    expect(
-      firstButtons[1].disabled,
-    ).toBe(false);
-
-    expect(
-      secondButtons[0].disabled,
-    ).toBe(false);
-
-    expect(
-      secondButtons[1].disabled,
-    ).toBe(true);
-
-    expect(
-      secondButtons[2].title,
-    ).toBe("Remove Second");
-  });
 });
 
 describe("layer controls", () => {
-  it("updates layer visibility", () => {
-    const overlay =
-      createLayer({
-        visible: true,
-      });
+    it("updates layer visibility", () => {
+        const overlay =
+            createLayer({
+                visible: true,
+            });
 
-    const {
-      list,
-      controller,
-    } = createHarness({
-      overlayLayers: {
-        Overlay: overlay,
-      },
+        const {
+            list,
+            controller,
+        } = createHarness({
+            overlayLayers: {
+                Overlay: overlay,
+            },
+        });
+
+        controller.render();
+
+        const item =
+            getItemByName(
+                list,
+                "Overlay",
+            );
+
+        const visibility =
+            item.querySelector(
+                ".layer-editor-visibility",
+            );
+
+        expect(
+            visibility.checked,
+        ).toBe(true);
+
+        visibility.checked = false;
+
+        visibility.dispatchEvent(
+            new Event(
+                "change",
+                {
+                    bubbles: true,
+                },
+            ),
+        );
+
+        expect(
+            overlay.setVisible,
+        ).toHaveBeenCalledWith(
+            false,
+        );
+
+        expect(
+            overlay.getVisible(),
+        ).toBe(false);
     });
 
-    controller.render();
+    it("updates layer opacity and its percentage label", () => {
+        const overlay =
+            createLayer({
+                opacity: 0.75,
+            });
 
-    const item =
-      getItemByName(
-        list,
-        "Overlay",
-      );
+        const {
+            list,
+            controller,
+        } = createHarness({
+            overlayLayers: {
+                Overlay: overlay,
+            },
+        });
 
-    const visibility =
-      item.querySelector(
-        ".layer-editor-visibility",
-      );
+        controller.render();
 
-    expect(
-      visibility.checked,
-    ).toBe(true);
+        const item =
+            getItemByName(
+                list,
+                "Overlay",
+            );
 
-    visibility.checked = false;
+        const slider =
+            item.querySelector(
+                ".layer-editor-slider",
+            );
 
-    visibility.dispatchEvent(
-      new Event(
-        "change",
-        {
-          bubbles: true,
-        },
-      ),
-    );
+        const value =
+            item.querySelector(
+                ".layer-editor-value",
+            );
 
-    expect(
-      overlay.setVisible,
-    ).toHaveBeenCalledWith(
-      false,
-    );
+        expect(slider.value).toBe(
+            "0.75",
+        );
+        expect(value.textContent).toBe(
+            "75%",
+        );
 
-    expect(
-      overlay.getVisible(),
-    ).toBe(false);
-  });
+        slider.value = "0.35";
 
-  it("updates layer opacity and its percentage label", () => {
-    const overlay =
-      createLayer({
-        opacity: 0.75,
-      });
+        slider.dispatchEvent(
+            new Event(
+                "input",
+                {
+                    bubbles: true,
+                },
+            ),
+        );
 
-    const {
-      list,
-      controller,
-    } = createHarness({
-      overlayLayers: {
-        Overlay: overlay,
-      },
+        expect(
+            overlay.setOpacity,
+        ).toHaveBeenCalledWith(
+            0.35,
+        );
+
+        expect(
+            overlay.getOpacity(),
+        ).toBe(0.35);
+
+        expect(value.textContent).toBe(
+            "35%",
+        );
     });
 
-    controller.render();
+    it("moves an overlay down by swapping z-index values", () => {
+        const first =
+            createLayer({
+                zIndex: 10,
+            });
 
-    const item =
-      getItemByName(
-        list,
-        "Overlay",
-      );
+        const second =
+            createLayer({
+                zIndex: 20,
+            });
 
-    const slider =
-      item.querySelector(
-        ".layer-editor-slider",
-      );
+        const {
+            list,
+            controller,
+        } = createHarness({
+            overlayLayers: {
+                First: first,
+                Second: second,
+            },
+        });
 
-    const value =
-      item.querySelector(
-        ".layer-editor-value",
-      );
+        controller.render();
 
-    expect(slider.value).toBe(
-      "0.75",
-    );
-    expect(value.textContent).toBe(
-      "75%",
-    );
+        const firstItem =
+            getItemByName(
+                list,
+                "First",
+            );
 
-    slider.value = "0.35";
+        const moveDown =
+            firstItem.querySelector(
+                'button[title="Move layer down"]',
+            );
 
-    slider.dispatchEvent(
-      new Event(
-        "input",
-        {
-          bubbles: true,
-        },
-      ),
-    );
+        moveDown.click();
 
-    expect(
-      overlay.setOpacity,
-    ).toHaveBeenCalledWith(
-      0.35,
-    );
+        expect(
+            first.getZIndex(),
+        ).toBe(20);
 
-    expect(
-      overlay.getOpacity(),
-    ).toBe(0.35);
+        expect(
+            second.getZIndex(),
+        ).toBe(10);
 
-    expect(value.textContent).toBe(
-      "35%",
-    );
-  });
-
-  it("moves an overlay down by swapping z-index values", () => {
-    const first =
-      createLayer({
-        zIndex: 10,
-      });
-
-    const second =
-      createLayer({
-        zIndex: 20,
-      });
-
-    const {
-      list,
-      controller,
-    } = createHarness({
-      overlayLayers: {
-        First: first,
-        Second: second,
-      },
+        expect(
+            getItems(list).map(
+                getItemName,
+            ),
+        ).toEqual([
+            "CMU-1",
+            "Second",
+            "First",
+        ]);
     });
 
-    controller.render();
+    it("moves an overlay up by swapping z-index values", () => {
+        const first =
+            createLayer({
+                zIndex: 10,
+            });
 
-    const firstItem =
-      getItemByName(
-        list,
-        "First",
-      );
+        const second =
+            createLayer({
+                zIndex: 20,
+            });
 
-    const moveDown =
-      firstItem.querySelector(
-        'button[title="Move layer down"]',
-      );
+        const {
+            list,
+            controller,
+        } = createHarness({
+            overlayLayers: {
+                First: first,
+                Second: second,
+            },
+        });
 
-    moveDown.click();
+        controller.render();
 
-    expect(
-      first.getZIndex(),
-    ).toBe(20);
+        const secondItem =
+            getItemByName(
+                list,
+                "Second",
+            );
 
-    expect(
-      second.getZIndex(),
-    ).toBe(10);
+        const moveUp =
+            secondItem.querySelector(
+                'button[title="Move layer up"]',
+            );
 
-    expect(
-      getItems(list).map(
-        getItemName,
-      ),
-    ).toEqual([
-      "CMU-1",
-      "Second",
-      "First",
-    ]);
-  });
+        moveUp.click();
 
-  it("moves an overlay up by swapping z-index values", () => {
-    const first =
-      createLayer({
-        zIndex: 10,
-      });
+        expect(
+            first.getZIndex(),
+        ).toBe(20);
 
-    const second =
-      createLayer({
-        zIndex: 20,
-      });
+        expect(
+            second.getZIndex(),
+        ).toBe(10);
 
-    const {
-      list,
-      controller,
-    } = createHarness({
-      overlayLayers: {
-        First: first,
-        Second: second,
-      },
+        expect(
+            getItems(list).map(
+                getItemName,
+            ),
+        ).toEqual([
+            "CMU-1",
+            "Second",
+            "First",
+        ]);
     });
 
-    controller.render();
+    it("passes an overlay ID to the remove callback", async () => {
+        const overlay =
+            createLayer();
 
-    const secondItem =
-      getItemByName(
-        list,
-        "Second",
-      );
+        const {
+            list,
+            controller,
+            onRemoveLayer,
+        } = createHarness({
+            overlayLayers: {
+                Tumour: overlay,
+            },
+        });
 
-    const moveUp =
-      secondItem.querySelector(
-        'button[title="Move layer up"]',
-      );
+        controller.render();
 
-    moveUp.click();
+        const item =
+            getItemByName(
+                list,
+                "Tumour",
+            );
 
-    expect(
-      first.getZIndex(),
-    ).toBe(20);
+        item.querySelector(
+            'button[title="Remove Tumour"]',
+        ).click();
 
-    expect(
-      second.getZIndex(),
-    ).toBe(10);
+        await flushPromises();
 
-    expect(
-      getItems(list).map(
-        getItemName,
-      ),
-    ).toEqual([
-      "CMU-1",
-      "Second",
-      "First",
-    ]);
-  });
+        expect(
+            onRemoveLayer,
+        ).toHaveBeenCalledOnce();
 
-  it("passes an overlay ID to the remove callback", async () => {
-    const overlay =
-      createLayer();
-
-    const {
-      list,
-      controller,
-      onRemoveLayer,
-    } = createHarness({
-      overlayLayers: {
-        Tumour: overlay,
-      },
+        expect(
+            onRemoveLayer,
+        ).toHaveBeenCalledWith(
+            "Tumour",
+        );
     });
 
-    controller.render();
+    it("logs errors when removing an overlay fails", async () => {
+        const error =
+            new Error(
+                "Remove failure",
+            );
 
-    const item =
-      getItemByName(
-        list,
-        "Tumour",
-      );
+        const consoleError =
+            vi.spyOn(
+                console,
+                "error",
+            ).mockImplementation(
+                () => {},
+            );
 
-    item.querySelector(
-      'button[title="Remove Tumour"]',
-    ).click();
+        const {
+            list,
+            controller,
+        } = createHarness({
+            overlayLayers: {
+                Tumour:
+                    createLayer(),
+            },
 
-    await flushPromises();
+            onRemoveLayer:
+                vi.fn().mockRejectedValue(
+                    error,
+                ),
+        });
 
-    expect(
-      onRemoveLayer,
-    ).toHaveBeenCalledOnce();
+        controller.render();
 
-    expect(
-      onRemoveLayer,
-    ).toHaveBeenCalledWith(
-      "Tumour",
-    );
-  });
+        getItemByName(
+            list,
+            "Tumour",
+        )
+            .querySelector(
+                'button[title="Remove Tumour"]',
+            )
+            .click();
 
-  it("logs errors when removing an overlay fails", async () => {
-    const error =
-      new Error(
-        "Remove failure",
-      );
+        await flushPromises();
 
-    const consoleError =
-      vi.spyOn(
-        console,
-        "error",
-      ).mockImplementation(
-        () => {},
-      );
-
-    const {
-      list,
-      controller,
-    } = createHarness({
-      overlayLayers: {
-        Tumour:
-          createLayer(),
-      },
-
-      onRemoveLayer:
-        vi.fn().mockRejectedValue(
-          error,
-        ),
+        expect(
+            consoleError,
+        ).toHaveBeenCalledWith(
+            error,
+        );
     });
-
-    controller.render();
-
-    getItemByName(
-      list,
-      "Tumour",
-    )
-      .querySelector(
-        'button[title="Remove Tumour"]',
-      )
-      .click();
-
-    await flushPromises();
-
-    expect(
-      consoleError,
-    ).toHaveBeenCalledWith(
-      error,
-    );
-  });
 });
 
 describe("panel state", () => {
-  it("opens and closes through the controller", () => {
-    const {
-      panel,
-      toggle,
-      controller,
-      onOpen,
-    } = createHarness();
+    it("opens and closes through the controller", () => {
+        const {
+            panel,
+            toggle,
+            controller,
+            onOpen,
+        } = createHarness();
 
-    controller.setOpen(true);
+        controller.setOpen(true);
 
-    expect(
-      panel.classList.contains(
-        "hidden",
-      ),
-    ).toBe(false);
+        expect(
+            panel.classList.contains(
+                "hidden",
+            ),
+        ).toBe(false);
 
-    expect(
-      toggle.classList.contains(
-        "active",
-      ),
-    ).toBe(true);
+        expect(
+            toggle.classList.contains(
+                "active",
+            ),
+        ).toBe(true);
 
-    expect(
-      onOpen,
-    ).toHaveBeenCalledOnce();
+        expect(
+            onOpen,
+        ).toHaveBeenCalledOnce();
 
-    controller.setOpen(false);
+        controller.setOpen(false);
 
-    expect(
-      panel.classList.contains(
-        "hidden",
-      ),
-    ).toBe(true);
+        expect(
+            panel.classList.contains(
+                "hidden",
+            ),
+        ).toBe(true);
 
-    expect(
-      toggle.classList.contains(
-        "active",
-      ),
-    ).toBe(false);
+        expect(
+            toggle.classList.contains(
+                "active",
+            ),
+        ).toBe(false);
 
-    expect(
-      onOpen,
-    ).toHaveBeenCalledOnce();
-  });
+        expect(
+            onOpen,
+        ).toHaveBeenCalledOnce();
+    });
 
-  it("toggles the panel from its toggle button", () => {
-    const {
-      panel,
-      toggle,
-      onOpen,
-    } = createHarness();
+    it("toggles the panel from its toggle button", () => {
+        const {
+            panel,
+            toggle,
+            onOpen,
+        } = createHarness();
 
-    toggle.click();
+        toggle.click();
 
-    expect(
-      panel.classList.contains(
-        "hidden",
-      ),
-    ).toBe(false);
+        expect(
+            panel.classList.contains(
+                "hidden",
+            ),
+        ).toBe(false);
 
-    expect(
-      onOpen,
-    ).toHaveBeenCalledOnce();
+        expect(
+            onOpen,
+        ).toHaveBeenCalledOnce();
 
-    toggle.click();
+        toggle.click();
 
-    expect(
-      panel.classList.contains(
-        "hidden",
-      ),
-    ).toBe(true);
+        expect(
+            panel.classList.contains(
+                "hidden",
+            ),
+        ).toBe(true);
 
-    expect(
-      onOpen,
-    ).toHaveBeenCalledOnce();
-  });
+        expect(
+            onOpen,
+        ).toHaveBeenCalledOnce();
+    });
 });

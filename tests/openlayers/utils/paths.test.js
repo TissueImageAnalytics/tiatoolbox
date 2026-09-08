@@ -1,45 +1,45 @@
 import {
-  describe,
-  expect,
-  it,
+    describe,
+    expect,
+    it,
 } from "vitest";
 
 import {
-  getFileStem,
+    getFileStem,
 } from "../../../tiatoolbox/visualization/openlayers/src/utils/paths.js";
 
 describe("getFileStem", () => {
-  it.each([
-    [
-      "/slides/CMU-1.svs",
-      "CMU-1",
-    ],
-    [
-      "C:\\slides\\CMU-1.svs",
-      "CMU-1",
-    ],
-    [
-      "/overlays/tissue_mask.png",
-      "tissue_mask",
-    ],
-    [
-      "/overlays/semantic_segmentation.db",
-      "semantic_segmentation",
-    ],
-    [
-      "/slides/no-extension",
-      "no-extension",
-    ],
-    [
-      "/slides/.hidden",
-      ".hidden",
-    ],
-  ])(
-    "returns the filename stem for %s",
-    (filePath, expected) => {
-      expect(
-        getFileStem(filePath),
-      ).toBe(expected);
-    },
-  );
+    it.each([
+        [
+            "/slides/CMU-1.svs",
+            "CMU-1",
+        ],
+        [
+            "C:\\slides\\CMU-1.svs",
+            "CMU-1",
+        ],
+        [
+            "/overlays/tissue_mask.png",
+            "tissue_mask",
+        ],
+        [
+            "/overlays/semantic_segmentation.db",
+            "semantic_segmentation",
+        ],
+        [
+            "/slides/no-extension",
+            "no-extension",
+        ],
+        [
+            "/slides/.hidden",
+            ".hidden",
+        ],
+    ])(
+        "returns the filename stem for %s",
+        (filePath, expected) => {
+            expect(
+                getFileStem(filePath),
+            ).toBe(expected);
+        },
+    );
 });

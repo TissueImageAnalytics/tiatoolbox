@@ -1,818 +1,818 @@
 import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
+    afterEach,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    vi,
 } from "vitest";
 
 import {
-  createOverviewMapController,
+    createOverviewMapController,
 } from "../../../tiatoolbox/visualization/openlayers/src/controls/overview-map.js";
 
 class ResizeObserverMock {
-  constructor(callback) {
-    this.callback = callback;
-  }
+    constructor(callback) {
+        this.callback = callback;
+    }
 
-  observe() {}
+    observe() {}
 
-  unobserve() {}
+    unobserve() {}
 
-  disconnect() {}
+    disconnect() {}
 }
 
 function createCheckbox(
-  checked = true,
+    checked = true,
 ) {
-  const input =
-    document.createElement(
-      "input",
-    );
+    const input =
+        document.createElement(
+            "input",
+        );
 
-  input.type = "checkbox";
-  input.checked = checked;
+    input.type = "checkbox";
+    input.checked = checked;
 
-  return input;
+    return input;
 }
 
 function createSelect(
-  values,
-  value,
+    values,
+    value,
 ) {
-  const select =
-    document.createElement(
-      "select",
-    );
+    const select =
+        document.createElement(
+            "select",
+        );
 
-  for (const optionValue of values) {
-    const option =
-      document.createElement(
-        "option",
-      );
+    for (const optionValue of values) {
+        const option =
+            document.createElement(
+                "option",
+            );
 
-    option.value = optionValue;
-    option.textContent =
-      optionValue;
+        option.value = optionValue;
+        option.textContent =
+            optionValue;
 
-    select.append(option);
-  }
+        select.append(option);
+    }
 
-  select.value = value;
+    select.value = value;
 
-  return select;
+    return select;
 }
 
 function createProjection() {
-  return "EPSG:3857";
+    return "EPSG:3857";
 }
 
 function createSource({
-  extent = [
-    0,
-    0,
-    600,
-    300,
-  ],
+    extent = [
+        0,
+        0,
+        600,
+        300,
+    ],
 } = {}) {
-  const source =
-    new EventTarget();
+    const source =
+        new EventTarget();
 
-  source.getState =
-    vi.fn(() => "ready");
+    source.getState =
+        vi.fn(() => "ready");
 
-  source.getTileGrid =
-    vi.fn(() => ({
-      getExtent: vi.fn(
-        () => extent,
-      ),
-    }));
+    source.getTileGrid =
+        vi.fn(() => ({
+            getExtent: vi.fn(
+                () => extent,
+            ),
+        }));
 
-  return source;
+    return source;
 }
 
 function dispatchChange(element) {
-  element.dispatchEvent(
-    new Event(
-      "change",
-      {
-        bubbles: true,
-      },
-    ),
-  );
+    element.dispatchEvent(
+        new Event(
+            "change",
+            {
+                bubbles: true,
+            },
+        ),
+    );
 }
 
 function createHarness({
-  source = null,
-  extent = [
-    0,
-    0,
-    600,
-    300,
-  ],
-  size = "default",
-  visible = true,
-  slideLoaded = true,
+    source = null,
+    extent = [
+        0,
+        0,
+        600,
+        300,
+    ],
+    size = "default",
+    visible = true,
+    slideLoaded = true,
 } = {}) {
-  const projection =
-    createProjection();
+    const projection =
+        createProjection();
 
-  const state = {
-    slideLoaded,
-  };
+    const state = {
+        slideLoaded,
+    };
 
-  const mapView = {
-    getProjection: vi.fn(
-      () => projection,
-    ),
-  };
+    const mapView = {
+        getProjection: vi.fn(
+            () => projection,
+        ),
+    };
 
-  const map = {
-    addControl: vi.fn(
-      (control) => {
-        const overviewMap =
-          control.getOverviewMap();
+    const map = {
+        addControl: vi.fn(
+            (control) => {
+                const overviewMap =
+                    control.getOverviewMap();
 
-        vi.spyOn(
-          overviewMap,
-          "updateSize",
-        ).mockImplementation(
-          () => {},
+                vi.spyOn(
+                    overviewMap,
+                    "updateSize",
+                ).mockImplementation(
+                    () => {},
+                );
+
+                vi.spyOn(
+                    overviewMap,
+                    "renderSync",
+                ).mockImplementation(
+                    () => {},
+                );
+            },
+        ),
+
+        getView: vi.fn(
+            () => mapView,
+        ),
+    };
+
+    const sizeSelect =
+        createSelect(
+            [
+                "small",
+                "default",
+                "large",
+            ],
+            size,
         );
 
-        vi.spyOn(
-          overviewMap,
-          "renderSync",
-        ).mockImplementation(
-          () => {},
-        );
-      },
-    ),
+    const visibleInput =
+        createCheckbox(visible);
 
-    getView: vi.fn(
-      () => mapView,
-    ),
-  };
-
-  const sizeSelect =
-    createSelect(
-      [
-        "small",
-        "default",
-        "large",
-      ],
-      size,
+    document.body.append(
+        sizeSelect,
+        visibleInput,
     );
 
-  const visibleInput =
-    createCheckbox(visible);
+    const controller =
+        createOverviewMapController({
+            map,
+            source,
+            projection,
+            extent,
+            sizeSelect,
+            visibleInput,
+            hasSlide: () =>
+                state.slideLoaded,
+        });
 
-  document.body.append(
-    sizeSelect,
-    visibleInput,
-  );
+    const control =
+        controller.control;
 
-  const controller =
-    createOverviewMapController({
-      map,
-      source,
-      projection,
-      extent,
-      sizeSelect,
-      visibleInput,
-      hasSlide: () =>
-        state.slideLoaded,
-    });
+    const overviewMap =
+        control.getOverviewMap();
 
-  const control =
-    controller.control;
+    overviewMap.updateSize.mockClear();
+    overviewMap.renderSync.mockClear();
 
-  const overviewMap =
-    control.getOverviewMap();
-
-  overviewMap.updateSize.mockClear();
-  overviewMap.renderSync.mockClear();
-
-  return {
-    state,
-    map,
-    projection,
-    extent,
-    sizeSelect,
-    visibleInput,
-    controller,
-    control,
-    overviewMap,
-  };
+    return {
+        state,
+        map,
+        projection,
+        extent,
+        sizeSelect,
+        visibleInput,
+        controller,
+        control,
+        overviewMap,
+    };
 }
 
 function getOverviewLayer(
-  control,
+    control,
 ) {
-  return control
-    .getOverviewMap()
-    .getLayers()
-    .item(0);
+    return control
+        .getOverviewMap()
+        .getLayers()
+        .item(0);
 }
 
 beforeEach(() => {
-  document.body.replaceChildren();
+    document.body.replaceChildren();
 
-  vi.stubGlobal(
-    "ResizeObserver",
-    ResizeObserverMock,
-  );
+    vi.stubGlobal(
+        "ResizeObserver",
+        ResizeObserverMock,
+    );
 
-  vi.stubGlobal(
-    "requestAnimationFrame",
-    (callback) => {
-      callback();
-      return 1;
-    },
-  );
+    vi.stubGlobal(
+        "requestAnimationFrame",
+        (callback) => {
+            callback();
+            return 1;
+        },
+    );
 });
 
 afterEach(() => {
-  document.body.replaceChildren();
+    document.body.replaceChildren();
 
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
 });
 
 describe("initialisation", () => {
-  it("creates and adds the overview map control", () => {
-    const {
-      map,
-      control,
-    } = createHarness();
+    it("creates and adds the overview map control", () => {
+        const {
+            map,
+            control,
+        } = createHarness();
 
-    expect(control).toBeDefined();
+        expect(control).toBeDefined();
 
-    expect(
-      map.addControl,
-    ).toHaveBeenCalledOnce();
+        expect(
+            map.addControl,
+        ).toHaveBeenCalledOnce();
 
-    expect(
-      map.addControl,
-    ).toHaveBeenCalledWith(
-      control,
-    );
+        expect(
+            map.addControl,
+        ).toHaveBeenCalledWith(
+            control,
+        );
 
-    expect(
-      control.getCollapsed(),
-    ).toBe(false);
+        expect(
+            control.getCollapsed(),
+        ).toBe(false);
 
-    expect(
-      control.getCollapsible(),
-    ).toBe(true);
+        expect(
+            control.getCollapsible(),
+        ).toBe(true);
 
-    expect(
-      control.element.classList
-        .contains(
-          "ol-custom-overviewmap",
-        ),
-    ).toBe(true);
-  });
-
-  it("creates an overview layer without a source when none is supplied", () => {
-    const {
-      control,
-    } = createHarness();
-
-    expect(
-      getOverviewLayer(
-        control,
-      ).getSource(),
-    ).toBeNull();
-  });
-
-  it("uses a supplied source for the overview layer", () => {
-    const source =
-      createSource();
-
-    const {
-      control,
-    } = createHarness({
-      source,
+        expect(
+            control.element.classList
+                .contains(
+                    "ol-custom-overviewmap",
+                ),
+        ).toBe(true);
     });
 
-    expect(
-      getOverviewLayer(
-        control,
-      ).getSource(),
-    ).toBe(source);
-  });
+    it("creates an overview layer without a source when none is supplied", () => {
+        const {
+            control,
+        } = createHarness();
 
-  it.each([
-    [
-      "small",
-      220,
-      180,
-      600 / 220,
-    ],
-    [
-      "default",
-      300,
-      250,
-      2,
-    ],
-    [
-      "large",
-      380,
-      320,
-      600 / 380,
-    ],
-  ])(
-    "uses the %s overview map size",
-    (
-      size,
-      expectedWidth,
-      expectedHeight,
-      expectedResolution,
-    ) => {
-      const {
-        control,
-        overviewMap,
-      } = createHarness({
-        size,
-      });
-
-      expect(
-        control.element.style
-          .getPropertyValue(
-            "--overview-map-width",
-          ),
-      ).toBe(
-        `${expectedWidth}px`,
-      );
-
-      expect(
-        control.element.style
-          .getPropertyValue(
-            "--overview-map-height",
-          ),
-      ).toBe(
-        `${expectedHeight}px`,
-      );
-
-      expect(
-        overviewMap
-          .getView()
-          .getCenter(),
-      ).toEqual([
-        300,
-        150,
-      ]);
-
-      expect(
-        overviewMap
-          .getView()
-          .getResolution(),
-      ).toBeCloseTo(
-        expectedResolution,
-      );
-    },
-  );
-
-  it("falls back to the default size for an unknown value", () => {
-    const {
-      control,
-      overviewMap,
-    } = createHarness({
-      size: "",
+        expect(
+            getOverviewLayer(
+                control,
+            ).getSource(),
+        ).toBeNull();
     });
 
-    expect(
-      control.element.style
-        .getPropertyValue(
-          "--overview-map-width",
-        ),
-    ).toBe("300px");
+    it("uses a supplied source for the overview layer", () => {
+        const source =
+            createSource();
 
-    expect(
-      control.element.style
-        .getPropertyValue(
-          "--overview-map-height",
-        ),
-    ).toBe("250px");
+        const {
+            control,
+        } = createHarness({
+            source,
+        });
 
-    expect(
-      overviewMap
-        .getView()
-        .getResolution(),
-    ).toBeCloseTo(2);
-  });
+        expect(
+            getOverviewLayer(
+                control,
+            ).getSource(),
+        ).toBe(source);
+    });
 
-  it("creates the overview toggle labels", () => {
-    const {
-      control,
-    } = createHarness();
+    it.each([
+        [
+            "small",
+            220,
+            180,
+            600 / 220,
+        ],
+        [
+            "default",
+            300,
+            250,
+            2,
+        ],
+        [
+            "large",
+            380,
+            320,
+            600 / 380,
+        ],
+    ])(
+        "uses the %s overview map size",
+        (
+            size,
+            expectedWidth,
+            expectedHeight,
+            expectedResolution,
+        ) => {
+            const {
+                control,
+                overviewMap,
+            } = createHarness({
+                size,
+            });
 
-    expect(
-      control.element.querySelector(
-        ".overview-toggle-icon",
-      ),
-    ).not.toBeNull();
+            expect(
+                control.element.style
+                    .getPropertyValue(
+                        "--overview-map-width",
+                    ),
+            ).toBe(
+                `${expectedWidth}px`,
+            );
 
-    expect(
-      control.element.innerHTML,
-    ).toContain(
-      "fa-chevron-up",
+            expect(
+                control.element.style
+                    .getPropertyValue(
+                        "--overview-map-height",
+                    ),
+            ).toBe(
+                `${expectedHeight}px`,
+            );
+
+            expect(
+                overviewMap
+                    .getView()
+                    .getCenter(),
+            ).toEqual([
+                300,
+                150,
+            ]);
+
+            expect(
+                overviewMap
+                    .getView()
+                    .getResolution(),
+            ).toBeCloseTo(
+                expectedResolution,
+            );
+        },
     );
-  });
+
+    it("falls back to the default size for an unknown value", () => {
+        const {
+            control,
+            overviewMap,
+        } = createHarness({
+            size: "",
+        });
+
+        expect(
+            control.element.style
+                .getPropertyValue(
+                    "--overview-map-width",
+                ),
+        ).toBe("300px");
+
+        expect(
+            control.element.style
+                .getPropertyValue(
+                    "--overview-map-height",
+                ),
+        ).toBe("250px");
+
+        expect(
+            overviewMap
+                .getView()
+                .getResolution(),
+        ).toBeCloseTo(2);
+    });
+
+    it("creates the overview toggle labels", () => {
+        const {
+            control,
+        } = createHarness();
+
+        expect(
+            control.element.querySelector(
+                ".overview-toggle-icon",
+            ),
+        ).not.toBeNull();
+
+        expect(
+            control.element.innerHTML,
+        ).toContain(
+            "fa-chevron-up",
+        );
+    });
 });
 
 describe("source and view", () => {
-  it("updates the overview layer source", () => {
-    const {
-      controller,
-      control,
-    } = createHarness();
+    it("updates the overview layer source", () => {
+        const {
+            controller,
+            control,
+        } = createHarness();
 
-    const source =
-      createSource();
+        const source =
+            createSource();
 
-    controller.setSource(
-      source,
-    );
+        controller.setSource(
+            source,
+        );
 
-    expect(
-      getOverviewLayer(
-        control,
-      ).getSource(),
-    ).toBe(source);
+        expect(
+            getOverviewLayer(
+                control,
+            ).getSource(),
+        ).toBe(source);
 
-    controller.setSource(
-      null,
-    );
+        controller.setSource(
+            null,
+        );
 
-    expect(
-      getOverviewLayer(
-        control,
-      ).getSource(),
-    ).toBeNull();
-  });
-
-  it("sets a new overview view", () => {
-    const {
-      controller,
-      overviewMap,
-      projection,
-    } = createHarness();
-
-    controller.setView(
-      projection,
-      [
-        0,
-        0,
-        100,
-        200,
-      ],
-    );
-
-    const view =
-      overviewMap.getView();
-
-    expect(
-      view.getCenter(),
-    ).toEqual([
-      50,
-      100,
-    ]);
-
-    expect(
-      view.getResolution(),
-    ).toBeCloseTo(0.8);
-
-    expect(
-      view.getResolutions(),
-    ).toEqual([
-      0.8,
-    ]);
-  });
-
-  it("keeps the overview view centred on its extent", () => {
-    const {
-      controller,
-      overviewMap,
-      projection,
-    } = createHarness();
-
-    controller.setView(
-      projection,
-      [
-        0,
-        0,
-        100,
-        200,
-      ],
-    );
-
-    const view =
-      overviewMap.getView();
-
-    view.setCenter([
-      10,
-      20,
-    ]);
-
-    expect(
-      view.getCenter(),
-    ).toEqual([
-      50,
-      100,
-    ]);
-  });
-
-  it("rebuilds the overview view when the size changes and a source exists", () => {
-    const source =
-      createSource({
-        extent: [
-          0,
-          0,
-          600,
-          300,
-        ],
-      });
-
-    const {
-      sizeSelect,
-      control,
-      overviewMap,
-    } = createHarness({
-      source,
+        expect(
+            getOverviewLayer(
+                control,
+            ).getSource(),
+        ).toBeNull();
     });
 
-    const updateSize =
-      overviewMap.updateSize;
+    it("sets a new overview view", () => {
+        const {
+            controller,
+            overviewMap,
+            projection,
+        } = createHarness();
 
-    const renderSync =
-      overviewMap.renderSync;
+        controller.setView(
+            projection,
+            [
+                0,
+                0,
+                100,
+                200,
+            ],
+        );
 
-    const setView =
-      vi.spyOn(
-        overviewMap,
-        "setView",
-      );
+        const view =
+            overviewMap.getView();
 
-    sizeSelect.value =
-      "small";
+        expect(
+            view.getCenter(),
+        ).toEqual([
+            50,
+            100,
+        ]);
 
-    dispatchChange(
-      sizeSelect,
-    );
+        expect(
+            view.getResolution(),
+        ).toBeCloseTo(0.8);
 
-    expect(
-      control.element.style
-        .getPropertyValue(
-          "--overview-map-width",
-        ),
-    ).toBe("220px");
+        expect(
+            view.getResolutions(),
+        ).toEqual([
+            0.8,
+        ]);
+    });
 
-    expect(
-      control.element.style
-        .getPropertyValue(
-          "--overview-map-height",
-        ),
-    ).toBe("180px");
+    it("keeps the overview view centred on its extent", () => {
+        const {
+            controller,
+            overviewMap,
+            projection,
+        } = createHarness();
 
-    expect(
-      updateSize,
-    ).toHaveBeenCalledOnce();
+        controller.setView(
+            projection,
+            [
+                0,
+                0,
+                100,
+                200,
+            ],
+        );
 
-    expect(
-      setView,
-    ).toHaveBeenCalledOnce();
+        const view =
+            overviewMap.getView();
 
-    expect(
-      overviewMap
-        .getView()
-        .getResolution(),
-    ).toBeCloseTo(
-      600 / 220,
-    );
+        view.setCenter([
+            10,
+            20,
+        ]);
 
-    expect(
-      renderSync,
-    ).toHaveBeenCalledOnce();
-  });
+        expect(
+            view.getCenter(),
+        ).toEqual([
+            50,
+            100,
+        ]);
+    });
 
-  it("does not replace the view during size updates without a source", () => {
-    const {
-      controller,
-      overviewMap,
-    } = createHarness();
+    it("rebuilds the overview view when the size changes and a source exists", () => {
+        const source =
+            createSource({
+                extent: [
+                    0,
+                    0,
+                    600,
+                    300,
+                ],
+            });
 
-    const setView =
-      vi.spyOn(
-        overviewMap,
-        "setView",
-      );
+        const {
+            sizeSelect,
+            control,
+            overviewMap,
+        } = createHarness({
+            source,
+        });
 
-    const updateSize =
-      overviewMap.updateSize;
+        const updateSize =
+            overviewMap.updateSize;
 
-    const renderSync =
-      overviewMap.renderSync;
+        const renderSync =
+            overviewMap.renderSync;
 
-    controller.updateSize();
+        const setView =
+            vi.spyOn(
+                overviewMap,
+                "setView",
+            );
 
-    expect(
-      updateSize,
-    ).toHaveBeenCalledOnce();
+        sizeSelect.value =
+            "small";
 
-    expect(
-      setView,
-    ).not.toHaveBeenCalled();
+        dispatchChange(
+            sizeSelect,
+        );
 
-    expect(
-      renderSync,
-    ).toHaveBeenCalledOnce();
-  });
+        expect(
+            control.element.style
+                .getPropertyValue(
+                    "--overview-map-width",
+                ),
+        ).toBe("220px");
+
+        expect(
+            control.element.style
+                .getPropertyValue(
+                    "--overview-map-height",
+                ),
+        ).toBe("180px");
+
+        expect(
+            updateSize,
+        ).toHaveBeenCalledOnce();
+
+        expect(
+            setView,
+        ).toHaveBeenCalledOnce();
+
+        expect(
+            overviewMap
+                .getView()
+                .getResolution(),
+        ).toBeCloseTo(
+            600 / 220,
+        );
+
+        expect(
+            renderSync,
+        ).toHaveBeenCalledOnce();
+    });
+
+    it("does not replace the view during size updates without a source", () => {
+        const {
+            controller,
+            overviewMap,
+        } = createHarness();
+
+        const setView =
+            vi.spyOn(
+                overviewMap,
+                "setView",
+            );
+
+        const updateSize =
+            overviewMap.updateSize;
+
+        const renderSync =
+            overviewMap.renderSync;
+
+        controller.updateSize();
+
+        expect(
+            updateSize,
+        ).toHaveBeenCalledOnce();
+
+        expect(
+            setView,
+        ).not.toHaveBeenCalled();
+
+        expect(
+            renderSync,
+        ).toHaveBeenCalledOnce();
+    });
 });
 
 describe("visibility", () => {
-  it("shows and refreshes when a slide is available and the control is enabled", () => {
-    const {
-      controller,
-      control,
-      overviewMap,
-    } = createHarness();
+    it("shows and refreshes when a slide is available and the control is enabled", () => {
+        const {
+            controller,
+            control,
+            overviewMap,
+        } = createHarness();
 
-    const updateSize =
-      overviewMap.updateSize;
+        const updateSize =
+            overviewMap.updateSize;
 
-    const renderSync =
-      overviewMap.renderSync;
+        const renderSync =
+            overviewMap.renderSync;
 
-    controller.updateVisibility();
+        controller.updateVisibility();
 
-    expect(
-      control.element.classList
-        .contains(
-          "viewer-control-hidden",
-        ),
-    ).toBe(false);
+        expect(
+            control.element.classList
+                .contains(
+                    "viewer-control-hidden",
+                ),
+        ).toBe(false);
 
-    expect(
-      updateSize,
-    ).toHaveBeenCalledOnce();
+        expect(
+            updateSize,
+        ).toHaveBeenCalledOnce();
 
-    expect(
-      renderSync,
-    ).toHaveBeenCalledOnce();
-  });
-
-  it("hides when no slide is available", () => {
-    const {
-      controller,
-      control,
-      overviewMap,
-    } = createHarness({
-      slideLoaded: false,
+        expect(
+            renderSync,
+        ).toHaveBeenCalledOnce();
     });
 
-    const updateSize =
-      overviewMap.updateSize;
+    it("hides when no slide is available", () => {
+        const {
+            controller,
+            control,
+            overviewMap,
+        } = createHarness({
+            slideLoaded: false,
+        });
 
-    controller.updateVisibility();
+        const updateSize =
+            overviewMap.updateSize;
 
-    expect(
-      control.element.classList
-        .contains(
-          "viewer-control-hidden",
-        ),
-    ).toBe(true);
+        controller.updateVisibility();
 
-    expect(
-      updateSize,
-    ).not.toHaveBeenCalled();
-  });
+        expect(
+            control.element.classList
+                .contains(
+                    "viewer-control-hidden",
+                ),
+        ).toBe(true);
 
-  it("hides when overview map visibility is disabled", () => {
-    const {
-      controller,
-      control,
-    } = createHarness({
-      visible: false,
+        expect(
+            updateSize,
+        ).not.toHaveBeenCalled();
     });
 
-    controller.updateVisibility();
+    it("hides when overview map visibility is disabled", () => {
+        const {
+            controller,
+            control,
+        } = createHarness({
+            visible: false,
+        });
 
-    expect(
-      control.element.classList
-        .contains(
-          "viewer-control-hidden",
-        ),
-    ).toBe(true);
-  });
+        controller.updateVisibility();
 
-  it("respects viewer enabled state", () => {
-    const {
-      controller,
-      control,
-      overviewMap,
-    } = createHarness();
-
-    const updateSize =
-      overviewMap.updateSize;
-
-    const renderSync =
-      overviewMap.renderSync;
-
-    controller.setViewerEnabled(
-      false,
-    );
-
-    expect(
-      control.element.classList
-        .contains(
-          "viewer-control-hidden",
-        ),
-    ).toBe(true);
-
-    expect(
-      updateSize,
-    ).not.toHaveBeenCalled();
-
-    controller.setViewerEnabled(
-      true,
-    );
-
-    expect(
-      control.element.classList
-        .contains(
-          "viewer-control-hidden",
-        ),
-    ).toBe(false);
-
-    expect(
-      updateSize,
-    ).toHaveBeenCalledOnce();
-
-    expect(
-      renderSync,
-    ).toHaveBeenCalledOnce();
-  });
-
-  it("remains hidden when viewer is enabled but the setting is disabled", () => {
-    const {
-      controller,
-      control,
-      overviewMap,
-    } = createHarness({
-      visible: false,
+        expect(
+            control.element.classList
+                .contains(
+                    "viewer-control-hidden",
+                ),
+        ).toBe(true);
     });
 
-    const updateSize =
-      overviewMap.updateSize;
+    it("respects viewer enabled state", () => {
+        const {
+            controller,
+            control,
+            overviewMap,
+        } = createHarness();
 
-    const renderSync =
-      overviewMap.renderSync;
+        const updateSize =
+            overviewMap.updateSize;
 
-    controller.setViewerEnabled(
-      true,
-    );
+        const renderSync =
+            overviewMap.renderSync;
 
-    expect(
-      control.element.classList
-        .contains(
-          "viewer-control-hidden",
-        ),
-    ).toBe(true);
+        controller.setViewerEnabled(
+            false,
+        );
 
-    expect(
-      updateSize,
-    ).toHaveBeenCalledOnce();
+        expect(
+            control.element.classList
+                .contains(
+                    "viewer-control-hidden",
+                ),
+        ).toBe(true);
 
-    expect(
-      renderSync,
-    ).toHaveBeenCalledOnce();
-  });
+        expect(
+            updateSize,
+        ).not.toHaveBeenCalled();
+
+        controller.setViewerEnabled(
+            true,
+        );
+
+        expect(
+            control.element.classList
+                .contains(
+                    "viewer-control-hidden",
+                ),
+        ).toBe(false);
+
+        expect(
+            updateSize,
+        ).toHaveBeenCalledOnce();
+
+        expect(
+            renderSync,
+        ).toHaveBeenCalledOnce();
+    });
+
+    it("remains hidden when viewer is enabled but the setting is disabled", () => {
+        const {
+            controller,
+            control,
+            overviewMap,
+        } = createHarness({
+            visible: false,
+        });
+
+        const updateSize =
+            overviewMap.updateSize;
+
+        const renderSync =
+            overviewMap.renderSync;
+
+        controller.setViewerEnabled(
+            true,
+        );
+
+        expect(
+            control.element.classList
+                .contains(
+                    "viewer-control-hidden",
+                ),
+        ).toBe(true);
+
+        expect(
+            updateSize,
+        ).toHaveBeenCalledOnce();
+
+        expect(
+            renderSync,
+        ).toHaveBeenCalledOnce();
+    });
 });
 
 describe("refresh", () => {
-  it("updates and renders the internal overview map", () => {
-    const {
-      controller,
-      overviewMap,
-    } = createHarness();
+    it("updates and renders the internal overview map", () => {
+        const {
+            controller,
+            overviewMap,
+        } = createHarness();
 
-    const updateSize =
-      overviewMap.updateSize;
+        const updateSize =
+            overviewMap.updateSize;
 
-    const renderSync =
-      overviewMap.renderSync;
+        const renderSync =
+            overviewMap.renderSync;
 
-    controller.refresh();
+        controller.refresh();
 
-    expect(
-      updateSize,
-    ).toHaveBeenCalledOnce();
+        expect(
+            updateSize,
+        ).toHaveBeenCalledOnce();
 
-    expect(
-      renderSync,
-    ).toHaveBeenCalledOnce();
-  });
+        expect(
+            renderSync,
+        ).toHaveBeenCalledOnce();
+    });
 });
