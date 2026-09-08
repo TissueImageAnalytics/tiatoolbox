@@ -12,6 +12,7 @@ const scaleBarWidths = {
     large: 140,
 };
 
+// Manage scale bar visibility, appearance, size and units.
 function createScaleBarController({
     map,
     hasSlide,

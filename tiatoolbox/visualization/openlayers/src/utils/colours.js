@@ -1,3 +1,4 @@
+// Shared colour helpers for viewer controls, grids, and themes.
 function hexToRgb(hex) {
     const value = hex.replace("#", "");
 

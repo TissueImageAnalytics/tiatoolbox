@@ -1,3 +1,5 @@
+// TileServer API helpers for dynamic slide and overlay management.
+
 // Initialise the TileServer session used for dynamic slide loading.
 async function createSession() {
     const response = await fetch("/tileserver/session_id");

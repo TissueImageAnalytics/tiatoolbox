@@ -113,9 +113,11 @@ Select a slide from the slide dropdown to load it. The available files can be
 searched by name, and a different slide can be selected at any time without
 restarting the viewer.
 
-Once a slide is loaded, related overlays are made available in the overlay
-dropdown. The available overlays can also be searched by name. Multiple
-overlays can be loaded and managed using the Layers panel.
+Once a slide is loaded, matching overlays are made available in the overlay
+dropdown. An overlay is considered a match when its filename contains the
+filename stem of the selected slide. The available overlays can also be
+searched by name. Multiple overlays can be loaded and managed using the Layers
+panel.
 
 Use **Clear Overlays** to remove all overlays while keeping the current slide
 loaded. Use **Clear Slide** to remove the slide and its overlays and return the
@@ -159,7 +161,7 @@ npm --version
 The existing `show-wsi` viewer is kept separately as the legacy viewer, while
 the experimental dynamic viewer uses the main OpenLayers frontend files.
 
-The shared frontend files are:
+The shared frontend tooling files are:
 
 - `package.json` defines the frontend dependencies and build commands.
 - `package-lock.json` records the exact dependency versions installed by npm.
@@ -191,16 +193,24 @@ tiatoolbox/data/visualization/templates/index_legacy.html
 
 The experimental viewer source is split into the following files and directories:
 
-- `src/main.js` contains the main viewer logic and coordinates the map, slides,
-  overlays and other frontend modules.
-- `src/api/` contains communication with the TileServer.
-- `src/components/` contains reusable interface components.
-- `src/controls/` contains the OpenLayers viewer controls.
-- `src/panels/` contains the Files, Layers and Settings panels.
-- `src/utils/` contains shared helper functions.
+- `src/main.js` owns the application-level viewer state and coordinates the
+  map, slide and overlay lifecycle, and the frontend feature controllers.
+- `src/api/` contains TileServer request helpers for dynamic slide and overlay
+  operations.
+- `src/components/` contains reusable interface components, such as the
+  searchable file selector.
+- `src/controls/` contains the map, grid, scale bar and overview map
+  controllers.
+- `src/panels/` contains the Files, Layers and Settings panel controllers.
+- `src/utils/` contains shared colour and path helpers.
 - `src/style.css` imports the experimental viewer styles.
-- `src/styles/` contains the viewer styles, split into separate files.
+- `src/styles/` contains the experimental viewer styling split by feature.
 - `vite.config.js` defines how the experimental viewer is built.
+
+`src/main.js` remains responsible for coordination between features. The
+extracted modules keep individual feature logic separate and receive the state
+and callbacks they need from the main viewer rather than owning the overall
+application state.
 
 The generated files for the experimental viewer are:
 
@@ -283,8 +293,8 @@ The legacy build does not remove the generated experimental viewer files.
 
 ### Building the experimental viewer
 
-After changing any of the experimental frontend source files under `src/`,
-rebuild the experimental viewer with:
+After changing `src/main.js` or any of the experimental modules or styles under
+`src/`, rebuild the experimental viewer with:
 
 ```bash
 npm run build

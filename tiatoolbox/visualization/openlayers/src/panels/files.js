@@ -1,6 +1,8 @@
 import { createFileSelect } from "../components/file-select.js";
 import { getFileStem } from "../utils/paths.js";
 
+
+// Manage slide and overlay selection, panel state and loading actions.
 function createFilesPanelController({
     panel,
     toggle,
