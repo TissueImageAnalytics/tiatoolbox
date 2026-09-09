@@ -59,3 +59,11 @@ jobs:
 
       - name: Build legacy OpenLayers viewer
         run: npm run build:legacy
+
+      - name: Verify generated OpenLayers bundles
+        run: |
+          git diff --exit-code -- \
+            ../../data/visualization/static/openlayers/viewer.js \
+            ../../data/visualization/static/openlayers/viewer.css \
+            ../../data/visualization/static/openlayers/viewer_legacy.js \
+            ../../data/visualization/static/openlayers/viewer_legacy.css
