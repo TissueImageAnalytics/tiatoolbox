@@ -712,6 +712,37 @@ describe("slide selection", () => {
 });
 
 describe("overlay selection", () => {
+    it("ignores an empty overlay selection", async () => {
+        const state = {
+            currentSlidePath:
+                "/slides/CMU-1.svs",
+            slideLoaded: true,
+            overlaysLoaded: false,
+        };
+
+        const {
+            overlaySelect,
+            onOverlaySelected,
+        } = createHarness({
+            state,
+        });
+
+        overlaySelect.dispatchEvent(
+            new CustomEvent(
+                "change",
+                {
+                    detail: "",
+                },
+            ),
+        );
+
+        await flushAsyncEvents();
+
+        expect(
+            onOverlaySelected,
+        ).not.toHaveBeenCalled();
+    });
+
     it("loads an overlay and clears the selection", async () => {
         const state = {
             currentSlidePath:

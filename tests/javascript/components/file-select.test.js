@@ -367,6 +367,31 @@ describe("opening and closing", () => {
         ).toBe(true);
     });
 
+    it("does not open from the keyboard while disabled", () => {
+        const select =
+            createPopulatedSelect();
+
+        select.disabled = true;
+
+        const event =
+            dispatchKey(
+                getButton(select),
+                "ArrowDown",
+            );
+
+        expect(
+            event.defaultPrevented,
+        ).toBe(true);
+
+        expect(
+            select.classList.contains("open"),
+        ).toBe(false);
+
+        expect(
+            getMenu(select).hidden,
+        ).toBe(true);
+    });
+
     it("closes when disabled while open", () => {
         const select =
             createPopulatedSelect();
@@ -466,6 +491,35 @@ describe("opening and closing", () => {
         ).toBe(false);
         expect(
             getMenu(select).hidden,
+        ).toBe(true);
+    });
+
+    it("prevents mousedown from moving focus away from an option", () => {
+        const select =
+            createPopulatedSelect();
+
+        getButton(select).click();
+
+        const option =
+            select.querySelector(
+                ".viewer-file-select-option",
+            );
+
+        expect(option).not.toBeNull();
+
+        const event =
+            new MouseEvent(
+                "mousedown",
+                {
+                    bubbles: true,
+                    cancelable: true,
+                },
+            );
+
+        option.dispatchEvent(event);
+
+        expect(
+            event.defaultPrevented,
         ).toBe(true);
     });
 });

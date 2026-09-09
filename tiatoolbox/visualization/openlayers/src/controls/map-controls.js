@@ -82,6 +82,7 @@ function createMapControlsController({
     let zoomOutButton =
         zoomControl.querySelector(".ol-zoom-out");
 
+    /* v8 ignore if */
     if (zoomOutButton === null) {
         throw new Error(
             "The OpenLayers zoom control could not be found.",
@@ -352,6 +353,7 @@ function createMapControlsController({
         zoomOutButton =
             zoomControl.querySelector(".ol-zoom-out");
 
+        /* v8 ignore if */
         if (zoomOutButton === null) {
             throw new Error(
                 "The OpenLayers zoom control could not be found.",

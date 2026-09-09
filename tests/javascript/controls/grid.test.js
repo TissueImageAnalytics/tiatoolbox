@@ -541,6 +541,39 @@ describe("appearance", () => {
         );
     });
 
+    it("updates appearance when the grid theme changes", () => {
+        const {
+            map,
+            graticule,
+            gridThemeSelect,
+        } = createHarness({
+            gridTheme: "dark",
+        });
+
+        map.renderSync.mockClear();
+
+        gridThemeSelect.value =
+            "light";
+
+        dispatchChange(
+            gridThemeSelect,
+        );
+
+        expect(
+            getGridStyle(
+                graticule,
+            )
+                .getStroke()
+                .getColor(),
+        ).toBe(
+            "rgba(255, 255, 255, 0.5)",
+        );
+
+        expect(
+            map.renderSync,
+        ).toHaveBeenCalledOnce();
+    });
+
     it("updates opacity and the displayed opacity value", () => {
         const {
             map,
@@ -742,6 +775,50 @@ describe("grid toggles", () => {
         expect(
             mapState.getAssignedMap(
                 graticule,
+            ),
+        ).toBeNull();
+    });
+
+    it("deactivates the screen-space grid", () => {
+        const {
+            map,
+            graticule,
+            screenSpaceGraticule,
+            screenSpaceGraticuleToggle,
+        } = createHarness();
+
+        const mapState =
+            stubGraticuleSetMap(
+                graticule,
+            );
+
+        clickToggle(
+            screenSpaceGraticuleToggle,
+        );
+
+        expect(
+            screenSpaceGraticuleToggle
+                .getActive(),
+        ).toBe(true);
+
+        expect(
+            mapState.getAssignedMap(
+                screenSpaceGraticule,
+            ),
+        ).toBe(map);
+
+        clickToggle(
+            screenSpaceGraticuleToggle,
+        );
+
+        expect(
+            screenSpaceGraticuleToggle
+                .getActive(),
+        ).toBe(false);
+
+        expect(
+            mapState.getAssignedMap(
+                screenSpaceGraticule,
             ),
         ).toBeNull();
     });

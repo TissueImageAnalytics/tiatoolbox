@@ -868,6 +868,16 @@ describe("saving settings", () => {
 });
 
 describe("loading settings", () => {
+    it("returns safely when no saved settings exist", () => {
+        const {
+            controller,
+        } = createHarness();
+
+        expect(() => {
+            controller.load();
+        }).not.toThrow();
+    });
+
     it("loads valid saved settings", () => {
         const harness =
             createHarness();
