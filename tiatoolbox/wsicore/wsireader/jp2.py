@@ -9,7 +9,9 @@ from typing import TYPE_CHECKING
 import glymur
 
 from tiatoolbox import logger, utils
-from tiatoolbox.wsicore import WSIMeta, WSIReader
+from tiatoolbox.wsicore.wsimeta import WSIMeta
+
+from .base import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from numbers import Number
