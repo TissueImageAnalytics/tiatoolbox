@@ -38,7 +38,6 @@ from tiatoolbox.utils.exceptions import FileNotSupportedError
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
-from . import JP2WSIReader
 from .detection import is_tiled_tiff, is_url
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -93,6 +92,8 @@ def _handle_virtual_wsi(
     ) -> VirtualWSIReader:
         """Create a virtual WSI from a numpy array."""
         return VirtualWSIReader(input_path, *args, **kwargs)
+
+    from .jp2 import JP2WSIReader  # noqa: PLC0415
 
     suffix_to_reader = {
         ".npy": np_virtual_wsi,
