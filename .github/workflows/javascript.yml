@@ -21,10 +21,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js 22.12.0
+      - name: Set up Node.js 24.18.1
         uses: actions/setup-node@v4
         with:
-          node-version: "22.12.0"
+          node-version: "24.18.1"
           cache: npm
           cache-dependency-path: tiatoolbox/visualization/openlayers/package-lock.json
 
