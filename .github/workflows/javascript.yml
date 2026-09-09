@@ -37,6 +37,23 @@ jobs:
       - name: Test JavaScript
         run: npm run test:coverage
 
+      - name: Report test coverage to Codecov
+        uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          files: tiatoolbox/visualization/openlayers/coverage/lcov.info
+          fail_ci_if_error: false
+          verbose: true
+
+      - name: Report test coverage to DeepSource
+        uses: deepsourcelabs/test-coverage-action@master
+        with:
+          key: javascript
+          coverage-file: tiatoolbox/visualization/openlayers/coverage/lcov.info
+          dsn: ${{ secrets.DEEPSOURCE_DSN }}
+          fail-ci-on-error: false
+
       - name: Build OpenLayers viewer
         run: npm run build
 
