@@ -60,6 +60,7 @@ from tiatoolbox.wsicore.wsireader import (
     is_tiled_tiff,
     is_url,
     is_zarr,
+    jp2,
 )
 from tiatoolbox.wsicore.wsireader.detection import is_valid_zarr_fsspec
 from tiatoolbox.wsicore.wsireader.factory import (
@@ -394,7 +395,7 @@ def test_relative_level_scales_openslide_baseline(sample_ndpi: Path) -> None:
 
 def test_relative_level_scales_jp2_baseline(sample_jp2: Path) -> None:
     """Test jp2 relative level scales for pixels per baseline pixel."""
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
     relative_level_scales_baseline(wsi)
 
 
@@ -410,7 +411,7 @@ def test_relative_level_scales_openslide_mpp(sample_ndpi: Path) -> None:
 
 def test_relative_level_scales_jp2_mpp(sample_jp2: Path) -> None:
     """Test jp2 calculation of relative level scales for mpp."""
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
     level_scales = wsi.info.relative_level_scales(0.5, "mpp")
     level_scales = np.array(level_scales)
     assert strictly_increasing(level_scales[:, 0])
@@ -438,7 +439,7 @@ def test_relative_level_scales_openslide_power(sample_ndpi: Path) -> None:
 
 def test_relative_level_scales_jp2_power(sample_jp2: Path) -> None:
     """Test jp2 calculation of relative level scales for objective power."""
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
     relative_level_scales_power(wsi)
 
 
@@ -461,7 +462,7 @@ def test_relative_level_scales_openslide_level(sample_ndpi: Path) -> None:
 
 def test_relative_level_scales_jp2_level(sample_jp2: Path) -> None:
     """Test jp2 calculation of relative level scales for level."""
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
     relative_level_scales_level(wsi)
 
 
@@ -484,7 +485,7 @@ def test_relative_level_scales_openslide_level_float(sample_ndpi: Path) -> None:
 
 def test_relative_level_scales_jp2_level_float(sample_jp2: Path) -> None:
     """Test jp2 calculation of relative level scales for fractional level."""
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
     relative_level_scales_float(wsi)
 
 
@@ -560,7 +561,7 @@ def test_find_optimal_level_and_downsample_jp2_interpolation_warning(
     will be applied to the output. A UserWarning should be raised in this case.
 
     """
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
     _, _ = wsi._find_optimal_level_and_downsample(0.1, "mpp")
     assert (
         "Read: Scale > 1.This means that the desired resolution is higher"
@@ -758,7 +759,7 @@ def test_read_rect_jp2_baseline(sample_jp2: Path) -> None:
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
     location = JP2_TEST_TISSUE_LOCATION
     size = JP2_TEST_TISSUE_SIZE
     im_region = wsi.read_rect(location, size, resolution=0, units="level")
@@ -833,7 +834,7 @@ def test_read_rect_jp2_levels(sample_jp2: Path) -> None:
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
     location = (0, 0)
     size = JP2_TEST_TISSUE_SIZE
     width, height = size
@@ -888,7 +889,7 @@ def test_read_rect_jp2_mpp(sample_jp2: Path) -> None:
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
     location = JP2_TEST_TISSUE_LOCATION
     size = JP2_TEST_TISSUE_SIZE
     read_rect_mpp(wsi, location, size)
@@ -913,7 +914,7 @@ def test_read_rect_jp2_objective_power(sample_jp2: Path) -> None:
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
     location = JP2_TEST_TISSUE_LOCATION
     size = JP2_TEST_TISSUE_SIZE
 
@@ -942,7 +943,7 @@ def test_read_bounds_jp2_baseline(sample_jp2: Path) -> None:
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
     size = JP2_TEST_TISSUE_SIZE
     im_region = wsi.read_bounds(bounds, resolution=0, units="level")
@@ -978,7 +979,7 @@ def test_read_bounds_jp2_levels(sample_jp2: Path) -> None:
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
     width, height = JP2_TEST_TISSUE_SIZE
     for level, downsample in enumerate(wsi.info.level_downsamples):
@@ -1012,7 +1013,7 @@ def test_read_bounds_jp2_mpp(sample_jp2: Path) -> None:
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
     size = JP2_TEST_TISSUE_SIZE
 
@@ -1039,7 +1040,7 @@ def test_read_bounds_jp2_objective_power(sample_jp2: Path) -> None:
     Coordinates in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
     bounds = JP2_TEST_TISSUE_BOUNDS
     size = JP2_TEST_TISSUE_SIZE
     slide_power = wsi.info.objective_power
@@ -1089,7 +1090,7 @@ def test_read_bounds_level_consistency_jp2(sample_jp2: Path) -> None:
 
     """
     bounds = JP2_TEST_TISSUE_BOUNDS
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
 
     read_bounds_level_consistency(wsi, bounds)
 
@@ -1161,7 +1162,7 @@ def test_incompatible_level(
 
 def test_wsireader_jp2_save_tiles(sample_jp2: Path, track_tmp_path: Path) -> None:
     """Test for save_tiles in wsireader as a python function."""
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
     wsi.save_tiles(
         output_dir=str(track_tmp_path / "test_wsireader_jp2_save_tiles"),
         tile_objective_value=5,
@@ -1652,7 +1653,7 @@ def test_wsireader_open(
     assert isinstance(wsi, wsireader.OpenSlideWSIReader)
 
     wsi = WSIReader.open(sample_jp2)
-    assert isinstance(wsi, wsireader.JP2WSIReader)
+    assert isinstance(wsi, jp2.JP2WSIReader)
 
     wsi = WSIReader.open(sample_ome_tiff)
     assert isinstance(wsi, wsireader.TIFFWSIReader)
@@ -1687,7 +1688,7 @@ def test_wsireader_open(
 
 def test_jp2_missing_cod(sample_jp2: Path, caplog: pytest.LogCaptureFixture) -> None:
     """Test for warning if JP2 is missing COD segment."""
-    wsi = wsireader.JP2WSIReader(sample_jp2)
+    wsi = jp2.JP2WSIReader(sample_jp2)
     wsi.glymur_jp2.codestream.segment = []
     _ = wsi.info
     assert "missing COD" in caplog.text
