@@ -30,6 +30,7 @@ from tifffile import TiffPages
 from zarr.experimental.cache_store import CacheStore
 from zarr.storage import FsspecStore, MemoryStore
 
+import tiatoolbox
 from tiatoolbox import logger, utils
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
 from tiatoolbox.utils import postproc_defs
@@ -93,11 +94,9 @@ def _handle_virtual_wsi(
         """Create a virtual WSI from a numpy array."""
         return VirtualWSIReader(input_path, *args, **kwargs)
 
-    from .jp2 import JP2WSIReader  # noqa: PLC0415
-
     suffix_to_reader = {
         ".npy": np_virtual_wsi,
-        ".jp2": JP2WSIReader,
+        ".jp2": tiatoolbox.wsicore.wsireader.JP2WSIReader,
         ".jpeg": VirtualWSIReader,
         ".jpg": VirtualWSIReader,
         ".png": VirtualWSIReader,
