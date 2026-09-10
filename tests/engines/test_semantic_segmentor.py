@@ -487,6 +487,7 @@ def test_get_wsi_output_shape_uses_existing_reader() -> None:
             units: str,
         ) -> tuple[int, int]:
             """Return fake WSI dimensions."""
+            _ = self
             assert resolution == 0.5
             assert units == "mpp"
 

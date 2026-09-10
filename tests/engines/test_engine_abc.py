@@ -560,12 +560,14 @@ def test_update_run_params_sets_dask_num_workers(
         masks: object,
         labels: object,
     ) -> None:
+        """Fake validate input numbers."""
         _ = images, masks, labels
 
     def _fake_validate_images_masks(
         *,
         images: object,
     ) -> list:
+        """Fake validate images masks."""
         _ = images
         return []
 
@@ -573,6 +575,7 @@ def test_update_run_params_sets_dask_num_workers(
         *,
         ioconfig: object,
     ) -> object:
+        """Fake load ioconfig."""
         return ioconfig
 
     def _fake_update_ioconfig(
@@ -581,6 +584,7 @@ def test_update_run_params_sets_dask_num_workers(
         stride_shape: object,
         input_resolutions: object,
     ) -> object:
+        """Fake update ioconfig."""
         _ = patch_input_shape, stride_shape, input_resolutions
         return ioconfig
 
