@@ -61,6 +61,7 @@ from tiatoolbox.wsicore.wsireader import (
     is_url,
     is_zarr,
     jp2,
+    ngff,
 )
 from tiatoolbox.wsicore.wsireader.detection import is_valid_zarr_fsspec
 from tiatoolbox.wsicore.wsireader.factory import (
@@ -2360,7 +2361,7 @@ def test_ngff_zattrs_non_micrometer_scale_mpp(
     with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
 
-    wsi = wsireader.NGFFWSIReader(sample_copy)
+    wsi = ngff.NGFFWSIReader(sample_copy)
     assert "micrometer" in caplog.text
 
     assert wsi.info.mpp is None
@@ -2379,7 +2380,7 @@ def test_ngff_zattrs_missing_axes_mpp(
     zattrs["multiscales"][0]["axes"] = []
     with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
-    wsi = wsireader.NGFFWSIReader(sample_copy)
+    wsi = ngff.NGFFWSIReader(sample_copy)
     assert wsi.info.mpp is None
 
 
@@ -2394,7 +2395,7 @@ def test_ngff_empty_datasets_mpp(track_tmp_path: Path, remote_sample: Callable) 
     zattrs["multiscales"][0]["datasets"] = []
     with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
-    wsi = wsireader.NGFFWSIReader(sample_copy)
+    wsi = ngff.NGFFWSIReader(sample_copy)
     assert wsi.info.mpp is None
 
 
@@ -2413,7 +2414,7 @@ def test_ngff_no_scale_transforms_mpp(
         datasets["coordinateTransformations"][0]["type"] = "identity"
     with Path.open(sample_copy / ".zattrs", "w") as fh:
         json.dump(zattrs, fh, indent=2)
-    wsi = wsireader.NGFFWSIReader(sample_copy)
+    wsi = ngff.NGFFWSIReader(sample_copy)
     assert wsi.info.mpp is None
 
 
