@@ -8,8 +8,10 @@ import zarr
 from zarr.storage import FsspecStore
 
 from tiatoolbox import logger, utils
-from tiatoolbox.wsicore import WSIMeta, WSIReader
+from tiatoolbox.wsicore.wsimeta import WSIMeta
 from tiatoolbox.wsicore.wsireader import ArrayView
+
+from .base import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path

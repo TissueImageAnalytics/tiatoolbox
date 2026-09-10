@@ -14,13 +14,13 @@ from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
 from .detection import is_dicom, is_ngff, is_valid_zarr_fsspec
+from .ngff import NGFFWSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from numbers import Number
 
     from tiatoolbox.type_hints import WSIPostProc
 
-    from . import NGFFWSIReader
     from .base import (
         AnnotationStoreReader,
         FsspecJsonWSIReader,
@@ -260,8 +260,6 @@ def try_ngff(
     **kwargs: Unpack[WSIReaderExtraParams],
 ) -> NGFFWSIReader | None:
     """Try to create an NGFFWSIReader if the file is a valid NGFF Zarr."""
-    from .base import NGFFWSIReader  # noqa: PLC0415
-
     if last_suffix == ".zarr":
         if not is_ngff(input_path, **kwargs):
             msg = f"File {input_path} does not appear to be a v0.4 NGFF zarr."
