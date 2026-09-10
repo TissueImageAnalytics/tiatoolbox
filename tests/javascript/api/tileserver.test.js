@@ -438,6 +438,47 @@ describe("setAnnotationColors", () => {
         });
     });
 
+    it("preserves numeric annotation type keys from a map", async () => {
+        const fetchMock = vi.fn().mockResolvedValue(
+            mockResponse(),
+        );
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        const colorMap = new Map([
+            [
+                0,
+                [1, 0, 0, 1],
+            ],
+            [
+                1,
+                [0, 1, 0, 1],
+            ],
+        ]);
+
+        await setAnnotationColors(colorMap);
+
+        const [
+            ,
+            options,
+        ] = fetchMock.mock.calls[0];
+
+        expect(
+            JSON.parse(
+                options.body.get("cmap"),
+            ),
+        ).toEqual({
+            keys: [
+                0,
+                1,
+            ],
+            values: [
+                [1, 0, 0, 1],
+                [0, 1, 0, 1],
+            ],
+        });
+    });
+
     it("throws when annotation colours cannot be updated", async () => {
         vi.stubGlobal(
             "fetch",

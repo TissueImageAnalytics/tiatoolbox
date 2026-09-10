@@ -4,7 +4,7 @@ import "./style.css";
 
 import { defaults as defaultControls } from "ol/control/defaults.js";
 import TileLayer from "ol/layer/Tile.js";
-import Map from "ol/Map.js";
+import OlMap from "ol/Map.js";
 import Projection from "ol/proj/Projection.js";
 import { addProjection } from "ol/proj.js";
 import Zoomify from "ol/source/Zoomify.js";
@@ -44,6 +44,9 @@ import {
 import {
     createSettingsPanelController,
 } from "./panels/settings.js";
+import {
+    assignAnnotationColours,
+} from "./utils/annotation-colours.js";
 import { getFileStem } from "./utils/paths.js";
 
 // Create a Zoomify source with versions to avoid reusing tiles from an old slide.
@@ -361,6 +364,7 @@ let currentSlideInfo = null;
 let currentSlidePath = null;
 const overlayLayers = {};
 const annotationLayerNames = new Set();
+const annotationColours = new Map();
 
 const configuredSlides =
     await getConfiguredFiles("slide");
@@ -538,7 +542,7 @@ const view = new View({
     resolution: resolutions[0],
 });
 
-const map = new Map({
+const map = new OlMap({
     target: mapElement,
     layers,
     view,
@@ -1006,6 +1010,15 @@ async function loadOverlay(overlayPath) {
 
     if (isAnnotation) {
         annotationLayerNames.add(layerName);
+
+        assignAnnotationColours(
+            annotationColours,
+            result,
+        );
+
+        await setTileServerAnnotationColors(
+            annotationColours,
+        );
     } else {
         annotationLayerNames.delete(layerName);
     }
@@ -1101,12 +1114,32 @@ async function setAnnotationColors(colorMap) {
         throw new Error("No annotation overlay is loaded.");
     }
 
-    await setTileServerAnnotationColors(colorMap);
+    const entries =
+        colorMap instanceof Map
+            ? [...colorMap.entries()]
+            : Object.entries(colorMap);
+
+    const updatedColours =
+        new Map(entries);
+
+    await setTileServerAnnotationColors(
+        updatedColours,
+    );
+
+    annotationColours.clear();
+
+    for (const [type, colour] of updatedColours) {
+        annotationColours.set(
+            type,
+            colour,
+        );
+    }
 
     overlayVersion += 1;
 
     for (const layerName of annotationLayerNames) {
-        const overlayLayer = overlayLayers[layerName];
+        const overlayLayer =
+            overlayLayers[layerName];
 
         if (overlayLayer === undefined) {
             continue;
@@ -1117,7 +1150,8 @@ async function setAnnotationColors(colorMap) {
                 `/tileserver/layer/${encodeURIComponent(layerName)}/` +
                 `${sessionId}/zoomify/` +
                 `{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${overlayVersion}`,
-            size: currentSlideInfo.slide_dimensions,
+            size:
+                currentSlideInfo.slide_dimensions,
             crossOrigin: "anonymous",
             zDirection: -1,
         });

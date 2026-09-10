@@ -98,12 +98,22 @@ async function removeOverlay(layerName) {
 }
 
 async function setAnnotationColors(colorMap) {
+    const entries =
+        colorMap instanceof Map
+            ? [...colorMap.entries()]
+            : Object.entries(colorMap);
+
     const formData = new FormData();
+
     formData.append(
         "cmap",
         JSON.stringify({
-            keys: Object.keys(colorMap),
-            values: Object.values(colorMap),
+            keys: entries.map(
+                ([key]) => key,
+            ),
+            values: entries.map(
+                ([, value]) => value,
+            ),
         }),
     );
 
