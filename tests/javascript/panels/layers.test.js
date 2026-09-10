@@ -167,6 +167,7 @@ beforeEach(() => {
 
 describe("rendering", () => {
     it("shows an empty state when no layers are loaded", () => {
+        // Test the layers panel shows an empty state when no layers are loaded.
         const {
             list,
             controller,
@@ -191,6 +192,7 @@ describe("rendering", () => {
     });
 
     it("renders the slide first and overlays in z-index order", () => {
+        // Test the slide is listed first and overlays follow their layer order.
         const lowerOverlay =
             createLayer({
                 zIndex: 10,
@@ -225,6 +227,7 @@ describe("rendering", () => {
     });
 
     it("uses a fallback name when the slide path is unavailable", () => {
+        // Test the slide uses a fallback name when its path is unavailable.
         const {
             list,
             controller,
@@ -242,6 +245,7 @@ describe("rendering", () => {
     });
 
     it("only gives overlays ordering and removal controls", () => {
+        // Test only overlay layers can be reordered or removed.
         const first =
             createLayer({
                 zIndex: 10,
@@ -334,6 +338,7 @@ describe("rendering", () => {
 
 describe("layer controls", () => {
     it("updates layer visibility", () => {
+        // Test changing a layer visibility checkbox updates the layer.
         const overlay =
             createLayer({
                 visible: true,
@@ -388,6 +393,7 @@ describe("layer controls", () => {
     });
 
     it("updates layer opacity and its percentage label", () => {
+        // Test changing layer opacity updates the layer and percentage label.
         const overlay =
             createLayer({
                 opacity: 0.75,
@@ -454,6 +460,7 @@ describe("layer controls", () => {
     });
 
     it("moves an overlay down by swapping z-index values", () => {
+        // Test moving an overlay down swaps its order with the layer below.
         const first =
             createLayer({
                 zIndex: 10,
@@ -509,6 +516,7 @@ describe("layer controls", () => {
     });
 
     it("moves an overlay up by swapping z-index values", () => {
+        // Test moving an overlay up swaps its order with the layer above.
         const first =
             createLayer({
                 zIndex: 10,
@@ -564,6 +572,7 @@ describe("layer controls", () => {
     });
 
     it("passes an overlay ID to the remove callback", async () => {
+        // Test removing an overlay passes its layer ID to the callback.
         const overlay =
             createLayer();
 
@@ -599,6 +608,7 @@ describe("layer controls", () => {
     });
 
     it("logs errors when removing an overlay fails", async () => {
+        // Test failed overlay removal is logged.
         const error =
             new Error(
                 "Remove failure",
@@ -650,6 +660,7 @@ describe("layer controls", () => {
 
 describe("panel state", () => {
     it("opens and closes through the controller", () => {
+        // Test opening and closing the layers panel through its controller.
         const {
             panel,
             toggle,
@@ -695,6 +706,7 @@ describe("panel state", () => {
     });
 
     it("toggles the panel from its toggle button", () => {
+        // Test the layers button toggles the panel.
         const {
             panel,
             toggle,

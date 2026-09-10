@@ -335,6 +335,7 @@ beforeEach(() => {
 
 describe("initialisation", () => {
     it("creates both graticules and adds both toggle controls", () => {
+        // Test creating both grid types and their toggle controls.
         const {
             map,
             graticule,
@@ -379,6 +380,7 @@ describe("initialisation", () => {
     });
 
     it("applies the initial appearance and labels", () => {
+        // Test the grids start with the selected appearance and label settings.
         const {
             map,
             graticule,
@@ -412,6 +414,7 @@ describe("initialisation", () => {
     });
 
     it("starts without labels when label visibility is disabled", () => {
+        // Test grid labels start hidden when label visibility is disabled.
         const {
             graticule,
         } = createHarness({
@@ -450,6 +453,7 @@ describe("appearance", () => {
             gridTheme,
             expectedColour,
         ) => {
+            // Test each grid theme uses the expected colours.
             const {
                 graticule,
             } = createHarness({
@@ -485,6 +489,7 @@ describe("appearance", () => {
             theme,
             expectedColour,
         ) => {
+            // Test the default grid theme follows the selected interface theme.
             const {
                 graticule,
             } = createHarness({
@@ -503,6 +508,7 @@ describe("appearance", () => {
     );
 
     it("falls back to dark colours for an unknown grid theme", () => {
+        // Test an unknown grid theme uses the dark theme colours.
         const {
             graticule,
         } = createHarness({
@@ -542,6 +548,7 @@ describe("appearance", () => {
     });
 
     it("updates appearance when the grid theme changes", () => {
+        // Test changing the grid theme updates grid appearance.
         const {
             map,
             graticule,
@@ -575,6 +582,7 @@ describe("appearance", () => {
     });
 
     it("updates opacity and the displayed opacity value", () => {
+        // Test changing grid opacity updates both the grids and displayed value.
         const {
             map,
             graticule,
@@ -616,6 +624,7 @@ describe("appearance", () => {
 
 describe("labels", () => {
     it("hides labels when label visibility is disabled", () => {
+        // Test disabling grid labels hides them on both grid types.
         const {
             map,
             graticule,
@@ -643,6 +652,7 @@ describe("labels", () => {
     });
 
     it("restores labels when label visibility is enabled", () => {
+        // Test enabling grid labels restores them on both grid types.
         const {
             map,
             graticule,
@@ -674,6 +684,7 @@ describe("labels", () => {
 
 describe("grid toggles", () => {
     it("activates the graticule and deactivates the screen-space grid", () => {
+        // Test enabling the graticule turns off the screen-space grid.
         const {
             map,
             graticule,
@@ -730,6 +741,7 @@ describe("grid toggles", () => {
     });
 
     it("activates the screen-space grid and deactivates the graticule", () => {
+        // Test enabling the screen-space grid turns off the graticule.
         const {
             map,
             graticule,
@@ -780,6 +792,7 @@ describe("grid toggles", () => {
     });
 
     it("deactivates the screen-space grid", () => {
+        // Test turning off the screen-space grid removes it from the map.
         const {
             map,
             graticule,
@@ -824,6 +837,7 @@ describe("grid toggles", () => {
     });
 
     it("removes a grid when its active toggle is clicked again", () => {
+        // Test clicking an active grid button turns that grid off.
         const {
             graticule,
             graticuleToggle,
@@ -867,6 +881,7 @@ describe("grid recreation", () => {
     ])(
         "recreates both grids when spacing changes to %s",
         (spacing) => {
+            // Test changing grid spacing recreates both grid types.
             const {
                 map,
                 graticule,
@@ -932,6 +947,7 @@ describe("grid recreation", () => {
     );
 
     it("preserves an active graticule when spacing changes", () => {
+        // Test changing spacing keeps an active graticule enabled.
         const {
             map,
             graticule,
@@ -988,6 +1004,7 @@ describe("grid recreation", () => {
     });
 
     it("preserves an active screen-space grid when projection changes", () => {
+        // Test changing projection keeps an active screen-space grid enabled.
         const {
             map,
             controller,
@@ -1044,6 +1061,7 @@ describe("grid recreation", () => {
     });
 
     it("can recreate grids without preserving active state", () => {
+        // Test grids can be recreated without restoring the active grid.
         const {
             controller,
             graticule,
@@ -1116,6 +1134,7 @@ describe("grid recreation", () => {
 
 describe("visibility and viewer state", () => {
     it("hides disabled grid controls and deactivates their grids", () => {
+        // Test hidden grid controls also turn off their active grids.
         const {
             graticule,
             screenSpaceGraticule,
@@ -1182,6 +1201,7 @@ describe("visibility and viewer state", () => {
     });
 
     it("shows grid controls when their visibility settings are enabled", () => {
+        // Test grid controls return when their visibility settings are enabled.
         const harness =
             createHarness({
                 graticuleVisible: false,
@@ -1221,6 +1241,8 @@ describe("visibility and viewer state", () => {
     });
 
     it("disables both grid controls and clears active grids when the viewer is disabled", () => {
+        // Test disabling the viewer disables both grid controls and turns off active
+        // grids.
         const {
             graticule,
             screenSpaceGraticule,
@@ -1279,6 +1301,8 @@ describe("visibility and viewer state", () => {
     });
 
     it("reenables both grid buttons without reactivating a grid", () => {
+        // Test enabling the viewer restores grid buttons without turning a grid back
+        // on.
         const {
             graticule,
             graticuleToggle,
