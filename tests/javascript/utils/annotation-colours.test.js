@@ -2,55 +2,105 @@ import {
     describe,
     expect,
     it,
+    vi,
 } from "vitest";
 
 import {
     assignAnnotationColours,
 } from "../../../tiatoolbox/visualization/openlayers/src/utils/annotation-colours.js";
 
-describe("assignAnnotationColours", () => {
-    it("assigns different colours to new annotation types", () => {
-        const colourMap = new Map();
+function createColourGenerator() {
+    const colours = new Map([
+        [
+            0,
+            [1, 0, 0, 1],
+        ],
+        [
+            1,
+            [0, 1, 0, 1],
+        ],
+        [
+            2,
+            [0, 0, 1, 1],
+        ],
+        [
+            "tumour",
+            [1, 0.5, 0, 1],
+        ],
+        [
+            "stroma",
+            [0, 1, 1, 1],
+        ],
+    ]);
 
-        assignAnnotationColours(
+    return vi.fn(
+        async (types) =>
+            new Map(
+                types.map(
+                    (type) => [
+                        type,
+                        colours.get(type),
+                    ],
+                ),
+            ),
+    );
+}
+
+describe("assignAnnotationColours", () => {
+    it("adds generated colours for new annotation types", async () => {
+        const colourMap = new Map();
+        const getColours =
+            createColourGenerator();
+
+        await assignAnnotationColours(
             colourMap,
             [0, 1, 2],
+            getColours,
         );
 
-        expect(colourMap.size).toBe(3);
-
-        for (const colour of colourMap.values()) {
-            expect(colour).toHaveLength(4);
-            expect(colour[3]).toBe(1);
-        }
-
         expect(
-            new Set(
-                [...colourMap.values()].map(
-                    (colour) =>
-                        JSON.stringify(colour),
-                ),
-            ).size,
-        ).toBe(3);
+            [...colourMap.entries()],
+        ).toEqual([
+            [
+                0,
+                [1, 0, 0, 1],
+            ],
+            [
+                1,
+                [0, 1, 0, 1],
+            ],
+            [
+                2,
+                [0, 0, 1, 1],
+            ],
+        ]);
     });
 
-    it("preserves colours already assigned to annotation types", () => {
+    it("preserves existing colours", async () => {
         const existingColour = [
             0.25,
             0.5,
             0.75,
+            1,
         ];
 
         const colourMap = new Map([
-            ["tumour", existingColour],
+            [
+                "tumour",
+                existingColour,
+            ],
         ]);
 
-        assignAnnotationColours(
+        const getColours =
+            createColourGenerator();
+
+        await assignAnnotationColours(
             colourMap,
             [
                 "tumour",
                 "stroma",
             ],
+            getColours,
         );
 
         expect(
@@ -58,146 +108,78 @@ describe("assignAnnotationColours", () => {
         ).toBe(existingColour);
 
         expect(
-            colourMap.has("stroma"),
-        ).toBe(true);
+            colourMap.get("stroma"),
+        ).toEqual([
+            0,
+            1,
+            1,
+            1,
+        ]);
+
+        expect(
+            getColours,
+        ).toHaveBeenCalledWith([
+            "stroma",
+        ]);
     });
 
-    it("does not add the same annotation type twice", () => {
+    it("requests duplicate annotation types once", async () => {
         const colourMap = new Map();
+        const getColours =
+            createColourGenerator();
 
-        assignAnnotationColours(
+        await assignAnnotationColours(
             colourMap,
             [
                 "tumour",
                 "tumour",
             ],
+            getColours,
         );
+
+        expect(
+            getColours,
+        ).toHaveBeenCalledWith([
+            "tumour",
+        ]);
 
         expect(colourMap.size).toBe(1);
     });
 
-    it("preserves numeric annotation types", () => {
+    it("preserves numeric annotation type keys", async () => {
         const colourMap = new Map();
+        const getColours =
+            createColourGenerator();
 
-        assignAnnotationColours(
+        await assignAnnotationColours(
             colourMap,
             [0, 1],
+            getColours,
         );
 
         expect(colourMap.has(0)).toBe(true);
         expect(colourMap.has("0")).toBe(false);
     });
 
-    it("assigns the same colour to each type regardless of load order", () => {
-        const firstColourMap =
-            new Map();
-
-        const secondColourMap =
-            new Map();
-
-        assignAnnotationColours(
-            firstColourMap,
-            [0, 1, 2],
-        );
-
-        assignAnnotationColours(
-            firstColourMap,
-            [2, 3, 4],
-        );
-
-        assignAnnotationColours(
-            secondColourMap,
-            [2, 3, 4],
-        );
-
-        assignAnnotationColours(
-            secondColourMap,
-            [0, 1, 2],
-        );
-
-        for (const annotationType of [
-            0,
-            1,
-            2,
-            3,
-            4,
-        ]) {
-            expect(
-                firstColourMap.get(
-                    annotationType,
-                ),
-            ).toEqual(
-                secondColourMap.get(
-                    annotationType,
-                ),
-            );
-        }
-    });
-
-    it("assigns stable colours to named annotation types", () => {
-        const firstColourMap =
-            new Map();
-
-        const secondColourMap =
-            new Map();
-
-        assignAnnotationColours(
-            firstColourMap,
+    it("does not request colours for known types", async () => {
+        const colourMap = new Map([
             [
-                "tumour",
-                "stroma",
+                0,
+                [1, 0, 0, 1],
             ],
-        );
+        ]);
 
-        assignAnnotationColours(
-            secondColourMap,
-            [
-                "stroma",
-                "tumour",
-            ],
-        );
+        const getColours =
+            createColourGenerator();
 
-        expect(
-            firstColourMap.get("tumour"),
-        ).toEqual(
-            secondColourMap.get("tumour"),
-        );
-
-        expect(
-            firstColourMap.get("stroma"),
-        ).toEqual(
-            secondColourMap.get("stroma"),
-        );
-    });
-
-    it("keeps existing colours when new types are discovered", () => {
-        const colourMap = new Map();
-
-        assignAnnotationColours(
+        await assignAnnotationColours(
             colourMap,
-            [
-                "stroma",
-                "tumour",
-            ],
-        );
-
-        const tumourColour =
-            colourMap.get("tumour");
-
-        assignAnnotationColours(
-            colourMap,
-            [
-                "necrosis",
-                "tumour",
-            ],
+            [0],
+            getColours,
         );
 
         expect(
-            colourMap.get("tumour"),
-        ).toEqual(tumourColour);
-
-        expect(
-            colourMap.has("necrosis"),
-        ).toBe(true);
+            getColours,
+        ).not.toHaveBeenCalled();
     });
 });

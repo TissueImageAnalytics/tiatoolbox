@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import io
 import json
 import os
@@ -177,6 +178,10 @@ class TileServer(Flask):
         self.route("/tileserver/slide", methods=["DELETE"])(self.remove_slide)
         self.route("/tileserver/clear_overlays", methods=["PUT"])(self.clear_overlays)
         self.route("/tileserver/cmap", methods=["PUT"])(self.change_mapper)
+        self.route(
+            "/tileserver/annotation_colours",
+            methods=["PUT"],
+        )(self.get_annotation_colours)
         self.route(
             "/tileserver/annotations",
             methods=["PUT"],
@@ -369,6 +374,47 @@ class TileServer(Flask):
         types = sq.pquery("props['type']")
         types = [t for t in types if t is not None]
         return tuple(types)
+
+    @staticmethod
+    def annotation_colours(types: list) -> dict:
+        """Return deterministic qualitative colours for annotation types."""
+        set1 = colormaps["Set1"].colors
+
+        palette = [
+            (*map(float, set1[index][:3]), 1.0) for index in (0, 1, 2, 3, 4, 7, 5, 6, 8)
+        ]
+
+        for cmap_name in (
+            "Dark2",
+            "Accent",
+            "tab10",
+            "Paired",
+            "Set3",
+        ):
+            for colour in colormaps[cmap_name].colors:
+                rgba = (*map(float, colour[:3]), 1.0)
+
+                if rgba not in palette:
+                    palette.append(rgba)
+
+        values = []
+
+        for annotation_type in types:
+            if isinstance(annotation_type, int) and annotation_type >= 0:
+                colour_index = annotation_type
+            else:
+                key = f"{type(annotation_type).__name__}:{annotation_type}".encode()
+                colour_index = int.from_bytes(
+                    hashlib.sha256(key).digest()[:8],
+                    "big",
+                )
+
+            values.append(palette[colour_index % len(palette)])
+
+        return {
+            "keys": types,
+            "values": values,
+        }
 
     @staticmethod
     def decode_safe_name(name: str) -> Path:
@@ -817,6 +863,11 @@ class TileServer(Flask):
         self.pyramids[session_id].pop(layer, None)
 
         return Response("done", status=200)
+
+    def get_annotation_colours(self: TileServer) -> Response:
+        """Return colours for annotation types."""
+        types = json.loads(request.form["types"])
+        return jsonify(self.annotation_colours(types))
 
     def change_mapper(self: TileServer) -> str:
         """Change the colour mapper for the overlay."""

@@ -2003,3 +2003,27 @@ def test_enhance_set_nopostproc(app: TileServer) -> None:
         )
         assert response.status_code == 200
         assert response.data.decode() == "done"
+
+
+def test_annotation_colours_are_deterministic(app: TileServer) -> None:
+    """Test annotation colours do not depend on type order."""
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={"types": json.dumps([0, 1, 2])},
+        )
+        assert response.status_code == 200
+        first = response.get_json()
+
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={"types": json.dumps([2, 1, 0])},
+        )
+        assert response.status_code == 200
+        second = response.get_json()
+
+    first_colours = dict(zip(first["keys"], first["values"], strict=False))
+    second_colours = dict(zip(second["keys"], second["values"], strict=False))
+
+    assert first_colours == second_colours
+    assert all(len(colour) == 4 for colour in first_colours.values())

@@ -127,6 +127,41 @@ async function setAnnotationColors(colorMap) {
     }
 }
 
+async function getAnnotationColors(annotationTypes) {
+    const formData = new FormData();
+
+    formData.append(
+        "types",
+        JSON.stringify(annotationTypes),
+    );
+
+    const response = await fetch(
+        "/tileserver/annotation_colours",
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to generate annotation colours.",
+        );
+    }
+
+    const colourMap =
+        await response.json();
+
+    return new Map(
+        colourMap.keys.map(
+            (key, index) => [
+                key,
+                colourMap.values[index],
+            ],
+        ),
+    );
+}
+
 export {
     clearOverlays,
     createSession,
@@ -135,5 +170,6 @@ export {
     loadSlide,
     removeOverlay,
     removeSlide,
+    getAnnotationColors,
     setAnnotationColors,
 };

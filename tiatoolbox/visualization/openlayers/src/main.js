@@ -21,6 +21,7 @@ import {
     loadSlide,
     removeOverlay as removeTileServerOverlay,
     removeSlide as removeTileServerSlide,
+    getAnnotationColors as getTileServerAnnotationColors,
     setAnnotationColors as setTileServerAnnotationColors,
 } from "./api/tileserver.js";
 import {
@@ -1011,9 +1012,10 @@ async function loadOverlay(overlayPath) {
     if (isAnnotation) {
         annotationLayerNames.add(layerName);
 
-        assignAnnotationColours(
+        await assignAnnotationColours(
             annotationColours,
             result,
+            getTileServerAnnotationColors,
         );
 
         await setTileServerAnnotationColors(

@@ -14,6 +14,7 @@ import {
     loadSlide,
     removeOverlay,
     removeSlide,
+    getAnnotationColors,
     setAnnotationColors,
 } from "../../../tiatoolbox/visualization/openlayers/src/api/tileserver.js";
 
@@ -496,5 +497,67 @@ describe("setAnnotationColors", () => {
         ).rejects.toThrow(
             "Failed to update annotation colours.",
         );
+    });
+
+    it("gets annotation colours while preserving type keys", async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+
+            json: vi.fn().mockResolvedValue({
+                keys: [
+                    0,
+                    1,
+                ],
+
+                values: [
+                    [1, 0, 0, 1],
+                    [0, 1, 0, 1],
+                ],
+            }),
+        });
+
+        vi.stubGlobal(
+            "fetch",
+            fetchMock,
+        );
+
+        const colourMap =
+            await getAnnotationColors([
+                0,
+                1,
+            ]);
+
+        const [
+            url,
+            options,
+        ] = fetchMock.mock.calls[0];
+
+        expect(url).toBe(
+            "/tileserver/annotation_colours",
+        );
+
+        expect(options.method).toBe("PUT");
+
+        expect(
+            JSON.parse(
+                options.body.get("types"),
+            ),
+        ).toEqual([
+            0,
+            1,
+        ]);
+
+        expect(
+            [...colourMap.entries()],
+        ).toEqual([
+            [
+                0,
+                [1, 0, 0, 1],
+            ],
+            [
+                1,
+                [0, 1, 0, 1],
+            ],
+        ]);
     });
 });
