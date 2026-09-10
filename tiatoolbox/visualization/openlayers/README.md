@@ -257,6 +257,45 @@ The experimental viewer also uses:
   listing, loading and removing slides and overlays while the viewer is
   running.
 
+## Testing the frontend
+
+JavaScript tests for the OpenLayers frontend are located in
+`tests/javascript/` and use Vitest with jsdom.
+
+Run all JavaScript tests from the OpenLayers frontend directory:
+
+```bash
+npm run test
+```
+
+Run the tests with coverage using:
+
+```bash
+npm run test:coverage
+```
+
+To rerun tests automatically while developing:
+
+```bash
+npm run test:watch
+```
+
+A specific test file can also be run directly. For example:
+
+```bash
+npm run test -- ../../../tests/javascript/panels/layers.test.js
+```
+
+Run the JavaScript linter with:
+
+```bash
+npm run lint
+```
+
+Tests that exercise rendering or interaction with the TileServer should also be
+checked manually using the appropriate OpenLayers viewer after rebuilding the
+frontend.
+
 ## Building the frontend
 
 Run the frontend development commands from:
