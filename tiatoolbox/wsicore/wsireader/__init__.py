@@ -9,8 +9,6 @@ from .base import (
     AnnotationStoreReader,
     ArrayView,
     FsspecJsonWSIReader,
-    JP2WSIReader,
-    NGFFWSIReader,
     OpenSlideWSIReader,
     TIFFWSIReader,
     TIFFWSIReaderDelegate,
@@ -24,6 +22,8 @@ from .detection import is_dicom, is_ngff, is_tiled_tiff, is_url, is_zarr
 
 # Import reader classes
 from .dicom import DICOMWSIReader
+from .jp2 import JP2WSIReader
+from .ngff import NGFFWSIReader
 
 __all__ = [
     "AnnotationStoreReader",
