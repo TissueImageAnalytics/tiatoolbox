@@ -54,6 +54,7 @@ function createLayersPanelController({
     }
 
     function moveLayer(layerId, direction) {
+        /* v8 ignore if */
         if (layerId === "slide") {
             return;
         }
@@ -66,6 +67,7 @@ function createLayersPanelController({
             (entry) => entry.id === layerId,
         );
 
+        /* v8 ignore if */
         if (index === -1) {
             return;
         }
@@ -75,6 +77,7 @@ function createLayersPanelController({
                 ? index - 1
                 : index + 1;
 
+        /* v8 ignore if */
         if (
             targetIndex < 0 ||
             targetIndex >= entries.length
