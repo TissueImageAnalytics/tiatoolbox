@@ -14,7 +14,6 @@ from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
 from .detection import is_dicom, is_ngff, is_valid_zarr_fsspec
-from .ngff import NGFFWSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
     from numbers import Number
@@ -30,6 +29,7 @@ if TYPE_CHECKING:  # pragma: no cover
         WSIReader,
     )
     from .dicom import DICOMWSIReader
+    from .ngff import NGFFWSIReader
     from .types import WSIReaderExtraParams, WSIReaderParams
 
 
@@ -264,6 +264,9 @@ def try_ngff(
         if not is_ngff(input_path, **kwargs):
             msg = f"File {input_path} does not appear to be a v0.4 NGFF zarr."
             raise FileNotSupportedError(msg)
+
+        from .ngff import NGFFWSIReader  # noqa: PLC0415
+
         return NGFFWSIReader(input_path, mpp=mpp, power=power, **kwargs)
     return None
 
