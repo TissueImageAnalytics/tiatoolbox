@@ -139,6 +139,7 @@ afterEach(() => {
 
 describe("createFileSelect", () => {
     it("creates an initially disabled selector", () => {
+        // Test the selector starts disabled with the correct button and menu state.
         const select =
             createFileSelect("Select slide");
 
@@ -196,6 +197,7 @@ describe("createFileSelect", () => {
     });
 
     it("gives different selectors unique listbox IDs", () => {
+        // Test different selectors use different listbox IDs.
         const first =
             createFileSelect("First");
         const second =
@@ -218,6 +220,7 @@ describe("createFileSelect", () => {
 
 describe("setFiles and value", () => {
     it("enables the selector and updates its placeholder", () => {
+        // Test adding files enables the selector and updates its placeholder.
         const select =
             createFileSelect("Loading");
 
@@ -239,6 +242,7 @@ describe("setFiles and value", () => {
     });
 
     it("resets and disables the selector when given no files", () => {
+        // Test an empty file list resets, closes, and disables the selector.
         const select =
             createPopulatedSelect();
 
@@ -270,6 +274,7 @@ describe("setFiles and value", () => {
     });
 
     it("sets a known value without dispatching a change event", () => {
+        // Test setting a known value updates the label without firing a change event.
         const select =
             createPopulatedSelect();
         const changeHandler = vi.fn();
@@ -297,6 +302,7 @@ describe("setFiles and value", () => {
     });
 
     it("uses the filename for an unknown selected path", () => {
+        // Test an unknown path is displayed using its filename.
         const select =
             createPopulatedSelect();
 
@@ -316,6 +322,7 @@ describe("setFiles and value", () => {
 
 describe("opening and closing", () => {
     it("opens and closes when the button is clicked", () => {
+        // Test the selector button opens and closes the menu.
         const select =
             createPopulatedSelect();
         const button =
@@ -352,6 +359,7 @@ describe("opening and closing", () => {
     });
 
     it("does not open while disabled", () => {
+        // Test a disabled selector cannot be opened by clicking.
         const select =
             createPopulatedSelect();
 
@@ -368,6 +376,7 @@ describe("opening and closing", () => {
     });
 
     it("does not open from the keyboard while disabled", () => {
+        // Test a disabled selector cannot be opened with the keyboard.
         const select =
             createPopulatedSelect();
 
@@ -393,6 +402,7 @@ describe("opening and closing", () => {
     });
 
     it("closes when disabled while open", () => {
+        // Test disabling an open selector closes it.
         const select =
             createPopulatedSelect();
 
@@ -413,6 +423,7 @@ describe("opening and closing", () => {
     });
 
     it("opens with ArrowDown from the button", () => {
+        // Test ArrowDown opens the selector and focuses its search field.
         const select =
             createPopulatedSelect();
         const button =
@@ -436,6 +447,7 @@ describe("opening and closing", () => {
     });
 
     it("closes another selector when opened", () => {
+        // Test opening one selector closes another open selector.
         const first =
             createPopulatedSelect("First");
         const second =
@@ -458,6 +470,7 @@ describe("opening and closing", () => {
     });
 
     it("closes when clicking outside the selector", () => {
+        // Test clicking outside closes the selector.
         const select =
             createPopulatedSelect();
         const outside =
@@ -479,6 +492,7 @@ describe("opening and closing", () => {
     });
 
     it("can be closed through its close method", () => {
+        // Test closing the selector through its close method.
         const select =
             createPopulatedSelect();
 
@@ -495,6 +509,7 @@ describe("opening and closing", () => {
     });
 
     it("prevents mousedown from moving focus away from an option", () => {
+        // Test pressing an option does not move focus before selection.
         const select =
             createPopulatedSelect();
 
@@ -526,6 +541,7 @@ describe("opening and closing", () => {
 
 describe("filtering", () => {
     it("filters files case-insensitively and ignores surrounding whitespace", () => {
+        // Test file filtering ignores case and surrounding spaces.
         const select =
             createPopulatedSelect();
 
@@ -555,6 +571,7 @@ describe("filtering", () => {
     });
 
     it("shows an empty state when no files match", () => {
+        // Test a search with no matches shows the empty state and selects nothing.
         const select =
             createPopulatedSelect();
 
@@ -593,6 +610,7 @@ describe("filtering", () => {
 
 describe("selection", () => {
     it("selects a file by clicking an option", () => {
+        // Test clicking an option updates the selected file and closes the menu.
         const select =
             createPopulatedSelect();
         const changeHandler = vi.fn();
@@ -644,6 +662,7 @@ describe("selection", () => {
     });
 
     it("selects the first filtered file with Enter when none is active", () => {
+        // Test Enter selects the first filtered file when none is active.
         const select =
             createPopulatedSelect();
 
@@ -660,6 +679,7 @@ describe("selection", () => {
     });
 
     it("moves down through options and selects the active file", () => {
+        // Test ArrowDown moves through options and Enter selects the active file.
         const select =
             createPopulatedSelect();
 
@@ -694,6 +714,7 @@ describe("selection", () => {
     });
 
     it("does not move past the final option with ArrowDown", () => {
+        // Test ArrowDown stops at the final option.
         const select =
             createPopulatedSelect();
 
@@ -727,6 +748,7 @@ describe("selection", () => {
     });
 
     it("wraps to the final option with ArrowUp", () => {
+        // Test ArrowUp moves to the final option when none is active.
         const select =
             createPopulatedSelect();
 
@@ -757,6 +779,7 @@ describe("selection", () => {
     });
 
     it("closes with Escape and returns focus to the button", () => {
+        // Test Escape closes the selector and returns focus to its button.
         const select =
             createPopulatedSelect();
         const button =

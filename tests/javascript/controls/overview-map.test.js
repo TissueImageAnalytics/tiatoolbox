@@ -242,6 +242,7 @@ afterEach(() => {
 
 describe("initialisation", () => {
     it("creates and adds the overview map control", () => {
+        // Test creating and adding the overview map control.
         const {
             map,
             control,
@@ -272,6 +273,7 @@ describe("initialisation", () => {
     });
 
     it("creates an overview layer without a source when none is supplied", () => {
+        // Test the overview layer starts without a source when none is provided.
         const {
             control,
         } = createHarness();
@@ -284,6 +286,7 @@ describe("initialisation", () => {
     });
 
     it("uses a supplied source for the overview layer", () => {
+        // Test the overview layer uses the source provided at creation.
         const source =
             createSource();
 
@@ -327,6 +330,7 @@ describe("initialisation", () => {
             expectedHeight,
             expectedResolution,
         ) => {
+            // Test each overview map size sets the expected dimensions and view.
             const {
                 control,
                 overviewMap,
@@ -372,6 +376,7 @@ describe("initialisation", () => {
     );
 
     it("falls back to the default size for an unknown value", () => {
+        // Test an unknown overview map size uses the default size.
         const {
             control,
             overviewMap,
@@ -401,6 +406,7 @@ describe("initialisation", () => {
     });
 
     it("creates the overview toggle labels", () => {
+        // Test creating the overview map toggle labels.
         const {
             control,
         } = createHarness();
@@ -421,6 +427,7 @@ describe("initialisation", () => {
 
 describe("source and view", () => {
     it("updates the overview layer source", () => {
+        // Test changing and clearing the overview layer source.
         const {
             controller,
             control,
@@ -451,6 +458,7 @@ describe("source and view", () => {
     });
 
     it("sets a new overview view", () => {
+        // Test setting a new overview view from its projection and extent.
         const {
             controller,
             overviewMap,
@@ -489,6 +497,7 @@ describe("source and view", () => {
     });
 
     it("keeps the overview view centred on its extent", () => {
+        // Test the overview view stays centred on the slide extent.
         const {
             controller,
             overviewMap,
@@ -522,6 +531,7 @@ describe("source and view", () => {
     });
 
     it("rebuilds the overview view when the size changes and a source exists", () => {
+        // Test resizing the overview map rebuilds its view when a source is loaded.
         const source =
             createSource({
                 extent: [
@@ -595,6 +605,7 @@ describe("source and view", () => {
     });
 
     it("does not replace the view during size updates without a source", () => {
+        // Test resizing without a source does not replace the overview view.
         const {
             controller,
             overviewMap,
@@ -630,6 +641,7 @@ describe("source and view", () => {
 
 describe("visibility", () => {
     it("shows and refreshes when a slide is available and the control is enabled", () => {
+        // Test the overview map shows and refreshes when it is available and enabled.
         const {
             controller,
             control,
@@ -661,6 +673,7 @@ describe("visibility", () => {
     });
 
     it("hides when no slide is available", () => {
+        // Test the overview map hides when no slide is loaded.
         const {
             controller,
             control,
@@ -687,6 +700,7 @@ describe("visibility", () => {
     });
 
     it("hides when overview map visibility is disabled", () => {
+        // Test the overview map hides when its visibility setting is disabled.
         const {
             controller,
             control,
@@ -705,6 +719,7 @@ describe("visibility", () => {
     });
 
     it("respects viewer enabled state", () => {
+        // Test the overview map follows the viewer enabled state.
         const {
             controller,
             control,
@@ -753,6 +768,8 @@ describe("visibility", () => {
     });
 
     it("remains hidden when viewer is enabled but the setting is disabled", () => {
+        // Test enabling the viewer does not override the overview map visibility
+        // setting.
         const {
             controller,
             control,
@@ -790,6 +807,7 @@ describe("visibility", () => {
 
 describe("refresh", () => {
     it("updates and renders the internal overview map", () => {
+        // Test refreshing the control updates and renders the overview map.
         const {
             controller,
             overviewMap,

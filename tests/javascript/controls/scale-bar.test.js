@@ -205,6 +205,7 @@ beforeEach(() => {
 
 describe("initialisation", () => {
     it("creates and adds the scale bar control", () => {
+        // Test creating and adding the scale bar control.
         const {
             map,
             onControlChange,
@@ -252,6 +253,7 @@ describe("initialisation", () => {
     ])(
         "uses the %s scale bar width",
         (size, expectedWidth) => {
+            // Test each scale bar size uses the expected width.
             createHarness({
                 size,
             });
@@ -264,6 +266,7 @@ describe("initialisation", () => {
     );
 
     it("falls back to the default width for an unknown size", () => {
+        // Test an unknown scale bar size uses the default width.
         const harness =
             createHarness();
 
@@ -278,6 +281,7 @@ describe("initialisation", () => {
     });
 
     it("applies the initial colour and opacity", () => {
+        // Test the scale bar starts with the selected colour and opacity.
         const {
             opacityValue,
         } = createHarness({
@@ -320,6 +324,7 @@ describe("initialisation", () => {
 
 describe("visibility", () => {
     it("shows the control when a slide is loaded and the scale bar is enabled", () => {
+        // Test the scale bar shows when a slide is loaded and it is enabled.
         const {
             controller,
         } = createHarness();
@@ -335,6 +340,7 @@ describe("visibility", () => {
     });
 
     it("hides the control when no slide is loaded", () => {
+        // Test the scale bar hides when no slide is loaded.
         const {
             controller,
         } = createHarness({
@@ -352,6 +358,7 @@ describe("visibility", () => {
     });
 
     it("hides the control when the scale bar is disabled", () => {
+        // Test the scale bar hides when its setting is disabled.
         const {
             controller,
         } = createHarness({
@@ -369,6 +376,7 @@ describe("visibility", () => {
     });
 
     it("updates visibility when the enabled input changes", () => {
+        // Test changing the scale bar setting updates its visibility.
         const {
             enabledInput,
         } = createHarness();
@@ -388,6 +396,7 @@ describe("visibility", () => {
     });
 
     it("respects viewer enabled state", () => {
+        // Test the scale bar follows the viewer enabled state.
         const {
             controller,
         } = createHarness();
@@ -416,6 +425,7 @@ describe("visibility", () => {
     });
 
     it("stays hidden when the viewer is enabled but the scale bar setting is disabled", () => {
+        // Test enabling the viewer does not override the scale bar setting.
         const {
             controller,
         } = createHarness({
@@ -437,6 +447,7 @@ describe("visibility", () => {
 
 describe("appearance", () => {
     it("updates the scale bar colour", () => {
+        // Test changing the scale bar colour updates its appearance.
         const {
             colourInput,
         } = createHarness();
@@ -467,6 +478,7 @@ describe("appearance", () => {
     });
 
     it("uses a light background for a dark scale bar colour", () => {
+        // Test dark scale bar colours use a light background.
         const {
             colourInput,
             opacityInput,
@@ -496,6 +508,7 @@ describe("appearance", () => {
     });
 
     it("uses a dark background for a light scale bar colour", () => {
+        // Test light scale bar colours use a dark background.
         const {
             opacityInput,
         } = createHarness({
@@ -518,6 +531,7 @@ describe("appearance", () => {
     });
 
     it("returns without changing opacity styling for an invalid colour", () => {
+        // Test an invalid colour leaves the current opacity styling unchanged.
         const {
             colourInput,
             opacityInput,
@@ -558,6 +572,7 @@ describe("appearance", () => {
     });
 
     it("returns safely when the scale line inner element is missing", () => {
+        // Test scale bar updates safely when its inner line element is missing.
         const {
             colourInput,
             controller,
@@ -579,6 +594,7 @@ describe("appearance", () => {
 
 describe("size and units", () => {
     it("recreates the control when size changes", () => {
+        // Test changing scale bar size recreates the control.
         const {
             map,
             sizeSelect,
@@ -641,6 +657,7 @@ describe("size and units", () => {
     });
 
     it("reapplies state and appearance after recreating the control", () => {
+        // Test recreating the scale bar keeps its current state and appearance.
         const {
             colourInput,
             opacityInput,
@@ -697,6 +714,7 @@ describe("size and units", () => {
     });
 
     it("updates units without recreating the control", () => {
+        // Test changing scale bar units does not recreate the control.
         const {
             unitsSelect,
             map,

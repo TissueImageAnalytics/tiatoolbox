@@ -33,6 +33,7 @@ afterEach(() => {
 
 describe("createSession", () => {
     it("creates a TileServer session", async () => {
+        // Test creating a TileServer session.
         const fetchMock = vi.fn().mockResolvedValue(
             mockResponse({
                 json: {
@@ -55,6 +56,7 @@ describe("createSession", () => {
     });
 
     it("throws when the session cannot be created", async () => {
+        // Test error handling when a TileServer session cannot be created.
         vi.stubGlobal(
             "fetch",
             vi.fn().mockResolvedValue(
@@ -74,6 +76,7 @@ describe("createSession", () => {
 
 describe("loadSlide", () => {
     it("loads a slide and returns its metadata", async () => {
+        // Test loading a slide and returning its metadata.
         const slideMetadata = {
             width: 1000,
             height: 800,
@@ -120,6 +123,7 @@ describe("loadSlide", () => {
     });
 
     it("throws when the slide cannot be loaded", async () => {
+        // Test error handling when a slide cannot be loaded.
         const fetchMock = vi.fn().mockResolvedValue(
             mockResponse({
                 ok: false,
@@ -138,6 +142,7 @@ describe("loadSlide", () => {
     });
 
     it("throws when slide metadata cannot be retrieved", async () => {
+        // Test error handling when slide metadata cannot be retrieved.
         const fetchMock = vi
             .fn()
             .mockResolvedValueOnce(
@@ -163,6 +168,7 @@ describe("loadSlide", () => {
 
 describe("getConfiguredFiles", () => {
     it("returns configured slide files", async () => {
+        // Test returning configured slide files.
         const files = {
             directory: "slides",
             files: [
@@ -195,6 +201,7 @@ describe("getConfiguredFiles", () => {
     });
 
     it("throws when configured overlay files cannot be retrieved", async () => {
+        // Test error handling when configured overlay files cannot be retrieved.
         vi.stubGlobal(
             "fetch",
             vi.fn().mockResolvedValue(
@@ -214,6 +221,7 @@ describe("getConfiguredFiles", () => {
 
 describe("clearOverlays", () => {
     it("clears all overlays", async () => {
+        // Test clearing all overlays.
         const fetchMock = vi.fn().mockResolvedValue(
             mockResponse(),
         );
@@ -233,6 +241,7 @@ describe("clearOverlays", () => {
     });
 
     it("throws when overlays cannot be cleared", async () => {
+        // Test error handling when overlays cannot be cleared.
         vi.stubGlobal(
             "fetch",
             vi.fn().mockResolvedValue(
@@ -252,6 +261,7 @@ describe("clearOverlays", () => {
 
 describe("removeSlide", () => {
     it("removes the current slide", async () => {
+        // Test removing the current slide.
         const fetchMock = vi.fn().mockResolvedValue(
             mockResponse(),
         );
@@ -271,6 +281,7 @@ describe("removeSlide", () => {
     });
 
     it("throws when the current slide cannot be removed", async () => {
+        // Test error handling when the current slide cannot be removed.
         vi.stubGlobal(
             "fetch",
             vi.fn().mockResolvedValue(
@@ -290,6 +301,7 @@ describe("removeSlide", () => {
 
 describe("loadOverlay", () => {
     it("loads an overlay and returns its metadata", async () => {
+        // Test loading an overlay and returning its metadata.
         const overlayMetadata = {
             layer: "Tumour",
         };
@@ -332,6 +344,7 @@ describe("loadOverlay", () => {
     });
 
     it("throws when an overlay cannot be loaded", async () => {
+        // Test error handling when an overlay cannot be loaded.
         vi.stubGlobal(
             "fetch",
             vi.fn().mockResolvedValue(
@@ -354,6 +367,7 @@ describe("loadOverlay", () => {
 
 describe("removeOverlay", () => {
     it("removes an overlay using its encoded layer name", async () => {
+        // Test encoding the layer name when removing an overlay.
         const fetchMock = vi.fn().mockResolvedValue(
             mockResponse(),
         );
@@ -373,6 +387,7 @@ describe("removeOverlay", () => {
     });
 
     it("throws when an overlay cannot be removed", async () => {
+        // Test error handling when an overlay cannot be removed.
         vi.stubGlobal(
             "fetch",
             vi.fn().mockResolvedValue(
@@ -392,6 +407,7 @@ describe("removeOverlay", () => {
 
 describe("setAnnotationColors", () => {
     it("sends annotation colours to TileServer", async () => {
+        // Test sending annotation colours to TileServer in the expected format.
         const fetchMock = vi.fn().mockResolvedValue(
             mockResponse(),
         );
@@ -439,6 +455,7 @@ describe("setAnnotationColors", () => {
     });
 
     it("throws when annotation colours cannot be updated", async () => {
+        // Test error handling when annotation colours cannot be updated.
         vi.stubGlobal(
             "fetch",
             vi.fn().mockResolvedValue(

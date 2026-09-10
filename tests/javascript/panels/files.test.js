@@ -241,6 +241,7 @@ afterEach(() => {
 
 describe("initialisation", () => {
     it("creates the file selectors and action buttons", () => {
+        // Test creating the slide and overlay selectors and their action buttons.
         const {
             slideSelect,
             overlaySelect,
@@ -280,6 +281,7 @@ describe("initialisation", () => {
     });
 
     it("shows placeholders when directories are not configured", () => {
+        // Test missing file directories show the correct placeholders.
         const {
             slideSelect,
             overlaySelect,
@@ -316,6 +318,7 @@ describe("initialisation", () => {
     });
 
     it("populates matching overlays for the current slide", () => {
+        // Test the overlay selector shows files matching the current slide.
         const state = {
             currentSlidePath:
                 "/slides/CMU-1.svs",
@@ -355,6 +358,7 @@ describe("initialisation", () => {
     });
 
     it("shows when no overlays match the current slide", () => {
+        // Test the overlay selector shows when no overlays match the current slide.
         const state = {
             currentSlidePath:
                 "/slides/CMU-3.svs",
@@ -382,6 +386,7 @@ describe("initialisation", () => {
 
 describe("controller state", () => {
     it("sets the selected slide", () => {
+        // Test setting the selected slide updates the slide selector.
         const {
             controller,
             slideSelect,
@@ -401,6 +406,7 @@ describe("controller state", () => {
     });
 
     it("updates the clear action state", () => {
+        // Test clear buttons follow the current slide and overlay state.
         const {
             state,
             controller,
@@ -434,6 +440,7 @@ describe("controller state", () => {
     });
 
     it("opens and closes the panel", () => {
+        // Test opening and closing the files panel.
         const {
             panel,
             toggle,
@@ -502,6 +509,7 @@ describe("controller state", () => {
     });
 
     it("toggles the panel from the toggle button", () => {
+        // Test the Files button toggles the panel.
         const {
             panel,
             toggle,
@@ -534,6 +542,7 @@ describe("controller state", () => {
 
 describe("slide selection", () => {
     it("passes the selected slide to its callback", async () => {
+        // Test selecting a slide passes its path to the load callback.
         const {
             state,
             slideSelect,
@@ -574,6 +583,7 @@ describe("slide selection", () => {
     });
 
     it("disables all file controls while loading a slide", async () => {
+        // Test loading a slide temporarily disables all file controls.
         const deferred =
             createDeferred();
 
@@ -624,6 +634,7 @@ describe("slide selection", () => {
     });
 
     it("ignores an empty slide selection", async () => {
+        // Test an empty slide selection does not start a load.
         const {
             slideSelect,
             onSlideSelected,
@@ -646,6 +657,7 @@ describe("slide selection", () => {
     });
 
     it("uses the selector value when change detail is absent", async () => {
+        // Test slide loading falls back to the selector value when needed.
         const {
             slideSelect,
             onSlideSelected,
@@ -668,6 +680,7 @@ describe("slide selection", () => {
     });
 
     it("logs slide loading errors and restores the controls", async () => {
+        // Test a failed slide load is logged and the file controls are restored.
         const error =
             new Error("Slide failure");
 
@@ -713,6 +726,7 @@ describe("slide selection", () => {
 
 describe("overlay selection", () => {
     it("ignores an empty overlay selection", async () => {
+        // Test an empty overlay selection does not start a load.
         const state = {
             currentSlidePath:
                 "/slides/CMU-1.svs",
@@ -744,6 +758,7 @@ describe("overlay selection", () => {
     });
 
     it("loads an overlay and clears the selection", async () => {
+        // Test a successful overlay load clears the overlay selector.
         const state = {
             currentSlidePath:
                 "/slides/CMU-1.svs",
@@ -788,6 +803,7 @@ describe("overlay selection", () => {
     });
 
     it("logs overlay loading errors without clearing the selection", async () => {
+        // Test a failed overlay load is logged without clearing the selection.
         const state = {
             currentSlidePath:
                 "/slides/CMU-1.svs",
@@ -840,6 +856,7 @@ describe("overlay selection", () => {
 
 describe("clear actions", () => {
     it("clears the slide and resets both selectors", async () => {
+        // Test clearing the slide resets both file selectors.
         const state = {
             currentSlidePath:
                 "/slides/CMU-1.svs",
@@ -890,6 +907,7 @@ describe("clear actions", () => {
     });
 
     it("preserves selections when clearing the slide fails", async () => {
+        // Test a failed slide clear keeps the current selections.
         const state = {
             currentSlidePath:
                 "/slides/CMU-1.svs",
@@ -947,6 +965,7 @@ describe("clear actions", () => {
     });
 
     it("clears overlays and resets the overlay selector", async () => {
+        // Test clearing overlays resets the overlay selector.
         const state = {
             currentSlidePath:
                 "/slides/CMU-1.svs",
@@ -981,6 +1000,7 @@ describe("clear actions", () => {
     });
 
     it("preserves the overlay selection when clearing overlays fails", async () => {
+        // Test a failed overlay clear keeps the current overlay selection.
         const state = {
             currentSlidePath:
                 "/slides/CMU-1.svs",

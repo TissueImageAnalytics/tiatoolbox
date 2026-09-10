@@ -350,6 +350,7 @@ beforeEach(() => {
 
 describe("initialisation", () => {
     it("creates the map controls and mouse wheel interaction", () => {
+        // Test creating the map controls and mouse wheel zoom interaction.
         const {
             map,
             controller,
@@ -399,6 +400,7 @@ describe("initialisation", () => {
     });
 
     it("builds the bottom controls group in the expected order", () => {
+        // Test the bottom controls are placed in the expected order.
         const {
             bottomControlsGroup,
             resetViewControl,
@@ -422,6 +424,7 @@ describe("initialisation", () => {
     });
 
     it("inserts the zoom level input before the zoom-out button", () => {
+        // Test the editable zoom field is created in the correct position.
         const {
             zoomControl,
             zoomLevel,
@@ -463,6 +466,7 @@ describe("initialisation", () => {
     });
 
     it("displays an integer zoom level without decimals", () => {
+        // Test integer zoom levels display without decimal places.
         const {
             zoomLevel,
         } = createHarness({
@@ -475,6 +479,7 @@ describe("initialisation", () => {
     });
 
     it("displays a fractional zoom level with one decimal place", () => {
+        // Test fractional zoom levels display with one decimal place.
         const {
             zoomLevel,
         } = createHarness({
@@ -487,6 +492,7 @@ describe("initialisation", () => {
     });
 
     it("clears the zoom level when the view has no zoom", () => {
+        // Test the zoom field is cleared when the view has no zoom value.
         const {
             state,
             controller,
@@ -503,6 +509,7 @@ describe("initialisation", () => {
     });
 
     it("formats mouse coordinates with an inverted y-axis", () => {
+        // Test mouse coordinates account for the inverted slide y-axis.
         const {
             controller,
         } = createHarness();
@@ -523,6 +530,7 @@ describe("initialisation", () => {
 
 describe("zoom level input", () => {
     it("selects the zoom level when focused", () => {
+        // Test focusing the zoom field selects its current value.
         const {
             zoomLevel,
         } = createHarness();
@@ -543,6 +551,7 @@ describe("zoom level input", () => {
     });
 
     it("applies a valid zoom level on blur", () => {
+        // Test a valid zoom value is applied when the field loses focus.
         const {
             zoomLevel,
             view,
@@ -580,6 +589,7 @@ describe("zoom level input", () => {
             enteredZoom,
             expectedZoom,
         ) => {
+            // Test zoom values are limited to the allowed zoom range.
             const {
                 zoomLevel,
                 view,
@@ -607,6 +617,7 @@ describe("zoom level input", () => {
     );
 
     it("restores the current zoom when the input is invalid", () => {
+        // Test invalid zoom input restores the current zoom value.
         const {
             zoomLevel,
             view,
@@ -630,6 +641,7 @@ describe("zoom level input", () => {
     });
 
     it("applies the zoom level when Enter is pressed", () => {
+        // Test Enter applies the value entered in the zoom field.
         const {
             zoomLevel,
             view,
@@ -660,6 +672,7 @@ describe("zoom level input", () => {
     });
 
     it("restores the current zoom when Escape is pressed", () => {
+        // Test Escape restores the current zoom value.
         const {
             zoomLevel,
         } = createHarness({
@@ -687,6 +700,7 @@ describe("zoom level input", () => {
 
 describe("reset view", () => {
     it("does nothing when no slide is loaded", () => {
+        // Test reset view does nothing when no slide is loaded.
         const {
             resetViewButton,
             view,
@@ -706,6 +720,7 @@ describe("reset view", () => {
     });
 
     it("resets rotation and fits the loaded slide", () => {
+        // Test reset view clears rotation and fits the loaded slide.
         const {
             map,
             resetViewButton,
@@ -745,6 +760,7 @@ describe("reset view", () => {
 
 describe("viewer state and visibility", () => {
     it("disables interactive controls when the viewer is disabled", () => {
+        // Test disabling the viewer disables its interactive controls.
         const {
             resetViewButton,
             zoomControl,
@@ -807,6 +823,7 @@ describe("viewer state and visibility", () => {
     });
 
     it("reenables interactive controls when the viewer is enabled", () => {
+        // Test enabling the viewer restores its interactive controls.
         const {
             resetViewButton,
             zoomControl,
@@ -873,6 +890,7 @@ describe("viewer state and visibility", () => {
     });
 
     it("hides controls when their visibility settings are disabled", () => {
+        // Test controls are hidden when their visibility settings are disabled.
         const harness =
             createHarness();
 
@@ -944,6 +962,7 @@ describe("viewer state and visibility", () => {
     });
 
     it("shows controls when their visibility settings are enabled", () => {
+        // Test controls are shown when their visibility settings are enabled.
         const harness =
             createHarness({
                 zoomVisible: false,
@@ -1024,6 +1043,7 @@ describe("viewer state and visibility", () => {
     });
 
     it("keeps mouse position hidden when no slide is loaded", () => {
+        // Test mouse coordinates stay hidden when no slide is loaded.
         const {
             controller,
         } = createHarness({
@@ -1044,6 +1064,7 @@ describe("viewer state and visibility", () => {
     });
 
     it("keeps mouse position hidden when its setting is disabled", () => {
+        // Test mouse coordinates stay hidden when their setting is disabled.
         const {
             controller,
         } = createHarness({
@@ -1089,6 +1110,7 @@ describe("mouse wheel zoom sensitivity", () => {
             expectedDeltaPerZoom,
             expectedMaxDelta,
         ) => {
+            // Test each mouse wheel zoom preset uses the expected sensitivity.
             const {
                 mouseWheelInteraction,
             } = createHarness({
@@ -1113,6 +1135,7 @@ describe("mouse wheel zoom sensitivity", () => {
     );
 
     it("falls back to the default mouse wheel zoom preset", () => {
+        // Test an unknown mouse wheel setting uses the default sensitivity.
         const {
             mouseWheelInteraction,
         } = createHarness({
@@ -1131,6 +1154,7 @@ describe("mouse wheel zoom sensitivity", () => {
     });
 
     it("starts with mouse wheel zoom disabled when no slide is loaded", () => {
+        // Test mouse wheel zoom starts disabled when no slide is loaded.
         const {
             mouseWheelInteraction,
         } = createHarness({
@@ -1144,6 +1168,7 @@ describe("mouse wheel zoom sensitivity", () => {
     });
 
     it("replaces the mouse wheel interaction when sensitivity changes", () => {
+        // Test changing sensitivity replaces the mouse wheel zoom interaction.
         const {
             map,
             mouseWheelInteraction,
@@ -1196,6 +1221,8 @@ describe("mouse wheel zoom sensitivity", () => {
     });
 
     it("keeps a replacement mouse wheel interaction disabled when the viewer is disabled", () => {
+        // Test a new mouse wheel interaction stays disabled while the viewer is
+        // disabled.
         const {
             map,
             controller,
@@ -1226,6 +1253,7 @@ describe("mouse wheel zoom sensitivity", () => {
 
 describe("zoom button step", () => {
     it("recreates the zoom control when the step changes", () => {
+        // Test changing the zoom step recreates the zoom control in the same place.
         const {
             map,
             viewerApp,
@@ -1302,6 +1330,7 @@ describe("zoom button step", () => {
     });
 
     it("preserves viewer state and visibility when the zoom control is recreated", () => {
+        // Test recreating the zoom control keeps its hidden and disabled state.
         const {
             viewerApp,
             zoomLevel,
