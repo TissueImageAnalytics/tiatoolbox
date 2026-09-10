@@ -31,6 +31,7 @@ from skimage import exposure
 from tqdm.auto import tqdm, trange
 from tqdm.dask import TqdmCallback
 
+import tiatoolbox.rust.utils.misc as rmisc
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupportedError
@@ -430,6 +431,9 @@ def contrast_enhancer(img: np.ndarray, low_p: int = 2, high_p: int = 98) -> np.n
     if img.dtype != np.uint8:
         msg = "Image should be uint8."
         raise AssertionError(msg)
+    dimension_for_rust = 3
+    if img.ndim == dimension_for_rust:
+        return rmisc.contrast_enhancer(img, low_p, high_p)
     img_out = img.copy()
     percentiles = np.array(np.percentile(img_out, (low_p, high_p)))
     p_low, p_high = percentiles[0], percentiles[1]
@@ -1502,6 +1506,20 @@ def dict_to_store_semantic_segmentor(
         offset=offset,
         verbose=verbose,
     )
+
+
+def poly_geo_func(coords: list) -> list:
+    """Used solely for function semantic_segmentation_as_qupath_json."""
+    geom = make_valid_poly(
+        feature2geometry(
+            {
+                "type": "Polygon",
+                "coordinates": coords,
+            }
+        ),
+        (0, 0),
+    )
+    return mapping(geom)
 
 
 def _semantic_segmentations_as_qupath_json(

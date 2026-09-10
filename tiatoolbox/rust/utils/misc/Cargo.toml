@@ -1,0 +1,16 @@
+[package]
+name = "misc"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+name = "misc"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+ndarray = "0.17.2"
+numpy = "0.29.0"
+ordered-float = "5.3.0"
+pyo3 = { workspace = true, features = ["extension-module"] }
+pythonize = "0.29.0"
+serde_json = "1.0.151"
