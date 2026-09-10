@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Unpack
 
+import dask
 import dask.array as da
 import numpy as np
 import pytest
@@ -539,6 +540,93 @@ def test_io_config_delegation(
                 stride_shape=(1, 1),
                 input_resolutions=_kwargs["input_resolutions"],
             )
+
+
+def test_update_run_params_sets_dask_num_workers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test Dask configuration when num_workers is greater than zero."""
+    eng = TestEngineABC(model="alexnet-kather100k")
+
+    captured: dict[str, object] = {}
+
+    def _fake_dask_config_set(**kwargs: object) -> None:
+        """Capture Dask configuration."""
+        captured.update(kwargs)
+
+    def _fake_validate_input_numbers(
+        *,
+        images: object,
+        masks: object,
+        labels: object,
+    ) -> None:
+        _ = images, masks, labels
+
+    def _fake_validate_images_masks(
+        *,
+        images: object,
+    ) -> list:
+        _ = images
+        return []
+
+    def _fake_load_ioconfig(
+        *,
+        ioconfig: object,
+    ) -> object:
+        return ioconfig
+
+    def _fake_update_ioconfig(
+        ioconfig: object,
+        patch_input_shape: object,
+        stride_shape: object,
+        input_resolutions: object,
+    ) -> object:
+        _ = patch_input_shape, stride_shape, input_resolutions
+        return ioconfig
+
+    monkeypatch.setattr(
+        dask.config,
+        "set",
+        _fake_dask_config_set,
+    )
+
+    monkeypatch.setattr(
+        eng,
+        "_validate_input_numbers",
+        _fake_validate_input_numbers,
+    )
+
+    monkeypatch.setattr(
+        eng,
+        "_validate_images_masks",
+        _fake_validate_images_masks,
+    )
+
+    monkeypatch.setattr(
+        eng,
+        "_load_ioconfig",
+        _fake_load_ioconfig,
+    )
+
+    monkeypatch.setattr(
+        eng,
+        "_update_ioconfig",
+        _fake_update_ioconfig,
+    )
+
+    eng.num_workers = 4
+    eng.return_labels = True
+    eng.drop_keys = []
+
+    eng._update_run_params(
+        images=[],
+        patch_mode=True,
+        output_type="dict",
+        save_dir=None,
+    )
+
+    assert captured["scheduler"] == "threads"
+    assert captured["num_workers"] == 4
 
 
 def test_save_predictions_incorrect_output_type() -> None:
