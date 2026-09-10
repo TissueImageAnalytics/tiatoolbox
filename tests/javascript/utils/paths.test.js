@@ -37,6 +37,7 @@ describe("getFileStem", () => {
     ])(
         "returns the filename stem for %s",
         (filePath, expected) => {
+            // Test getting a filename stem from supported path formats.
             expect(
                 getFileStem(filePath),
             ).toBe(expected);

@@ -32,6 +32,7 @@ describe("hexToRgb", () => {
     ])(
         "converts %s to RGB values",
         (hex, expected) => {
+            // Test converting supported hex colours to RGB values.
             expect(
                 hexToRgb(hex),
             ).toEqual(expected);
@@ -47,6 +48,7 @@ describe("hexToRgb", () => {
     ])(
         "returns null for invalid colour %s",
         (hex) => {
+            // Test invalid colour values return null.
             expect(
                 hexToRgb(hex),
             ).toBeNull();
@@ -56,6 +58,7 @@ describe("hexToRgb", () => {
 
 describe("getContrastingColour", () => {
     it("returns white for a dark colour", () => {
+        // Test choosing white text for a dark colour.
         expect(
             getContrastingColour({
                 r: 0,
@@ -66,6 +69,7 @@ describe("getContrastingColour", () => {
     });
 
     it("returns black for a light colour", () => {
+        // Test choosing black text for a light colour.
         expect(
             getContrastingColour({
                 r: 255,
@@ -78,6 +82,7 @@ describe("getContrastingColour", () => {
 
 describe("mixColour", () => {
     it("returns the original colour when the amount is zero", () => {
+        // Test colour mixing returns the original colour at zero.
         expect(
             mixColour(
                 {
@@ -96,6 +101,7 @@ describe("mixColour", () => {
     });
 
     it("returns the target colour when the amount is one", () => {
+        // Test colour mixing returns the target colour at one.
         expect(
             mixColour(
                 {
@@ -114,6 +120,7 @@ describe("mixColour", () => {
     });
 
     it("mixes and rounds colour channels", () => {
+        // Test mixing colours and rounding the resulting RGB channels.
         expect(
             mixColour(
                 {
@@ -132,6 +139,7 @@ describe("mixColour", () => {
     });
 
     it("can mix a colour towards black", () => {
+        // Test mixing a colour towards black.
         expect(
             mixColour(
                 {
@@ -182,6 +190,7 @@ describe("toRgba", () => {
     ])(
         "formats RGB values and opacity as rgba",
         (rgb, opacity, expected) => {
+            // Test formatting RGB values and opacity as an rgba colour.
             expect(
                 toRgba(rgb, opacity),
             ).toBe(expected);

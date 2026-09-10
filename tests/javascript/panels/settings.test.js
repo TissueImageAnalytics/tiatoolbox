@@ -393,6 +393,7 @@ afterEach(() => {
 
 describe("panel state and tabs", () => {
     it("opens and closes through the controller", () => {
+        // Test opening and closing the settings panel through its controller.
         const {
             panel,
             toggle,
@@ -429,6 +430,7 @@ describe("panel state and tabs", () => {
     });
 
     it("opens from the toggle and closes from the close button", () => {
+        // Test the settings buttons open and close the panel.
         const {
             panel,
             toggle,
@@ -456,6 +458,7 @@ describe("panel state and tabs", () => {
     });
 
     it("switches between settings tabs", () => {
+        // Test switching between settings tabs.
         const {
             tabs,
             tabPanels,
@@ -492,6 +495,7 @@ describe("panel state and tabs", () => {
     });
 
     it("only binds events once", () => {
+        // Test settings event handlers are only bound once.
         const {
             zoomVisibleInput,
             onControlVisibilityChange,
@@ -515,6 +519,7 @@ describe("panel state and tabs", () => {
 
 describe("interface appearance", () => {
     it("updates the dark interface appearance", () => {
+        // Test applying the dark interface appearance.
         const {
             viewerApp,
             controlOpacityInput,
@@ -554,6 +559,7 @@ describe("interface appearance", () => {
     });
 
     it("updates appearance, calls the theme callback, and saves on theme change", () => {
+        // Test changing theme updates appearance, applies the theme, and saves it.
         const {
             viewerApp,
             themeSelect,
@@ -599,6 +605,7 @@ describe("interface appearance", () => {
     });
 
     it("updates and saves interface opacity on input", () => {
+        // Test changing interface opacity updates and saves the value.
         const {
             viewerApp,
             controlOpacityInput,
@@ -640,6 +647,7 @@ describe("interface appearance", () => {
 
 describe("saving settings", () => {
     it("saves the complete current settings state", () => {
+        // Test saving includes the complete current settings state.
         const harness =
             createHarness();
 
@@ -769,6 +777,7 @@ describe("saving settings", () => {
     });
 
     it("saves changes from visibility controls", () => {
+        // Test control visibility changes are saved.
         const {
             zoomVisibleInput,
             onControlVisibilityChange,
@@ -799,6 +808,7 @@ describe("saving settings", () => {
     });
 
     it("saves changes from grid and scale bar inputs", () => {
+        // Test grid and scale bar changes are saved.
         const {
             gridOpacityInput,
             scaleBarColourInput,
@@ -841,6 +851,7 @@ describe("saving settings", () => {
     });
 
     it("continues when local storage cannot save settings", () => {
+        // Test settings continue to work when saving to local storage fails.
         const {
             gridThemeSelect,
             controller,
@@ -869,6 +880,7 @@ describe("saving settings", () => {
 
 describe("loading settings", () => {
     it("returns safely when no saved settings exist", () => {
+        // Test loading settings safely handles an empty local storage.
         const {
             controller,
         } = createHarness();
@@ -879,6 +891,7 @@ describe("loading settings", () => {
     });
 
     it("loads valid saved settings", () => {
+        // Test valid saved settings are restored to the controls.
         const harness =
             createHarness();
 
@@ -1024,6 +1037,7 @@ describe("loading settings", () => {
     });
 
     it("ignores invalid saved setting values", () => {
+        // Test invalid saved setting values are ignored.
         const harness =
             createHarness();
 
@@ -1156,6 +1170,7 @@ describe("loading settings", () => {
     ])(
         "ignores unusable stored data %s",
         (storedValue) => {
+            // Test unusable saved settings data is ignored.
             const harness =
                 createHarness();
 
@@ -1175,6 +1190,7 @@ describe("loading settings", () => {
     );
 
     it("continues when local storage cannot be read", () => {
+        // Test settings continue to work when local storage cannot be read.
         const {
             controller,
         } = createHarness();
@@ -1198,6 +1214,7 @@ describe("loading settings", () => {
 
 describe("resetting settings", () => {
     it("restores all default values", () => {
+        // Test resetting settings restores all default values.
         const harness =
             createHarness();
 
@@ -1333,6 +1350,7 @@ describe("resetting settings", () => {
     });
 
     it("clears saved settings", () => {
+        // Test resetting settings clears saved local storage.
         const {
             controller,
         } = createHarness();
@@ -1352,6 +1370,7 @@ describe("resetting settings", () => {
     });
 
     it("continues when saved settings cannot be cleared", () => {
+        // Test reset still completes when local storage cannot be cleared.
         const {
             controller,
         } = createHarness();
@@ -1373,6 +1392,7 @@ describe("resetting settings", () => {
     });
 
     it("delegates the reset button to the reset callback", () => {
+        // Test the reset button calls the supplied reset callback.
         const {
             resetDefaultsButton,
             onReset,
