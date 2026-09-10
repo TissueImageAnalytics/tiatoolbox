@@ -1508,20 +1508,6 @@ def dict_to_store_semantic_segmentor(
     )
 
 
-def poly_geo_func(coords: list) -> list:
-    """Used solely for function semantic_segmentation_as_qupath_json."""
-    geom = make_valid_poly(
-        feature2geometry(
-            {
-                "type": "Polygon",
-                "coordinates": coords,
-            }
-        ),
-        (0, 0),
-    )
-    return mapping(geom)
-
-
 def _semantic_segmentations_as_qupath_json(
     layer_list: list,
     preds: da.Array,
