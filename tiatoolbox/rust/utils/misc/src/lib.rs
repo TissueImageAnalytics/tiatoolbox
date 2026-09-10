@@ -1,16 +1,6 @@
-use ndarray::Axis;
 use ndarray::{Array1, Array3};
-use numpy::PyReadonlyArrayDyn;
-use numpy::PyUntypedArrayMethods;
-use numpy::{IntoPyArray, PyArray3, PyReadonlyArray2, PyReadonlyArray3};
-use ordered_float::OrderedFloat;
-use pyo3::FromPyObject;
+use numpy::{IntoPyArray, PyArray3, PyReadonlyArray3};
 use pyo3::prelude::*;
-use pyo3::pyclass::CompareOp;
-use pyo3::types::{PyDict, PyList};
-use pythonize::depythonize;
-use serde_json::Value;
-use std::collections::HashMap;
 
 fn rescale_intensity(x: f32, in_range_low: f32, in_range_high: f32, range: f32) -> u8 {
     //asssumes out_min = 0 and out_max = 255
