@@ -1,0 +1,61 @@
+name: JavaScript
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [develop, master, main]
+    tags: v*
+  pull_request:
+    branches: [develop, pre-release, master, main]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    defaults:
+      run:
+        working-directory: tiatoolbox/visualization/openlayers
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 24.18.1
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.18.1"
+          cache: npm
+          cache-dependency-path: tiatoolbox/visualization/openlayers/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint JavaScript
+        run: npm run lint
+
+      - name: Test JavaScript
+        run: npm run test:coverage
+
+      - name: Report test coverage to Codecov
+        uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          files: tiatoolbox/visualization/openlayers/coverage/lcov.info
+          fail_ci_if_error: false
+          verbose: true
+
+      - name: Report test coverage to DeepSource
+        uses: deepsourcelabs/test-coverage-action@master
+        with:
+          key: javascript
+          coverage-file: tiatoolbox/visualization/openlayers/coverage/lcov.info
+          dsn: ${{ secrets.DEEPSOURCE_DSN }}
+          fail-ci-on-error: false
+
+      - name: Build OpenLayers viewer
+        run: npm run build
+
+      - name: Build legacy OpenLayers viewer
+        run: npm run build:legacy

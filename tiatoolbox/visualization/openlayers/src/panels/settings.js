@@ -75,6 +75,7 @@ function createSettingsPanelController({
         const colour =
             hexToRgb(themeColour);
 
+        /* v8 ignore if */
         if (colour === null) {
             return;
         }

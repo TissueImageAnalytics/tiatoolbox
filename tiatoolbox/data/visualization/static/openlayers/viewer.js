@@ -25713,6 +25713,7 @@ function sh({ map: e, viewerApp: t, getSlideSource: n, zoomVisibleInput: r, zoom
 	let _ = g();
 	e.addControl(_);
 	let v = _.element, y = v.querySelector(".ol-zoom-out");
+	/* v8 ignore if */
 	if (y === null) throw Error("The OpenLayers zoom control could not be found.");
 	let b = document.createElement("input");
 	b.type = "number", b.className = "ol-zoom-level", b.step = "1", b.setAttribute("aria-label", "Zoom level"), b.title = "Zoom level", v.insertBefore(b, y);
@@ -25788,6 +25789,7 @@ function sh({ map: e, viewerApp: t, getSlideSource: n, zoomVisibleInput: r, zoom
 		e.removeInteraction(h), h = m(), h.setActive(O), e.addInteraction(h);
 	}
 	function M() {
+		/* v8 ignore if */
 		if (e.removeControl(_), _ = g(), e.addControl(_), v = _.element, y = v.querySelector(".ol-zoom-out"), y === null) throw Error("The OpenLayers zoom control could not be found.");
 		v.insertBefore(b, y), D.insertBefore(v, E.element), k(O), A();
 	}
@@ -26158,6 +26160,7 @@ function xh({ map: e, projection: t, themeSelect: n, gridThemeSelect: r, gridOpa
 			margin: yh,
 			style: m,
 			spacing: d(),
+			/* v8 ignore start */
 			formatCoord: (e, t) => (e = t === "left" || t === "right" ? -Math.floor(e) : Math.floor(e), e >= 1e6 && (e = e.toExponential(3), e = e.replace("+", "")), e)
 		});
 	}
@@ -26169,6 +26172,7 @@ function xh({ map: e, projection: t, themeSelect: n, gridThemeSelect: r, gridOpa
 			spacing: n,
 			margin: v,
 			style: m,
+			/* v8 ignore start */
 			formatCoord(t, r) {
 				let i = e.getView().calculateExtent(e.getSize()), a = e.getView().getResolution(), o = i[0] + a * v, s = i[3] - a * v, c;
 				if (c = r === "left" || r === "right" ? -(t - s) : t - o, c = Math.floor(c / a / n), r === "left" || r === "right") {
@@ -26999,10 +27003,13 @@ function zh({ panel: e, toggle: t, list: n, getSlideLayer: r, getCurrentSlidePat
 		return e.push(...n), e;
 	}
 	function u(e, t) {
+		/* v8 ignore if */
 		if (e === "slide") return;
 		let n = l().filter((e) => e.id !== "slide"), r = n.findIndex((t) => t.id === e);
+		/* v8 ignore if */
 		if (r === -1) return;
 		let i = t === "up" ? r - 1 : r + 1;
+		/* v8 ignore if */
 		if (i < 0 || i >= n.length) return;
 		let a = n[r].layer, o = n[i].layer, s = a.getZIndex() ?? 0, c = o.getZIndex() ?? 0;
 		a.setZIndex(c), o.setZIndex(s), d();
@@ -27075,6 +27082,7 @@ function Hh({ viewerApp: e, panel: t, toggle: n, closeButton: r, tabs: i, tabPan
 	}
 	function F() {
 		let t = ph(Bh[s.value] ?? Bh.dark);
+		/* v8 ignore if */
 		if (t === null) return;
 		let n = Number(c.value) / 100, r = hh(t), i = r === "#ffffff" ? {
 			r: 255,
