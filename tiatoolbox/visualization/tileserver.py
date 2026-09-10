@@ -10,7 +10,7 @@ import secrets
 import sys
 import tempfile
 import urllib
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -31,6 +31,8 @@ from tiatoolbox.wsicore.wsireader import (
     TransformedWSIReader,
     VirtualWSIReader,
     WSIReader,
+    is_dicom,
+    is_ngff,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -58,6 +60,10 @@ class TileServer(Flask):
         legacy (bool):
             Whether to use the legacy OpenLayers viewer behaviour (show-wsi)
             or to use the experimental viewer (visualize-beta). Defaults to True.
+        slide_directory (str or Path or None):
+            Directory containing slides available to the experimental viewer.
+        overlay_directory (str or Path or None):
+            Directory containing overlays available to the experimental viewer.
 
     Examples:
         >>> from tiatoolbox.wsicore.wsireader import WSIReader
@@ -80,6 +86,8 @@ class TileServer(Flask):
         renderer: AnnotationRenderer | None = None,
         *,
         legacy: bool = True,
+        slide_directory: str | Path | None = None,
+        overlay_directory: str | Path | None = None,
     ) -> None:
         """Initialize :class:`TileServer`."""
         super().__init__(
@@ -94,6 +102,19 @@ class TileServer(Flask):
         )
         self.title = title
         self.legacy = legacy
+
+        self.slide_directory = (
+            Path(slide_directory).expanduser().resolve()
+            if slide_directory is not None
+            else None
+        )
+
+        self.overlay_directory = (
+            Path(overlay_directory).expanduser().resolve()
+            if overlay_directory is not None
+            else None
+        )
+
         self.layers = {}
         self.pyramids = {}
         self.renderer = renderer
@@ -148,6 +169,9 @@ class TileServer(Flask):
         )
         self.route("/")(self.index)
         self.route("/tileserver/session_id")(self.session_id)
+        self.route("/tileserver/files/<kind>", methods=["GET"])(
+            self.get_configured_files,
+        )
         self.route("/tileserver/color_prop", methods=["PUT"])(self.change_prop)
         self.route("/tileserver/slide", methods=["PUT"])(self.change_slide)
         self.route("/tileserver/slide", methods=["DELETE"])(self.remove_slide)
@@ -351,6 +375,133 @@ class TileServer(Flask):
         """Decode a URL-safe name."""
         return Path(urllib.parse.unquote(name).replace("\\", os.sep))
 
+    @staticmethod
+    def _get_public_path_prefix(kind: str) -> str:
+        """Return the browser-facing prefix for a configured file type."""
+        if kind == "slide":
+            return "slides"
+
+        if kind == "overlay":
+            return "overlays"
+
+        msg = "Invalid configured file type."
+        raise ValueError(msg)
+
+    def _get_configured_directory(
+        self: TileServer,
+        kind: str,
+    ) -> Path | None:
+        """Return the configured directory for a file type."""
+        if kind == "slide":
+            return self.slide_directory
+
+        if kind == "overlay":
+            return self.overlay_directory
+
+        msg = "Invalid configured file type."
+        raise ValueError(msg)
+
+    @staticmethod
+    def _is_directory_image(path: Path) -> bool:
+        """Return whether a directory represents a supported image."""
+        if not path.is_dir():
+            return False
+
+        if path.suffix.lower() == ".zarr":
+            return is_ngff(path)
+
+        return is_dicom(path)
+
+    @staticmethod
+    def _is_image_overlay(path: Path) -> bool:
+        """Return whether a configured overlay is an image."""
+        suffix = path.suffix.lower()
+
+        if suffix in {
+            ".jpg",
+            ".png",
+            ".tif",
+            ".tiff",
+            ".svs",
+            ".ndpi",
+            ".mrxs",
+        }:
+            return True
+
+        if suffix == ".zarr":
+            return is_ngff(path)
+
+        return is_dicom(path)
+
+    def _get_public_file_path(
+        self: TileServer,
+        file_path: Path,
+        kind: str,
+    ) -> str:
+        """Return a browser-safe path for a configured file."""
+        if self.legacy:
+            return str(file_path)
+
+        directory = self._get_configured_directory(kind)
+
+        if directory is None:
+            return file_path.name
+
+        try:
+            relative_path = file_path.resolve().relative_to(directory)
+        except ValueError:
+            return file_path.name
+
+        prefix = self._get_public_path_prefix(kind)
+
+        return PurePosixPath(
+            prefix,
+            *relative_path.parts,
+        ).as_posix()
+
+    def _resolve_client_file_path(
+        self: TileServer,
+        file_path: str,
+        kind: str,
+    ) -> Path:
+        """Resolve a browser-facing path inside a configured directory."""
+        if self.legacy:
+            return self.decode_safe_name(file_path)
+
+        directory = self._get_configured_directory(kind)
+
+        if directory is None:
+            msg = "Configured file directory is unavailable."
+            raise ValueError(msg)
+
+        decoded_path = urllib.parse.unquote(file_path).replace("\\", "/")
+        public_path = PurePosixPath(decoded_path)
+        prefix = self._get_public_path_prefix(kind)
+
+        if (
+            public_path.is_absolute()
+            or not public_path.parts
+            or public_path.parts[0] != prefix
+            or len(public_path.parts) == 1
+        ):
+            msg = "Invalid configured file path."
+            raise ValueError(msg)
+
+        relative_path = Path(*public_path.parts[1:])
+        resolved_path = (directory / relative_path).resolve()
+
+        try:
+            resolved_path.relative_to(directory)
+        except ValueError as exc:
+            msg = "Invalid configured file path."
+            raise ValueError(msg) from exc
+
+        if not (resolved_path.is_file() or self._is_directory_image(resolved_path)):
+            msg = "Configured file does not exist."
+            raise ValueError(msg)
+
+        return resolved_path
+
     def get_ann_layer(
         self: TileServer,
         session_id: str,
@@ -475,6 +626,126 @@ class TileServer(Flask):
 
         return response
 
+    def get_configured_files(
+        self: TileServer,
+        kind: str,
+    ) -> Response:
+        """Return files from a configured slide or overlay directory.
+
+        Args:
+            kind (str):
+                The configured file type. Must be "slide" or "overlay".
+
+        Returns:
+            flask.Response:
+                A JSON response containing the configured directory and files.
+
+        """
+        try:
+            directory = self._get_configured_directory(kind)
+        except ValueError:
+            return Response("Invalid configured file type.", status=400)
+
+        if directory is None:
+            return jsonify(
+                {
+                    "directory": None,
+                    "files": [],
+                },
+            )
+
+        if not directory.is_dir():
+            return Response(
+                "Configured file directory is unavailable.",
+                status=404,
+            )
+
+        file_extensions = {
+            "slide": {
+                ".svs",
+                ".ndpi",
+                ".tiff",
+                ".mrxs",
+                ".jpg",
+                ".png",
+                ".tif",
+                ".qptiff",
+            },
+            "overlay": {
+                ".db",
+                ".dat",
+                ".geojson",
+                ".json",
+                ".png",
+                ".jpg",
+                ".tiff",
+                ".mrxs",
+                ".ndpi",
+                ".svs",
+                ".tif",
+                ".npy",
+                ".mha",
+            },
+        }
+
+        configured_paths = []
+
+        for root, directories, filenames in os.walk(directory):
+            root_path = Path(root)
+
+            for dirname in list(directories):
+                path = root_path / dirname
+
+                if not path.resolve().is_relative_to(directory):
+                    directories.remove(dirname)
+                    continue
+
+                if path.suffix.lower() == ".zarr":
+                    directories.remove(dirname)
+
+                    if self._is_directory_image(path):
+                        configured_paths.append(path)
+
+                    continue
+
+                if self._is_directory_image(path):
+                    directories.remove(dirname)
+                    configured_paths.append(path)
+
+            for filename in filenames:
+                path = root_path / filename
+
+                if path.suffix.lower() in file_extensions[
+                    kind
+                ] and path.resolve().is_relative_to(directory):
+                    configured_paths.append(path)
+
+        configured_paths.sort(
+            key=lambda path: (
+                len(path.relative_to(directory).parts),
+                path.relative_to(directory).as_posix().casefold(),
+            ),
+        )
+
+        files = [
+            {
+                "name": path.relative_to(directory).as_posix(),
+                "path": self._get_public_file_path(path, kind),
+            }
+            for path in configured_paths
+        ]
+
+        public_directory = (
+            str(directory) if self.legacy else self._get_public_path_prefix(kind)
+        )
+
+        return jsonify(
+            {
+                "directory": public_directory,
+                "files": files,
+            },
+        )
+
     def reset(self: TileServer, session_id: str) -> str:
         """Reset the tileserver."""
         del self.layers[session_id]
@@ -484,13 +755,22 @@ class TileServer(Flask):
         del self.overlaps[session_id]
         return "done"
 
-    def change_slide(self: TileServer) -> str:
+    def change_slide(self: TileServer) -> str | Response:
         """Change the slide."""
         session_id = self._get_session_id()
-        slide_path = request.form["slide_path"]
-        slide_path = self.decode_safe_name(slide_path)
+        try:
+            slide_path = self._resolve_client_file_path(
+                request.form["slide_path"],
+                "slide",
+            )
+        except ValueError:
+            return Response("Invalid slide path.", status=400)
 
         self.layers[session_id] = {"slide": WSIReader.open(Path(slide_path))}
+
+        if self.layers[session_id]["slide"].info.file_path is None:
+            self.layers[session_id]["slide"].info.file_path = str(slide_path)
+
         self.pyramids[session_id] = {
             "slide": ZoomifyGenerator(self.layers[session_id]["slide"], tile_size=256),
         }
@@ -615,7 +895,7 @@ class TileServer(Flask):
         types = self.update_types(sq)
         return json.dumps(types)
 
-    def change_overlay(self: TileServer) -> str:
+    def change_overlay(self: TileServer) -> str | Response:
         """Change or add an overlay.
 
         An explicit layer name allows multiple overlays to coexist.
@@ -628,8 +908,13 @@ class TileServer(Flask):
 
         """
         session_id = self._get_session_id()
-        overlay_path = request.form["overlay_path"]
-        overlay_path = self.decode_safe_name(overlay_path)
+        try:
+            overlay_path = self._resolve_client_file_path(
+                request.form["overlay_path"],
+                "overlay",
+            )
+        except ValueError:
+            return Response("Invalid overlay path.", status=400)
         layer_name = request.form.get("layer_name")
 
         # Get other session id
@@ -646,14 +931,7 @@ class TileServer(Flask):
                 other_session_id,
             )
 
-        if overlay_path.suffix in [
-            ".jpg",
-            ".png",
-            ".tiff",
-            ".svs",
-            ".ndpi",
-            ".mrxs",
-        ]:
+        if self._is_image_overlay(overlay_path):
             return self._add_image_overlay(
                 session_id,
                 overlay_path,
@@ -736,7 +1014,7 @@ class TileServer(Flask):
                 mpp=self.layers[session_id]["slide"].info.mpp[0],
             )
         elif overlay_path.suffix in [".jpg", ".png"]:
-            info = self.layers[session_id]["slide"].info
+            info = copy.deepcopy(self.layers[session_id]["slide"].info)
             info.file_path = str(overlay_path)
 
             self.layers[session_id][layer] = VirtualWSIReader(
@@ -942,7 +1220,10 @@ class TileServer(Flask):
         """Get the slide metadata."""
         session_id = self._get_session_id()
         info = self.layers[session_id]["slide"].info.as_dict()
-        info["file_path"] = str(info["file_path"])
+        info["file_path"] = self._get_public_file_path(
+            Path(info["file_path"]),
+            "slide",
+        )
         return jsonify(info)
 
     def get_mapper(self: TileServer) -> Response:
@@ -969,7 +1250,17 @@ class TileServer(Flask):
     def get_overlay(self: TileServer) -> Response:
         """Get the overlay info."""
         session_id = self._get_session_id()
-        return jsonify(str(self.get_ann_layer(session_id).store.path))
+        overlay_path = self.get_ann_layer(session_id).store.path
+
+        if overlay_path is None:
+            return jsonify("")
+
+        return jsonify(
+            self._get_public_file_path(
+                Path(overlay_path),
+                "overlay",
+            ),
+        )
 
     def get_renderer(self: TileServer, prop: str) -> Response:
         """Get the requested property from the renderer."""
@@ -1063,10 +1354,24 @@ class TileServer(Flask):
 
         """
         session_paths = {}
+
         for key, layer in self.layers.items():
             slide = layer.get("slide")
-            if slide is not None:
-                session_paths[key] = str(slide.info.as_dict().get("file_path", ""))
+
+            if slide is None:
+                continue
+
+            file_path = slide.info.as_dict().get("file_path")
+
+            if file_path is None:
+                session_paths[key] = ""
+                continue
+
+            session_paths[key] = self._get_public_file_path(
+                Path(file_path),
+                "slide",
+            )
+
         return jsonify(session_paths)
 
     @staticmethod

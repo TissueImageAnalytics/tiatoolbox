@@ -79,6 +79,9 @@ Ready to contribute? Here's how to set up ``tiatoolbox`` for local development.
 
     $ uv sync --extra dev --index pytorch-cpu=https://download.pytorch.org/whl/cpu
 
+   Some models depend on optional packages that are not installed by default
+   and so are imported lazily.
+
 4. Create a branch for local development::
 
     $ git checkout -b name-of-your-bugfix-or-feature
