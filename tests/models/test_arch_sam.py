@@ -16,6 +16,273 @@ ON_GPU = toolbox_env.has_gpu()
 _RUNNING_ON_CI = toolbox_env.running_on_ci()
 
 
+def test_sam_init(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test SAM initialization."""
+    fake_model = object()
+    fake_processor = object()
+
+    class FakeLoadedModel:
+        """Fake SAM model."""
+
+        def to(self, device: str) -> object:
+            """Return fake model."""
+            assert device == "cpu"
+            return fake_model
+
+    def _fake_model_from_pretrained(
+        model_path: str,
+    ) -> FakeLoadedModel:
+        """Return fake SAM model."""
+        assert model_path == "fake-model"
+        return FakeLoadedModel()
+
+    def _fake_processor_from_pretrained(
+        model_path: str,
+    ) -> object:
+        """Return fake SAM processor."""
+        assert model_path == "fake-model"
+        return fake_processor
+
+    monkeypatch.setattr(
+        "tiatoolbox.models.architecture.sam.SamModel.from_pretrained",
+        _fake_model_from_pretrained,
+    )
+
+    monkeypatch.setattr(
+        "tiatoolbox.models.architecture.sam.SamProcessor.from_pretrained",
+        _fake_processor_from_pretrained,
+    )
+
+    sam = SAM(
+        model_path="fake-model",
+        device="cpu",
+    )
+
+    assert sam.net_name == "SAM"
+    assert sam.device == "cpu"
+    assert sam.model is fake_model
+    assert sam.processor is fake_processor
+
+
+def test_sam_encode_image() -> None:
+    """Test image encoding pipeline."""
+    sam = SAM.__new__(SAM)
+
+    sam.device = "cpu"
+
+    processed = {
+        "original_sizes": torch.tensor([[100, 200]]),
+        "reshaped_input_sizes": torch.tensor([[64, 64]]),
+        "pixel_values": torch.ones((1, 3, 64, 64)),
+    }
+
+    class FakeProcessed(dict):
+        """Fake processor output."""
+
+        def to(self, device: str) -> "FakeProcessed":
+            """Return self after device transfer."""
+            assert device == "cpu"
+            return self
+
+    class FakeProcessor:
+        """Fake SAM processor."""
+
+        def __call__(
+            self,
+            image: np.ndarray,
+            return_tensors: str,
+        ) -> FakeProcessed:
+            """Return encoded image."""
+            _ = image
+
+            assert return_tensors == "pt"
+
+            return FakeProcessed(processed)
+
+    class FakeModel:
+        """Fake SAM model."""
+
+        @staticmethod
+        def get_image_embeddings(
+            pixel_values: torch.Tensor,
+        ) -> torch.Tensor:
+            """Return fake embeddings."""
+            assert torch.equal(
+                pixel_values,
+                processed["pixel_values"],
+            )
+
+            return torch.tensor([[123]])
+
+    sam.processor = FakeProcessor()
+    sam.model = FakeModel()
+
+    image = np.zeros(
+        (32, 32, 3),
+        dtype=np.uint8,
+    )
+
+    embeddings, original_sizes, reshaped_sizes = sam._encode_image(
+        image,
+    )
+
+    assert torch.equal(
+        embeddings,
+        torch.tensor([[123]]),
+    )
+
+    assert torch.equal(
+        original_sizes,
+        processed["original_sizes"],
+    )
+
+    assert torch.equal(
+        reshaped_sizes,
+        processed["reshaped_input_sizes"],
+    )
+
+
+def test_sam_process_prompts() -> None:
+    """Test SAM prompt processing."""
+    sam = SAM.__new__(SAM)
+
+    sam.device = "cpu"
+
+    image_masks = np.array([[1]])
+    image_scores = torch.tensor([[0.99]])
+
+    captured: dict[str, object] = {}
+
+    class FakeInputs(dict):
+        """Fake processor outputs."""
+
+        def to(self, device: str) -> "FakeInputs":
+            """Fake tensor transfer."""
+            assert device == "cpu"
+            return self
+
+    class FakeOutputs:
+        """Fake SAM outputs."""
+
+        def __init__(self) -> None:
+            self.pred_masks = torch.ones((1, 1, 4, 4))
+            self.iou_scores = image_scores
+
+    class FakeImageProcessor:
+        """Fake image processor."""
+
+        @staticmethod
+        def post_process_masks(
+            pred_masks: torch.Tensor,
+            original_sizes: torch.Tensor,
+            reshaped_input_sizes: torch.Tensor,
+        ) -> np.ndarray:
+            """Return fake masks."""
+            _ = (
+                pred_masks,
+                original_sizes,
+                reshaped_input_sizes,
+            )
+
+            return image_masks
+
+    class FakeProcessor:
+        """Fake SAM processor."""
+
+        image_processor = FakeImageProcessor()
+
+        def __call__(
+            self,
+            image: object,
+            input_points: list | None = None,
+            input_labels: list | None = None,
+            input_boxes: list | None = None,
+            return_tensors: str = "pt",
+        ) -> FakeInputs:
+            """Return fake processor inputs."""
+            _ = image
+            captured["input_points"] = input_points
+            captured["input_labels"] = input_labels
+            captured["input_boxes"] = input_boxes
+
+            assert return_tensors == "pt"
+
+            return FakeInputs(
+                {
+                    "pixel_values": torch.ones((1, 3, 4, 4)),
+                },
+            )
+
+    class FakeModel:
+        """Fake SAM model."""
+
+        def __call__(
+            self,
+            **kwargs: object,
+        ) -> FakeOutputs:
+            """Capture forwarded kwargs."""
+            captured["forward_kwargs"] = kwargs
+
+            assert kwargs["multimask_output"] is False
+            assert "pixel_values" not in kwargs
+            assert "image_embeddings" in kwargs
+
+            return FakeOutputs()
+
+    sam.processor = FakeProcessor()
+    sam.model = FakeModel()
+
+    embeddings = torch.tensor([[1]])
+    original_sizes = torch.tensor([[100, 200]])
+    reshaped_sizes = torch.tensor([[64, 64]])
+
+    masks, scores = sam._process_prompts(
+        image=[np.zeros((4, 4, 3), dtype=np.uint8)],
+        embeddings=embeddings,
+        orig_sizes=original_sizes,
+        reshaped_sizes=reshaped_sizes,
+        points=[[[1, 1]]],
+        boxes=None,
+        point_labels=[[[1]]],
+    )
+
+    assert np.array_equal(masks, image_masks)
+    assert torch.equal(scores, image_scores)
+
+    assert captured["input_points"] == [[[1, 1]]]
+    assert captured["input_boxes"] is None
+
+
+def test_sam_to_updates_device() -> None:
+    """Test SAM.to updates device."""
+    sam = SAM.__new__(SAM)
+    torch.nn.Module.__init__(sam)
+
+    class FakeModel:
+        """Fake model."""
+
+        def __init__(self) -> None:
+            self.called_device: str | None = None
+
+        def to(self, device: str) -> "FakeModel":
+            """Record device."""
+            self.called_device = device
+            return self
+
+    fake_model = FakeModel()
+
+    sam.model = fake_model
+    sam.device = "cpu"
+
+    result = sam.to(device="cpu")
+
+    assert result is sam
+    assert sam.device == "cpu"
+    assert fake_model.called_device == "cpu"
+
+
 def test_sam_preproc_torch_tensor() -> None:
     """Test SAM pre-processing for PyTorch tensor input."""
     image = torch.arange(
