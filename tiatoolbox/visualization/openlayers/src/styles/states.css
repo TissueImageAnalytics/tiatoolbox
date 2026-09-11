@@ -1,0 +1,90 @@
+/* Disabled viewer controls */
+
+.ol-control button:disabled,
+.ol-control button:disabled:hover,
+.ol-control button:disabled:active,
+.ol-control button:disabled:focus,
+.ol-control.ol-toggle button:disabled,
+.ol-control.ol-toggle button:disabled:hover,
+.ol-control.ol-toggle button:disabled:active,
+.ol-control.ol-toggle button:disabled:focus {
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+    opacity: 0.4;
+    cursor: default;
+    outline: none;
+    pointer-events: none;
+}
+
+
+/* Hidden viewer controls */
+
+.viewer-control-hidden {
+    display: none !important;
+}
+
+
+/* Remove persistent mouse-focus styling */
+
+.ol-zoom button:focus:not(:active):not(:disabled) {
+    background: transparent;
+    color: var(--viewer-control-foreground);
+    outline: none;
+    box-shadow: none;
+}
+
+.ol-rotate button:focus:not(:active):not(:disabled),
+.reset-view-control button:focus:not(:active):not(:disabled),
+.map .ol-custom-overviewmap button:focus:not(:active) {
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+    outline: none;
+    box-shadow: none;
+}
+
+.ol-graticule:not(.active) button:focus:not(:active):not(:disabled),
+.ol-screen-space-graticule:not(.active) button:focus:not(:active):not(:disabled),
+.ol-full-screen button:not(.ol-full-screen-true):focus:not(:active),
+.viewer-panel-control button:not(.active):focus:not(:active),
+.layer-editor-control button:not(.active):focus:not(:active),
+.settings-control button:not(.active):focus:not(:active) {
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+    outline: none;
+    box-shadow: none;
+}
+
+
+/* Active controls */
+
+.ol-graticule.active button,
+.ol-screen-space-graticule.active button,
+.ol-full-screen button.ol-full-screen-true,
+.viewer-panel-control button.active,
+.layer-editor-control button.active,
+.settings-control button.active {
+    background: var(--viewer-control-selected-background);
+    color: var(--viewer-control-selected-foreground);
+}
+
+
+.ol-graticule.active button:hover,
+.ol-screen-space-graticule.active button:hover,
+.ol-full-screen button.ol-full-screen-true:hover,
+.viewer-panel-control button.active:hover,
+.layer-editor-control button.active:hover,
+.settings-control button.active:hover {
+    background: var(--viewer-control-selected-hover-background);
+    color: var(--viewer-control-selected-foreground);
+}
+
+
+.ol-graticule.active button:active,
+.ol-screen-space-graticule.active button:active,
+.ol-full-screen button.ol-full-screen-true:active,
+.viewer-panel-control button.active:active,
+.layer-editor-control button.active:active,
+.settings-control button.active:active {
+    background: var(--viewer-control-selected-pressed-background);
+    color: var(--viewer-control-selected-foreground);
+}

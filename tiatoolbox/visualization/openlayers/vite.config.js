@@ -6,17 +6,17 @@ import { defineConfig } from "vite";
 const currentDirectory = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
-  build: {
-    emptyOutDir: false,
-    lib: {
-      entry: resolve(currentDirectory, "src/main.js"),
-      formats: ["es"],
-      fileName: "viewer",
-      cssFileName: "viewer",
+    build: {
+        emptyOutDir: false,
+        lib: {
+            entry: resolve(currentDirectory, "src/main.js"),
+            formats: ["es"],
+            fileName: "viewer",
+            cssFileName: "viewer",
+        },
+        outDir: resolve(
+            currentDirectory,
+            "../../data/visualization/static/openlayers",
+        ),
     },
-    outDir: resolve(
-      currentDirectory,
-      "../../data/visualization/static/openlayers",
-    ),
-  },
 });
