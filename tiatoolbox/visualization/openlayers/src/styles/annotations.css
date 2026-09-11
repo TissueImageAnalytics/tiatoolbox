@@ -125,6 +125,17 @@
 }
 
 
+.annotations-panel-group-title {
+    margin-bottom: 10px;
+    overflow: hidden;
+
+    font-size: 13px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
 .annotations-panel-group + .annotations-panel-group {
     margin-top: 14px;
     padding-top: 14px;

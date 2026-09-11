@@ -404,9 +404,13 @@ function getAnnotationTypes() {
 }
 
 function getAnnotationGroups() {
-    return [...annotationTypesByLayer.values()];
+    return [...annotationTypesByLayer.entries()].map(
+        ([layerName, annotationTypes]) => ({
+            layerName,
+            annotationTypes,
+        }),
+    );
 }
-
 function initialiseAnnotationTypeState(annotationTypes) {
     for (const annotationType of annotationTypes) {
         if (!annotationTypeVisibility.has(annotationType)) {

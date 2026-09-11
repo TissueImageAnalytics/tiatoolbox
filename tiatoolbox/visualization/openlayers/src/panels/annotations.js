@@ -68,12 +68,31 @@ function createAnnotationsPanelController({
             return;
         }
 
-        for (const annotationTypes of annotationGroups) {
+        for (const {
+            layerName,
+            annotationTypes,
+        } of annotationGroups) {
             const group =
                 document.createElement("section");
 
             group.className =
                 "annotations-panel-group";
+
+            const groupTitle =
+                document.createElement("div");
+
+            groupTitle.className =
+                "annotations-panel-group-title";
+
+            groupTitle.textContent =
+                layerName;
+
+            groupTitle.title =
+                layerName;
+
+            group.appendChild(
+                groupTitle,
+            );
 
             for (const annotationType of annotationTypes) {
                 const annotationName =

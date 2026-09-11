@@ -16181,35 +16181,37 @@ function Uh({ panel: e, toggle: t, list: n, getAnnotationGroups: r, getAnnotatio
 			e.className = "annotations-panel-empty", e.textContent = "No annotations loaded", n.appendChild(e);
 			return;
 		}
-		for (let t of e) {
+		for (let { layerName: t, annotationTypes: r } of e) {
 			let e = document.createElement("section");
 			e.className = "annotations-panel-group";
-			for (let n of t) {
-				let t = String(n), r = document.createElement("div");
+			let u = document.createElement("div");
+			u.className = "annotations-panel-group-title", u.textContent = t, u.title = t, e.appendChild(u);
+			for (let t of r) {
+				let n = String(t), r = document.createElement("div");
 				r.className = "annotations-panel-item";
 				let u = document.createElement("div");
 				u.className = "annotations-panel-item-header";
 				let d = document.createElement("input");
-				d.type = "checkbox", d.className = "annotations-panel-visibility", d.checked = a(n), d.title = `Toggle ${t}`, d.addEventListener("change", () => {
-					f(() => c(n, d.checked));
+				d.type = "checkbox", d.className = "annotations-panel-visibility", d.checked = a(t), d.title = `Toggle ${n}`, d.addEventListener("change", () => {
+					f(() => c(t, d.checked));
 				});
 				let p = document.createElement("input");
-				p.type = "color", p.className = "annotations-panel-colour", p.value = Hh(i(n)), p.title = `Change ${t} colour`, p.addEventListener("change", () => {
-					f(() => s(n, p.value));
+				p.type = "color", p.className = "annotations-panel-colour", p.value = Hh(i(t)), p.title = `Change ${n} colour`, p.addEventListener("change", () => {
+					f(() => s(t, p.value));
 				});
 				let m = document.createElement("span");
-				m.className = "annotations-panel-name", m.textContent = t, m.title = t, u.append(d, p, m);
+				m.className = "annotations-panel-name", m.textContent = n, m.title = n, u.append(d, p, m);
 				let h = document.createElement("div");
 				h.className = "annotations-panel-opacity";
 				let g = document.createElement("span");
 				g.className = "annotations-panel-opacity-label", g.textContent = "Fill opacity";
 				let _ = document.createElement("input");
-				_.type = "range", _.className = "annotations-panel-slider", _.min = "0", _.max = "1", _.step = "0.05", _.value = o(n).toString();
+				_.type = "range", _.className = "annotations-panel-slider", _.min = "0", _.max = "1", _.step = "0.05", _.value = o(t).toString();
 				let v = document.createElement("span");
 				v.className = "annotations-panel-value", v.textContent = `${Math.round(Number(_.value) * 100)}%`, _.addEventListener("input", () => {
 					v.textContent = `${Math.round(Number(_.value) * 100)}%`;
 				}), _.addEventListener("change", () => {
-					f(() => l(n, Number(_.value)));
+					f(() => l(t, Number(_.value)));
 				}), h.append(g, _, v), r.append(u, h), e.appendChild(r);
 			}
 			n.appendChild(e);
@@ -16549,7 +16551,10 @@ function t_() {
 	return [...e];
 }
 function n_() {
-	return [...Qg.values()];
+	return [...Qg.entries()].map(([e, t]) => ({
+		layerName: e,
+		annotationTypes: t
+	}));
 }
 function r_(e) {
 	for (let t of e) if ($g.has(t) || $g.set(t, !0), !e_.has(t)) {
