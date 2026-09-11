@@ -123,6 +123,36 @@ Use **Clear Overlays** to remove all overlays while keeping the current slide
 loaded. Use **Clear Slide** to remove the slide and its overlays and return the
 viewer to its empty state.
 
+### Annotation overlays
+
+Annotation overlays loaded through the Files panel can be managed using the
+Annotations panel.
+
+Annotation types are grouped by their loaded annotation layer. Each type can
+be shown or hidden, assigned a colour and given a different fill opacity.
+**Show all** and **Hide all** can be used to change the visibility of all
+annotation types at once.
+
+Default annotation colours can be provided using a JSON file in the root of
+the overlay directory. The filename must end in `config.json`, for example
+`annotation_config.json`:
+
+```json
+{
+    "color_dict": {
+        "Tumour": [214, 39, 40, 255],
+        "Stroma": [31, 119, 180, 255],
+        "Inflammatory": [44, 160, 44, 255]
+    }
+}
+```
+
+Types not included in `color_dict` are assigned colours automatically.
+
+The **Export colours** button downloads the colours for the currently loaded
+annotation types as `annotation_config.json`. This file can be placed in the
+overlay directory and reused when the viewer is started again.
+
 The viewer can also be launched without predefined directories:
 
 ```bash
@@ -201,8 +231,8 @@ The experimental viewer source is split into the following files and directories
   searchable file selector.
 - `src/controls/` contains the map, grid, scale bar and overview map
   controllers.
-- `src/panels/` contains the Files, Layers and Settings panel controllers.
-- `src/utils/` contains shared colour and path helpers.
+- `src/panels/` contains the Files, Layers, Annotations and Settings panel controllers.
+- `src/utils/` contains shared annotation colour, colour and path helpers.
 - `src/style.css` imports the experimental viewer styles.
 - `src/styles/` contains the experimental viewer styling split by feature.
 - `vite.config.js` defines how the experimental viewer is built.
