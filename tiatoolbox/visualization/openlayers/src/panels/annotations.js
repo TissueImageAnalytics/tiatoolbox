@@ -17,6 +17,8 @@ function createAnnotationsPanelController({
     panel,
     toggle,
     list,
+    showAllButton,
+    hideAllButton,
     exportButton,
     getAnnotationGroups,
     getAnnotationColour,
@@ -25,6 +27,7 @@ function createAnnotationsPanelController({
     onColourChange,
     onVisibilityChange,
     onOpacityChange,
+    onSetAllVisibility,
     onExport,
     onOpen,
 }) {
@@ -55,8 +58,17 @@ function createAnnotationsPanelController({
         const annotationGroups =
             getAnnotationGroups();
 
+        const hasAnnotations =
+            annotationGroups.length > 0;
+
+        showAllButton.disabled =
+            !hasAnnotations;
+
+        hideAllButton.disabled =
+            !hasAnnotations;
+
         exportButton.disabled =
-            annotationGroups.length === 0;
+            !hasAnnotations;
 
         if (annotationGroups.length === 0) {
             const empty =
@@ -267,6 +279,22 @@ function createAnnotationsPanelController({
             list.appendChild(group);
         }
     }
+
+    showAllButton.addEventListener(
+        "click",
+        () => {
+            runAction(() =>
+                onSetAllVisibility(true));
+        },
+    );
+
+    hideAllButton.addEventListener(
+        "click",
+        () => {
+            runAction(() =>
+                onSetAllVisibility(false));
+        },
+    );
 
     exportButton.addEventListener(
         "click",

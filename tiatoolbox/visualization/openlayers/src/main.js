@@ -98,6 +98,16 @@ const annotationsList = document.getElementById(
     "annotations-panel-list",
 );
 
+const annotationsShowAllButton =
+    document.getElementById(
+        "annotations-show-all",
+    );
+
+const annotationsHideAllButton =
+    document.getElementById(
+        "annotations-hide-all",
+    );
+
 const annotationsExportColoursButton =
     document.getElementById(
         "annotations-export-colours",
@@ -255,6 +265,8 @@ if (
     annotationsPanel === null ||
     annotationsToggle === null ||
     annotationsList === null ||
+    annotationsShowAllButton === null ||
+    annotationsHideAllButton === null ||
     annotationsExportColoursButton === null ||
     settingsPanel === null ||
     settingsToggle === null ||
@@ -651,6 +663,10 @@ const annotationsPanelController =
         panel: annotationsPanel,
         toggle: annotationsToggle,
         list: annotationsList,
+        showAllButton:
+            annotationsShowAllButton,
+        hideAllButton:
+            annotationsHideAllButton,
         exportButton:
             annotationsExportColoursButton,
 
@@ -761,6 +777,46 @@ const annotationsPanelController =
                 annotationType,
                 opacity,
             );
+        },
+
+        async onSetAllVisibility(visible) {
+            const annotationTypes =
+                getAnnotationTypes();
+
+            const previousVisibility =
+                new Map(
+                    annotationTypes.map(
+                        (annotationType) => [
+                            annotationType,
+                            annotationTypeVisibility.get(
+                                annotationType,
+                            ) ?? true,
+                        ],
+                    ),
+                );
+
+            for (const annotationType of annotationTypes) {
+                annotationTypeVisibility.set(
+                    annotationType,
+                    visible,
+                );
+            }
+
+            try {
+                await updateAnnotationFilter();
+            } catch (error) {
+                for (const [
+                    annotationType,
+                    previousValue,
+                ] of previousVisibility) {
+                    annotationTypeVisibility.set(
+                        annotationType,
+                        previousValue,
+                    );
+                }
+
+                throw error;
+            }
         },
 
         onExport() {

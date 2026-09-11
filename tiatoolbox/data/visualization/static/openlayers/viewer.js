@@ -317,11 +317,11 @@ var k = class extends S {
 			delete this.values_[e], r(this.values_) && (this.values_ = null), t || this.notify(e, n);
 		}
 	}
-}, j = { LENGTH: "length" }, M = class extends S {
+}, ee = { LENGTH: "length" }, j = class extends S {
 	constructor(e, t, n) {
 		super(e), this.element = t, this.index = n;
 	}
-}, N = class extends A {
+}, M = class extends A {
 	constructor(e, t) {
 		if (super(), this.on, this.once, this.un, t ||= {}, this.unique_ = !!t.unique, this.array_ = e ?? [], this.unique_) for (let e = 1, t = this.array_.length; e < t; ++e) this.assertUnique_(this.array_[e], e);
 		this.updateLength_();
@@ -344,11 +344,11 @@ var k = class extends S {
 		return this.array_[e];
 	}
 	getLength() {
-		return this.get(j.LENGTH);
+		return this.get(ee.LENGTH);
 	}
 	insertAt(t, n) {
 		if (t < 0 || t > this.getLength()) throw Error("Index out of bounds: " + t);
-		this.unique_ && this.assertUnique_(n), this.array_.splice(t, 0, n), this.updateLength_(), this.dispatchEvent(new M(e.ADD, n, t));
+		this.unique_ && this.assertUnique_(n), this.array_.splice(t, 0, n), this.updateLength_(), this.dispatchEvent(new j(e.ADD, n, t));
 	}
 	pop() {
 		return this.removeAt(this.getLength() - 1);
@@ -364,7 +364,7 @@ var k = class extends S {
 	removeAt(t) {
 		if (t < 0 || t >= this.getLength()) return;
 		let n = this.array_[t];
-		return this.array_.splice(t, 1), this.updateLength_(), this.dispatchEvent(new M(e.REMOVE, n, t)), n;
+		return this.array_.splice(t, 1), this.updateLength_(), this.dispatchEvent(new j(e.REMOVE, n, t)), n;
 	}
 	setAt(t, n) {
 		if (t >= this.getLength()) {
@@ -374,16 +374,16 @@ var k = class extends S {
 		if (t < 0) throw Error("Index out of bounds: " + t);
 		this.unique_ && this.assertUnique_(n, t);
 		let r = this.array_[t];
-		this.array_[t] = n, this.dispatchEvent(new M(e.REMOVE, r, t)), this.dispatchEvent(new M(e.ADD, n, t));
+		this.array_[t] = n, this.dispatchEvent(new j(e.REMOVE, r, t)), this.dispatchEvent(new j(e.ADD, n, t));
 	}
 	updateLength_() {
-		this.set(j.LENGTH, this.array_.length);
+		this.set(ee.LENGTH, this.array_.length);
 	}
 	assertUnique_(e, t) {
 		let n = this.array_;
 		for (let r = 0, i = n.length; r < i; ++r) if (n[r] === e && r !== t) throw Error("Duplicate item added to a unique collection");
 	}
-}, ee = "ol-hidden", P = "ol-selectable", F = "ol-unselectable", te = "ol-unsupported", ne = "ol-control", re = "ol-collapsed", ie = new RegExp([
+}, N = "ol-hidden", P = "ol-selectable", F = "ol-unselectable", te = "ol-unsupported", ne = "ol-control", re = "ol-collapsed", ie = new RegExp([
 	"^\\s*(?=(?:(?:[-a-z]+\\s*){0,2}(italic|oblique))?)",
 	"(?=(?:(?:[-a-z]+\\s*){0,2}(small-caps))?)",
 	"(?=(?:(?:[-a-z]+\\s*){0,2}(bold(?:er)?|lighter|[1-9]00 ))?)",
@@ -621,7 +621,7 @@ var Pe = class extends Oe {
 		let i = e.tipLabel ? e.tipLabel : "Reset rotation", a = document.createElement("button");
 		a.className = t + "-reset", a.setAttribute("type", "button"), a.title = i, a.appendChild(this.label_), a.addEventListener(s.CLICK, this.handleClick_.bind(this), !1);
 		let o = t + " " + F + " " + ne, c = this.element;
-		c.className = o, c.appendChild(a), this.callResetNorth_ = e.resetNorth ? e.resetNorth : void 0, this.duration_ = e.duration === void 0 ? 250 : e.duration, this.autoHide_ = e.autoHide === void 0 || e.autoHide, this.rotation_ = void 0, this.autoHide_ && this.element.classList.add(ee);
+		c.className = o, c.appendChild(a), this.callResetNorth_ = e.resetNorth ? e.resetNorth : void 0, this.duration_ = e.duration === void 0 ? 250 : e.duration, this.autoHide_ = e.autoHide === void 0 || e.autoHide, this.rotation_ = void 0, this.autoHide_ && this.element.classList.add(N);
 	}
 	handleClick_(e) {
 		e.preventDefault(), this.callResetNorth_ === void 0 ? this.resetNorth_() : this.callResetNorth_();
@@ -643,8 +643,8 @@ var Pe = class extends Oe {
 		if (n != this.rotation_) {
 			let e = "rotate(" + n + "rad)";
 			if (this.autoHide_) {
-				let e = this.element.classList.contains(ee);
-				!e && n === 0 ? this.element.classList.add(ee) : e && n !== 0 && this.element.classList.remove(ee);
+				let e = this.element.classList.contains(N);
+				!e && n === 0 ? this.element.classList.add(N) : e && n !== 0 && this.element.classList.remove(N);
 			}
 			this.label_.style.transform = e;
 		}
@@ -684,7 +684,7 @@ var Pe = class extends Oe {
 //#region node_modules/ol/control/defaults.js
 function Ie(e) {
 	e ||= {};
-	let t = new N();
+	let t = new M();
 	return (e.zoom === void 0 || e.zoom) && t.push(new Fe(e.zoomOptions)), (e.rotate === void 0 || e.rotate) && t.push(new Pe(e.rotateOptions)), (e.attribution === void 0 || e.attribution) && t.push(new ke(e.attributionOptions)), t;
 }
 //#endregion
@@ -2653,14 +2653,14 @@ var ra = class extends $i {
 		$r(this.tempTransform, g / 2, _ / 2, E, E, 0, -g / 2, -_ / 2), this.layerExtent && this.clipUnrotated(D, e, this.layerExtent), l.getInterpolate() || (D.imageSmoothingEnabled = !1), this.preRender(D, e);
 		let k = Object.keys(x).map(Number);
 		k.sort(u);
-		let A = [], j = [], M = [];
+		let A = [], ee = [], j = [];
 		for (let t = k.length - 1; t >= 0; --t) {
 			let n = k[t], r = l.getTilePixelSize(n, s, i), a = d.getResolution(n) / p, o = r[0] * a * E, c = r[1] * a * E, u = d.getTileCoordForCoordAndZ(Et(b), n), m = d.getTileCoordExtent(u), g = B(this.tempTransform, [h * (m[0] - b[0]) / p, h * (b[3] - m[3]) / p]), _ = h * l.getGutterForProjection(i);
 			for (let t of x[n]) {
 				if (t.getState() !== I.LOADED) continue;
 				let r = t.tileCoord, i = u[1] - r[1], a = Math.round(g[0] - (i - 1) * o), s = u[2] - r[2], d = Math.round(g[1] - (s - 1) * c), p = Math.round(g[0] - i * o), m = Math.round(g[1] - s * c), h = a - p, v = d - m, y = n === f;
 				if (y && t.inTransition(w)) {
-					M.push({
+					j.push({
 						tile: t,
 						x: p,
 						y: m,
@@ -2676,13 +2676,13 @@ var ra = class extends $i {
 					p + h,
 					m + v
 				], x = [];
-				for (let e = 0, t = A.length; e < t; ++e) n < j[e] && Ot(b, A[e]) && x.push(A[e]);
+				for (let e = 0, t = A.length; e < t; ++e) n < ee[e] && Ot(b, A[e]) && x.push(A[e]);
 				let S;
-				x.length > 0 && (S = It(b, x)), A.push(b), j.push(n), this.drawTile(t, e, p, m, h, v, _, y, S), this.renderedTiles.unshift(t), this.updateUsedTiles(e.usedTiles, l, t);
+				x.length > 0 && (S = It(b, x)), A.push(b), ee.push(n), this.drawTile(t, e, p, m, h, v, _, y, S), this.renderedTiles.unshift(t), this.updateUsedTiles(e.usedTiles, l, t);
 			}
 		}
-		for (let t = 0, n = M.length; t < n; ++t) {
-			let { tile: n, x: r, y: i, w: a, h: o, gutter: s } = M[t];
+		for (let t = 0, n = j.length; t < n; ++t) {
+			let { tile: n, x: r, y: i, w: a, h: o, gutter: s } = j[t];
 			this.drawTile(n, e, r, i, a, o, s, !0, void 0);
 		}
 		return this.renderedResolution = p, this.extentChanged = !this.renderedExtent_ || !ut(this.renderedExtent_, b), this.renderedExtent_ = b, this.renderedPixelRatio = s, this.postRender(this.context, e), this.layerExtent && D.restore(), D.imageSmoothingEnabled = !0, this.renderComplete && e.postRenderFunctions.push((e, t) => {
@@ -4918,7 +4918,7 @@ var es = class extends Qo {
 //#region node_modules/ol/interaction/defaults.js
 function gs(e) {
 	e ||= {};
-	let t = new N(), n = new Po(-.005, .05, 100);
+	let t = new M(), n = new Po(-.005, .05, 100);
 	return (e.altShiftDragRotate === void 0 || e.altShiftDragRotate) && t.push(new ts()), (e.doubleClickZoom === void 0 || e.doubleClickZoom) && t.push(new zo({
 		delta: e.zoomDelta,
 		duration: e.zoomDuration
@@ -4948,7 +4948,7 @@ var _s = {
 		let t = Object.assign({}, e);
 		delete t.layers;
 		let n = e.layers;
-		super(t), this.on, this.once, this.un, this.layersListenerKeys_ = [], this.listenerKeys_ = {}, this.addChangeListener(ys.LAYERS, this.handleLayersChanged_), n ? Array.isArray(n) ? n = new N(n.slice(), { unique: !0 }) : z(typeof n.getArray == "function", "Expected `layers` to be an array or a `Collection`") : n = new N(void 0, { unique: !0 }), this.setLayers(n);
+		super(t), this.on, this.once, this.un, this.layersListenerKeys_ = [], this.listenerKeys_ = {}, this.addChangeListener(ys.LAYERS, this.handleLayersChanged_), n ? Array.isArray(n) ? n = new M(n.slice(), { unique: !0 }) : z(typeof n.getArray == "function", "Expected `layers` to be an array or a `Collection`") : n = new M(void 0, { unique: !0 }), this.setLayers(n);
 	}
 	handleLayerChange_() {
 		this.changed();
@@ -7631,7 +7631,7 @@ var hu = class extends A {
 	constructor(t) {
 		super(), t ||= {}, this.on, this.once, this.un;
 		let n = gu(t);
-		this.renderComplete_ = !1, this.loaded_ = !0, this.boundHandleBrowserEvent_ = this.handleBrowserEvent.bind(this), this.maxTilesLoading_ = t.maxTilesLoading === void 0 ? 16 : t.maxTilesLoading, this.pixelRatio_ = t.pixelRatio === void 0 ? fe : t.pixelRatio, this.postRenderTimeoutHandle_, this.animationDelayKey_, this.animationDelay_ = this.animationDelay_.bind(this), this.coordinateToPixelTransform_ = Kr(), this.pixelToCoordinateTransform_ = Kr(), this.frameIndex_ = 0, this.frameState_ = null, this.previousExtent_ = null, this.viewPropertyListenerKey_ = null, this.viewChangeListenerKey_ = null, this.layerGroupPropertyListenerKeys_ = null, pe || (this.viewport_ = document.createElement("div"), this.viewport_.className = "ol-viewport" + ("ontouchstart" in window ? " ol-touch" : ""), this.viewport_.style.position = "relative", this.viewport_.style.overflow = "hidden", this.viewport_.style.width = "100%", this.viewport_.style.height = "100%", this.overlayContainer_ = document.createElement("div"), this.overlayContainer_.style.position = "absolute", this.overlayContainer_.style.zIndex = "0", this.overlayContainer_.style.width = "100%", this.overlayContainer_.style.height = "100%", this.overlayContainer_.style.pointerEvents = "none", this.overlayContainer_.className = "ol-overlaycontainer", this.viewport_.appendChild(this.overlayContainer_), this.overlayContainerStopEvent_ = document.createElement("div"), this.overlayContainerStopEvent_.style.position = "absolute", this.overlayContainerStopEvent_.style.zIndex = "0", this.overlayContainerStopEvent_.style.width = "100%", this.overlayContainerStopEvent_.style.height = "100%", this.overlayContainerStopEvent_.style.pointerEvents = "none", this.overlayContainerStopEvent_.className = "ol-overlaycontainer-stopevent", this.viewport_.appendChild(this.overlayContainerStopEvent_)), this.mapBrowserEventHandler_ = null, this.moveTolerance_ = t.moveTolerance, this.keyboardEventTarget_ = n.keyboardEventTarget, this.targetChangeHandlerKeys_ = null, this.targetElement_ = null, pe || (this.resizeObserver_ = new ResizeObserver(() => this.updateSize())), this.controls = n.controls || (pe ? new N() : Ie()), this.interactions = n.interactions || (pe ? new N() : gs({ onFocusOnly: !0 })), this.overlays_ = n.overlays, this.overlayIdIndex_ = {}, this.renderer_ = null, this.postRenderFunctions_ = [], this.tileQueue_ = new Mo(this.getTilePriority.bind(this), this.handleTileChange_.bind(this)), this.addChangeListener(ko.LAYERGROUP, this.handleLayerGroupChanged_), this.addChangeListener(ko.VIEW, this.handleViewChanged_), this.addChangeListener(ko.SIZE, this.handleSizeChanged_), this.addChangeListener(ko.TARGET, this.handleTargetChanged_), this.setProperties(n.values);
+		this.renderComplete_ = !1, this.loaded_ = !0, this.boundHandleBrowserEvent_ = this.handleBrowserEvent.bind(this), this.maxTilesLoading_ = t.maxTilesLoading === void 0 ? 16 : t.maxTilesLoading, this.pixelRatio_ = t.pixelRatio === void 0 ? fe : t.pixelRatio, this.postRenderTimeoutHandle_, this.animationDelayKey_, this.animationDelay_ = this.animationDelay_.bind(this), this.coordinateToPixelTransform_ = Kr(), this.pixelToCoordinateTransform_ = Kr(), this.frameIndex_ = 0, this.frameState_ = null, this.previousExtent_ = null, this.viewPropertyListenerKey_ = null, this.viewChangeListenerKey_ = null, this.layerGroupPropertyListenerKeys_ = null, pe || (this.viewport_ = document.createElement("div"), this.viewport_.className = "ol-viewport" + ("ontouchstart" in window ? " ol-touch" : ""), this.viewport_.style.position = "relative", this.viewport_.style.overflow = "hidden", this.viewport_.style.width = "100%", this.viewport_.style.height = "100%", this.overlayContainer_ = document.createElement("div"), this.overlayContainer_.style.position = "absolute", this.overlayContainer_.style.zIndex = "0", this.overlayContainer_.style.width = "100%", this.overlayContainer_.style.height = "100%", this.overlayContainer_.style.pointerEvents = "none", this.overlayContainer_.className = "ol-overlaycontainer", this.viewport_.appendChild(this.overlayContainer_), this.overlayContainerStopEvent_ = document.createElement("div"), this.overlayContainerStopEvent_.style.position = "absolute", this.overlayContainerStopEvent_.style.zIndex = "0", this.overlayContainerStopEvent_.style.width = "100%", this.overlayContainerStopEvent_.style.height = "100%", this.overlayContainerStopEvent_.style.pointerEvents = "none", this.overlayContainerStopEvent_.className = "ol-overlaycontainer-stopevent", this.viewport_.appendChild(this.overlayContainerStopEvent_)), this.mapBrowserEventHandler_ = null, this.moveTolerance_ = t.moveTolerance, this.keyboardEventTarget_ = n.keyboardEventTarget, this.targetChangeHandlerKeys_ = null, this.targetElement_ = null, pe || (this.resizeObserver_ = new ResizeObserver(() => this.updateSize())), this.controls = n.controls || (pe ? new M() : Ie()), this.interactions = n.interactions || (pe ? new M() : gs({ onFocusOnly: !0 })), this.overlays_ = n.overlays, this.overlayIdIndex_ = {}, this.renderer_ = null, this.postRenderFunctions_ = [], this.tileQueue_ = new Mo(this.getTilePriority.bind(this), this.handleTileChange_.bind(this)), this.addChangeListener(ko.LAYERGROUP, this.handleLayerGroupChanged_), this.addChangeListener(ko.VIEW, this.handleViewChanged_), this.addChangeListener(ko.SIZE, this.handleSizeChanged_), this.addChangeListener(ko.TARGET, this.handleTargetChanged_), this.setProperties(n.values);
 		let r = this;
 		t.view && !(t.view instanceof uo) && t.view.then(function(e) {
 			r.setView(new uo(e));
@@ -7746,7 +7746,7 @@ var hu = class extends A {
 	}
 	setLayers(e) {
 		let t = this.getLayerGroup();
-		if (e instanceof N) {
+		if (e instanceof M) {
 			t.setLayers(e);
 			return;
 		}
@@ -8013,11 +8013,11 @@ function gu(e) {
 	let n = {}, r = e.layers && typeof e.layers.getLayers == "function" ? e.layers : new bs({ layers: e.layers });
 	n[ko.LAYERGROUP] = r, n[ko.TARGET] = e.target, n[ko.VIEW] = e.view instanceof uo ? e.view : new uo();
 	let i;
-	e.controls !== void 0 && (Array.isArray(e.controls) ? i = new N(e.controls.slice()) : (z(typeof e.controls.getArray == "function", "Expected `controls` to be an array or an `ol/Collection.js`"), i = e.controls));
+	e.controls !== void 0 && (Array.isArray(e.controls) ? i = new M(e.controls.slice()) : (z(typeof e.controls.getArray == "function", "Expected `controls` to be an array or an `ol/Collection.js`"), i = e.controls));
 	let a;
-	e.interactions !== void 0 && (Array.isArray(e.interactions) ? a = new N(e.interactions.slice()) : (z(typeof e.interactions.getArray == "function", "Expected `interactions` to be an array or an `ol/Collection.js`"), a = e.interactions));
+	e.interactions !== void 0 && (Array.isArray(e.interactions) ? a = new M(e.interactions.slice()) : (z(typeof e.interactions.getArray == "function", "Expected `interactions` to be an array or an `ol/Collection.js`"), a = e.interactions));
 	let o;
-	return e.overlays === void 0 ? o = new N() : Array.isArray(e.overlays) ? o = new N(e.overlays.slice()) : (z(typeof e.overlays.getArray == "function", "Expected `overlays` to be an array or an `ol/Collection.js`"), o = e.overlays), {
+	return e.overlays === void 0 ? o = new M() : Array.isArray(e.overlays) ? o = new M(e.overlays.slice()) : (z(typeof e.overlays.getArray == "function", "Expected `overlays` to be an array or an `ol/Collection.js`"), o = e.overlays), {
 		controls: i,
 		interactions: a,
 		keyboardEventTarget: t,
@@ -9543,34 +9543,34 @@ function hd(e, t, n, r, i, a, o, s, c, l, u, d, f = !0) {
 			ca(e, 0, 4, 2, d, e, e), O = e[0] > e[2];
 		} else O = x > E;
 	}
-	let k = Math.PI, A = [], j = C + r === t;
+	let k = Math.PI, A = [], ee = C + r === t;
 	t = C, _ = 0, v = w, p = e[t], m = e[t + 1];
-	let M;
-	if (j) return y(), M = Math.atan2(m - g, p - h), O && (M += M > 0 ? -k : k), A[0] = [
+	let j;
+	if (ee) return y(), j = Math.atan2(m - g, p - h), O && (j += j > 0 ? -k : k), A[0] = [
 		(E + x) / 2,
 		(D + S) / 2,
 		(T - a) / 2,
-		M,
+		j,
 		i
 	], A;
 	i = i.replace(/\n/g, " ");
-	let N = Array.from(md().segment(i), (e) => e.segment);
-	for (let e = 0, i = N.length; e < i;) {
+	let M = Array.from(md().segment(i), (e) => e.segment);
+	for (let e = 0, i = M.length; e < i;) {
 		y();
 		let d = Math.atan2(m - g, p - h);
-		if (O && (d += d > 0 ? -k : k), M !== void 0) {
-			let e = d - M;
+		if (O && (d += d > 0 ? -k : k), j !== void 0) {
+			let e = d - j;
 			if (e += e > k ? -2 * k : e < -k ? 2 * k : 0, Math.abs(e) > o) return null;
 		}
-		M = d;
+		j = d;
 		let f = e, x = 0;
 		for (; e < i; ++e) {
-			let o = s * c(l, N[O ? i - e - 1 : e], u);
+			let o = s * c(l, M[O ? i - e - 1 : e], u);
 			if (t + r < n && v + _ < a + x + o / 2) break;
 			x += o;
 		}
 		if (e === f) continue;
-		let S = (O ? N.slice(i - e, i - f) : N.slice(f, e)).join("");
+		let S = (O ? M.slice(i - e, i - f) : M.slice(f, e)).join("");
 		b = _ === 0 ? 0 : (a + x / 2 - v) / _;
 		let C = qt(h, p, b), w = qt(g, m, b);
 		A.push([
@@ -9615,7 +9615,7 @@ var Ed = class {
 			contextInstructions: y
 		};
 		(l[0] != 1 || l[1] != 1) && y.push("scale", l), r && (y.push("strokeStyle", a.strokeStyle), y.push("lineWidth", d), y.push("lineCap", a.lineCap), y.push("lineJoin", a.lineJoin), y.push("miterLimit", a.miterLimit), y.push("setLineDash", [a.lineDash]), y.push("lineDashOffset", a.lineDashOffset)), n && y.push("fillStyle", o.fillStyle), y.push("textBaseline", "middle"), y.push("textAlign", "center");
-		let C = .5 - u, w = u * v + C * d, T = [], E = [], D = 0, O = 0, k = 0, A = 0, j;
+		let C = .5 - u, w = u * v + C * d, T = [], E = [], D = 0, O = 0, k = 0, A = 0, ee;
 		for (let e = 0, t = f.length; e < t; e += 2) {
 			let t = f[e];
 			if (t === "\n") {
@@ -9623,7 +9623,7 @@ var Ed = class {
 				continue;
 			}
 			let i = f[e + 1] || s.font;
-			i !== j && (r && T.push("font", i), n && E.push("font", i), j = i), D = Math.max(D, g[k]);
+			i !== ee && (r && T.push("font", i), n && E.push("font", i), ee = i), D = Math.max(D, g[k]);
 			let a = [
 				t,
 				w + C * h[k] + u * (h[k] - _[A]),
@@ -9685,11 +9685,11 @@ var Ed = class {
 	execute_(e, t, n, r, i, a, o, s) {
 		let c = this.zIndexContext_, l;
 		this.pixelCoordinates_ && h(n, this.renderedTransform_) ? l = this.pixelCoordinates_ : (this.pixelCoordinates_ ||= [], l = sa(this.coordinates, 0, this.coordinates.length, 2, n, this.pixelCoordinates_), Xr(this.renderedTransform_, n));
-		let u = 0, d = r.length, f = 0, p, m = [], g, _, v, y, b, x, S, C, w, T, E, D, O, k = 0, A = 0, j = this.coordinateCache_, M = this.viewRotation_, N = Math.round(Math.atan2(-n[1], n[0]) * 0xe8d4a51000) / 0xe8d4a51000, ee = {
+		let u = 0, d = r.length, f = 0, p, m = [], g, _, v, y, b, x, S, C, w, T, E, D, O, k = 0, A = 0, ee = this.coordinateCache_, j = this.viewRotation_, M = Math.round(Math.atan2(-n[1], n[0]) * 0xe8d4a51000) / 0xe8d4a51000, N = {
 			context: e,
 			pixelRatio: this.pixelRatio,
 			resolution: this.resolution,
-			rotation: M
+			rotation: j
 		}, P = this.instructions != r || this.overlaps ? 0 : 200, F, te, ne, re;
 		for (; u < d;) {
 			let n = r[u];
@@ -9711,9 +9711,9 @@ var Ed = class {
 				case X.CUSTOM:
 					f = n[1], p = n[2];
 					let ce = n[3], le = n[4], ue = n[5];
-					ee.geometry = ce, ee.feature = F, u in j || (j[u] = []);
-					let de = j[u];
-					ue ? ue(l, f, p, 2, de) : (de[0] = l[f], de[1] = l[f + 1], de.length = 2), c && (c.zIndex = n[6]), le(de, ee), ++u;
+					N.geometry = ce, N.feature = F, u in ee || (ee[u] = []);
+					let de = ee[u];
+					ue ? ue(l, f, p, 2, de) : (de[0] = l[f], de[1] = l[f + 1], de.length = 2), c && (c.zIndex = n[6]), le(de, N), ++u;
 					break;
 				case X.DRAW_IMAGE:
 					f = n[1], p = n[2], w = n[3], g = n[4], _ = n[5];
@@ -9732,7 +9732,7 @@ var Ed = class {
 					let xe;
 					n.length > 25 && (xe = n[25]);
 					let Se, Ce, we;
-					n.length > 17 ? (Se = n[16], Ce = n[17], we = n[18]) : (Se = Xc, Ce = null, we = null), ge && N ? _e += M : !ge && !N && (_e -= M);
+					n.length > 17 ? (Se = n[16], Ce = n[17], we = n[18]) : (Se = Xc, Ce = null, we = null), ge && M ? _e += j : !ge && !M && (_e -= j);
 					let Te = 0;
 					for (; f < p; f += 2) {
 						if (xe && xe[Te++] < ye / this.pixelRatio) continue;
@@ -9782,7 +9782,7 @@ var Ed = class {
 					Le in this.widths_ ? ze = this.widths_[Le] : (ze = {}, this.widths_[Le] = ze);
 					let Be = ld(l, Ee, De, 2), Ve = Math.abs(Re[0]) * sl(Le, T, ze);
 					if (ke || Ve <= Be) {
-						let n = this.textStates[E].textAlign, r = (Be - Ve) * Cd(T, n), i = hd(l, Ee, De, 2, T, r, Ae, Math.abs(Re[0]), sl, Le, ze, N ? 0 : this.viewRotation_, Fe);
+						let n = this.textStates[E].textAlign, r = (Be - Ve) * Cd(T, n), i = hd(l, Ee, De, 2, T, r, Ae, Math.abs(Re[0]), sl, Le, ze, M ? 0 : this.viewRotation_, Fe);
 						drawChars: if (i) {
 							let n = [], r, a, o, c, l;
 							if (D) for (r = 0, a = i.length; r < a; ++r) {
@@ -10603,8 +10603,8 @@ var nf = class extends $i {
 		m && k.sort(m);
 		for (let e = 0, t = k.length; e < t; ++e) D(k[e], e);
 		this.renderedFeatures_ = k, this.ready = E;
-		let A = S.finish(), j = new Nd(_, u, d, n.getOverlaps(), A, t.getRenderBuffer(), !!e.declutter);
-		return this.renderedResolution_ = u, this.renderedRevision_ = f, this.renderedRenderOrder_ = m, this.renderedFrameDeclutter_ = !!e.declutter, this.renderedExtent_ = v, this.wrappedRenderedExtent_ = _, this.renderedCenter_ = g, this.renderedProjection_ = l, this.renderedPixelRatio_ = d, this.replayGroup_ = j, this.hitDetectionImageData_ = null, this.replayGroupChanged = !0, !0;
+		let A = S.finish(), ee = new Nd(_, u, d, n.getOverlaps(), A, t.getRenderBuffer(), !!e.declutter);
+		return this.renderedResolution_ = u, this.renderedRevision_ = f, this.renderedRenderOrder_ = m, this.renderedFrameDeclutter_ = !!e.declutter, this.renderedExtent_ = v, this.wrappedRenderedExtent_ = _, this.renderedCenter_ = g, this.renderedProjection_ = l, this.renderedPixelRatio_ = d, this.replayGroup_ = ee, this.hitDetectionImageData_ = null, this.replayGroupChanged = !0, !0;
 	}
 	renderFeature(e, t, n, r, i, a, o) {
 		if (!n) return !1;
@@ -14883,26 +14883,26 @@ function lh({ map: e, viewerApp: t, getSlideSource: n, zoomVisibleInput: r, zoom
 		let e = n() !== null;
 		v.classList.toggle("viewer-control-hidden", !r.checked), b.classList.toggle("viewer-control-hidden", !i.checked), T.element.classList.toggle("viewer-control-hidden", !a.checked), s.classList.toggle("viewer-control-hidden", !c.checked), E.element.classList.toggle("viewer-control-hidden", !l.checked), w.element.classList.toggle("viewer-control-hidden", !e || !u.checked);
 	}
-	function j() {
+	function ee() {
 		e.removeInteraction(h), h = m(), h.setActive(O), e.addInteraction(h);
 	}
-	function M() {
+	function j() {
 		/* v8 ignore if */
 		if (e.removeControl(_), _ = g(), e.addControl(_), v = _.element, y = v.querySelector(".ol-zoom-out"), y === null) throw Error("The OpenLayers zoom control could not be found.");
 		v.insertBefore(b, y), D.insertBefore(v, E.element), k(O), A();
 	}
 	return d.addEventListener("change", () => {
-		j();
+		ee();
 	}), f.addEventListener("change", () => {
-		M();
+		j();
 	}), {
 		fullscreen: E,
 		mousePositionControl: w,
 		rotate: T,
 		setViewerEnabled: k,
-		updateMouseWheelZoomSensitivity: j,
+		updateMouseWheelZoomSensitivity: ee,
 		updateVisibility: A,
-		updateZoomButtonStep: M,
+		updateZoomButtonStep: j,
 		updateZoomLevel: x
 	};
 }
@@ -15027,9 +15027,9 @@ var uh = function(e) {
 				left: [],
 				bottom: [],
 				right: []
-			}, A, j, M, N, ee;
-			for (A = u; A < l; A += g) for (N = Er([A, f], o, s.getView().getProjection()), N = s.getPixelFromCoordinate(N), E && t.moveTo(N[0], N[1]), M = N, j = f + w; j <= d; j += w) ee = Er([A, j], o, s.getView().getProjection()), ee = s.getPixelFromCoordinate(ee), E && t.lineTo(ee[0], ee[1]), M[1] > 0 && ee[1] < 0 && k.top.push([A, M]), M[1] > a && ee[1] < a && k.bottom.push([A, M]), M = ee;
-			for (j = f; j < d; j += g) for (N = Er([u, j], o, s.getView().getProjection()), N = s.getPixelFromCoordinate(N), E && t.moveTo(N[0], N[1]), M = N, A = u + w; A <= l; A += w) ee = Er([A, j], o, s.getView().getProjection()), ee = s.getPixelFromCoordinate(ee), E && t.lineTo(ee[0], ee[1]), M[0] < 0 && ee[0] > 0 && k.left.push([j, M]), M[0] < i && ee[0] > i && k.right.push([j, M]), M = ee;
+			}, A, ee, j, M, N;
+			for (A = u; A < l; A += g) for (M = Er([A, f], o, s.getView().getProjection()), M = s.getPixelFromCoordinate(M), E && t.moveTo(M[0], M[1]), j = M, ee = f + w; ee <= d; ee += w) N = Er([A, ee], o, s.getView().getProjection()), N = s.getPixelFromCoordinate(N), E && t.lineTo(N[0], N[1]), j[1] > 0 && N[1] < 0 && k.top.push([A, j]), j[1] > a && N[1] < a && k.bottom.push([A, j]), j = N;
+			for (ee = f; ee < d; ee += g) for (M = Er([u, ee], o, s.getView().getProjection()), M = s.getPixelFromCoordinate(M), E && t.moveTo(M[0], M[1]), j = M, A = u + w; A <= l; A += w) N = Er([A, ee], o, s.getView().getProjection()), N = s.getPixelFromCoordinate(N), E && t.lineTo(N[0], N[1]), j[0] < 0 && N[0] > 0 && k.left.push([ee, j]), j[0] < i && N[0] > i && k.right.push([ee, j]), j = N;
 			if (E && (t.strokeStyle = this.getStyle().getStroke().getColor(), t.lineWidth = this.getStyle().getStroke().getWidth(), t.stroke()), D) {
 				t.fillStyle = this.getStyle().getText().getFill().getColor(), t.strokeStyle = this.getStyle().getText().getStroke().getColor(), t.lineWidth = this.getStyle().getText().getStroke().getWidth(), t.font = this.getStyle().getText().getFont(), t.textAlign = "center", t.textBaseline = "hanging";
 				var P, F, te = (O ? v : 0) + y + 2;
@@ -15628,8 +15628,8 @@ var Ah = {
 		o.setAttribute("type", "button"), o.title = n, o.appendChild(a), o.addEventListener(s.CLICK, this.handleClick_.bind(this), !1), this.ovmapDiv_ = document.createElement("div"), this.ovmapDiv_.className = "ol-overviewmap-map", this.view_ = e.view;
 		let c = new hu({
 			view: e.view,
-			controls: new N(),
-			interactions: new N()
+			controls: new M(),
+			interactions: new M()
 		});
 		this.ovmap_ = c, e.layers && e.layers.forEach(function(e) {
 			c.addLayer(e);
@@ -16162,21 +16162,21 @@ function Vh({ panel: e, toggle: t, list: n, getSlideLayer: r, getCurrentSlidePat
 function Hh(e) {
 	return typeof e == "string" ? e : `#${e.slice(0, 3).map((e) => Math.round(e * 255).toString(16).padStart(2, "0")).join("")}`;
 }
-function Uh({ panel: e, toggle: t, list: n, exportButton: r, getAnnotationGroups: i, getAnnotationColour: a, isAnnotationTypeVisible: o, getAnnotationOpacity: s, onColourChange: c, onVisibilityChange: l, onOpacityChange: u, onExport: d, onOpen: f }) {
-	function p(n) {
-		n && (f(), h()), e.classList.toggle("hidden", !n), t.classList.toggle("active", n);
+function Uh({ panel: e, toggle: t, list: n, showAllButton: r, hideAllButton: i, exportButton: a, getAnnotationGroups: o, getAnnotationColour: s, isAnnotationTypeVisible: c, getAnnotationOpacity: l, onColourChange: u, onVisibilityChange: d, onOpacityChange: f, onSetAllVisibility: p, onExport: m, onOpen: h }) {
+	function g(n) {
+		n && (h(), v()), e.classList.toggle("hidden", !n), t.classList.toggle("active", n);
 	}
-	function m(e) {
+	function _(e) {
 		e().then(() => {
-			h();
+			v();
 		}).catch((e) => {
-			console.error(e), h();
+			console.error(e), v();
 		});
 	}
-	function h() {
+	function v() {
 		n.replaceChildren();
-		let e = i();
-		if (r.disabled = e.length === 0, e.length === 0) {
+		let e = o(), t = e.length > 0;
+		if (r.disabled = !t, i.disabled = !t, a.disabled = !t, e.length === 0) {
 			let e = document.createElement("div");
 			e.className = "annotations-panel-empty", e.textContent = "No annotations loaded", n.appendChild(e);
 			return;
@@ -16191,39 +16191,43 @@ function Uh({ panel: e, toggle: t, list: n, exportButton: r, getAnnotationGroups
 				r.className = "annotations-panel-item";
 				let i = document.createElement("div");
 				i.className = "annotations-panel-item-header";
-				let d = document.createElement("input");
-				d.type = "checkbox", d.className = "annotations-panel-visibility", d.checked = o(t), d.title = `Toggle ${n}`, d.addEventListener("change", () => {
-					m(() => l(t, d.checked));
+				let a = document.createElement("input");
+				a.type = "checkbox", a.className = "annotations-panel-visibility", a.checked = c(t), a.title = `Toggle ${n}`, a.addEventListener("change", () => {
+					_(() => d(t, a.checked));
 				});
-				let f = document.createElement("input");
-				f.type = "color", f.className = "annotations-panel-colour", f.value = Hh(a(t)), f.title = `Change ${n} colour`, f.addEventListener("change", () => {
-					m(() => c(t, f.value));
+				let o = document.createElement("input");
+				o.type = "color", o.className = "annotations-panel-colour", o.value = Hh(s(t)), o.title = `Change ${n} colour`, o.addEventListener("change", () => {
+					_(() => u(t, o.value));
 				});
 				let p = document.createElement("span");
-				p.className = "annotations-panel-name", p.textContent = n, p.title = n, i.append(d, f, p);
-				let h = document.createElement("div");
-				h.className = "annotations-panel-opacity";
-				let g = document.createElement("span");
-				g.className = "annotations-panel-opacity-label", g.textContent = "Fill opacity";
-				let _ = document.createElement("input");
-				_.type = "range", _.className = "annotations-panel-slider", _.min = "0", _.max = "1", _.step = "0.05", _.value = s(t).toString();
+				p.className = "annotations-panel-name", p.textContent = n, p.title = n, i.append(a, o, p);
+				let m = document.createElement("div");
+				m.className = "annotations-panel-opacity";
+				let h = document.createElement("span");
+				h.className = "annotations-panel-opacity-label", h.textContent = "Fill opacity";
+				let g = document.createElement("input");
+				g.type = "range", g.className = "annotations-panel-slider", g.min = "0", g.max = "1", g.step = "0.05", g.value = l(t).toString();
 				let v = document.createElement("span");
-				v.className = "annotations-panel-value", v.textContent = `${Math.round(Number(_.value) * 100)}%`, _.addEventListener("input", () => {
-					v.textContent = `${Math.round(Number(_.value) * 100)}%`;
-				}), _.addEventListener("change", () => {
-					m(() => u(t, Number(_.value)));
-				}), h.append(g, _, v), r.append(i, h), e.appendChild(r);
+				v.className = "annotations-panel-value", v.textContent = `${Math.round(Number(g.value) * 100)}%`, g.addEventListener("input", () => {
+					v.textContent = `${Math.round(Number(g.value) * 100)}%`;
+				}), g.addEventListener("change", () => {
+					_(() => f(t, Number(g.value)));
+				}), m.append(h, g, v), r.append(i, m), e.appendChild(r);
 			}
 			n.appendChild(e);
 		}
 	}
 	return r.addEventListener("click", () => {
-		d();
+		_(() => p(!0));
+	}), i.addEventListener("click", () => {
+		_(() => p(!1));
+	}), a.addEventListener("click", () => {
+		m();
 	}), t.addEventListener("click", () => {
-		p(e.classList.contains("hidden"));
+		g(e.classList.contains("hidden"));
 	}), {
-		render: h,
-		setOpen: p
+		render: v,
+		setOpen: g
 	};
 }
 //#endregion
@@ -16233,8 +16237,8 @@ var Wh = {
 	light: "#f2f2f2",
 	"high-contrast": "#000000"
 }, Gh = "tiatoolbox-openlayers-settings";
-function Kh({ viewerApp: e, panel: t, toggle: n, closeButton: r, tabs: i, tabPanels: a, resetDefaultsButton: o, themeSelect: s, controlOpacityInput: c, controlOpacityValue: l, zoomVisibleInput: u, zoomLevelVisibleInput: d, rotationVisibleInput: f, graticuleVisibleInput: p, screenSpaceGraticuleVisibleInput: m, resetViewVisibleInput: h, fullscreenVisibleInput: g, mousePositionVisibleInput: _, overviewMapVisibleInput: v, overviewMapSizeSelect: y, mouseWheelZoomSensitivitySelect: b, zoomButtonStepSelect: x, gridThemeSelect: S, gridOpacityInput: C, gridSpacingSelect: w, gridLabelsVisibleInput: T, scaleBarEnabledInput: E, scaleBarColourInput: D, scaleBarOpacityInput: O, scaleBarSizeSelect: k, scaleBarUnitsSelect: A, onThemeChange: j, onControlVisibilityChange: M, onReset: N }) {
-	let ee = !1;
+function Kh({ viewerApp: e, panel: t, toggle: n, closeButton: r, tabs: i, tabPanels: a, resetDefaultsButton: o, themeSelect: s, controlOpacityInput: c, controlOpacityValue: l, zoomVisibleInput: u, zoomLevelVisibleInput: d, rotationVisibleInput: f, graticuleVisibleInput: p, screenSpaceGraticuleVisibleInput: m, resetViewVisibleInput: h, fullscreenVisibleInput: g, mousePositionVisibleInput: _, overviewMapVisibleInput: v, overviewMapSizeSelect: y, mouseWheelZoomSensitivitySelect: b, zoomButtonStepSelect: x, gridThemeSelect: S, gridOpacityInput: C, gridSpacingSelect: w, gridLabelsVisibleInput: T, scaleBarEnabledInput: E, scaleBarColourInput: D, scaleBarOpacityInput: O, scaleBarSizeSelect: k, scaleBarUnitsSelect: A, onThemeChange: ee, onControlVisibilityChange: j, onReset: M }) {
+	let N = !1;
 	function P(e) {
 		t.classList.toggle("hidden", !e), n.classList.toggle("active", e);
 	}
@@ -16395,8 +16399,8 @@ function Kh({ viewerApp: e, panel: t, toggle: n, closeButton: r, tabs: i, tabPan
 		} catch {}
 	}
 	function ae() {
-		if (!ee) {
-			ee = !0, n.addEventListener("click", () => {
+		if (!N) {
+			N = !0, n.addEventListener("click", () => {
 				P(t.classList.contains("hidden"));
 			}), r.addEventListener("click", () => {
 				P(!1);
@@ -16407,7 +16411,7 @@ function Kh({ viewerApp: e, panel: t, toggle: n, closeButton: r, tabs: i, tabPan
 				for (let e of a) e.classList.toggle("hidden", e.dataset.settingsPanel !== t);
 			});
 			s.addEventListener("change", () => {
-				F(), j(), te();
+				F(), ee(), te();
 			}), c.addEventListener("input", () => {
 				F(), te();
 			});
@@ -16422,7 +16426,7 @@ function Kh({ viewerApp: e, panel: t, toggle: n, closeButton: r, tabs: i, tabPan
 				_,
 				v
 			]) e.addEventListener("change", () => {
-				M(), te();
+				j(), te();
 			});
 			for (let e of [
 				S,
@@ -16445,7 +16449,7 @@ function Kh({ viewerApp: e, panel: t, toggle: n, closeButton: r, tabs: i, tabPan
 				te();
 			});
 			o.addEventListener("click", () => {
-				N();
+				M();
 			});
 		}
 	}
@@ -16498,88 +16502,88 @@ function Yh(e, t, n) {
 		zDirection: -1
 	});
 }
-var Xh = document.getElementById("map"), Zh = document.querySelector(".viewer-app"), Qh = document.getElementById("viewer-panel"), $h = document.getElementById("viewer-panel-toggle"), eg = document.getElementById("viewer-files"), tg = document.getElementById("layer-editor"), ng = document.getElementById("layer-editor-toggle"), rg = document.getElementById("layer-editor-list"), ig = document.getElementById("annotations-panel"), ag = document.getElementById("annotations-toggle"), og = document.getElementById("annotations-panel-list"), sg = document.getElementById("annotations-export-colours"), cg = document.getElementById("settings-panel"), lg = document.getElementById("settings-toggle"), ug = document.getElementById("settings-close"), dg = document.querySelectorAll(".settings-tab"), fg = document.querySelectorAll(".settings-tab-panel"), pg = document.getElementById("settings-zoom-visible"), mg = document.getElementById("settings-zoom-level-visible"), hg = document.getElementById("settings-rotation-visible"), gg = document.getElementById("settings-graticule-visible"), _g = document.getElementById("settings-screen-space-graticule-visible"), vg = document.getElementById("reset-view-button"), yg = document.querySelector(".reset-view-control"), bg = document.getElementById("settings-reset-view-visible"), xg = document.getElementById("settings-fullscreen-visible"), Sg = document.getElementById("settings-mouse-position-visible"), Cg = document.getElementById("settings-overview-map-visible"), wg = document.getElementById("settings-overview-map-size"), Tg = document.getElementById("settings-mouse-wheel-zoom-sensitivity"), Eg = document.getElementById("settings-zoom-button-step"), Dg = document.getElementById("settings-scale-bar-enabled"), Og = document.getElementById("settings-theme"), kg = document.getElementById("settings-grid-theme"), Ag = document.getElementById("settings-grid-opacity"), jg = document.getElementById("settings-grid-opacity-value"), Mg = document.getElementById("settings-grid-spacing"), Ng = document.getElementById("settings-grid-labels-visible"), Pg = document.getElementById("settings-control-opacity"), Fg = document.getElementById("settings-control-opacity-value"), Ig = document.getElementById("settings-reset-defaults"), Lg = document.getElementById("settings-scale-bar-colour"), Rg = document.getElementById("settings-scale-bar-opacity"), zg = document.getElementById("settings-scale-bar-opacity-value"), Bg = document.getElementById("settings-scale-bar-size"), Vg = document.getElementById("settings-scale-bar-units");
+var Xh = document.getElementById("map"), Zh = document.querySelector(".viewer-app"), Qh = document.getElementById("viewer-panel"), $h = document.getElementById("viewer-panel-toggle"), eg = document.getElementById("viewer-files"), tg = document.getElementById("layer-editor"), ng = document.getElementById("layer-editor-toggle"), rg = document.getElementById("layer-editor-list"), ig = document.getElementById("annotations-panel"), ag = document.getElementById("annotations-toggle"), og = document.getElementById("annotations-panel-list"), sg = document.getElementById("annotations-show-all"), cg = document.getElementById("annotations-hide-all"), lg = document.getElementById("annotations-export-colours"), ug = document.getElementById("settings-panel"), dg = document.getElementById("settings-toggle"), fg = document.getElementById("settings-close"), pg = document.querySelectorAll(".settings-tab"), mg = document.querySelectorAll(".settings-tab-panel"), hg = document.getElementById("settings-zoom-visible"), gg = document.getElementById("settings-zoom-level-visible"), _g = document.getElementById("settings-rotation-visible"), vg = document.getElementById("settings-graticule-visible"), yg = document.getElementById("settings-screen-space-graticule-visible"), bg = document.getElementById("reset-view-button"), xg = document.querySelector(".reset-view-control"), Sg = document.getElementById("settings-reset-view-visible"), Cg = document.getElementById("settings-fullscreen-visible"), wg = document.getElementById("settings-mouse-position-visible"), Tg = document.getElementById("settings-overview-map-visible"), Eg = document.getElementById("settings-overview-map-size"), Dg = document.getElementById("settings-mouse-wheel-zoom-sensitivity"), Og = document.getElementById("settings-zoom-button-step"), kg = document.getElementById("settings-scale-bar-enabled"), Ag = document.getElementById("settings-theme"), jg = document.getElementById("settings-grid-theme"), Mg = document.getElementById("settings-grid-opacity"), Ng = document.getElementById("settings-grid-opacity-value"), Pg = document.getElementById("settings-grid-spacing"), Fg = document.getElementById("settings-grid-labels-visible"), Ig = document.getElementById("settings-control-opacity"), Lg = document.getElementById("settings-control-opacity-value"), Rg = document.getElementById("settings-reset-defaults"), zg = document.getElementById("settings-scale-bar-colour"), Bg = document.getElementById("settings-scale-bar-opacity"), Vg = document.getElementById("settings-scale-bar-opacity-value"), Hg = document.getElementById("settings-scale-bar-size"), Ug = document.getElementById("settings-scale-bar-units");
 if (Xh === null || Zh === null) throw Error("The OpenLayers viewer could not be found.");
-if (Qh === null || $h === null || tg === null || ng === null || rg === null || ig === null || ag === null || og === null || sg === null || cg === null || lg === null || ug === null || pg === null || mg === null || hg === null || gg === null || _g === null || vg === null || yg === null || bg === null || xg === null || Sg === null || Cg === null || wg === null || Tg === null || Eg === null || Og === null || kg === null || Ag === null || jg === null || Mg === null || Ng === null || Pg === null || Fg === null || Ig === null || Dg === null || Lg === null || Rg === null || zg === null || Bg === null || Vg === null || eg === null) throw Error("The OpenLayers viewer controls could not be found.");
-var Hg = {
+if (Qh === null || $h === null || tg === null || ng === null || rg === null || ig === null || ag === null || og === null || sg === null || cg === null || lg === null || ug === null || dg === null || fg === null || hg === null || gg === null || _g === null || vg === null || yg === null || bg === null || xg === null || Sg === null || Cg === null || wg === null || Tg === null || Eg === null || Dg === null || Og === null || Ag === null || jg === null || Mg === null || Ng === null || Pg === null || Fg === null || Ig === null || Lg === null || Rg === null || kg === null || zg === null || Bg === null || Vg === null || Hg === null || Ug === null || eg === null) throw Error("The OpenLayers viewer controls could not be found.");
+var Wg = {
 	dark: "#ffffff",
 	light: "#000000",
 	"high-contrast": "#ffffff"
-}, Ug = Kh({
+}, Gg = Kh({
 	viewerApp: Zh,
-	panel: cg,
-	toggle: lg,
-	closeButton: ug,
-	tabs: dg,
-	tabPanels: fg,
-	resetDefaultsButton: Ig,
-	themeSelect: Og,
-	controlOpacityInput: Pg,
-	controlOpacityValue: Fg,
-	zoomVisibleInput: pg,
-	zoomLevelVisibleInput: mg,
-	rotationVisibleInput: hg,
-	graticuleVisibleInput: gg,
-	screenSpaceGraticuleVisibleInput: _g,
-	resetViewVisibleInput: bg,
-	fullscreenVisibleInput: xg,
-	mousePositionVisibleInput: Sg,
-	overviewMapVisibleInput: Cg,
-	overviewMapSizeSelect: wg,
-	mouseWheelZoomSensitivitySelect: Tg,
-	zoomButtonStepSelect: Eg,
-	gridThemeSelect: kg,
-	gridOpacityInput: Ag,
-	gridSpacingSelect: Mg,
-	gridLabelsVisibleInput: Ng,
-	scaleBarEnabledInput: Dg,
-	scaleBarColourInput: Lg,
-	scaleBarOpacityInput: Rg,
-	scaleBarSizeSelect: Bg,
-	scaleBarUnitsSelect: Vg,
+	panel: ug,
+	toggle: dg,
+	closeButton: fg,
+	tabs: pg,
+	tabPanels: mg,
+	resetDefaultsButton: Rg,
+	themeSelect: Ag,
+	controlOpacityInput: Ig,
+	controlOpacityValue: Lg,
+	zoomVisibleInput: hg,
+	zoomLevelVisibleInput: gg,
+	rotationVisibleInput: _g,
+	graticuleVisibleInput: vg,
+	screenSpaceGraticuleVisibleInput: yg,
+	resetViewVisibleInput: Sg,
+	fullscreenVisibleInput: Cg,
+	mousePositionVisibleInput: wg,
+	overviewMapVisibleInput: Tg,
+	overviewMapSizeSelect: Eg,
+	mouseWheelZoomSensitivitySelect: Dg,
+	zoomButtonStepSelect: Og,
+	gridThemeSelect: jg,
+	gridOpacityInput: Mg,
+	gridSpacingSelect: Pg,
+	gridLabelsVisibleInput: Fg,
+	scaleBarEnabledInput: kg,
+	scaleBarColourInput: zg,
+	scaleBarOpacityInput: Bg,
+	scaleBarSizeSelect: Hg,
+	scaleBarUnitsSelect: Ug,
 	onThemeChange() {
-		Lg.value = Hg[Og.value] ?? Hg.dark, M_.updateColour(), M_.updateOpacity(), R_.updateAppearance();
+		zg.value = Wg[Ag.value] ?? Wg.dark, P_.updateColour(), P_.updateOpacity(), B_.updateAppearance();
 	},
 	onControlVisibilityChange() {
-		H_();
+		W_();
 	},
 	onReset() {
-		U_();
+		G_();
 	}
 });
-Ug.load(), Ug.updateAppearance();
-var Wg = Vh({
+Gg.load(), Gg.updateAppearance();
+var Kg = Vh({
 	panel: tg,
 	toggle: ng,
 	list: rg,
-	getSlideLayer: () => v_,
-	getCurrentSlidePath: () => Xg,
-	getOverlayLayers: () => Zg,
-	onRemoveLayer: (e) => Q_(e),
+	getSlideLayer: () => b_,
+	getCurrentSlidePath: () => Qg,
+	getOverlayLayers: () => $g,
+	onRemoveLayer: (e) => ev(e),
 	onOpen() {
-		m_.setOpen(!1), h_.setOpen(!1);
+		g_.setOpen(!1), __.setOpen(!1);
 	}
-}), Gg = JSON.parse(Xh.dataset.layers ?? "[]"), Kg = null, qg = Date.now(), Jg = Date.now(), Yg = null, Xg = null, Zg = {}, Qg = /* @__PURE__ */ new Set(), $g = /* @__PURE__ */ new Map(), e_ = /* @__PURE__ */ new Map(), t_ = /* @__PURE__ */ new Map(), n_ = /* @__PURE__ */ new Map();
-function r_() {
+}), qg = JSON.parse(Xh.dataset.layers ?? "[]"), Jg = null, Yg = Date.now(), Xg = Date.now(), Zg = null, Qg = null, $g = {}, e_ = /* @__PURE__ */ new Set(), t_ = /* @__PURE__ */ new Map(), n_ = /* @__PURE__ */ new Map(), r_ = /* @__PURE__ */ new Map(), i_ = /* @__PURE__ */ new Map();
+function a_() {
 	let e = /* @__PURE__ */ new Set();
-	for (let t of e_.values()) for (let n of t) e.add(n);
+	for (let t of n_.values()) for (let n of t) e.add(n);
 	return [...e];
 }
-function i_() {
-	return [...e_.entries()].map(([e, t]) => ({
+function o_() {
+	return [...n_.entries()].map(([e, t]) => ({
 		layerName: e,
 		annotationTypes: t
 	}));
 }
-function a_() {
-	let e = Jh($g, r_()), t = `${JSON.stringify(e, null, 4)}\n`, n = new Blob([t], { type: "application/json" }), r = URL.createObjectURL(n), i = document.createElement("a");
+function s_() {
+	let e = Jh(t_, a_()), t = `${JSON.stringify(e, null, 4)}\n`, n = new Blob([t], { type: "application/json" }), r = URL.createObjectURL(n), i = document.createElement("a");
 	i.href = r, i.download = "annotation_config.json", document.body.appendChild(i), i.click(), i.remove(), URL.revokeObjectURL(r);
 }
-function o_(e) {
-	for (let t of e) if (t_.has(t) || t_.set(t, !0), !n_.has(t)) {
-		n_.set(t, 1);
-		let e = $g.get(t);
-		e !== void 0 && $g.set(t, [
+function c_(e) {
+	for (let t of e) if (r_.has(t) || r_.set(t, !0), !i_.has(t)) {
+		i_.set(t, 1);
+		let e = t_.get(t);
+		e !== void 0 && t_.set(t, [
 			e[0],
 			e[1],
 			e[2],
@@ -16587,13 +16591,13 @@ function o_(e) {
 		]);
 	}
 }
-function s_() {
-	let e = new Set(r_()), t = /* @__PURE__ */ new Set([...t_.keys(), ...n_.keys()]);
+function l_() {
+	let e = new Set(a_()), t = /* @__PURE__ */ new Set([...r_.keys(), ...i_.keys()]);
 	for (let n of t) {
 		if (e.has(n)) continue;
-		t_.delete(n), n_.delete(n);
-		let t = $g.get(n);
-		t !== void 0 && $g.set(n, [
+		r_.delete(n), i_.delete(n);
+		let t = t_.get(n);
+		t !== void 0 && t_.set(n, [
 			t[0],
 			t[1],
 			t[2],
@@ -16601,107 +16605,119 @@ function s_() {
 		]);
 	}
 }
-function c_() {
-	let e = r_(), t = e.filter((e) => t_.get(e) ?? !0);
+function u_() {
+	let e = a_(), t = e.filter((e) => r_.get(e) ?? !0);
 	return t.length === e.length ? null : t.length === 0 ? "props[\"type\"]==\"None\"" : t.map((e) => `(props["type"]==${JSON.stringify(e)})`).join(" | ");
 }
-function l_() {
-	Jg += 1;
-	for (let e of Qg) {
-		let t = Zg[e];
+function d_() {
+	Xg += 1;
+	for (let e of e_) {
+		let t = $g[e];
 		if (t === void 0) continue;
 		let n = new Wu({
-			url: `/tileserver/layer/${encodeURIComponent(e)}/${Kg}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${Jg}`,
-			size: Yg.slide_dimensions,
+			url: `/tileserver/layer/${encodeURIComponent(e)}/${Jg}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${Xg}`,
+			size: Zg.slide_dimensions,
 			crossOrigin: "anonymous",
 			zDirection: -1
 		});
 		t.setSource(n);
 	}
 }
-async function u_() {
-	Qg.size !== 0 && (await Ym(c_()), l_());
+async function f_() {
+	e_.size !== 0 && (await Ym(u_()), d_());
 }
-var d_ = await Wm("slide"), f_ = await Wm("overlay"), p_ = f_.config?.color_dict ?? {}, m_ = Bh({
+var p_ = await Wm("slide"), m_ = await Wm("overlay"), h_ = m_.config?.color_dict ?? {}, g_ = Bh({
 	panel: Qh,
 	toggle: $h,
 	container: eg,
-	configuredSlides: d_,
-	configuredOverlays: f_,
-	getCurrentSlidePath: () => Xg,
-	hasSlide: () => Yg !== null,
-	hasOverlays: () => Object.keys(Zg).length > 0,
-	onSlideSelected: (e) => X_(e),
-	onOverlaySelected: (e) => Z_(e),
-	onClearSlide: () => Y_(),
-	onClearOverlays: () => K_(),
+	configuredSlides: p_,
+	configuredOverlays: m_,
+	getCurrentSlidePath: () => Qg,
+	hasSlide: () => Zg !== null,
+	hasOverlays: () => Object.keys($g).length > 0,
+	onSlideSelected: (e) => Q_(e),
+	onOverlaySelected: (e) => $_(e),
+	onClearSlide: () => Z_(),
+	onClearOverlays: () => J_(),
 	onOpen() {
-		Wg.setOpen(!1), h_.setOpen(!1);
+		Kg.setOpen(!1), __.setOpen(!1);
 	}
-}), h_ = Uh({
+}), __ = Uh({
 	panel: ig,
 	toggle: ag,
 	list: og,
-	exportButton: sg,
-	getAnnotationGroups: i_,
-	getAnnotationColour: (e) => $g.get(e) ?? [
+	showAllButton: sg,
+	hideAllButton: cg,
+	exportButton: lg,
+	getAnnotationGroups: o_,
+	getAnnotationColour: (e) => t_.get(e) ?? [
 		0,
 		0,
 		0,
 		1
 	],
-	isAnnotationTypeVisible: (e) => t_.get(e) ?? !0,
-	getAnnotationOpacity: (e) => n_.get(e) ?? 1,
+	isAnnotationTypeVisible: (e) => r_.get(e) ?? !0,
+	getAnnotationOpacity: (e) => i_.get(e) ?? 1,
 	async onColourChange(e, t) {
-		let n = hh(t), r = n_.get(e) ?? 1, i = new Map($g);
+		let n = hh(t), r = i_.get(e) ?? 1, i = new Map(t_);
 		i.set(e, [
 			n.r / 255,
 			n.g / 255,
 			n.b / 255,
 			r
-		]), await $_(i);
+		]), await tv(i);
 	},
 	async onVisibilityChange(e, t) {
-		let n = t_.get(e) ?? !0;
-		t_.set(e, t);
+		let n = r_.get(e) ?? !0;
+		r_.set(e, t);
 		try {
-			await u_();
+			await f_();
 		} catch (t) {
-			throw t_.set(e, n), t;
+			throw r_.set(e, n), t;
 		}
 	},
 	async onOpacityChange(e, t) {
-		let n = $g.get(e);
+		let n = t_.get(e);
 		if (n === void 0) throw Error("Annotation colour is not available.");
-		let r = new Map($g);
+		let r = new Map(t_);
 		r.set(e, [
 			n[0],
 			n[1],
 			n[2],
 			t
-		]), await $_(r), n_.set(e, t);
+		]), await tv(r), i_.set(e, t);
+	},
+	async onSetAllVisibility(e) {
+		let t = a_(), n = new Map(t.map((e) => [e, r_.get(e) ?? !0]));
+		for (let n of t) r_.set(n, e);
+		try {
+			await f_();
+		} catch (e) {
+			for (let [e, t] of n) r_.set(e, t);
+			throw e;
+		}
 	},
 	onExport() {
-		a_();
+		s_();
 	},
 	onOpen() {
-		m_.setOpen(!1), Wg.setOpen(!1);
+		g_.setOpen(!1), Kg.setOpen(!1);
 	}
 });
-m_.setOpen(!0);
-var g_ = new URLSearchParams(window.location.search).get("slide") ?? (Gg.length === 0 ? d_.files[0]?.path ?? null : null);
-if (g_ !== null) {
-	Xg = g_, Kg = await Hm();
-	let e = await Um(g_);
-	Yg = e, m_.setSlide(g_), m_.updateOverlaySelect(), Gg = [{
+g_.setOpen(!0);
+var v_ = new URLSearchParams(window.location.search).get("slide") ?? (qg.length === 0 ? p_.files[0]?.path ?? null : null);
+if (v_ !== null) {
+	Qg = v_, Jg = await Hm();
+	let e = await Um(v_);
+	Zg = e, g_.setSlide(v_), g_.updateOverlaySelect(), qg = [{
 		name: "slide",
-		url: `/tileserver/layer/slide/${Kg}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${qg}`,
+		url: `/tileserver/layer/slide/${Jg}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${Yg}`,
 		size: e.slide_dimensions,
 		mpp: e.mpp[0]
 	}];
-} else Gg.length === 0 && (Kg = await Hm());
-m_.updateActionState();
-var __ = Gg.map((e) => {
+} else qg.length === 0 && (Jg = await Hm());
+g_.updateActionState();
+var y_ = qg.map((e) => {
 	let t = new Wu({
 		url: e.url,
 		size: e.size,
@@ -16712,37 +16728,37 @@ var __ = Gg.map((e) => {
 		title: e.name,
 		source: t
 	});
-}), v_ = __[0];
-v_ === void 0 && (v_ = new Co({ title: "slide" }), __.push(v_)), v_.setZIndex(0);
-var y_ = v_.getSource(), b_, x_, S_;
-if (y_ !== null) {
-	let e = y_.getTileGrid();
-	b_ = e.getResolutions(), x_ = e.getExtent(), S_ = new cn({
+}), b_ = y_[0];
+b_ === void 0 && (b_ = new Co({ title: "slide" }), y_.push(b_)), b_.setZIndex(0);
+var x_ = b_.getSource(), S_, C_, w_;
+if (x_ !== null) {
+	let e = x_.getTileGrid();
+	S_ = e.getResolutions(), C_ = e.getExtent(), w_ = new cn({
 		code: "ZoomifyProjection",
 		units: "pixels",
-		extent: x_,
-		metersPerUnit: Gg[0].mpp * 1e-6,
+		extent: C_,
+		metersPerUnit: qg[0].mpp * 1e-6,
 		getPointResolution(e) {
 			return e;
 		}
 	});
-} else b_ = [1], x_ = [
+} else S_ = [1], C_ = [
 	0,
 	-1,
 	1,
 	0
-], S_ = new cn({
+], w_ = new cn({
 	code: "ZoomifyProjectionEmpty",
 	units: "pixels",
-	extent: x_,
+	extent: C_,
 	metersPerUnit: 1,
 	getPointResolution(e) {
 		return e;
 	}
 });
-var C_ = .1;
-function w_(e) {
-	let t = e[2] - e[0], n = e[3] - e[1], r = t * C_, i = n * C_;
+var T_ = .1;
+function E_(e) {
+	let t = e[2] - e[0], n = e[3] - e[1], r = t * T_, i = n * T_;
 	return [
 		e[0] - r,
 		e[1] - i,
@@ -16750,126 +16766,126 @@ function w_(e) {
 		e[3] + i
 	];
 }
-mr(S_);
-var T_ = new uo({
-	projection: S_,
-	resolutions: b_,
-	extent: w_(x_),
+mr(w_);
+var D_ = new uo({
+	projection: w_,
+	resolutions: S_,
+	extent: E_(C_),
 	constrainOnlyCenter: !0,
 	smoothExtentConstraint: !0,
 	smoothResolutionConstraint: !1,
 	center: [.5, -.5],
-	resolution: b_[0]
-}), E_ = new hu({
+	resolution: S_[0]
+}), O_ = new hu({
 	target: Xh,
-	layers: __,
-	view: T_,
+	layers: y_,
+	view: D_,
 	controls: Ie({
 		zoom: !1,
 		rotate: !1
 	}),
 	interactions: gs({ mouseWheelZoom: !1 })
-}), D_ = lh({
-	map: E_,
+}), k_ = lh({
+	map: O_,
 	viewerApp: Zh,
-	getSlideSource: () => v_.getSource(),
-	zoomVisibleInput: pg,
-	zoomLevelVisibleInput: mg,
-	rotationVisibleInput: hg,
-	resetViewButton: vg,
-	resetViewControl: yg,
-	resetViewVisibleInput: bg,
-	fullscreenVisibleInput: xg,
-	mousePositionVisibleInput: Sg,
-	mouseWheelZoomSensitivitySelect: Tg,
-	zoomButtonStepSelect: Eg
-}), { fullscreen: O_, mousePositionControl: k_, rotate: A_ } = D_, j_ = null, M_ = kh({
-	map: E_,
-	hasSlide: () => v_.getSource() !== null,
-	enabledInput: Dg,
-	colourInput: Lg,
-	opacityInput: Rg,
-	opacityValue: zg,
-	sizeSelect: Bg,
-	unitsSelect: Vg,
+	getSlideSource: () => b_.getSource(),
+	zoomVisibleInput: hg,
+	zoomLevelVisibleInput: gg,
+	rotationVisibleInput: _g,
+	resetViewButton: bg,
+	resetViewControl: xg,
+	resetViewVisibleInput: Sg,
+	fullscreenVisibleInput: Cg,
+	mousePositionVisibleInput: wg,
+	mouseWheelZoomSensitivitySelect: Dg,
+	zoomButtonStepSelect: Og
+}), { fullscreen: A_, mousePositionControl: j_, rotate: M_ } = k_, N_ = null, P_ = kh({
+	map: O_,
+	hasSlide: () => b_.getSource() !== null,
+	enabledInput: kg,
+	colourInput: zg,
+	opacityInput: Bg,
+	opacityValue: Vg,
+	sizeSelect: Hg,
+	unitsSelect: Ug,
 	onControlChange(e) {
-		j_ = e, window.scaleLineControl = e;
+		N_ = e, window.scaleLineControl = e;
 	}
-}), N_ = Ih({
-	map: E_,
-	source: y_,
-	projection: S_,
-	extent: x_,
-	sizeSelect: wg,
-	visibleInput: Cg,
-	hasSlide: () => v_.getSource() !== null
-}), P_ = N_.control, F_ = new Vm();
-E_.addControl(F_);
-var I_ = null, L_ = null, R_ = Ch({
-	map: E_,
-	projection: S_,
-	themeSelect: Og,
-	gridThemeSelect: kg,
-	gridOpacityInput: Ag,
-	gridOpacityValue: jg,
-	gridSpacingSelect: Mg,
-	gridLabelsVisibleInput: Ng,
-	graticuleVisibleInput: gg,
-	screenSpaceGraticuleVisibleInput: _g,
+}), F_ = Ih({
+	map: O_,
+	source: x_,
+	projection: w_,
+	extent: C_,
+	sizeSelect: Eg,
+	visibleInput: Tg,
+	hasSlide: () => b_.getSource() !== null
+}), I_ = F_.control, L_ = new Vm();
+O_.addControl(L_);
+var R_ = null, z_ = null, B_ = Ch({
+	map: O_,
+	projection: w_,
+	themeSelect: Ag,
+	gridThemeSelect: jg,
+	gridOpacityInput: Mg,
+	gridOpacityValue: Ng,
+	gridSpacingSelect: Pg,
+	gridLabelsVisibleInput: Fg,
+	graticuleVisibleInput: vg,
+	screenSpaceGraticuleVisibleInput: yg,
 	onGraticulesChange(e, t) {
-		I_ = e, L_ = t, window.graticule = I_, window.screenSpaceGraticule = L_;
+		R_ = e, z_ = t, window.graticule = R_, window.screenSpaceGraticule = z_;
 	}
-}), { graticuleToggle: z_, screenSpaceGraticuleToggle: B_ } = R_, V_ = document.createElement("div");
-V_.className = "viewer-tools-group ol-unselectable", E_.getOverlayContainerStopEvent().append(V_), V_.append(A_.element, z_.element, B_.element);
-function H_() {
-	D_.updateVisibility(), R_.updateVisibility(), N_.updateVisibility();
+}), { graticuleToggle: V_, screenSpaceGraticuleToggle: H_ } = B_, U_ = document.createElement("div");
+U_.className = "viewer-tools-group ol-unselectable", O_.getOverlayContainerStopEvent().append(U_), U_.append(M_.element, V_.element, H_.element);
+function W_() {
+	k_.updateVisibility(), B_.updateVisibility(), F_.updateVisibility();
 }
-function U_() {
-	Ug.resetValues(), Ug.updateAppearance(), R_.updateAppearance(), R_.updateSpacing(), R_.updateLabels(), H_(), N_.updateSize(), D_.updateMouseWheelZoomSensitivity(), D_.updateZoomButtonStep(), M_.updateSize(), M_.updateUnits(), M_.updateVisibility(), M_.updateColour(), M_.updateOpacity(), Ug.clearSavedSettings();
-}
-Ug.bindEvents();
-function W_(e) {
-	D_.setViewerEnabled(e), R_.setViewerEnabled(e), M_.setViewerEnabled(e), N_.setViewerEnabled(e);
-}
-if (W_(y_ !== null), H_(), y_ !== null) {
-	E_.getView().fit(x_);
-	let e = q_();
-	e !== null && (E_.getView().setCenter(e.center), E_.getView().setZoom(e.zoom));
-}
-E_.on("moveend", () => {
-	J_(), D_.updateZoomLevel();
-});
 function G_() {
-	for (let e of Object.values(Zg)) {
-		e.setSource(null), E_.removeLayer(e);
-		let t = __.indexOf(e);
-		t !== -1 && __.splice(t, 1);
-	}
-	for (let e of Object.keys(Zg)) delete Zg[e];
-	Qg.clear(), e_.clear(), s_(), h_.render(), Wg.render(), m_.updateActionState();
+	Gg.resetValues(), Gg.updateAppearance(), B_.updateAppearance(), B_.updateSpacing(), B_.updateLabels(), W_(), F_.updateSize(), k_.updateMouseWheelZoomSensitivity(), k_.updateZoomButtonStep(), P_.updateSize(), P_.updateUnits(), P_.updateVisibility(), P_.updateColour(), P_.updateOpacity(), Gg.clearSavedSettings();
 }
-async function K_() {
-	await Gm(), G_(), m_.updateActionState();
+Gg.bindEvents();
+function K_(e) {
+	k_.setViewerEnabled(e), B_.setViewerEnabled(e), P_.setViewerEnabled(e), F_.setViewerEnabled(e);
 }
+if (K_(x_ !== null), W_(), x_ !== null) {
+	O_.getView().fit(C_);
+	let e = Y_();
+	e !== null && (O_.getView().setCenter(e.center), O_.getView().setZoom(e.zoom));
+}
+O_.on("moveend", () => {
+	X_(), k_.updateZoomLevel();
+});
 function q_() {
+	for (let e of Object.values($g)) {
+		e.setSource(null), O_.removeLayer(e);
+		let t = y_.indexOf(e);
+		t !== -1 && y_.splice(t, 1);
+	}
+	for (let e of Object.keys($g)) delete $g[e];
+	e_.clear(), n_.clear(), l_(), __.render(), Kg.render(), g_.updateActionState();
+}
+async function J_() {
+	await Gm(), q_(), g_.updateActionState();
+}
+function Y_() {
 	let e = new URLSearchParams(window.location.search), t = Number(e.get("x")), n = Number(e.get("y")), r = Number(e.get("zoom"));
 	return e.get("x") === null || e.get("y") === null || e.get("zoom") === null || !Number.isFinite(t) || !Number.isFinite(n) || !Number.isFinite(r) ? null : {
 		center: [t, n],
 		zoom: r
 	};
 }
-function J_() {
-	if (Xg === null) return;
-	let e = E_.getView(), t = e.getCenter(), n = e.getZoom();
+function X_() {
+	if (Qg === null) return;
+	let e = O_.getView(), t = e.getCenter(), n = e.getZoom();
 	if (t === void 0 || n === void 0) return;
 	let r = new URL(window.location.href);
-	r.searchParams.set("slide", Xg), r.searchParams.set("x", t[0].toFixed(2)), r.searchParams.set("y", t[1].toFixed(2)), r.searchParams.set("zoom", n.toString());
+	r.searchParams.set("slide", Qg), r.searchParams.set("x", t[0].toFixed(2)), r.searchParams.set("y", t[1].toFixed(2)), r.searchParams.set("zoom", n.toString());
 	let i = r.searchParams.toString().replace(/%2F/gi, "/");
 	window.history.replaceState({}, "", `${r.pathname}?${i}${r.hash}`);
 }
-async function Y_() {
-	if (Kg === null) throw Error("No TileServer session is available.");
-	await Km(), G_(), Xg = null, Yg = null, Gg.length = 0, qg += 1, Jg += 1, v_.setSource(null), N_.setSource(null), Wg.render();
+async function Z_() {
+	if (Jg === null) throw Error("No TileServer session is available.");
+	await Km(), q_(), Qg = null, Zg = null, qg.length = 0, Yg += 1, Xg += 1, b_.setSource(null), F_.setSource(null), Kg.render();
 	let e = [
 		0,
 		-1,
@@ -16892,16 +16908,16 @@ async function Y_() {
 		center: [.5, -.5],
 		resolution: t[0]
 	});
-	E_.setView(r), N_.setView(n, e), R_.setProjection(n, { preserveActive: !1 });
+	O_.setView(r), F_.setView(n, e), B_.setProjection(n, { preserveActive: !1 });
 	let i = new URL(window.location.href);
-	i.search = "", i.hash = "", window.history.replaceState({}, "", i), W_(!1), D_.updateZoomLevel(), m_.updateActionState();
+	i.search = "", i.hash = "", window.history.replaceState({}, "", i), K_(!1), k_.updateZoomLevel(), g_.updateActionState();
 }
-async function X_(e) {
-	if (Kg === null) throw Error("Dynamic slide switching requires a TileServer session.");
-	G_();
+async function Q_(e) {
+	if (Jg === null) throw Error("Dynamic slide switching requires a TileServer session.");
+	q_();
 	let t = await Um(e);
-	Yg = t, Xg = e, m_.setSlide(e), m_.updateOverlaySelect(), m_.updateActionState(), qg += 1;
-	let n = Yh(Kg, t, qg), r = n.getTileGrid(), i = r.getExtent(), a = r.getResolutions(), o = new cn({
+	Zg = t, Qg = e, g_.setSlide(e), g_.updateOverlaySelect(), g_.updateActionState(), Yg += 1;
+	let n = Yh(Jg, t, Yg), r = n.getTileGrid(), i = r.getExtent(), a = r.getResolutions(), o = new cn({
 		code: "ZoomifyProjection",
 		units: "pixels",
 		extent: i,
@@ -16911,94 +16927,94 @@ async function X_(e) {
 	let s = [(i[0] + i[2]) / 2, (i[1] + i[3]) / 2], c = new uo({
 		projection: o,
 		resolutions: a,
-		extent: w_(i),
+		extent: E_(i),
 		constrainOnlyCenter: !0,
 		smoothExtentConstraint: !0,
 		smoothResolutionConstraint: !1,
 		center: s,
 		resolution: a[0]
 	});
-	c.fit(i, { size: E_.getSize() }), E_.setView(c), N_.setView(o, i), R_.setProjection(o), v_.setSource(n), N_.setSource(n), Wg.render(), W_(!0), J_(), D_.updateZoomLevel();
+	c.fit(i, { size: O_.getSize() }), O_.setView(c), F_.setView(o, i), B_.setProjection(o), b_.setSource(n), F_.setSource(n), Kg.render(), K_(!0), X_(), k_.updateZoomLevel();
 }
-Wg.render();
-async function Z_(e) {
-	if (Kg === null || Yg === null) throw Error("Dynamic overlay loading requires a loaded slide.");
+Kg.render();
+async function $_(e) {
+	if (Jg === null || Zg === null) throw Error("Dynamic overlay loading requires a loaded slide.");
 	let t = e.split(".").pop().toLowerCase();
 	if (t === "npy" || t === "mha") throw Error("Registration overlays are not supported yet.");
 	let n = [
 		"db",
 		"dat",
 		"geojson"
-	].includes(t), r = zh(e), i = Qg.has(r);
+	].includes(t), r = zh(e), i = e_.has(r);
 	if (r === "slide") throw Error("The overlay name \"slide\" is reserved.");
 	let a = await qm(e, r);
 	if (n) {
-		Qg.add(r);
+		e_.add(r);
 		let e = [...new Set(a)];
-		e_.set(r, e), s_(), await qh($g, e, Zm, p_), o_(e), await Xm($g);
-	} else i && (Qg.delete(r), e_.delete(r), s_());
-	Jg += 1;
+		n_.set(r, e), l_(), await qh(t_, e, Zm, h_), c_(e), await Xm(t_);
+	} else i && (e_.delete(r), n_.delete(r), l_());
+	Xg += 1;
 	let o = new Wu({
-		url: `/tileserver/layer/${encodeURIComponent(r)}/${Kg}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${Jg}`,
-		size: Yg.slide_dimensions,
+		url: `/tileserver/layer/${encodeURIComponent(r)}/${Jg}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${Xg}`,
+		size: Zg.slide_dimensions,
 		crossOrigin: "anonymous",
 		zDirection: -1
 	});
-	if (Zg[r] !== void 0) Zg[r].setSource(o), Zg[r].setVisible(!0);
+	if ($g[r] !== void 0) $g[r].setSource(o), $g[r].setVisible(!0);
 	else {
-		let e = [v_, ...Object.values(Zg)], t = Math.max(...e.map((e) => e.getZIndex() ?? 0)), n = new Co({
+		let e = [b_, ...Object.values($g)], t = Math.max(...e.map((e) => e.getZIndex() ?? 0)), n = new Co({
 			title: r,
 			source: o,
 			opacity: .75
 		});
-		n.setZIndex(t + 1), Zg[r] = n, E_.addLayer(n), __.push(n);
+		n.setZIndex(t + 1), $g[r] = n, O_.addLayer(n), y_.push(n);
 	}
-	return (n || i) && (h_.render(), await u_()), Wg.render(), m_.updateActionState(), a;
+	return (n || i) && (__.render(), await f_()), Kg.render(), g_.updateActionState(), a;
 }
-async function Q_(e) {
-	let t = Zg[e], n = Qg.has(e);
+async function ev(e) {
+	let t = $g[e], n = e_.has(e);
 	if (t === void 0) throw Error(`Overlay is not loaded: ${e}`);
 	let r = t.getSource();
-	t.setVisible(!1), t.setSource(null), E_.removeLayer(t);
+	t.setVisible(!1), t.setSource(null), O_.removeLayer(t);
 	try {
 		await Jm(e);
 	} catch (e) {
-		throw t.setSource(r), t.setVisible(!0), E_.addLayer(t), e;
+		throw t.setSource(r), t.setVisible(!0), O_.addLayer(t), e;
 	}
-	let i = __.indexOf(t);
-	i !== -1 && __.splice(i, 1), Qg.delete(e), e_.delete(e), delete Zg[e], n && (s_(), h_.render(), await u_()), Wg.render(), m_.updateActionState();
+	let i = y_.indexOf(t);
+	i !== -1 && y_.splice(i, 1), e_.delete(e), n_.delete(e), delete $g[e], n && (l_(), __.render(), await f_()), Kg.render(), g_.updateActionState();
 }
-async function $_(e) {
-	if (Qg.size === 0) throw Error("No annotation overlay is loaded.");
+async function tv(e) {
+	if (e_.size === 0) throw Error("No annotation overlay is loaded.");
 	let t = e instanceof Map ? [...e.entries()] : Object.entries(e), n = new Map(t);
-	await Xm(n), $g.clear();
-	for (let [e, t] of n) $g.set(e, t);
-	l_();
+	await Xm(n), t_.clear();
+	for (let [e, t] of n) t_.set(e, t);
+	d_();
 }
 Object.assign(window, {
-	clearOverlays: K_,
-	extent: x_,
-	fullscreen: O_,
-	graticule: I_,
-	graticuleToggle: z_,
-	layerSwitcher: F_,
-	layers: __,
-	layersData: Gg,
-	loadOverlay: Z_,
-	map: E_,
-	mousePositionControl: k_,
-	overlayLayers: Zg,
-	overviewMapControl: P_,
-	projection: S_,
-	removeOverlay: Q_,
-	removeSlide: Y_,
-	resolutions: b_,
-	rotate: A_,
-	scaleLineControl: j_,
-	screenSpaceGraticule: L_,
-	screenSpaceGraticuleToggle: B_,
-	setAnnotationColors: $_,
-	switchSlide: X_,
-	view: T_
+	clearOverlays: J_,
+	extent: C_,
+	fullscreen: A_,
+	graticule: R_,
+	graticuleToggle: V_,
+	layerSwitcher: L_,
+	layers: y_,
+	layersData: qg,
+	loadOverlay: $_,
+	map: O_,
+	mousePositionControl: j_,
+	overlayLayers: $g,
+	overviewMapControl: I_,
+	projection: w_,
+	removeOverlay: ev,
+	removeSlide: Z_,
+	resolutions: S_,
+	rotate: M_,
+	scaleLineControl: N_,
+	screenSpaceGraticule: z_,
+	screenSpaceGraticuleToggle: H_,
+	setAnnotationColors: tv,
+	switchSlide: Q_,
+	view: D_
 });
 //#endregion
