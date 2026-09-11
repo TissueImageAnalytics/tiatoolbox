@@ -1,0 +1,387 @@
+/* Control theme */
+
+.ol-zoom,
+.ol-rotate,
+.ol-full-screen,
+.ol-graticule,
+.ol-screen-space-graticule,
+.reset-view-control,
+.viewer-panel-control,
+.layer-editor-control,
+.settings-control {
+    padding: 0;
+    background: var(--viewer-control-background);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.3);
+}
+
+
+/* Prevent OpenLayers highlighting the whole control container */
+
+.ol-zoom:hover,
+.ol-rotate:hover,
+.ol-full-screen:hover,
+.ol-graticule:hover,
+.ol-screen-space-graticule:hover,
+.reset-view-control:hover,
+.viewer-panel-control:hover,
+.layer-editor-control:hover,
+.settings-control:hover {
+    background: var(--viewer-control-background);
+}
+
+
+/* Buttons */
+
+.ol-zoom button,
+.ol-rotate button,
+.ol-full-screen button,
+.ol-graticule button,
+.ol-screen-space-graticule button,
+.reset-view-control button,
+.viewer-panel-control button,
+.layer-editor-control button,
+.settings-control button {
+    width: 32px;
+    height: 32px;
+    margin: 0;
+    border: 0;
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+    cursor: pointer;
+}
+
+
+.ol-zoom button:hover:not(:disabled),
+.ol-rotate button:hover:not(:disabled),
+.ol-full-screen button:hover:not(:disabled),
+.ol-graticule button:hover:not(:disabled),
+.ol-screen-space-graticule button:hover:not(:disabled),
+.reset-view-control button:hover:not(:disabled),
+.viewer-panel-control button:hover:not(:disabled),
+.layer-editor-control button:hover:not(:disabled),
+.settings-control button:hover:not(:disabled) {
+    background: var(--viewer-control-hover-background);
+    color: var(--viewer-control-hover-foreground);
+    outline: none;
+    border-radius: 4px;
+}
+
+
+.ol-zoom button:active:not(:disabled),
+.ol-rotate button:active:not(:disabled),
+.ol-full-screen button:active:not(:disabled),
+.ol-graticule button:active:not(:disabled),
+.ol-screen-space-graticule button:active:not(:disabled),
+.reset-view-control button:active:not(:disabled),
+.viewer-panel-control button:active:not(:disabled),
+.layer-editor-control button:active:not(:disabled),
+.settings-control button:active:not(:disabled) {
+    background: var(--viewer-control-pressed-background);
+    color: var(--viewer-control-pressed-foreground);
+    outline: none;
+    border-radius: 4px;
+}
+
+
+/* Zoom */
+
+.ol-zoom {
+    display: flex;
+    flex-direction: row;
+}
+
+
+.ol-zoom.viewer-control-disabled {
+    opacity: 0.4;
+}
+
+
+.ol-zoom.viewer-control-disabled button:disabled,
+.ol-zoom.viewer-control-disabled button:disabled:hover,
+.ol-zoom.viewer-control-disabled button:disabled:active,
+.ol-zoom.viewer-control-disabled button:disabled:focus {
+    background: transparent;
+    opacity: 1;
+}
+
+
+.ol-zoom button {
+    background: transparent;
+    border-radius: 0;
+}
+
+
+.ol-zoom .ol-zoom-out {
+    order: 1;
+}
+
+
+.ol-zoom .ol-zoom-out,
+.ol-zoom .ol-zoom-out:hover,
+.ol-zoom .ol-zoom-out:active,
+.ol-zoom .ol-zoom-out:focus {
+    border-radius: 4px 0 0 4px;
+}
+
+
+.ol-zoom-level {
+    order: 2;
+
+    width: 42px;
+    height: 24px;
+    box-sizing: border-box;
+    margin: 4px 3px;
+    padding: 0 3px;
+
+    border: 1px solid var(--viewer-control-border);
+    border-radius: 3px;
+
+    background: var(--viewer-control-surface-background);
+    color: var(--viewer-control-foreground);
+
+    text-shadow: 0 0 2px var(--viewer-control-foreground-shadow);
+
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+
+    appearance: textfield;
+}
+
+
+.ol-zoom-level::-webkit-inner-spin-button,
+.ol-zoom-level::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
+}
+
+
+.ol-zoom-level:hover:not(:disabled) {
+    border-color: var(--viewer-control-focus-border);
+}
+
+
+.ol-zoom-level:focus {
+    border-color: var(--viewer-control-focus-border);
+    outline: none;
+    background: var(--viewer-control-hover-background);
+}
+
+
+.ol-zoom-level:disabled {
+    background: transparent;
+    opacity: 1;
+    cursor: default;
+}
+
+
+.ol-zoom .ol-zoom-in {
+    order: 3;
+}
+
+
+.ol-zoom .ol-zoom-in,
+.ol-zoom .ol-zoom-in:hover,
+.ol-zoom .ol-zoom-in:active,
+.ol-zoom .ol-zoom-in:focus {
+    border-radius: 0 4px 4px 0;
+}
+
+
+/* Settings control */
+
+.settings-control,
+.settings-control:hover {
+    top: 8px;
+    right: 8px;
+    left: auto;
+    z-index: 1002;
+    background: transparent;
+}
+
+
+.settings-control button,
+.settings-control button:hover,
+.settings-control button:active,
+.settings-control button:focus,
+.settings-control button.active,
+.settings-control button.active:hover,
+.settings-control button.active:active,
+.settings-control button.active:focus {
+    border-radius: 4px;
+}
+
+
+/* Viewer tools */
+
+.viewer-tools-group {
+    position: absolute;
+    top: 80px;
+    left: 8px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    width: 32px;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.3);
+}
+
+
+.viewer-tools-group .ol-rotate,
+.viewer-tools-group .ol-graticule,
+.viewer-tools-group .ol-screen-space-graticule {
+    position: static;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+
+.viewer-tools-group .ol-rotate:hover,
+.viewer-tools-group .ol-graticule:hover,
+.viewer-tools-group .ol-screen-space-graticule:hover {
+    background: transparent;
+}
+
+
+.viewer-tools-group button {
+    border-radius: 0 !important;
+}
+
+
+.reset-view-control {
+    background: transparent;
+    border-radius: 4px;
+}
+
+
+.reset-view-control:hover {
+    background: transparent;
+}
+
+
+.ol-full-screen {
+    background: transparent;
+    border-radius: 4px;
+}
+
+
+.ol-full-screen:hover {
+    background: transparent;
+}
+
+
+.ol-full-screen button,
+.ol-full-screen button:hover,
+.ol-full-screen button:active,
+.ol-full-screen button:focus,
+.reset-view-control button,
+.reset-view-control button:hover,
+.reset-view-control button:active,
+.reset-view-control button:focus {
+    border-radius: 4px;
+}
+
+
+.ol-full-screen button,
+.reset-view-control button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 16px;
+    line-height: 1;
+}
+
+
+/* Bottom viewer controls */
+
+.bottom-controls-group {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transform: translateX(-50%);
+}
+
+
+.bottom-controls-group .reset-view-control,
+.bottom-controls-group .ol-zoom,
+.bottom-controls-group .ol-full-screen {
+    position: static;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    margin: 0;
+    transform: none;
+}
+
+
+/* Scale line */
+
+.ol-scale-line {
+    bottom: 8px;
+    left: 8px;
+    padding: 5px 8px;
+    background: var(--viewer-control-background);
+    border-radius: 4px;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.25);
+    font-family: "Calibri", sans-serif;
+}
+
+.ol-scale-line-inner {
+    margin: 0;
+    border: 1px solid var(--viewer-control-foreground);
+    border-bottom: 0;
+    color: var(--viewer-control-foreground);
+    font-size: 14px;
+    line-height: 1.2;
+}
+
+
+/* Mouse position */
+
+.ol-mouse-position {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    top: auto;
+    left: auto;
+
+    z-index: 100;
+
+    padding: 6px 9px;
+
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+
+    text-shadow: 0 0 2px var(--viewer-control-foreground-shadow);
+
+    border-radius: 4px;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.3);
+
+    font-family: "Calibri", sans-serif;
+    font-size: 12px;
+}
+
+
+/* Layer switcher */
+
+.ol-layerswitcher,
+.ol-control.ol-layerswitcher {
+    display: none;
+}

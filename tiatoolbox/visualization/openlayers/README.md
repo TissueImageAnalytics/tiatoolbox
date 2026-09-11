@@ -81,54 +81,71 @@ This viewer uses the legacy OpenLayers frontend files and keeps the existing
 
 ## Running the experimental dynamic viewer
 
-The experimental OpenLayers viewer is launched using:
+The experimental OpenLayers viewer is launched using `visualize-beta`.
+
+Slides and overlays can be provided using a base directory containing
+`slides` and `overlays` subdirectories:
+
+```text
+/path/to/data
+├── slides/
+└── overlays/
+```
+
+Launch the viewer using:
+
+```bash
+tiatoolbox visualize-beta --base-path /path/to/data
+```
+
+The slide and overlay directories can also be provided separately:
+
+```bash
+tiatoolbox visualize-beta \
+    --slides /path/to/slides \
+    --overlays /path/to/overlays
+```
+
+When directories are provided, all the supported files they contain are made available in
+the Files panel in the top-left corner of the viewer.
+
+Select a slide from the slide dropdown to load it. The available files can be
+searched by name, and a different slide can be selected at any time without
+restarting the viewer.
+
+Once a slide is loaded, matching overlays are made available in the overlay
+dropdown. An overlay is considered a match when its filename contains the
+filename stem of the selected slide. The available overlays can also be
+searched by name. Multiple overlays can be loaded and managed using the Layers
+panel.
+
+Use **Clear Overlays** to remove all overlays while keeping the current slide
+loaded. Use **Clear Slide** to remove the slide and its overlays and return the
+viewer to its empty state.
+
+The viewer can also be launched without predefined directories:
 
 ```bash
 tiatoolbox visualize-beta
 ```
 
-`visualize-beta` does not require a slide path when the command is started. It
-opens an empty viewer and creates a TileServer session which can then be used
-to load and change slides dynamically.
+In this case, the viewer starts empty without configured slide or overlay
+directories.
 
-The experimental viewer is currently a work in progress. Slides can currently
-be loaded from the browser developer console with:
+A different port can be specified using `--port`:
 
-```js
-await switchSlide("/path/to/slide.svs");
+```bash
+tiatoolbox visualize-beta \
+    --base-path /path/to/data \
+    --port 5001
 ```
 
-A different slide can be loaded using the same command without restarting the
-viewer:
-
-```js
-await switchSlide("/path/to/another_slide.svs");
-```
-
-The experimental viewer also supports dynamic overlay loading and removal:
-
-```js
-await loadOverlay("/path/to/overlay.png");
-await removeOverlay("overlay-name");
-await clearOverlays();
-```
-
-The current slide can be removed and the viewer returned to its empty state
-with:
-
-```js
-await removeSlide();
-```
-
-The same TileServer session remains available, so another slide can be loaded
-after removing the current slide.
-
-The experimental viewer also stores the current slide, position and zoom level
-in the URL. A saved viewer URL can therefore be reopened to restore the slide
-and view state.
+The experimental viewer stores the current slide, position and zoom level in
+the URL. A saved viewer URL can therefore be reopened to restore the slide and
+view state.
 
 These features are currently part of the experimental `visualize-beta`
-workflow and do not change the behaviour of `show-wsi`.
+command and do not change the behaviour of `show-wsi`.
 
 ## For Developers
 
@@ -144,7 +161,7 @@ npm --version
 The existing `show-wsi` viewer is kept separately as the legacy viewer, while
 the experimental dynamic viewer uses the main OpenLayers frontend files.
 
-The shared frontend files are:
+The shared frontend tooling files are:
 
 - `package.json` defines the frontend dependencies and build commands.
 - `package-lock.json` records the exact dependency versions installed by npm.
@@ -174,12 +191,26 @@ tiatoolbox/data/visualization/templates/index_legacy.html
 
 ### Experimental viewer
 
-The experimental viewer files are:
+The experimental viewer source is split into the following files and directories:
 
-- `src/main.js` contains the dynamic OpenLayers viewer used by
-  `visualize-beta`.
-- `src/style.css` contains the experimental viewer styling.
+- `src/main.js` owns the application-level viewer state and coordinates the
+  map, slide and overlay lifecycle, and the frontend feature controllers.
+- `src/api/` contains TileServer request helpers for dynamic slide and overlay
+  operations.
+- `src/components/` contains reusable interface components, such as the
+  searchable file selector.
+- `src/controls/` contains the map, grid, scale bar and overview map
+  controllers.
+- `src/panels/` contains the Files, Layers and Settings panel controllers.
+- `src/utils/` contains shared colour and path helpers.
+- `src/style.css` imports the experimental viewer styles.
+- `src/styles/` contains the experimental viewer styling split by feature.
 - `vite.config.js` defines how the experimental viewer is built.
+
+`src/main.js` remains responsible for coordination between features. The
+extracted modules keep individual feature logic separate and receive the state
+and callbacks they need from the main viewer rather than owning the overall
+application state.
 
 The generated files for the experimental viewer are:
 
@@ -223,7 +254,8 @@ The experimental viewer also uses:
 
 - `tiatoolbox/cli/visualize_beta.py` to provide the `visualize-beta` command.
 - Dynamic TileServer routes in `tiatoolbox/visualization/tileserver.py` for
-  loading and removing slides and overlays while the viewer is running.
+  listing, loading and removing slides and overlays while the viewer is
+  running.
 
 ## Building the frontend
 
@@ -261,8 +293,8 @@ The legacy build does not remove the generated experimental viewer files.
 
 ### Building the experimental viewer
 
-After changing `src/main.js` or `src/style.css`, rebuild the experimental
-viewer with:
+After changing `src/main.js` or any of the experimental modules or styles under
+`src/`, rebuild the experimental viewer with:
 
 ```bash
 npm run build
@@ -305,7 +337,7 @@ tiatoolbox show-wsi --img-input /path/to/slide.svs
 Test the experimental viewer with:
 
 ```bash
-tiatoolbox visualize-beta
+tiatoolbox visualize-beta --base-path /path/to/data
 ```
 
 If the OpenLayers or ol-ext version needs to be changed, update it with npm

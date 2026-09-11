@@ -1,0 +1,155 @@
+/* Layer editor */
+
+.layer-editor {
+    position: absolute;
+    top: 8px;
+    left: 48px;
+    z-index: 1000;
+    width: 240px;
+    box-sizing: border-box;
+    overflow: hidden;
+
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+
+    text-shadow: 0 0 2px var(--viewer-control-foreground-shadow);
+
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+}
+
+
+.layer-editor.hidden {
+    display: none;
+}
+
+
+
+
+.layer-editor-list {
+    padding: 12px 14px;
+}
+
+
+.layer-editor-empty {
+    color: var(--viewer-control-muted-foreground);
+    font-size: 12px;
+}
+
+
+.layer-editor-item {
+    margin-bottom: 14px;
+}
+
+
+.layer-editor-item:last-child {
+    margin-bottom: 0;
+}
+
+
+.layer-editor-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+
+.layer-editor-visibility {
+    flex-shrink: 0;
+    margin: 0;
+    accent-color: var(--viewer-control-selected-background);
+    cursor: pointer;
+}
+
+
+.layer-editor-name {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+
+    color: var(--viewer-control-foreground);
+
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+.layer-editor-order {
+    display: flex;
+    flex-shrink: 0;
+    gap: 3px;
+}
+
+
+.layer-editor-order button {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+
+    border: 0;
+    border-radius: 4px;
+
+    background: var(--viewer-control-surface-background);
+    color: var(--viewer-control-foreground);
+
+    font-size: 9px;
+    cursor: pointer;
+}
+
+
+.layer-editor-order button:hover:not(:disabled) {
+    background: var(--viewer-control-hover-background);
+    color: var(--viewer-control-hover-foreground);
+    outline: none;
+}
+
+
+.layer-editor-order button:active:not(:disabled) {
+    background: var(--viewer-control-pressed-background);
+    color: var(--viewer-control-pressed-foreground);
+    outline: none;
+}
+
+
+.layer-editor-order button:focus {
+    color: var(--viewer-control-foreground);
+    outline: none;
+}
+
+
+.layer-editor-order button:disabled {
+    color: var(--viewer-control-subtle-foreground);
+    cursor: default;
+    pointer-events: none;
+    outline: none;
+}
+
+
+.layer-editor-opacity {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+
+.layer-editor-slider {
+    min-width: 0;
+    flex: 1;
+    margin: 0;
+
+    accent-color: var(--viewer-control-selected-background);
+    cursor: pointer;
+}
+
+
+.layer-editor-value {
+    width: 32px;
+    flex-shrink: 0;
+
+    color: var(--viewer-control-muted-foreground);
+
+    font-size: 11px;
+    text-align: right;
+}
