@@ -6,7 +6,10 @@
     left: 48px;
     z-index: 1000;
     width: 280px;
+    max-height: calc(100% - 56px);
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
 
     background: var(--viewer-control-background);
@@ -25,6 +28,7 @@
 
 
 .annotations-panel-list {
+    min-height: 0;
     max-height: calc(100vh - 90px);
     padding: 12px 14px;
     overflow-y: auto;
