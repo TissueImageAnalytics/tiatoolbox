@@ -57,6 +57,7 @@ def test_prompt_segmentor_run(
             *,
             device: str = "cpu",
         ) -> tuple[np.ndarray, np.ndarray]:
+            """Fake inference logic."""
             _ = (
                 model,
                 images,
@@ -138,6 +139,7 @@ def test_prompt_segmentor_run_multiple_masks(
             *,
             device: str = "cpu",
         ) -> tuple[np.ndarray, np.ndarray]:
+            """Fake inference logic."""
             _ = (
                 model,
                 images,
@@ -163,6 +165,7 @@ def test_prompt_segmentor_run_multiple_masks(
         output_type: str,
         ignore_index: int,
     ) -> None:
+        """Fake dictionary to store semantic segmentor."""
         _ = (
             patch_output,
             scale_factor,

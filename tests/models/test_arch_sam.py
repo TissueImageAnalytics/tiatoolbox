@@ -28,6 +28,7 @@ def test_sam_init(
 
         def to(self, device: str) -> object:
             """Return fake model."""
+            _ = self
             assert device == "cpu"
             return fake_model
 
