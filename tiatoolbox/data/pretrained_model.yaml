@@ -1189,3 +1189,158 @@ efficientunet-tissue_mask:
             stride_shape: [480, 480]
             save_resolution: {'units': 'mpp', 'resolution': 8.0}
             ignore_index: 0
+
+
+segformerb5_distilled_PUMA_1:
+    hf_repo_id: TIACentre/Virchow2_Distilled_Segmentation_Models
+    architecture:
+        class: segformer.Segformer
+        kwargs:
+            encoder_name: "mit_b5"
+            decoder_segmentation_channels: 768
+            in_channels: 3
+            classes: 6
+            class_dict: {
+                0: "Background",
+                1: "Stroma",
+                2: "Blood Vessels",
+                3: "Tumour",
+                4: "Epidermis",
+                5: "Necrosis",
+            }
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 1.14}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 1.14}
+            patch_input_shape: [224, 224]
+            patch_output_shape: [224, 224]
+            stride_shape: [112, 112]
+            save_resolution: {'units': 'mpp', 'resolution': 1.14}
+            ignore_index: 0
+
+
+segformerb5_distilled_PUMA_2:
+    hf_repo_id: TIACentre/Virchow2_Distilled_Segmentation_Models
+    architecture:
+        class: segformer.Segformer
+        kwargs:
+            encoder_name: "mit_b5"
+            decoder_segmentation_channels: 768
+            in_channels: 3
+            classes: 6
+            class_dict: {
+                0: "Background",
+                1: "Stroma",
+                2: "Blood Vessels",
+                3: "Tumour",
+                4: "Epidermis",
+                5: "Necrosis",
+            }
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 1.14}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 1.14}
+            patch_input_shape: [224, 224]
+            patch_output_shape: [224, 224]
+            stride_shape: [112, 112]
+            save_resolution: {'units': 'mpp', 'resolution': 1.14}
+            ignore_index: 0
+
+
+segformerb5_distilled_PUMA_5:
+    hf_repo_id: TIACentre/Virchow2_Distilled_Segmentation_Models
+    architecture:
+        class: segformer.Segformer
+        kwargs:
+            encoder_name: "mit_b5"
+            decoder_segmentation_channels: 768
+            in_channels: 3
+            classes: 6
+            class_dict: {
+                0: "Background",
+                1: "Stroma",
+                2: "Blood Vessels",
+                3: "Tumour",
+                4: "Epidermis",
+                5: "Necrosis",
+            }
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 1.14}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 1.14}
+            patch_input_shape: [224, 224]
+            patch_output_shape: [224, 224]
+            stride_shape: [112, 112]
+            save_resolution: {'units': 'mpp', 'resolution': 1.14}
+            ignore_index: 0
+
+
+segformerb5_distilled_IGNITE_1:
+    hf_repo_id: TIACentre/Virchow2_Distilled_Segmentation_Models
+    architecture:
+        class: segformer.Segformer
+        kwargs:
+            encoder_name: "mit_b5"
+            decoder_segmentation_channels: 768
+            in_channels: 3
+            classes: 7
+            class_dict: {
+                0: "Unknown",
+                1: "Background",
+                2: "Tumour",
+                3: "Stroma",
+                4: "Necrosis",
+                5: "Macrophages",
+                6: "Rest",
+            }
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 0.5}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 0.5}
+            patch_input_shape: [448, 448]
+            patch_output_shape: [448, 448]
+            stride_shape: [224, 224]
+            save_resolution: {'units': 'mpp', 'resolution': 0.5}
+            ignore_index: 0
+
+
+segformerb5_distilled_BEETLE_1:
+    hf_repo_id: TIACentre/Virchow2_Distilled_Segmentation_Models
+    architecture:
+        class: segformer.Segformer
+        kwargs:
+            encoder_name: "mit_b5"
+            decoder_segmentation_channels: 768
+            in_channels: 3
+            classes: 5
+            class_dict: {
+                0: "Unknown",
+                1: "Other",
+                2: "Non_invasive_epithelium",
+                3: "Invasive_epithelium",
+                4: "Necrosis",
+            }
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 1.0}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 1.0}
+            patch_input_shape: [448, 448]
+            patch_output_shape: [448, 448]
+            stride_shape: [224, 224]
+            save_resolution: {'units': 'mpp', 'resolution': 1.0}
+            ignore_index: 0
