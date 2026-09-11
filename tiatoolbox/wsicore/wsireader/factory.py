@@ -22,14 +22,14 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from .base import (
         AnnotationStoreReader,
-        DICOMWSIReader,
         FsspecJsonWSIReader,
-        NGFFWSIReader,
         OpenSlideWSIReader,
         TIFFWSIReader,
         VirtualWSIReader,
         WSIReader,
     )
+    from .dicom import DICOMWSIReader
+    from .ngff import NGFFWSIReader
     from .types import WSIReaderExtraParams, WSIReaderParams
 
 
@@ -217,7 +217,7 @@ def try_dicom(
     post_proc: WSIPostProc,
 ) -> DICOMWSIReader | None:
     """Try to create a DICOMWSIReader if the input is a DICOM file."""
-    from .base import DICOMWSIReader  # noqa: PLC0415
+    from .dicom import DICOMWSIReader  # noqa: PLC0415
 
     if is_dicom(input_path):
         return DICOMWSIReader(input_path, mpp=mpp, power=power, post_proc=post_proc)
@@ -260,12 +260,13 @@ def try_ngff(
     **kwargs: Unpack[WSIReaderExtraParams],
 ) -> NGFFWSIReader | None:
     """Try to create an NGFFWSIReader if the file is a valid NGFF Zarr."""
-    from .base import NGFFWSIReader  # noqa: PLC0415
-
     if last_suffix == ".zarr":
         if not is_ngff(input_path, **kwargs):
             msg = f"File {input_path} does not appear to be a v0.4 NGFF zarr."
             raise FileNotSupportedError(msg)
+
+        from .ngff import NGFFWSIReader  # noqa: PLC0415
+
         return NGFFWSIReader(input_path, mpp=mpp, power=power, **kwargs)
     return None
 

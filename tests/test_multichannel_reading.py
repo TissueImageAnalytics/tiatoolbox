@@ -12,6 +12,7 @@ from defusedxml import ElementTree
 from tiatoolbox import utils
 from tiatoolbox.utils import postproc_defs
 from tiatoolbox.wsicore import wsireader
+from tiatoolbox.wsicore.wsireader import ngff
 
 
 def test_multichannel_basic_read() -> None:
@@ -51,7 +52,7 @@ def test_ngff_multichannel_read(remote_sample: callable) -> None:
 
     """
     ngff_path = remote_sample("ngff-1")
-    wsi = wsireader.NGFFWSIReader(ngff_path)
+    wsi = ngff.NGFFWSIReader(ngff_path)
 
     # Read a tiny region to avoid heavy IO
     size = (8, 8)

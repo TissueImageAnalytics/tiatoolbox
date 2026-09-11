@@ -10,9 +10,13 @@ import pytest
 from click.testing import CliRunner
 
 from tiatoolbox.cli.common import (
+    cli_base_path,
     cli_class_dict,
     cli_input_resolutions,
     cli_output_resolutions,
+    cli_overlays,
+    cli_port,
+    cli_slides,
     parse_bool_list,
     prepare_ioconfig,
     prepare_model_cli,
@@ -30,6 +34,28 @@ def predictor_specific_inputs(
 ) -> None:
     """Helper to test predictor specific inputs."""
     click.echo((class_dict, input_resolutions, output_resolutions))
+
+
+@click.command()
+@cli_base_path()
+@cli_slides()
+@cli_overlays()
+@cli_port(default=5000)
+def visualization_inputs(
+    base_path: Path | None,
+    slides: Path | None,
+    overlays: Path | None,
+    port: int,
+) -> None:
+    """Helper to test visualization CLI options."""
+    click.echo(
+        (
+            base_path,
+            slides,
+            overlays,
+            port,
+        ),
+    )
 
 
 def test_cli_class_dict() -> None:
@@ -149,6 +175,72 @@ def test_cli_resolutions_not_list(option: str) -> None:
     )
     assert result.exit_code != 0
     assert "Must be a JSON list of dictionaries" in result.output
+
+
+def test_visualization_cli_defaults() -> None:
+    """Test default visualization CLI options."""
+    runner = CliRunner()
+
+    result = runner.invoke(visualization_inputs)
+
+    assert result.exit_code == 0
+    assert "(None, None, None, 5000)" in result.output
+
+
+def test_visualization_cli_directories(
+    tmp_path: Path,
+) -> None:
+    """Test visualization directory CLI options."""
+    base_path = tmp_path / "base"
+    slides = tmp_path / "slides"
+    overlays = tmp_path / "overlays"
+
+    base_path.mkdir()
+    slides.mkdir()
+    overlays.mkdir()
+
+    runner = CliRunner()
+
+    result = runner.invoke(
+        visualization_inputs,
+        [
+            "--base-path",
+            str(base_path),
+            "--slides",
+            str(slides),
+            "--overlays",
+            str(overlays),
+            "--port",
+            "5001",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert str(base_path) in result.output
+    assert str(slides) in result.output
+    assert str(overlays) in result.output
+    assert "5001" in result.output
+
+
+def test_visualization_cli_rejects_file(
+    tmp_path: Path,
+) -> None:
+    """Test visualization directory options reject files."""
+    file_path = tmp_path / "slide.svs"
+    file_path.touch()
+
+    runner = CliRunner()
+
+    result = runner.invoke(
+        visualization_inputs,
+        [
+            "--slides",
+            str(file_path),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "directory" in result.output.lower()
 
 
 def test_parse_bool_list_none() -> None:

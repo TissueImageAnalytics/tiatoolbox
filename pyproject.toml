@@ -60,6 +60,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+deepspotm = ["deepspotm>=1.0.0"]
 docs = [
   "furo>=2022.12.7",
   "myst-nb>=0.17.1",
@@ -80,7 +81,7 @@ dev = [
   "pytest-cov>=4.0.0",
   "pytest-runner>=6.0",
   "pytest-xdist[psutil]",
-  "ruff==0.16.1",
+  "ruff==0.16.6",
   "toml>=0.10.2",
   "twine>=4.0.1",
   "wheel>=0.37.1",
