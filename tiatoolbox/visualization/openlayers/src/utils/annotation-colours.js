@@ -53,6 +53,34 @@ async function assignAnnotationColours(
     return colourMap;
 }
 
+function createAnnotationColourConfig(
+    colourMap,
+    annotationTypes,
+) {
+    const colorDict = {};
+
+    for (const annotationType of new Set(annotationTypes)) {
+        const colour =
+            colourMap.get(annotationType);
+
+        if (colour === undefined) {
+            continue;
+        }
+
+        colorDict[String(annotationType)] = [
+            Math.round(colour[0] * 255),
+            Math.round(colour[1] * 255),
+            Math.round(colour[2] * 255),
+            255,
+        ];
+    }
+
+    return {
+        color_dict: colorDict,
+    };
+}
+
 export {
     assignAnnotationColours,
+    createAnnotationColourConfig,
 };

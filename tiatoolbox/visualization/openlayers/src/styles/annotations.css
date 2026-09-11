@@ -29,7 +29,6 @@
 
 .annotations-panel-list {
     min-height: 0;
-    max-height: calc(100vh - 90px);
     padding: 12px 14px;
     overflow-y: auto;
 }
@@ -126,6 +125,41 @@
 
     font-size: 11px;
     text-align: right;
+}
+
+
+.annotations-panel-actions {
+    flex-shrink: 0;
+    padding: 10px 14px 12px;
+
+    border-top: 1px solid var(--viewer-control-border);
+}
+
+
+.annotations-panel-actions button {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px 10px;
+
+    border: 1px solid var(--viewer-control-border);
+    border-radius: 7px;
+
+    background: transparent;
+    color: var(--viewer-control-foreground);
+
+    font: inherit;
+    cursor: pointer;
+}
+
+
+.annotations-panel-actions button:hover:not(:disabled) {
+    background: var(--viewer-control-selected-background);
+}
+
+
+.annotations-panel-actions button:disabled {
+    opacity: 0.4;
+    cursor: default;
 }
 
 

@@ -7,6 +7,7 @@ import {
 
 import {
     assignAnnotationColours,
+    createAnnotationColourConfig,
 } from "../../../tiatoolbox/visualization/openlayers/src/utils/annotation-colours.js";
 
 function createColourGenerator() {
@@ -265,5 +266,99 @@ describe("assignAnnotationColours", () => {
         expect(
             getColours,
         ).not.toHaveBeenCalled();
+    });
+});
+
+describe("createAnnotationColourConfig", () => {
+    it("exports loaded annotation colours as byte values", () => {
+        const colourMap = new Map([
+            [
+                "Tumour",
+                [1, 0.5, 0, 0.4],
+            ],
+            [
+                "Stroma",
+                [0, 0.25, 1, 1],
+            ],
+        ]);
+
+        expect(
+            createAnnotationColourConfig(
+                colourMap,
+                [
+                    "Tumour",
+                    "Stroma",
+                ],
+            ),
+        ).toEqual({
+            color_dict: {
+                Tumour: [
+                    255,
+                    128,
+                    0,
+                    255,
+                ],
+                Stroma: [
+                    0,
+                    64,
+                    255,
+                    255,
+                ],
+            },
+        });
+    });
+
+    it("exports only currently loaded types", () => {
+        const colourMap = new Map([
+            [
+                "Tumour",
+                [1, 0, 0, 1],
+            ],
+            [
+                "Old type",
+                [0, 1, 0, 1],
+            ],
+        ]);
+
+        expect(
+            createAnnotationColourConfig(
+                colourMap,
+                ["Tumour"],
+            ),
+        ).toEqual({
+            color_dict: {
+                Tumour: [
+                    255,
+                    0,
+                    0,
+                    255,
+                ],
+            },
+        });
+    });
+
+    it("exports numeric annotation types as JSON-compatible keys", () => {
+        const colourMap = new Map([
+            [
+                2,
+                [0.1, 0.2, 0.3, 1],
+            ],
+        ]);
+
+        expect(
+            createAnnotationColourConfig(
+                colourMap,
+                [2],
+            ),
+        ).toEqual({
+            color_dict: {
+                2: [
+                    26,
+                    51,
+                    77,
+                    255,
+                ],
+            },
+        });
     });
 });

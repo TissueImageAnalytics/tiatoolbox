@@ -51,6 +51,7 @@ import {
 } from "./panels/settings.js";
 import {
     assignAnnotationColours,
+    createAnnotationColourConfig,
 } from "./utils/annotation-colours.js";
 import { hexToRgb } from "./utils/colours.js";
 import { getFileStem } from "./utils/paths.js";
@@ -96,6 +97,11 @@ const annotationsToggle = document.getElementById(
 const annotationsList = document.getElementById(
     "annotations-panel-list",
 );
+
+const annotationsExportColoursButton =
+    document.getElementById(
+        "annotations-export-colours",
+    );
 
 const settingsPanel = document.getElementById(
     "settings-panel",
@@ -249,6 +255,7 @@ if (
     annotationsPanel === null ||
     annotationsToggle === null ||
     annotationsList === null ||
+    annotationsExportColoursButton === null ||
     settingsPanel === null ||
     settingsToggle === null ||
     settingsCloseButton === null ||
@@ -411,6 +418,47 @@ function getAnnotationGroups() {
         }),
     );
 }
+
+function exportAnnotationColours() {
+    const config =
+        createAnnotationColourConfig(
+            annotationColours,
+            getAnnotationTypes(),
+        );
+
+    const json = `${JSON.stringify(
+        config,
+        null,
+        4,
+    )}\n`;
+
+    const blob = new Blob(
+        [json],
+        {
+            type: "application/json",
+        },
+    );
+
+    const url =
+        URL.createObjectURL(blob);
+
+    const downloadLink =
+        document.createElement("a");
+
+    downloadLink.href = url;
+    downloadLink.download =
+        "annotation_config.json";
+
+    document.body.appendChild(
+        downloadLink,
+    );
+
+    downloadLink.click();
+    downloadLink.remove();
+
+    URL.revokeObjectURL(url);
+}
+
 function initialiseAnnotationTypeState(annotationTypes) {
     for (const annotationType of annotationTypes) {
         if (!annotationTypeVisibility.has(annotationType)) {
@@ -603,6 +651,8 @@ const annotationsPanelController =
         panel: annotationsPanel,
         toggle: annotationsToggle,
         list: annotationsList,
+        exportButton:
+            annotationsExportColoursButton,
 
         getAnnotationGroups,
 
@@ -711,6 +761,10 @@ const annotationsPanelController =
                 annotationType,
                 opacity,
             );
+        },
+
+        onExport() {
+            exportAnnotationColours();
         },
 
         onOpen() {

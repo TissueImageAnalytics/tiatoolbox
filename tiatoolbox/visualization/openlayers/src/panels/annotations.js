@@ -17,6 +17,7 @@ function createAnnotationsPanelController({
     panel,
     toggle,
     list,
+    exportButton,
     getAnnotationGroups,
     getAnnotationColour,
     isAnnotationTypeVisible,
@@ -24,6 +25,7 @@ function createAnnotationsPanelController({
     onColourChange,
     onVisibilityChange,
     onOpacityChange,
+    onExport,
     onOpen,
 }) {
     function setOpen(open) {
@@ -52,6 +54,9 @@ function createAnnotationsPanelController({
 
         const annotationGroups =
             getAnnotationGroups();
+
+        exportButton.disabled =
+            annotationGroups.length === 0;
 
         if (annotationGroups.length === 0) {
             const empty =
@@ -262,6 +267,13 @@ function createAnnotationsPanelController({
             list.appendChild(group);
         }
     }
+
+    exportButton.addEventListener(
+        "click",
+        () => {
+            onExport();
+        },
+    );
 
     toggle.addEventListener("click", () => {
         setOpen(
