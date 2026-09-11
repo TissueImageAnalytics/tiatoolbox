@@ -1,5 +1,11 @@
 alexnet-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -14,6 +20,12 @@ alexnet-kather100k:
     dataset: kather100k
 resnet18-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -28,6 +40,12 @@ resnet18-kather100k:
     dataset: kather100k
 resnet34-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -42,6 +60,12 @@ resnet34-kather100k:
     dataset: kather100k
 resnet50-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -56,6 +80,12 @@ resnet50-kather100k:
     dataset: kather100k
 resnet101-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -70,6 +100,12 @@ resnet101-kather100k:
     dataset: kather100k
 resnext50_32x4d-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -84,6 +120,12 @@ resnext50_32x4d-kather100k:
     dataset: kather100k
 resnext101_32x8d-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -98,6 +140,12 @@ resnext101_32x8d-kather100k:
     dataset: kather100k
 wide_resnet50_2-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -112,6 +160,12 @@ wide_resnet50_2-kather100k:
     dataset: kather100k
 wide_resnet101_2-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -126,6 +180,12 @@ wide_resnet101_2-kather100k:
     dataset: kather100k
 densenet121-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -140,6 +200,12 @@ densenet121-kather100k:
     dataset: kather100k
 densenet161-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -154,6 +220,12 @@ densenet161-kather100k:
     dataset: kather100k
 densenet169-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -168,6 +240,12 @@ densenet169-kather100k:
     dataset: kather100k
 densenet201-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -182,6 +260,12 @@ densenet201-kather100k:
     dataset: kather100k
 mobilenet_v2-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -196,6 +280,12 @@ mobilenet_v2-kather100k:
     dataset: kather100k
 mobilenet_v3_large-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -210,6 +300,12 @@ mobilenet_v3_large-kather100k:
     dataset: kather100k
 mobilenet_v3_small-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -224,6 +320,12 @@ mobilenet_v3_small-kather100k:
     dataset: kather100k
 googlenet-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debri, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -239,6 +341,12 @@ googlenet-kather100k:
 
 alexnet-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -253,6 +361,12 @@ alexnet-pcam:
     dataset: pcam
 resnet18-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -267,6 +381,12 @@ resnet18-pcam:
     dataset: pcam
 resnet34-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -281,6 +401,12 @@ resnet34-pcam:
     dataset: pcam
 resnet50-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -295,6 +421,12 @@ resnet50-pcam:
     dataset: pcam
 resnet101-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -309,6 +441,12 @@ resnet101-pcam:
     dataset: pcam
 resnext50_32x4d-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -323,6 +461,12 @@ resnext50_32x4d-pcam:
     dataset: pcam
 resnext101_32x8d-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -337,6 +481,12 @@ resnext101_32x8d-pcam:
     dataset: pcam
 wide_resnet50_2-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -351,6 +501,12 @@ wide_resnet50_2-pcam:
     dataset: pcam
 wide_resnet101_2-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -365,6 +521,12 @@ wide_resnet101_2-pcam:
     dataset: pcam
 densenet121-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -379,6 +541,12 @@ densenet121-pcam:
     dataset: pcam
 densenet161-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -393,6 +561,12 @@ densenet161-pcam:
     dataset: pcam
 densenet169-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -407,6 +581,12 @@ densenet169-pcam:
     dataset: pcam
 densenet201-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -421,6 +601,12 @@ densenet201-pcam:
     dataset: pcam
 mobilenet_v2-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -435,6 +621,12 @@ mobilenet_v2-pcam:
     dataset: pcam
 mobilenet_v3_large-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -449,6 +641,12 @@ mobilenet_v3_large-pcam:
     dataset: pcam
 mobilenet_v3_small-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -463,6 +661,12 @@ mobilenet_v3_small-pcam:
     dataset: pcam
 googlenet-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -478,6 +682,10 @@ googlenet-pcam:
 
 resnet18-idars-tumour:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description:
+        primary_site:
+        supported_sites:
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -491,6 +699,10 @@ resnet18-idars-tumour:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
 resnet34-idars-msi:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description:
+        primary_site:
+        supported_sites:
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -504,6 +716,10 @@ resnet34-idars-msi:
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 resnet34-idars-braf:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description:
+        primary_site:
+        supported_sites:
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -517,6 +733,10 @@ resnet34-idars-braf:
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 resnet34-idars-cimp:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description:
+        primary_site:
+        supported_sites:
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -530,6 +750,10 @@ resnet34-idars-cimp:
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 resnet34-idars-cin:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description:
+        primary_site:
+        supported_sites:
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -543,6 +767,10 @@ resnet34-idars-cin:
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 resnet34-idars-tp53:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description:
+        primary_site:
+        supported_sites:
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -556,6 +784,10 @@ resnet34-idars-tp53:
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 resnet34-idars-hm:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description:
+        primary_site:
+        supported_sites:
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -571,6 +803,11 @@ resnet34-idars-hm:
 
 fcn-tissue_mask:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: Segmentation of tissue regions across different cancer types
+        primary_site: agnostic
+        supported_sites:
+            - agnostic
     architecture:
         class: unet.UNetModel
         kwargs:
@@ -578,7 +815,6 @@ fcn-tissue_mask:
             num_output_channels: 2
             encoder: "resnet50"
             decoder_block: [3]
-            class_dict: {1: "Tissue"}
     ioconfig:
         class: io_config.IOSegmentorConfig
         kwargs:
@@ -594,6 +830,11 @@ fcn-tissue_mask:
 
 fcn_resnet50_unet-bcss:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: Segments tumor, stroma, necrosi, and inflamatory regions in breast cancer images
+        primary_site: breast
+        supported_sites:
+            - breast
     architecture:
         class: unet.UNetModel
         kwargs:
@@ -601,7 +842,6 @@ fcn_resnet50_unet-bcss:
             num_output_channels: 5
             encoder: "resnet50"
             decoder_block: [3, 3]
-            class_dict: {0: "Tumour", 1: "Stroma", 2: "Inflamatory", 3: "Necrosis", 4: "Others"}
     ioconfig:
         class: io_config.IOSegmentorConfig
         kwargs:
@@ -616,10 +856,13 @@ fcn_resnet50_unet-bcss:
 
 unet_tissue_mask_tsef:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    description: >
-      These weights can be used to segment a grayscale image to
-      create a tissue mask excluding the fatty region. TSEF stands for tissue
-      segmentation excluding fat.
+    catalog:
+        description: >
+            These weights can be used to segment a grayscale image to
+            create a tissue mask excluding the fatty region. TSEF stands for tissue
+            segmentation excluding fat.
+        primary_site: agnostic
+        supported_sites:
     architecture:
         class: unet.UNetModel
         kwargs:
@@ -642,6 +885,21 @@ unet_tissue_mask_tsef:
 
 hovernet_fast-pannuke:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Instance Segmentation and detection of Neoplastic, Inflammatory, Connective, Dead, and Non-Neoplastic Epithelial nuclei across different cancer types.
+        primary_site: agnostic
+        supported_sites:
+            - liver
+            - prostate
+            - kidney
+            - breast
+            - stomach
+            - colon
+            - bladder
+            - brain
+            - head and neck
+            - lung
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -674,6 +932,15 @@ hovernet_fast-pannuke:
 
 hovernet_fast-monusac:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Instance Segmentation and detection of Epithelial, Lymphocyte, Macrophage, and Neutrophil nuclei across different cancer types.
+        primary_site: agnostic
+        supported_sites:
+            - breast
+            - kidney
+            - lung
+            - prostate
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -705,6 +972,12 @@ hovernet_fast-monusac:
 
 hovernet_original-consep:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Instance Segmentation and detection of Epithelial, Inflammatory, and Spindle-Shaped nuclei in colon images.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -735,6 +1008,17 @@ hovernet_original-consep:
 
 hovernet_original-kumar:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: Instance Segmentation and detection of Epithelial, Inflammatory, and Spindle-Shaped nuclei across different cancer types.
+        primary_site: agnostic
+        supported_sites:
+            - liver
+            - prostate
+            - kidney
+            - breast
+            - stomach
+            - colon
+            - bladder
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -795,6 +1079,11 @@ hovernetplus-oed:
 
 micronet-consep:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description:
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: micronet.MicroNet
         kwargs:
@@ -816,6 +1105,10 @@ micronet-consep:
 
 mapde-crchisto:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description:
+        primary_site:
+        supported_sites:
     architecture:
         class: mapde.MapDe
         kwargs:
@@ -842,6 +1135,11 @@ mapde-crchisto:
 
 mapde-conic:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description:
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: mapde.MapDe
         kwargs:
@@ -867,6 +1165,10 @@ mapde-conic:
 
 sccnn-crchisto:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description:
+        primary_site:
+        supported_sites:
     architecture:
         class: sccnn.SCCNN
         kwargs:
@@ -893,6 +1195,11 @@ sccnn-crchisto:
 
 sccnn-conic:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description:
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: sccnn.SCCNN
         kwargs:
@@ -919,6 +1226,20 @@ sccnn-conic:
 
 nuclick_original-pannuke:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description:
+        primary_site: agnostic
+        supported_sites:
+            - liver
+            - prostate
+            - kidney
+            - breast
+            - stomach
+            - colon
+            - bladder
+            - brain
+            - head and neck
+            - lung
     architecture:
         class: nuclick.NuClick
         kwargs:
@@ -938,6 +1259,20 @@ nuclick_original-pannuke:
 
 nuclick_light-pannuke:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description:
+        primary_site: agnostic
+        supported_sites:
+            - liver
+            - prostate
+            - kidney
+            - breast
+            - stomach
+            - colon
+            - bladder
+            - brain
+            - head and neck
+            - lung
     architecture:
         class: unet.UNetModel
         kwargs:
@@ -961,6 +1296,11 @@ nuclick_light-pannuke:
 
 grandqc_tissue_detection:
     hf_repo_id: TIACentre/GrandQC_Tissue_Detection
+    catalog:
+        description: >
+            Segmentation model for masking background from tissue regions
+        primary_site: agnostic
+        supported_sites: agnostic
     architecture:
         class: grandqc.GrandQCModel
         kwargs:
@@ -984,6 +1324,12 @@ grandqc_tissue_detection:
 
 KongNet_CoNIC_1:
     hf_repo_id: TIACentre/KongNet_pretrained_weights
+    catalog:
+        description: >
+            Nuclei detection model for neutrophils, epithelial, lymphocytes, plasma, eosinophil, and connective nuclei in colorectal cancer.
+        primary_site: colon
+        supported_sites:
+            - colon
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1016,6 +1362,21 @@ KongNet_CoNIC_1:
 
 KongNet_PanNuke_1:
     hf_repo_id: TIACentre/KongNet_pretrained_weights
+    catalog:
+        description: >
+            Nucleus detection model for connective, neoplastic, epithelial, dead, and inflamatory nuclei across multiple cancers.
+        primary_site: agnostic
+        supported_sites:
+            - liver
+            - prostate
+            - kidney
+            - breast
+            - stomach
+            - colon
+            - bladder
+            - brain
+            - head and neck
+            - lung
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1047,6 +1408,12 @@ KongNet_PanNuke_1:
 
 KongNet_MONKEY_1:
     hf_repo_id: TIACentre/KongNet_pretrained_weights
+    catalog:
+        description: >
+            Model for detecting lymphocytes, monocytes, and inflamatory nuclei in Kidney Biopsy images.
+        primary_site: kidney
+        supported_sites:
+            - kidney
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1076,6 +1443,18 @@ KongNet_MONKEY_1:
 
 KongNet_PUMA_T1_3:
     hf_repo_id: TIACentre/KongNet_pretrained_weights
+    catalog:
+        description:  >
+            Nuclei detection model for detecting Tumor and Lymphocyte nuclei in melanoma and metastatic melanoma.
+        primary_site: skin
+        supported_sites:
+            - bone
+            - lung
+            - liver
+            - brain
+            - gastrointestinal tract
+            - soft tissue
+            - lymph node
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1105,6 +1484,18 @@ KongNet_PUMA_T1_3:
 
 KongNet_PUMA_T2_3:
     hf_repo_id: TIACentre/KongNet_pretrained_weights
+    catalog:
+        description: >
+             Nuclei Detection model for detecting tumor, lymphocytes, plasma, histiocyte, melanophage, neutrophil, stroma, epithelium, endothelium, and apoptotic nuclei in melanoma and metastatic melanoma
+        primary_site: skin
+        supported_sites:
+            - bone
+            - lung
+            - liver
+            - brain
+            - gastrointestinal tract
+            - soft tissue
+            - lymph node
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1141,6 +1532,17 @@ KongNet_PUMA_T2_3:
 
 KongNet_Det_MIDOG_1:
     hf_repo_id: TIACentre/KongNet_pretrained_weights
+    catalog:
+        description: >
+            Nuclei detection model for mitotic figure detection across different cancer types.
+        primary_site: agnostic
+        supported_sites:
+            - breast
+            - lung
+            - lymph node
+            - neuroendocrine
+            - skin
+            - subcutaneous tissue
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1168,15 +1570,16 @@ KongNet_Det_MIDOG_1:
 
 efficientunet-tissue_mask:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: Segmentation model for tissue regions in images across cancer types.
+        primary_site: agnostic
+        supported_sites:
+            - agnostic
     architecture:
         class: efficientunet_tissue_mask_model.EfficientUNetTissueMaskModel
         kwargs:
             num_classes: 1
             threshold: 0.95
-            class_dict: {
-                0: "Background",
-                1: "Tissue",
-            }
     ioconfig:
         class: io_config.IOSegmentorConfig
         kwargs:
@@ -1188,4 +1591,3 @@ efficientunet-tissue_mask:
             patch_output_shape: [512, 512]
             stride_shape: [480, 480]
             save_resolution: {'units': 'mpp', 'resolution': 8.0}
-            ignore_index: 0
