@@ -58,6 +58,17 @@
             </div>
         </div>
 
+        <div class="annotation-control ol-unselectable ol-control">
+            <button
+                id="annotations-toggle"
+                type="button"
+                title="Annotations"
+                aria-label="Annotations"
+            >
+                <i class="fas fa-tags"></i>
+            </button>
+        </div>
+
         <div class="settings-control ol-unselectable ol-control">
             <button
                 id="settings-toggle"
@@ -77,6 +88,24 @@
             <div id="layer-editor-list" class="layer-editor-list">
                 <div class="layer-editor-empty">
                     No layers loaded
+                </div>
+            </div>
+        </aside>
+
+        <aside
+            id="annotations-panel"
+            class="annotations-panel hidden"
+        >
+            <div class="annotations-panel-header">
+                Annotations
+            </div>
+
+            <div
+                id="annotations-panel-list"
+                class="annotations-panel-list"
+            >
+                <div class="annotations-panel-empty">
+                    No annotations loaded
                 </div>
             </div>
         </aside>

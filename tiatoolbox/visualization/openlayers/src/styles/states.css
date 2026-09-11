@@ -47,6 +47,7 @@
 .ol-full-screen button:not(.ol-full-screen-true):focus:not(:active),
 .viewer-panel-control button:not(.active):focus:not(:active),
 .layer-editor-control button:not(.active):focus:not(:active),
+.annotation-control button:not(.active):focus:not(:active),
 .settings-control button:not(.active):focus:not(:active) {
     background: var(--viewer-control-background);
     color: var(--viewer-control-foreground);
@@ -62,6 +63,7 @@
 .ol-full-screen button.ol-full-screen-true,
 .viewer-panel-control button.active,
 .layer-editor-control button.active,
+.annotation-control button.active,
 .settings-control button.active {
     background: var(--viewer-control-selected-background);
     color: var(--viewer-control-selected-foreground);
@@ -73,6 +75,7 @@
 .ol-full-screen button.ol-full-screen-true:hover,
 .viewer-panel-control button.active:hover,
 .layer-editor-control button.active:hover,
+.annotation-control button.active:hover,
 .settings-control button.active:hover {
     background: var(--viewer-control-selected-hover-background);
     color: var(--viewer-control-selected-foreground);
@@ -84,6 +87,7 @@
 .ol-full-screen button.ol-full-screen-true:active,
 .viewer-panel-control button.active:active,
 .layer-editor-control button.active:active,
+.annotation-control button.active:active,
 .settings-control button.active:active {
     background: var(--viewer-control-selected-pressed-background);
     color: var(--viewer-control-selected-foreground);

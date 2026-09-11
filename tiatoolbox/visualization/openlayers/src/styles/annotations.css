@@ -1,0 +1,133 @@
+/* Annotations panel */
+
+.annotations-panel {
+    position: absolute;
+    top: 8px;
+    left: 48px;
+    z-index: 1000;
+    width: 280px;
+    box-sizing: border-box;
+    overflow: hidden;
+
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+
+    text-shadow: 0 0 2px var(--viewer-control-foreground-shadow);
+
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+}
+
+
+.annotations-panel.hidden {
+    display: none;
+}
+
+
+.annotations-panel-list {
+    max-height: calc(100vh - 90px);
+    padding: 12px 14px;
+    overflow-y: auto;
+}
+
+
+.annotations-panel-empty {
+    color: var(--viewer-control-muted-foreground);
+    font-size: 12px;
+}
+
+
+.annotations-panel-item {
+    margin-bottom: 14px;
+}
+
+
+.annotations-panel-item:last-child {
+    margin-bottom: 0;
+}
+
+
+.annotations-panel-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+
+.annotations-panel-visibility {
+    flex-shrink: 0;
+    margin: 0;
+    accent-color: var(--viewer-control-selected-background);
+    cursor: pointer;
+}
+
+
+.annotations-panel-colour {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    padding: 0;
+    overflow: hidden;
+
+    border: 1px solid var(--viewer-control-border);
+    border-radius: 4px;
+
+    background: transparent;
+    cursor: pointer;
+}
+
+
+.annotations-panel-name {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+.annotations-panel-opacity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+
+.annotations-panel-opacity-label {
+    flex-shrink: 0;
+
+    color: var(--viewer-control-muted-foreground);
+    font-size: 11px;
+}
+
+
+.annotations-panel-slider {
+    min-width: 0;
+    flex: 1;
+    margin: 0;
+
+    accent-color: var(--viewer-control-selected-background);
+    cursor: pointer;
+}
+
+
+.annotations-panel-value {
+    width: 32px;
+    flex-shrink: 0;
+
+    color: var(--viewer-control-muted-foreground);
+
+    font-size: 11px;
+    text-align: right;
+}
+
+
+.annotations-panel-group + .annotations-panel-group {
+    margin-top: 14px;
+    padding-top: 14px;
+
+    border-top: 1px solid var(--viewer-control-border);
+}

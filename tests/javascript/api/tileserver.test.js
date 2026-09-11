@@ -15,6 +15,7 @@ import {
     removeOverlay,
     removeSlide,
     getAnnotationColors,
+    setAnnotationFilter,
     setAnnotationColors,
 } from "../../../tiatoolbox/visualization/openlayers/src/api/tileserver.js";
 
@@ -402,6 +403,85 @@ describe("removeOverlay", () => {
             removeOverlay("Tumour"),
         ).rejects.toThrow(
             "Failed to remove overlay: Tumour",
+        );
+    });
+});
+
+describe("setAnnotationFilter", () => {
+    it("sends an annotation filter to TileServer", async () => {
+        // Test sending an annotation visibility filter.
+        const fetchMock = vi.fn().mockResolvedValue(
+            mockResponse(),
+        );
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        const where =
+            'props["type"]=="Tumour"';
+
+        await expect(
+            setAnnotationFilter(where),
+        ).resolves.toBeUndefined();
+
+        expect(fetchMock).toHaveBeenCalledOnce();
+
+        const [
+            url,
+            options,
+        ] = fetchMock.mock.calls[0];
+
+        expect(url).toBe(
+            "/tileserver/renderer/where",
+        );
+        expect(options.method).toBe("PUT");
+        expect(
+            options.body,
+        ).toBeInstanceOf(FormData);
+
+        expect(
+            options.body.get("val"),
+        ).toBe(
+            JSON.stringify(where),
+        );
+    });
+
+    it("clears the annotation filter", async () => {
+        // Test clearing the annotation visibility filter.
+        const fetchMock = vi.fn().mockResolvedValue(
+            mockResponse(),
+        );
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        await expect(
+            setAnnotationFilter(null),
+        ).resolves.toBeUndefined();
+
+        const [
+            ,
+            options,
+        ] = fetchMock.mock.calls[0];
+
+        expect(
+            options.body.get("val"),
+        ).toBe("null");
+    });
+
+    it("throws when the annotation filter cannot be updated", async () => {
+        // Test error handling when annotation visibility cannot be updated.
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue(
+                mockResponse({
+                    ok: false,
+                }),
+            ),
+        );
+
+        await expect(
+            setAnnotationFilter(null),
+        ).rejects.toThrow(
+            "Failed to update annotation visibility.",
         );
     });
 });

@@ -97,6 +97,29 @@ async function removeOverlay(layerName) {
     }
 }
 
+export async function setAnnotationFilter(where) {
+    const formData = new FormData();
+
+    formData.append(
+        "val",
+        JSON.stringify(where),
+    );
+
+    const response = await fetch(
+        "/tileserver/renderer/where",
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update annotation visibility.",
+        );
+    }
+}
+
 async function setAnnotationColors(colorMap) {
     const entries =
         colorMap instanceof Map
