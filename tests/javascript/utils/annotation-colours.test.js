@@ -182,4 +182,88 @@ describe("assignAnnotationColours", () => {
             getColours,
         ).not.toHaveBeenCalled();
     });
+
+    it("uses configured colours before generated colours", async () => {
+        const colourMap = new Map();
+        const getColours =
+            createColourGenerator();
+
+        await assignAnnotationColours(
+            colourMap,
+            [
+                "Tumour",
+                "stroma",
+            ],
+            getColours,
+            {
+                Tumour: [
+                    252,
+                    161,
+                    3,
+                    255,
+                ],
+            },
+        );
+
+        expect(
+            colourMap.get("Tumour"),
+        ).toEqual([
+            252 / 255,
+            161 / 255,
+            3 / 255,
+            1,
+        ]);
+
+        expect(
+            colourMap.get("stroma"),
+        ).toEqual([
+            0,
+            1,
+            1,
+            1,
+        ]);
+
+        expect(
+            getColours,
+        ).toHaveBeenCalledExactlyOnceWith([
+            "stroma",
+        ]);
+    });
+
+    it("matches numeric annotation types to string config keys", async () => {
+        const colourMap = new Map();
+        const getColours =
+            createColourGenerator();
+
+        await assignAnnotationColours(
+            colourMap,
+            [2],
+            getColours,
+            {
+                2: [
+                    10,
+                    20,
+                    30,
+                    255,
+                ],
+            },
+        );
+
+        expect(
+            colourMap.get(2),
+        ).toEqual([
+            10 / 255,
+            20 / 255,
+            30 / 255,
+            1,
+        ]);
+
+        expect(
+            colourMap.has("2"),
+        ).toBe(false);
+
+        expect(
+            getColours,
+        ).not.toHaveBeenCalled();
+    });
 });

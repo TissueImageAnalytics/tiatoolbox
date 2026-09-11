@@ -448,6 +448,38 @@ class TileServer(Flask):
         raise ValueError(msg)
 
     @staticmethod
+    def _load_overlay_config(
+        directory: Path,
+        kind: str,
+    ) -> dict | None:
+        """Load the first overlay config file, if available."""
+        if kind != "overlay":
+            return None
+
+        config_files = sorted(
+            directory.glob("*config.json"),
+        )
+
+        if not config_files:
+            return None
+
+        with config_files[0].open() as file_handle:
+            return json.load(file_handle)
+
+    @staticmethod
+    def _is_overlay_config_file(
+        path: Path,
+        directory: Path,
+        kind: str,
+    ) -> bool:
+        """Return whether a path is an overlay config file."""
+        return (
+            kind == "overlay"
+            and path.parent == directory
+            and path.name.endswith("config.json")
+        )
+
+    @staticmethod
     def _is_directory_image(path: Path) -> bool:
         """Return whether a directory represents a supported image."""
         if not path.is_dir():
@@ -684,7 +716,8 @@ class TileServer(Flask):
 
         Returns:
             flask.Response:
-                A JSON response containing the configured directory and files.
+                A JSON response containing the configured directory, files,
+                and overlay configuration when available.
 
         """
         try:
@@ -705,6 +738,11 @@ class TileServer(Flask):
                 "Configured file directory is unavailable.",
                 status=404,
             )
+
+        config = self._load_overlay_config(
+            directory,
+            kind,
+        )
 
         file_extensions = {
             "slide": {
@@ -761,9 +799,17 @@ class TileServer(Flask):
             for filename in filenames:
                 path = root_path / filename
 
-                if path.suffix.lower() in file_extensions[
-                    kind
-                ] and path.resolve().is_relative_to(directory):
+                if (
+                    not self._is_overlay_config_file(
+                        path,
+                        directory,
+                        kind,
+                    )
+                    and path.suffix.lower() in file_extensions[kind]
+                    and path.resolve().is_relative_to(
+                        directory,
+                    )
+                ):
                     configured_paths.append(path)
 
         configured_paths.sort(
@@ -785,12 +831,15 @@ class TileServer(Flask):
             str(directory) if self.legacy else self._get_public_path_prefix(kind)
         )
 
-        return jsonify(
-            {
-                "directory": public_directory,
-                "files": files,
-            },
-        )
+        response_data = {
+            "directory": public_directory,
+            "files": files,
+        }
+
+        if config is not None:
+            response_data["config"] = config
+
+        return jsonify(response_data)
 
     def reset(self: TileServer, session_id: str) -> str:
         """Reset the tileserver."""

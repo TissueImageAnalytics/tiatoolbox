@@ -413,6 +413,70 @@ def test_configured_files(tmp_path: Path) -> None:
         }
 
 
+def test_configured_overlay_files_load_config(
+    tmp_path: Path,
+) -> None:
+    """Test overlay config is returned without being listed as an overlay."""
+    overlays = tmp_path / "overlays"
+    overlays.mkdir()
+
+    overlay = overlays / "annotations.json"
+    overlay.touch()
+
+    config_file = overlays / "demo_config.json"
+    config_file.write_text(
+        """
+{
+    "color_dict": {
+        "Tumour": [252, 161, 3, 255],
+        "Stroma": [3, 252, 40, 255]
+    }
+}
+""".strip(),
+        encoding="utf-8",
+    )
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        overlay_directory=overlays,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get(
+            "/tileserver/files/overlay",
+        )
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "directory": "overlays",
+        "files": [
+            {
+                "name": "annotations.json",
+                "path": "overlays/annotations.json",
+            },
+        ],
+        "config": {
+            "color_dict": {
+                "Tumour": [
+                    252,
+                    161,
+                    3,
+                    255,
+                ],
+                "Stroma": [
+                    3,
+                    252,
+                    40,
+                    255,
+                ],
+            },
+        },
+    }
+
+
 def test_configured_files_skips_external_symlink(
     tmp_path: Path,
 ) -> None:

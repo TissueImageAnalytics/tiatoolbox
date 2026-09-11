@@ -554,6 +554,9 @@ const configuredSlides =
 const configuredOverlays =
     await getConfiguredFiles("overlay");
 
+const configuredColourDict =
+    configuredOverlays.config?.color_dict ?? {};
+
 const filesPanelController =
     createFilesPanelController({
         panel: viewerPanel,
@@ -1333,6 +1336,7 @@ async function loadOverlay(overlayPath) {
             annotationColours,
             annotationTypes,
             getTileServerAnnotationColors,
+            configuredColourDict,
         );
 
         initialiseAnnotationTypeState(
