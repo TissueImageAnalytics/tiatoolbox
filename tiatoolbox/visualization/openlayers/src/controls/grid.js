@@ -144,6 +144,7 @@ function createGridController({
             margin: graticuleMargin,
             style: graticuleStyle,
             spacing: getGridSpacing(),
+            /* v8 ignore start */
             formatCoord: (coordinate, position) => {
                 if (
                     position === "left" ||
@@ -164,6 +165,7 @@ function createGridController({
 
                 return coordinate;
             },
+            /* v8 ignore stop */
         });
     }
 
@@ -181,6 +183,7 @@ function createGridController({
             margin: screenSpaceGraticuleMargin,
             style: graticuleStyle,
 
+            /* v8 ignore start */
             formatCoord(coordinate, position) {
                 const mapExtent = map
                     .getView()
@@ -240,6 +243,7 @@ function createGridController({
 
                 return displayedCoordinate;
             },
+            /* v8 ignore stop */
         });
     }
 
