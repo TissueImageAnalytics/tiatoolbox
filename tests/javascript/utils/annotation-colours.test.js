@@ -49,6 +49,7 @@ function createColourGenerator() {
 
 describe("assignAnnotationColours", () => {
     it("adds generated colours for new annotation types", async () => {
+        // Test generated colours are assigned to new annotation types.
         const colourMap = new Map();
         const getColours =
             createColourGenerator();
@@ -78,6 +79,7 @@ describe("assignAnnotationColours", () => {
     });
 
     it("preserves existing colours", async () => {
+        // Test existing annotation colours are preserved.
         const existingColour = [
             0.25,
             0.5,
@@ -125,6 +127,7 @@ describe("assignAnnotationColours", () => {
     });
 
     it("requests duplicate annotation types once", async () => {
+        // Test duplicate annotation types request a generated colour only once.
         const colourMap = new Map();
         const getColours =
             createColourGenerator();
@@ -148,6 +151,7 @@ describe("assignAnnotationColours", () => {
     });
 
     it("preserves numeric annotation type keys", async () => {
+        // Test numeric annotation type keys remain numeric.
         const colourMap = new Map();
         const getColours =
             createColourGenerator();
@@ -163,6 +167,7 @@ describe("assignAnnotationColours", () => {
     });
 
     it("does not request colours for known types", async () => {
+        // Test known annotation types do not request new colours.
         const colourMap = new Map([
             [
                 0,
@@ -185,6 +190,7 @@ describe("assignAnnotationColours", () => {
     });
 
     it("uses configured colours before generated colours", async () => {
+        // Test configured colours take priority over generated colours.
         const colourMap = new Map();
         const getColours =
             createColourGenerator();
@@ -232,6 +238,7 @@ describe("assignAnnotationColours", () => {
     });
 
     it("matches numeric annotation types to string config keys", async () => {
+        // Test numeric annotation types match their string configuration keys.
         const colourMap = new Map();
         const getColours =
             createColourGenerator();
@@ -271,6 +278,7 @@ describe("assignAnnotationColours", () => {
 
 describe("createAnnotationColourConfig", () => {
     it("exports loaded annotation colours as byte values", () => {
+        // Test loaded annotation colours export as byte colour values.
         const colourMap = new Map([
             [
                 "Tumour",
@@ -309,6 +317,7 @@ describe("createAnnotationColourConfig", () => {
     });
 
     it("exports only currently loaded types", () => {
+        // Test colour configuration exports only currently loaded annotation types.
         const colourMap = new Map([
             [
                 "Tumour",
@@ -338,6 +347,7 @@ describe("createAnnotationColourConfig", () => {
     });
 
     it("exports numeric annotation types as JSON-compatible keys", () => {
+        // Test numeric annotation types export using JSON-compatible keys.
         const colourMap = new Map([
             [
                 2,
