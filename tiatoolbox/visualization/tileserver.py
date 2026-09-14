@@ -583,11 +583,22 @@ class TileServer(Flask):
     def get_ann_layer(
         self: TileServer,
         session_id: str,
-    ) -> AnnotationTileGenerator | ValueError:
-        """Get the annotation layer for a session_id."""
+        layer_name: str | None = None,
+    ) -> AnnotationTileGenerator:
+        """Get an annotation layer for a session."""
+        if layer_name is not None:
+            layer = self.pyramids[session_id].get(layer_name)
+
+            if isinstance(layer, AnnotationTileGenerator):
+                return layer
+
+            msg = f"Annotation layer not found: {layer_name}"
+            raise ValueError(msg)
+
         for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
                 return layer
+
         msg = "No annotation layer found."
         raise ValueError(msg)
 
@@ -1227,10 +1238,16 @@ class TileServer(Flask):
 
         """
         session_id = self._get_session_id()
+        layer_name = request.args.get("layer")
         where = None
+
         if ann_type != "all":
             where = f'props["type"]=={ann_type}'
-        ann_props = self.get_ann_layer(session_id).store.pquery(
+
+        ann_props = self.get_ann_layer(
+            session_id,
+            layer_name,
+        ).store.pquery(
             select="*",
             where=where,
             unique=False,
@@ -1251,11 +1268,15 @@ class TileServer(Flask):
             str: A jsonified list of the values of the property.
         """
         session_id = self._get_session_id()
+        layer_name = request.args.get("layer")
         where = None
         if ann_type != "all":
             where = f'props["type"]=={ann_type}'
         try:
-            layer = self.get_ann_layer(session_id)
+            layer = self.get_ann_layer(
+                session_id,
+                layer_name,
+            )
         except ValueError:
             return json.dumps([])
 

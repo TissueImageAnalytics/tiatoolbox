@@ -1757,6 +1757,25 @@ def test_get_props(app_alt: TileServer) -> None:
         assert set(json.loads(response.data)) == {"prob", "type"}
 
 
+def test_get_props_by_layer(app: TileServer) -> None:
+    """Test getting properties from a named annotation layer."""
+    layer = app.pyramids["default"]["store_geojson"]
+    ann_props = layer.store.pquery(
+        select="*",
+        where=None,
+        unique=False,
+    )
+    expected = {prop for prop_dict in ann_props.values() for prop in prop_dict}
+
+    with app.test_client() as client:
+        response = client.get(
+            "/tileserver/prop_names/all?layer=store_geojson",
+        )
+
+    assert response.status_code == 200
+    assert set(json.loads(response.data)) == expected
+
+
 def test_get_property_values(app: TileServer) -> None:
     """Test getting property values."""
     with app.test_client() as client:
@@ -1771,6 +1790,45 @@ def test_get_property_values(app: TileServer) -> None:
         assert response.content_type == "text/html; charset=utf-8"
         # the only value of property 'type' for annotations of type 1 is 1
         assert set(json.loads(response.data)) == {1}
+
+
+def test_get_property_values_by_layer(app: TileServer) -> None:
+    """Test getting property values from a named annotation layer."""
+    layer = app.pyramids["default"]["store_geojson"]
+    expected = set(
+        layer.store.pquery(
+            select="props['type']",
+            where=None,
+            unique=True,
+        ),
+    )
+
+    with app.test_client() as client:
+        response = client.get(
+            "/tileserver/prop_values/type/all?layer=store_geojson",
+        )
+
+    assert response.status_code == 200
+    assert set(json.loads(response.data)) == expected
+
+
+def test_get_ann_layer_by_name(app: TileServer) -> None:
+    """Test getting a named annotation layer."""
+    layer = app.get_ann_layer(
+        "default",
+        "store_geojson",
+    )
+
+    assert layer is app.pyramids["default"]["store_geojson"]
+
+    with pytest.raises(
+        ValueError,
+        match="Annotation layer not found: missing",
+    ):
+        app.get_ann_layer(
+            "default",
+            "missing",
+        )
 
 
 def test_get_property_values_no_overlay(empty_app: TileServer) -> None:
