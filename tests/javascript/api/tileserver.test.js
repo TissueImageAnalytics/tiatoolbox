@@ -15,6 +15,8 @@ import {
     removeOverlay,
     removeSlide,
     getAnnotationColors,
+    getAnnotationProperties,
+    getAnnotationPropertyValues,
     setAnnotationFilter,
     setAnnotationColors,
 } from "../../../tiatoolbox/visualization/openlayers/src/api/tileserver.js";
@@ -656,5 +658,109 @@ describe("setAnnotationColors", () => {
                 [0, 1, 0, 1],
             ],
         ]);
+    });
+});
+
+describe("annotation properties", () => {
+    it("gets annotation properties for a layer", async () => {
+        // Test annotation properties are requested for the selected layer.
+        const fetchMock = vi.fn().mockResolvedValue(
+            mockResponse({
+                json: [
+                    "type",
+                    "prob",
+                ],
+            }),
+        );
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        const properties =
+            await getAnnotationProperties(
+                "semantic_segmentation",
+            );
+
+        expect(
+            fetchMock,
+        ).toHaveBeenCalledExactlyOnceWith(
+            "/tileserver/prop_names/all?layer=semantic_segmentation",
+        );
+
+        expect(properties).toEqual([
+            "type",
+            "prob",
+        ]);
+    });
+
+    it("gets annotation property values for a layer", async () => {
+        // Test property values are requested for the selected annotation layer.
+        const fetchMock = vi.fn().mockResolvedValue(
+            mockResponse({
+                json: [
+                    0.2,
+                    0.8,
+                ],
+            }),
+        );
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        const values =
+            await getAnnotationPropertyValues(
+                "nucleus_detection",
+                "prob",
+            );
+
+        expect(
+            fetchMock,
+        ).toHaveBeenCalledExactlyOnceWith(
+            "/tileserver/prop_values/prob/all?layer=nucleus_detection",
+        );
+
+        expect(values).toEqual([
+            0.2,
+            0.8,
+        ]);
+    });
+
+    it("rejects failed annotation property requests", async () => {
+        // Test a failed annotation property request is rejected.
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue(
+                mockResponse({
+                    ok: false,
+                }),
+            ),
+        );
+
+        await expect(
+            getAnnotationProperties(
+                "annotations",
+            ),
+        ).rejects.toThrow(
+            "Failed to get annotation properties.",
+        );
+    });
+
+    it("rejects failed annotation property value requests", async () => {
+        // Test a failed annotation property value request is rejected.
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue(
+                mockResponse({
+                    ok: false,
+                }),
+            ),
+        );
+
+        await expect(
+            getAnnotationPropertyValues(
+                "annotations",
+                "prob",
+            ),
+        ).rejects.toThrow(
+            "Failed to get annotation property values.",
+        );
     });
 });

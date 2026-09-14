@@ -185,6 +185,47 @@ async function getAnnotationColors(annotationTypes) {
     );
 }
 
+async function getAnnotationProperties(layerName) {
+    const params =
+        new URLSearchParams({
+            layer: layerName,
+        });
+
+    const response = await fetch(
+        `/tileserver/prop_names/all?${params}`,
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to get annotation properties.",
+        );
+    }
+
+    return response.json();
+}
+
+async function getAnnotationPropertyValues(
+    layerName,
+    property,
+) {
+    const params =
+        new URLSearchParams({
+            layer: layerName,
+        });
+
+    const response = await fetch(
+        `/tileserver/prop_values/${encodeURIComponent(property)}/all?${params}`,
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to get annotation property values.",
+        );
+    }
+
+    return response.json();
+}
+
 export {
     clearOverlays,
     createSession,
@@ -194,5 +235,7 @@ export {
     removeOverlay,
     removeSlide,
     getAnnotationColors,
+    getAnnotationProperties,
+    getAnnotationPropertyValues,
     setAnnotationColors,
 };
