@@ -584,7 +584,7 @@ var De = {
 		this.collapsible_ !== e && (this.collapsible_ = e, this.element.classList.toggle("ol-uncollapsible"), this.userCollapsed_ && this.handleToggle_());
 	}
 	setCollapsed(e) {
-		this.userCollapsed_ = e, !(!this.collapsible_ || this.collapsed_ === e) && this.handleToggle_();
+		this.userCollapsed_ = e, this.collapsible_ && this.collapsed_ !== e && this.handleToggle_();
 	}
 	getCollapsed() {
 		return this.collapsed_;
@@ -7823,7 +7823,7 @@ var hu = class extends A {
 			let t = this.getInteractions().getArray().slice();
 			for (let n = t.length - 1; n >= 0; n--) {
 				let r = t[n];
-				if (!(r.getMap() !== this || !r.getActive() || !this.getTargetElement()) && (!r.handleEvent(e) || e.propagationStopped)) break;
+				if (r.getMap() === this && r.getActive() && this.getTargetElement() && (!r.handleEvent(e) || e.propagationStopped)) break;
 			}
 		}
 	}
@@ -10488,7 +10488,7 @@ var nf = class extends $i {
 		}
 	}
 	renderDeclutter(e) {
-		!this.replayGroup_ || !this.getLayer().getDeclutter() || this.renderWorlds(this.replayGroup_, e, !0);
+		this.replayGroup_ && this.getLayer().getDeclutter() && this.renderWorlds(this.replayGroup_, e, !0);
 	}
 	renderDeferredInternal(e) {
 		this.replayGroup_ && (this.clipExtent_ && this.clipUnrotated(this.context, e, this.clipExtent_), this.replayGroup_.renderDeferred(), this.clipExtent_ &&= (this.context.restore(), null), this.resetDrawContext_());
@@ -12858,7 +12858,7 @@ function Gp(e, t, n, r, i) {
 			continue;
 		}
 		let l = c?.[0] ?? c;
-		l === -9999999 && console.warn("The \"has\" operator might return false positives."), l === void 0 ? l = dp : l === null && (l = 0), e[i + a++] = l, !(!s.size || s.size === 1) && (e[i + a++] = c?.[1] ?? -9999999, !(s.size < 3) && (e[i + a++] = c?.[2] ?? -9999999, !(s.size < 4) && (e[i + a++] = c?.[3] ?? -9999999)));
+		l === -9999999 && console.warn("The \"has\" operator might return false positives."), l === void 0 ? l = dp : l === null && (l = 0), e[i + a++] = l, s.size && s.size !== 1 && (e[i + a++] = c?.[1] ?? -9999999, !(s.size < 3) && (e[i + a++] = c?.[2] ?? -9999999, !(s.size < 4) && (e[i + a++] = c?.[3] ?? -9999999)));
 	}
 	return a;
 }
@@ -15053,13 +15053,12 @@ var hh = function(e) {
 			T && (u < T[0] && (u = T[0]), f < T[1] && (f = T[1]), l > T[2] && (l = T[2] + g), d > T[3] && (d = T[3] + g));
 			var E = this.getStyle().getStroke() && this.get("stroke"), D = this.getStyle().getText(), O = this.getStyle().getFill();
 			t.save(), t.scale(r, r), t.beginPath(), t.rect(y, y, i - 2 * y, a - 2 * y), t.clip(), t.beginPath();
-			var k = {
+			for (var k = {
 				top: [],
 				left: [],
 				bottom: [],
 				right: []
-			}, A, j, M, N, ee;
-			for (A = u; A < l; A += g) for (N = Er([A, f], o, s.getView().getProjection()), N = s.getPixelFromCoordinate(N), E && t.moveTo(N[0], N[1]), M = N, j = f + w; j <= d; j += w) ee = Er([A, j], o, s.getView().getProjection()), ee = s.getPixelFromCoordinate(ee), E && t.lineTo(ee[0], ee[1]), M[1] > 0 && ee[1] < 0 && k.top.push([A, M]), M[1] > a && ee[1] < a && k.bottom.push([A, M]), M = ee;
+			}, A = u, j, M, N, ee; A < l; A += g) for (N = Er([A, f], o, s.getView().getProjection()), N = s.getPixelFromCoordinate(N), E && t.moveTo(N[0], N[1]), M = N, j = f + w; j <= d; j += w) ee = Er([A, j], o, s.getView().getProjection()), ee = s.getPixelFromCoordinate(ee), E && t.lineTo(ee[0], ee[1]), M[1] > 0 && ee[1] < 0 && k.top.push([A, M]), M[1] > a && ee[1] < a && k.bottom.push([A, M]), M = ee;
 			for (j = f; j < d; j += g) for (N = Er([u, j], o, s.getView().getProjection()), N = s.getPixelFromCoordinate(N), E && t.moveTo(N[0], N[1]), M = N, A = u + w; A <= l; A += w) ee = Er([A, j], o, s.getView().getProjection()), ee = s.getPixelFromCoordinate(ee), E && t.lineTo(ee[0], ee[1]), M[0] < 0 && ee[0] > 0 && k.left.push([j, M]), M[0] < i && ee[0] > i && k.right.push([j, M]), M = ee;
 			if (E && (t.strokeStyle = this.getStyle().getStroke().getColor(), t.lineWidth = this.getStyle().getStroke().getWidth(), t.stroke()), D) {
 				t.fillStyle = this.getStyle().getText().getFill().getColor(), t.strokeStyle = this.getStyle().getText().getStroke().getColor(), t.lineWidth = this.getStyle().getText().getStroke().getWidth(), t.font = this.getStyle().getText().getFont(), t.textAlign = "center", t.textBaseline = "hanging";
@@ -15778,7 +15777,7 @@ var Fh = {
 		this.collapsible_ !== e && (this.collapsible_ = e, this.element.classList.toggle("ol-uncollapsible"), !e && this.collapsed_ && this.handleToggle_());
 	}
 	setCollapsed(e) {
-		!this.collapsible_ || this.collapsed_ === e || this.handleToggle_();
+		this.collapsible_ && this.collapsed_ !== e && this.handleToggle_();
 	}
 	getCollapsed() {
 		return this.collapsed_;
