@@ -1756,6 +1756,36 @@ def test_secondary_cmap(app: TileServer) -> None:
         )
         assert layer.renderer.secondary_cmap["mapper"]("type2") == [0, 1, 0]
 
+        # Test a secondary continuous mapper with its own range.
+        response = client.put(
+            "/tileserver/secondary_cmap",
+            data={
+                "type_id": json.dumps(0),
+                "prop": "prob",
+                "cmap": json.dumps("viridis"),
+                "range": json.dumps([0.2, 0.8]),
+            },
+        )
+
+        assert response.status_code == 200
+
+        mapper = layer.renderer.secondary_cmap["mapper"]
+
+        np.testing.assert_allclose(
+            mapper(0.2),
+            colormaps["viridis"](0),
+        )
+
+        np.testing.assert_allclose(
+            mapper(0.5),
+            colormaps["viridis"](0.5),
+        )
+
+        np.testing.assert_allclose(
+            mapper(0.8),
+            colormaps["viridis"](1.0),
+        )
+
 
 def test_get_props(app_alt: TileServer) -> None:
     """Test getting props."""

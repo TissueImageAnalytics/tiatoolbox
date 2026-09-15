@@ -7,6 +7,7 @@ import {
 } from "vitest";
 
 import {
+    clearAnnotationSecondaryMapper,
     clearOverlays,
     createSession,
     getConfiguredFiles,
@@ -23,6 +24,7 @@ import {
     setAnnotationMapper,
     setAnnotationProperty,
     setAnnotationPropertyRange,
+    setAnnotationSecondaryMapper,
 } from "../../../tiatoolbox/visualization/openlayers/src/api/tileserver.js";
 
 function mockResponse({
@@ -975,6 +977,165 @@ describe("annotation display", () => {
             ]),
         ).rejects.toThrow(
             "Failed to update annotation property range.",
+        );
+    });
+
+    it("sets a secondary annotation mapper", async () => {
+        // Test applying continuous property colouring to one annotation type.
+        const fetchMock =
+            vi.fn().mockResolvedValue(
+                mockResponse(),
+            );
+
+        vi.stubGlobal(
+            "fetch",
+            fetchMock,
+        );
+
+        await expect(
+            setAnnotationSecondaryMapper(
+                "Neoplastic",
+                "prob",
+                "viridis",
+                [
+                    0.2,
+                    0.8,
+                ],
+            ),
+        ).resolves.toBeUndefined();
+
+        const [
+            url,
+            options,
+        ] = fetchMock.mock.calls[0];
+
+        expect(url).toBe(
+            "/tileserver/secondary_cmap",
+        );
+
+        expect(
+            options.method,
+        ).toBe("PUT");
+
+        expect(
+            JSON.parse(
+                options.body.get(
+                    "type_id",
+                ),
+            ),
+        ).toBe("Neoplastic");
+
+        expect(
+            options.body.get("prop"),
+        ).toBe("prob");
+
+        expect(
+            JSON.parse(
+                options.body.get("cmap"),
+            ),
+        ).toBe("viridis");
+
+        expect(
+            JSON.parse(
+                options.body.get("range"),
+            ),
+        ).toEqual([
+            0.2,
+            0.8,
+        ]);
+    });
+
+    it("clears the secondary annotation mapper", async () => {
+        // Test returning annotation rendering to the primary mapper only.
+        const fetchMock =
+            vi.fn().mockResolvedValue(
+                mockResponse(),
+            );
+
+        vi.stubGlobal(
+            "fetch",
+            fetchMock,
+        );
+
+        await expect(
+            clearAnnotationSecondaryMapper(),
+        ).resolves.toBeUndefined();
+
+        const [
+            url,
+            options,
+        ] = fetchMock.mock.calls[0];
+
+        expect(url).toBe(
+            "/tileserver/renderer/secondary_cmap",
+        );
+
+        expect(
+            options.method,
+        ).toBe("PUT");
+
+        expect(
+            options.body.get("val"),
+        ).toBe("null");
+    });
+
+    it("preserves numeric secondary annotation types", async () => {
+        const fetchMock =
+            vi.fn().mockResolvedValue(
+                mockResponse(),
+            );
+
+        vi.stubGlobal(
+            "fetch",
+            fetchMock,
+        );
+
+        await setAnnotationSecondaryMapper(
+            2,
+            "prob",
+            "viridis",
+            [
+                0,
+                1,
+            ],
+        );
+
+        const [
+            ,
+            options,
+        ] = fetchMock.mock.calls[0];
+
+        expect(
+            JSON.parse(
+                options.body.get(
+                    "type_id",
+                ),
+            ),
+        ).toBe(2);
+    });
+
+    it("rejects failed secondary annotation mapper updates", async () => {
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue(
+                mockResponse({
+                    ok: false,
+                }),
+            ),
+        );
+
+        await expect(
+            setAnnotationSecondaryMapper(
+                "Tumour",
+                "prob",
+                "viridis",
+                [
+                    0,
+                    1,
+                ],
+            ),
+        ).rejects.toThrow(
+            "Failed to update secondary annotation colour map.",
         );
     });
 });

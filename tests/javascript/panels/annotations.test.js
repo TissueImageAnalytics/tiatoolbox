@@ -15,8 +15,10 @@ function createHarness({
     displayMode = "type",
     annotationProperties = ["prob"],
     annotationProperty = null,
+    secondaryType = null,
     onDisplayModeChange = vi.fn(async () => {}),
     onPropertyChange = vi.fn(async () => {}),
+    onSecondaryTypeChange = vi.fn(async () => {}),
     propertyRange = [0.2, 0.8],
 } = {}) {
     document.body.innerHTML = `
@@ -27,7 +29,12 @@ function createHarness({
                 <select id="colour-by">
                     <option value="type">Class</option>
                     <option value="property">Property</option>
+                    <option value="secondary">Class + Property</option>
                 </select>
+            </label>
+
+            <label id="secondary-type-field" hidden>
+                <select id="secondary-type"></select>
             </label>
 
             <label id="property-field" hidden>
@@ -80,6 +87,16 @@ function createHarness({
     const colourBySelect =
         document.getElementById("colour-by");
 
+    const secondaryTypeField =
+        document.getElementById(
+            "secondary-type-field",
+        );
+
+    const secondaryTypeSelect =
+        document.getElementById(
+            "secondary-type",
+        );
+
     const propertyField =
         document.getElementById("property-field");
 
@@ -127,6 +144,14 @@ function createHarness({
         [
             "Inflammatory",
             [0, 1, 0, 1],
+        ],
+        [
+            0,
+            [1, 0, 0, 1],
+        ],
+        [
+            1,
+            [0, 0, 1, 1],
         ],
     ]);
 
@@ -176,6 +201,8 @@ function createHarness({
             toggle,
             list,
             colourBySelect,
+            secondaryTypeField,
+            secondaryTypeSelect,
             propertyField,
             propertySelect,
             propertyLegend,
@@ -189,6 +216,15 @@ function createHarness({
             getAnnotationGroups: () =>
                 annotationGroups,
 
+            getAnnotationTypes: () => [
+                ...new Set(
+                    annotationGroups.flatMap(
+                        (group) =>
+                            group.annotationTypes,
+                    ),
+                ),
+            ],
+
             getDisplayMode: () =>
                 displayMode,
 
@@ -197,6 +233,9 @@ function createHarness({
 
             getAnnotationProperty: () =>
                 annotationProperty,
+
+            getSecondaryType: () =>
+                secondaryType,
 
             getPropertyRange: () =>
                 propertyRange,
@@ -224,6 +263,7 @@ function createHarness({
             onOpacityChange,
             onDisplayModeChange,
             onPropertyChange,
+            onSecondaryTypeChange,
             onSetAllVisibility,
             onExport,
             onOpen,
@@ -235,6 +275,8 @@ function createHarness({
         toggle,
         list,
         colourBySelect,
+        secondaryTypeField,
+        secondaryTypeSelect,
         propertyField,
         propertySelect,
         propertyLegend,
@@ -252,6 +294,7 @@ function createHarness({
         onOpacityChange,
         onDisplayModeChange,
         onPropertyChange,
+        onSecondaryTypeChange,
         onSetAllVisibility,
         onExport,
         onOpen,
@@ -513,6 +556,104 @@ describe("createAnnotationsPanelController", () => {
                 ".annotations-panel-slider",
             ).disabled,
         ).toBe(true);
+    });
+
+    it("renders class and property mode", () => {
+        // Test one class can use continuous property colouring.
+        const {
+            controller,
+            list,
+            secondaryTypeField,
+            secondaryTypeSelect,
+            propertyField,
+            propertySelect,
+            propertyLegend,
+            propertyLegendCaption,
+            exportButton,
+        } = createHarness({
+            annotationGroups: [
+                {
+                    layerName: "annotations",
+                    annotationTypes: [
+                        "Tumour",
+                        "Stroma",
+                    ],
+                },
+            ],
+            displayMode: "secondary",
+            annotationProperty: "prob",
+            secondaryType: "Tumour",
+        });
+
+        controller.render();
+
+        expect(
+            secondaryTypeField.hidden,
+        ).toBe(false);
+
+        expect(
+            propertyField.hidden,
+        ).toBe(false);
+
+        expect(
+            [...secondaryTypeSelect.options].map(
+                (option) =>
+                    option.textContent,
+            ),
+        ).toEqual([
+            "Tumour",
+            "Stroma",
+        ]);
+
+        expect(
+            secondaryTypeSelect.value,
+        ).toBe(
+            JSON.stringify("Tumour"),
+        );
+
+        expect(
+            propertySelect.value,
+        ).toBe("prob");
+
+        expect(
+            propertyLegend.hidden,
+        ).toBe(false);
+
+        expect(
+            propertyLegendCaption.textContent,
+        ).toBe(
+            "Tumour · prob values · low → high",
+        );
+
+        const colours =
+            list.querySelectorAll(
+                ".annotations-panel-colour",
+            );
+
+        expect(
+            colours[0].disabled,
+        ).toBe(true);
+
+        expect(
+            colours[1].disabled,
+        ).toBe(false);
+
+        const sliders =
+            list.querySelectorAll(
+                ".annotations-panel-slider",
+            );
+
+        expect(
+            sliders[0].disabled,
+        ).toBe(true);
+
+        expect(
+            sliders[1].disabled,
+        ).toBe(false);
+
+        expect(
+            exportButton.disabled,
+        ).toBe(false);
     });
 
     it("renders repeated annotation types in separate groups", () => {
@@ -855,6 +996,50 @@ describe("createAnnotationsPanelController", () => {
             onPropertyChange,
         ).toHaveBeenCalledExactlyOnceWith(
             "score",
+        );
+    });
+
+    it("changes the secondary annotation class", async () => {
+        // Test secondary class selection preserves the annotation type value.
+        const {
+            controller,
+            secondaryTypeSelect,
+            onSecondaryTypeChange,
+        } = createHarness({
+            annotationGroups: [
+                {
+                    layerName: "annotations",
+                    annotationTypes: [
+                        0,
+                        1,
+                    ],
+                },
+            ],
+            displayMode: "secondary",
+            annotationProperty: "prob",
+            secondaryType: 0,
+        });
+
+        controller.render();
+
+        secondaryTypeSelect.value =
+            JSON.stringify(1);
+
+        secondaryTypeSelect.dispatchEvent(
+            new Event(
+                "change",
+                {
+                    bubbles: true,
+                },
+            ),
+        );
+
+        await flushActions();
+
+        expect(
+            onSecondaryTypeChange,
+        ).toHaveBeenCalledExactlyOnceWith(
+            1,
         );
     });
 

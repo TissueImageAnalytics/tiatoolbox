@@ -947,9 +947,43 @@ class TileServer(Flask):
         cmap = json.loads(request.form["cmap"])
         type_id = request.form["type_id"]
         prop = request.form["prop"]
-        cmapp = self._get_cmap(cmap)
+        mapper = self._get_cmap(cmap)
 
-        cmap_dict = {"type": json.loads(type_id), "score_prop": prop, "mapper": cmapp}
+        prop_range = json.loads(
+            request.form.get(
+                "range",
+                "null",
+            ),
+        )
+
+        if prop_range is not None and isinstance(cmap, str):
+            minimum, maximum = prop_range
+
+            if minimum == maximum:
+                maximum = minimum + 1
+
+            base_mapper = mapper
+
+            def normalised_mapper(
+                value: float,
+            ) -> tuple[float, ...]:
+                normalised_value = round(
+                    (value - minimum) / (maximum - minimum),
+                    15,
+                )
+
+                return base_mapper(
+                    normalised_value,
+                )
+
+            mapper = normalised_mapper
+
+        cmap_dict = {
+            "type": json.loads(type_id),
+            "score_prop": prop,
+            "mapper": mapper,
+        }
+
         self.renderers[session_id].secondary_cmap = cmap_dict
 
         return "done"

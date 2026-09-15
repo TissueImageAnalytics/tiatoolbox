@@ -21,6 +21,8 @@ function createAnnotationsPanelController({
     hideAllButton,
     exportButton,
     colourBySelect,
+    secondaryTypeField,
+    secondaryTypeSelect,
     propertyField,
     propertySelect,
     propertyLegend,
@@ -28,10 +30,12 @@ function createAnnotationsPanelController({
     propertyMin,
     propertyMax,
     getAnnotationGroups,
+    getAnnotationTypes,
     getAnnotationColour,
     getDisplayMode,
     getAnnotationProperties,
     getAnnotationProperty,
+    getSecondaryType,
     getPropertyRange,
     isAnnotationTypeVisible,
     getAnnotationOpacity,
@@ -40,6 +44,7 @@ function createAnnotationsPanelController({
     onOpacityChange,
     onDisplayModeChange,
     onPropertyChange,
+    onSecondaryTypeChange,
     onSetAllVisibility,
     onExport,
     onOpen,
@@ -108,6 +113,61 @@ function createAnnotationsPanelController({
         );
     }
 
+    function updateSecondaryTypeOptions(
+        annotationTypes,
+    ) {
+        const values =
+            annotationTypes.map(
+                (annotationType) =>
+                    JSON.stringify(
+                        annotationType,
+                    ),
+            );
+
+        const currentValues =
+            [...secondaryTypeSelect.options].map(
+                (option) => option.value,
+            );
+
+        if (
+            currentValues.length ===
+                values.length &&
+            currentValues.every(
+                (value, index) =>
+                    value ===
+                    values[index],
+            )
+        ) {
+            return;
+        }
+
+        const options =
+            annotationTypes.map(
+                (annotationType) => {
+                    const option =
+                        document.createElement(
+                            "option",
+                        );
+
+                    option.value =
+                        JSON.stringify(
+                            annotationType,
+                        );
+
+                    option.textContent =
+                        String(
+                            annotationType,
+                        );
+
+                    return option;
+                },
+            );
+
+        secondaryTypeSelect.replaceChildren(
+            ...options,
+        );
+    }
+
     function render() {
         list.replaceChildren();
 
@@ -119,6 +179,12 @@ function createAnnotationsPanelController({
 
         const properties =
             getAnnotationProperties();
+
+        const annotationTypes =
+            getAnnotationTypes();
+
+        const selectedSecondaryType =
+            getSecondaryType();
 
         const hasAnnotations =
             annotationGroups.length > 0;
@@ -143,15 +209,32 @@ function createAnnotationsPanelController({
                 'option[value="property"]',
             );
 
+        const secondaryModeOption =
+            colourBySelect.querySelector(
+                'option[value="secondary"]',
+            );
+
         propertyModeOption.disabled =
             !hasAnnotations ||
             properties.length === 0;
 
+        secondaryModeOption.disabled =
+            !hasAnnotations ||
+            annotationTypes.length === 0 ||
+            properties.length === 0;
+
+        secondaryTypeField.hidden =
+            displayMode !== "secondary";
+
         propertyField.hidden =
-            displayMode !== "property";
+            displayMode === "type";
 
         updatePropertyOptions(
             properties,
+        );
+
+        updateSecondaryTypeOptions(
+            annotationTypes,
         );
 
         const selectedProperty =
@@ -167,11 +250,33 @@ function createAnnotationsPanelController({
                 selectedProperty;
         }
 
+        if (
+            selectedSecondaryType !== null &&
+            annotationTypes.some(
+                (annotationType) =>
+                    Object.is(
+                        annotationType,
+                        selectedSecondaryType,
+                    ),
+            )
+        ) {
+            secondaryTypeSelect.value =
+                JSON.stringify(
+                    selectedSecondaryType,
+                );
+        }
+
+        secondaryTypeSelect.disabled =
+            annotationTypes.length === 0;
+
         const propertyRange =
             getPropertyRange();
 
         const showPropertyLegend =
-            displayMode === "property" &&
+            (
+                displayMode === "property" ||
+                displayMode === "secondary"
+            ) &&
             propertyRange !== null;
 
         propertyLegend.hidden =
@@ -184,7 +289,11 @@ function createAnnotationsPanelController({
             ] = propertyRange;
 
             propertyLegendCaption.textContent =
-                `${selectedProperty} values · low → high`;
+                displayMode === "secondary"
+                    ? `${String(
+                        selectedSecondaryType,
+                    )} · ${selectedProperty} values · low → high`
+                    : `${selectedProperty} values · low → high`;
 
             propertyMin.textContent =
                 Number(
@@ -255,6 +364,14 @@ function createAnnotationsPanelController({
                 const annotationName =
                     String(annotationType);
 
+                const secondaryTypeSelected =
+                    displayMode === "secondary" &&
+                    selectedSecondaryType !== null &&
+                    Object.is(
+                        annotationType,
+                        selectedSecondaryType,
+                    );
+
                 const item =
                     document.createElement("div");
 
@@ -311,7 +428,8 @@ function createAnnotationsPanelController({
                     `Change ${annotationName} colour`;
 
                 colour.disabled =
-                    displayMode === "property";
+                    displayMode === "property" ||
+                    secondaryTypeSelected;
 
                 colour.addEventListener(
                     "change",
@@ -374,7 +492,8 @@ function createAnnotationsPanelController({
                     ).toString();
 
                 slider.disabled =
-                    displayMode === "property";
+                    displayMode === "property" ||
+                    secondaryTypeSelected;
 
                 const value =
                     document.createElement("span");
@@ -442,6 +561,18 @@ function createAnnotationsPanelController({
             runAction(() =>
                 onPropertyChange(
                     propertySelect.value,
+                ));
+        },
+    );
+
+    secondaryTypeSelect.addEventListener(
+        "change",
+        () => {
+            runAction(() =>
+                onSecondaryTypeChange(
+                    JSON.parse(
+                        secondaryTypeSelect.value,
+                    ),
                 ));
         },
     );

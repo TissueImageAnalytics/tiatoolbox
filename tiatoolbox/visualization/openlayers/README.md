@@ -130,8 +130,19 @@ Annotations panel.
 
 Annotation types are grouped by their loaded annotation layer. Each type can
 be shown or hidden, assigned a colour and given a different fill opacity.
+
+Annotations can be coloured by **Class**, **Property** or **Class + Property**.
+Property colouring uses the viridis colour map and shows the property range in
+the Annotations panel.
+
+**Class + Property** keeps the normal class colours while allowing one selected
+class to be coloured by a numeric property.
+
 **Show all** and **Hide all** can be used to change the visibility of all
 annotation types at once.
+
+Selecting an annotation in the viewer shows its layer and annotation
+properties. Annotation inspection can be enabled or disabled in Settings.
 
 Default annotation colours can be provided using a JSON file in the root of
 the overlay directory. The filename must end in `config.json`, for example

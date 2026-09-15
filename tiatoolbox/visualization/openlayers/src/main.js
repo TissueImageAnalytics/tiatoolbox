@@ -14,6 +14,7 @@ import LayerSwitcher from "ol-ext/control/LayerSwitcher.js";
 
 import { defaults as defaultInteractions } from "ol/interaction/defaults.js";
 import {
+    clearAnnotationSecondaryMapper,
     clearOverlays as clearTileServerOverlays,
     createSession,
     getConfiguredFiles,
@@ -30,6 +31,7 @@ import {
     setAnnotationMapper,
     setAnnotationProperty,
     setAnnotationPropertyRange,
+    setAnnotationSecondaryMapper,
 } from "./api/tileserver.js";
 import {
     createMapControlsController,
@@ -107,6 +109,16 @@ const annotationsList = document.getElementById(
 const annotationsColourBySelect =
     document.getElementById(
         "annotations-colour-by",
+    );
+
+const annotationsSecondaryTypeField =
+    document.getElementById(
+        "annotations-secondary-type-field",
+    );
+
+const annotationsSecondaryTypeSelect =
+    document.getElementById(
+        "annotations-secondary-type",
     );
 
 const annotationsPropertyField =
@@ -351,6 +363,8 @@ if (
     annotationInspectorTitle === null ||
     annotationInspectorProperties === null ||
     annotationInspectorClose === null ||
+    annotationsSecondaryTypeField === null ||
+    annotationsSecondaryTypeSelect === null ||
     settingsPanel === null ||
     settingsToggle === null ||
     settingsCloseButton === null ||
@@ -504,6 +518,7 @@ const annotationTypeVisibility = new Map();
 const annotationTypeOpacity = new Map();
 let annotationDisplayMode = "type";
 let annotationProperty = null;
+let annotationSecondaryType = null;
 let annotationProperties = [];
 const annotationPropertyRanges =
     new Map();
@@ -640,6 +655,8 @@ function getAnnotationPropertyRenderRange(
 async function setAnnotationTypeMode({
     refresh = true,
 } = {}) {
+    await clearAnnotationSecondaryMapper();
+
     await setAnnotationProperty(
         "type",
     );
@@ -654,6 +671,7 @@ async function setAnnotationTypeMode({
 
     annotationDisplayMode = "type";
     annotationProperty = null;
+    annotationSecondaryType = null;
 
     if (refresh) {
         refreshAnnotationLayers();
@@ -661,6 +679,8 @@ async function setAnnotationTypeMode({
 }
 
 async function resetAnnotationRenderer() {
+    await clearAnnotationSecondaryMapper();
+
     await setAnnotationProperty(
         "type",
     );
@@ -681,6 +701,8 @@ async function setAnnotationPropertyMode(
             property,
         );
 
+    await clearAnnotationSecondaryMapper();
+
     await setAnnotationProperty(
         property,
     );
@@ -699,6 +721,54 @@ async function setAnnotationPropertyMode(
     annotationProperty =
         property;
 
+    annotationSecondaryType =
+        null;
+
+    if (refresh) {
+        refreshAnnotationLayers();
+    }
+}
+
+async function setAnnotationSecondaryMode(
+    annotationType,
+    property,
+    {
+        refresh = true,
+    } = {},
+) {
+    const range =
+        getAnnotationPropertyRenderRange(
+            property,
+        );
+
+    await setAnnotationProperty(
+        "type",
+    );
+
+    await setAnnotationPropertyRange(
+        null,
+    );
+
+    await setTileServerAnnotationColors(
+        annotationColours,
+    );
+
+    await setAnnotationSecondaryMapper(
+        annotationType,
+        property,
+        "viridis",
+        range,
+    );
+
+    annotationDisplayMode =
+        "secondary";
+
+    annotationProperty =
+        property;
+
+    annotationSecondaryType =
+        annotationType;
+
     if (refresh) {
         refreshAnnotationLayers();
     }
@@ -714,6 +784,7 @@ async function updateAnnotationProperties({
         annotationPropertyRanges.clear();
         annotationDisplayMode = "type";
         annotationProperty = null;
+        annotationSecondaryType = null;
 
         annotationsPanelController.render();
         return;
@@ -739,6 +810,34 @@ async function updateAnnotationProperties({
             });
         } else {
             await setAnnotationPropertyMode(
+                annotationProperty,
+                {
+                    refresh,
+                },
+            );
+        }
+    }
+
+    if (annotationDisplayMode === "secondary") {
+        const annotationTypes =
+            getAnnotationTypes();
+
+        if (
+            annotationSecondaryType === null ||
+            !annotationTypes.includes(
+                annotationSecondaryType,
+            ) ||
+            annotationProperty === null ||
+            !annotationProperties.includes(
+                annotationProperty,
+            )
+        ) {
+            await setAnnotationTypeMode({
+                refresh,
+            });
+        } else {
+            await setAnnotationSecondaryMode(
+                annotationSecondaryType,
                 annotationProperty,
                 {
                     refresh,
@@ -1234,6 +1333,10 @@ const annotationsPanelController =
         list: annotationsList,
         colourBySelect:
             annotationsColourBySelect,
+        secondaryTypeField:
+            annotationsSecondaryTypeField,
+        secondaryTypeSelect:
+            annotationsSecondaryTypeSelect,
         propertyField:
             annotationsPropertyField,
         propertySelect:
@@ -1254,6 +1357,7 @@ const annotationsPanelController =
             annotationsExportColoursButton,
 
         getAnnotationGroups,
+        getAnnotationTypes,
 
         getDisplayMode: () =>
             annotationDisplayMode,
@@ -1263,6 +1367,9 @@ const annotationsPanelController =
 
         getAnnotationProperty: () =>
             annotationProperty,
+
+        getSecondaryType: () =>
+            annotationSecondaryType,
 
         getPropertyRange: () =>
             annotationProperty === null
@@ -1301,13 +1408,80 @@ const annotationsPanelController =
                 );
             }
 
+            if (mode === "property") {
+                await setAnnotationPropertyMode(
+                    property,
+                );
+
+                return;
+            }
+
+            if (mode === "secondary") {
+                const annotationType =
+                    annotationSecondaryType ??
+                    getAnnotationTypes()[0];
+
+                if (annotationType === undefined) {
+                    throw new Error(
+                        "No annotation classes are available.",
+                    );
+                }
+
+                await setAnnotationSecondaryMode(
+                    annotationType,
+                    property,
+                );
+
+                return;
+            }
+
+            throw new Error(
+                `Unknown annotation display mode: ${mode}`,
+            );
+        },
+
+        async onPropertyChange(property) {
+            if (
+                annotationDisplayMode ===
+                "secondary"
+            ) {
+                if (
+                    annotationSecondaryType ===
+                    null
+                ) {
+                    throw new Error(
+                        "No secondary annotation class is selected.",
+                    );
+                }
+
+                await setAnnotationSecondaryMode(
+                    annotationSecondaryType,
+                    property,
+                );
+
+                return;
+            }
+
             await setAnnotationPropertyMode(
                 property,
             );
         },
 
-        async onPropertyChange(property) {
-            await setAnnotationPropertyMode(
+        async onSecondaryTypeChange(
+            annotationType,
+        ) {
+            const property =
+                annotationProperty ??
+                annotationProperties[0];
+
+            if (property === undefined) {
+                throw new Error(
+                    "No annotation properties are available.",
+                );
+            }
+
+            await setAnnotationSecondaryMode(
+                annotationType,
                 property,
             );
         },
@@ -1916,6 +2090,7 @@ function clearOverlayLayers() {
 
     annotationDisplayMode = "type";
     annotationProperty = null;
+    annotationSecondaryType = null;
     annotationProperties = [];
     annotationPropertyRanges.clear();
 

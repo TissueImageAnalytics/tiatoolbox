@@ -318,7 +318,80 @@ async function setAnnotationPropertyRange(range) {
     }
 }
 
+async function setAnnotationSecondaryMapper(
+    annotationType,
+    property,
+    mapper,
+    range,
+) {
+    const formData = new FormData();
+
+    formData.append(
+        "type_id",
+        JSON.stringify(
+            annotationType,
+        ),
+    );
+
+    formData.append(
+        "prop",
+        property,
+    );
+
+    formData.append(
+        "cmap",
+        JSON.stringify(
+            mapper,
+        ),
+    );
+
+    formData.append(
+        "range",
+        JSON.stringify(
+            range,
+        ),
+    );
+
+    const response = await fetch(
+        "/tileserver/secondary_cmap",
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update secondary annotation colour map.",
+        );
+    }
+}
+
+async function clearAnnotationSecondaryMapper() {
+    const formData = new FormData();
+
+    formData.append(
+        "val",
+        JSON.stringify(null),
+    );
+
+    const response = await fetch(
+        "/tileserver/renderer/secondary_cmap",
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to clear secondary annotation colour map.",
+        );
+    }
+}
+
 export {
+    clearAnnotationSecondaryMapper,
     clearOverlays,
     createSession,
     getConfiguredFiles,
@@ -334,4 +407,5 @@ export {
     setAnnotationMapper,
     setAnnotationProperty,
     setAnnotationPropertyRange,
+    setAnnotationSecondaryMapper,
 };
