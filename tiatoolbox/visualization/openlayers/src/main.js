@@ -406,6 +406,17 @@ if (
     throw new Error("The OpenLayers viewer controls could not be found.");
 }
 
+let annotationInspectionRequestId = 0;
+
+function invalidateAnnotationInspectionRequests() {
+    annotationInspectionRequestId += 1;
+}
+
+function hideAnnotationInspector() {
+    invalidateAnnotationInspectionRequests();
+    annotationInspector.hidden = true;
+}
+
 const scaleBarThemeColours = {
     dark: "#ffffff",
     light: "#000000",
@@ -454,7 +465,7 @@ const settingsPanelController =
             if (
                 !annotationInspectionEnabledInput.checked
             ) {
-                annotationInspector.hidden = true;
+                hideAnnotationInspector();
             }
         },
 
@@ -1957,11 +1968,25 @@ map.on("singleclick", async (event) => {
         return;
     }
 
+    annotationInspectionRequestId += 1;
+
+    const requestId =
+        annotationInspectionRequestId;
+
     try {
         const inspection =
             await inspectAnnotationAtCoordinate(
                 event.coordinate,
             );
+
+        if (
+            requestId !==
+                annotationInspectionRequestId ||
+            !annotationInspectionEnabledInput.checked ||
+            annotationLayerNames.size === 0
+        ) {
+            return;
+        }
 
         if (inspection === null) {
             return;
@@ -1972,6 +1997,13 @@ map.on("singleclick", async (event) => {
             event.pixel,
         );
     } catch (error) {
+        if (
+            requestId !==
+            annotationInspectionRequestId
+        ) {
+            return;
+        }
+
         console.error(
             "Failed to inspect annotation.",
             error,
@@ -1981,9 +2013,7 @@ map.on("singleclick", async (event) => {
 
 annotationInspectorClose.addEventListener(
     "click",
-    () => {
-        annotationInspector.hidden = true;
-    },
+    hideAnnotationInspector,
 );
 
 let annotationInspectorDragging = false;
@@ -2082,7 +2112,7 @@ function clearOverlayLayers() {
     annotationLayerNames.clear();
     annotationTypesByLayer.clear();
 
-    annotationInspector.hidden = true;
+    hideAnnotationInspector();
 
     pruneAnnotationTypeState();
 
@@ -2494,6 +2524,8 @@ async function removeOverlay(layerName) {
     delete overlayLayers[layerName];
 
     if (wasAnnotation) {
+        hideAnnotationInspector();
+
         pruneAnnotationTypeState();
 
         await updateAnnotationProperties({
