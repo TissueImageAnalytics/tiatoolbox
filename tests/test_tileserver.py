@@ -1183,6 +1183,12 @@ def test_change_cmap(app: TileServer) -> None:
         client.put("/tileserver/cmap", data={"cmap": json.dumps(None)})
         assert layer.renderer.mapper(0.5) == colormaps["jet"](0.5)
 
+        client.put(
+            "/tileserver/cmap",
+            data={"cmap": json.dumps("viridis")},
+        )
+        assert layer.renderer.mapper(0.5) == colormaps["viridis"](0.5)
+
         cdict = {"type1": [1, 0, 0], "type2": [0, 1, 0]}
         req_data = {"keys": list(cdict.keys()), "values": list(cdict.values())}
         client.put("/tileserver/cmap", data={"cmap": json.dumps(req_data)})
@@ -1692,6 +1698,12 @@ def test_update_renderer(app: TileServer) -> None:
         client.put("/tileserver/renderer/blur_radius", data={"val": 5})
         assert app.pyramids["default"]["overlay"].renderer.blur_radius == 5
         assert app.overlaps["default"] == int(5 * 1.5)
+
+        client.put(
+            "/tileserver/renderer/score_prop",
+            data={"val": json.dumps("prob")},
+        )
+        assert app.pyramids["default"]["overlay"].renderer.score_prop == "prob"
 
         client.put(
             "/tileserver/renderer/where",

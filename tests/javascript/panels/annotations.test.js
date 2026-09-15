@@ -12,11 +12,34 @@ import {
 
 function createHarness({
     annotationGroups = [],
+    displayMode = "type",
+    annotationProperties = ["prob"],
+    annotationProperty = null,
+    onDisplayModeChange = vi.fn(async () => {}),
+    onPropertyChange = vi.fn(async () => {}),
+    propertyRange = [0.2, 0.8],
 } = {}) {
     document.body.innerHTML = `
         <button id="toggle" type="button"></button>
 
         <aside id="panel" class="hidden">
+            <label class="annotations-panel-display-field">
+                <select id="colour-by">
+                    <option value="type">Class</option>
+                    <option value="property">Property</option>
+                </select>
+            </label>
+
+            <label id="property-field" hidden>
+                <select id="property"></select>
+            </label>
+
+            <div id="property-legend" hidden>
+                <span id="property-legend-caption"></span>
+                <span id="property-min"></span>
+                <span id="property-max"></span>
+            </div>
+
             <div id="list"></div>
 
             <button
@@ -53,6 +76,35 @@ function createHarness({
 
     const list =
         document.getElementById("list");
+
+    const colourBySelect =
+        document.getElementById("colour-by");
+
+    const propertyField =
+        document.getElementById("property-field");
+
+    const propertySelect =
+        document.getElementById("property");
+
+    const propertyLegend =
+        document.getElementById(
+            "property-legend",
+        );
+
+    const propertyLegendCaption =
+        document.getElementById(
+            "property-legend-caption",
+        );
+
+    const propertyMin =
+        document.getElementById(
+            "property-min",
+        );
+
+    const propertyMax =
+        document.getElementById(
+            "property-max",
+        );
 
     const showAllButton =
         document.getElementById("show-all");
@@ -123,12 +175,31 @@ function createHarness({
             panel,
             toggle,
             list,
+            colourBySelect,
+            propertyField,
+            propertySelect,
+            propertyLegend,
+            propertyLegendCaption,
+            propertyMin,
+            propertyMax,
             showAllButton,
             hideAllButton,
             exportButton,
 
             getAnnotationGroups: () =>
                 annotationGroups,
+
+            getDisplayMode: () =>
+                displayMode,
+
+            getAnnotationProperties: () =>
+                annotationProperties,
+
+            getAnnotationProperty: () =>
+                annotationProperty,
+
+            getPropertyRange: () =>
+                propertyRange,
 
             getAnnotationColour:
                 (annotationType) =>
@@ -151,6 +222,8 @@ function createHarness({
             onColourChange,
             onVisibilityChange,
             onOpacityChange,
+            onDisplayModeChange,
+            onPropertyChange,
             onSetAllVisibility,
             onExport,
             onOpen,
@@ -161,6 +234,13 @@ function createHarness({
         panel,
         toggle,
         list,
+        colourBySelect,
+        propertyField,
+        propertySelect,
+        propertyLegend,
+        propertyLegendCaption,
+        propertyMin,
+        propertyMax,
         showAllButton,
         hideAllButton,
         exportButton,
@@ -170,6 +250,8 @@ function createHarness({
         onColourChange,
         onVisibilityChange,
         onOpacityChange,
+        onDisplayModeChange,
+        onPropertyChange,
         onSetAllVisibility,
         onExport,
         onOpen,
@@ -191,12 +273,27 @@ describe("createAnnotationsPanelController", () => {
         const {
             controller,
             list,
+            colourBySelect,
             showAllButton,
             hideAllButton,
             exportButton,
         } = createHarness();
 
         controller.render();
+
+        expect(
+            colourBySelect.disabled,
+        ).toBe(true);
+
+        expect(
+            colourBySelect
+                .closest(
+                    ".annotations-panel-display-field",
+                )
+                ?.classList.contains(
+                    "disabled",
+                ),
+        ).toBe(true);
 
         expect(
             list.querySelector(
@@ -296,6 +393,126 @@ describe("createAnnotationsPanelController", () => {
         expect(showAllButton.disabled).toBe(false);
         expect(hideAllButton.disabled).toBe(false);
         expect(exportButton.disabled).toBe(false);
+    });
+
+    it("renders annotation display controls", () => {
+        // Test Class mode is shown by default.
+        const {
+            controller,
+            colourBySelect,
+            propertyField,
+        } = createHarness({
+            annotationGroups: [
+                {
+                    layerName: "annotations",
+                    annotationTypes: [
+                        "Tumour",
+                    ],
+                },
+            ],
+        });
+
+        controller.render();
+
+        expect(
+            colourBySelect.value,
+        ).toBe("type");
+
+        expect(
+            colourBySelect.disabled,
+        ).toBe(false);
+
+        expect(
+            colourBySelect
+                .closest(
+                    ".annotations-panel-display-field",
+                )
+                ?.classList.contains(
+                    "disabled",
+                ),
+        ).toBe(false);
+
+        expect(
+            propertyField.hidden,
+        ).toBe(true);
+    });
+
+    it("renders property mode", () => {
+        // Test Property mode shows available properties.
+        const {
+            controller,
+            list,
+            propertyField,
+            propertySelect,
+            propertyLegend,
+            propertyLegendCaption,
+            propertyMin,
+            propertyMax,
+            exportButton,
+        } = createHarness({
+            annotationGroups: [
+                {
+                    layerName: "annotations",
+                    annotationTypes: [
+                        "Tumour",
+                    ],
+                },
+            ],
+            displayMode: "property",
+            annotationProperty: "prob",
+        });
+
+        controller.render();
+
+        expect(
+            propertyField.hidden,
+        ).toBe(false);
+
+        expect(
+            [...propertySelect.options].map(
+                (option) => option.value,
+            ),
+        ).toEqual([
+            "prob",
+        ]);
+
+        expect(
+            propertySelect.value,
+        ).toBe("prob");
+
+        expect(
+            propertyLegend.hidden,
+        ).toBe(false);
+
+        expect(
+            propertyLegendCaption.textContent,
+        ).toBe(
+            "prob values · low → high",
+        );
+
+        expect(
+            propertyMin.textContent,
+        ).toBe("0.2");
+
+        expect(
+            propertyMax.textContent,
+        ).toBe("0.8");
+
+        expect(
+            exportButton.disabled,
+        ).toBe(true);
+
+        expect(
+            list.querySelector(
+                ".annotations-panel-colour",
+            ).disabled,
+        ).toBe(true);
+
+        expect(
+            list.querySelector(
+                ".annotations-panel-slider",
+            ).disabled,
+        ).toBe(true);
     });
 
     it("renders repeated annotation types in separate groups", () => {
@@ -552,6 +769,92 @@ describe("createAnnotationsPanelController", () => {
         ).toHaveBeenCalledExactlyOnceWith(
             "Tumour",
             0.4,
+        );
+    });
+
+    it("changes annotation display mode", async () => {
+        // Test changing the annotation display mode.
+        const {
+            controller,
+            colourBySelect,
+            onDisplayModeChange,
+        } = createHarness({
+            annotationGroups: [
+                {
+                    layerName: "annotations",
+                    annotationTypes: [
+                        "Tumour",
+                    ],
+                },
+            ],
+        });
+
+        controller.render();
+
+        colourBySelect.value =
+            "property";
+
+        colourBySelect.dispatchEvent(
+            new Event(
+                "change",
+                {
+                    bubbles: true,
+                },
+            ),
+        );
+
+        await flushActions();
+
+        expect(
+            onDisplayModeChange,
+        ).toHaveBeenCalledExactlyOnceWith(
+            "property",
+        );
+    });
+
+    it("changes annotation property", async () => {
+        // Test changing the property used to colour annotations.
+        const {
+            controller,
+            propertySelect,
+            onPropertyChange,
+        } = createHarness({
+            annotationGroups: [
+                {
+                    layerName: "annotations",
+                    annotationTypes: [
+                        "Tumour",
+                    ],
+                },
+            ],
+            displayMode: "property",
+            annotationProperties: [
+                "prob",
+                "score",
+            ],
+            annotationProperty: "prob",
+        });
+
+        controller.render();
+
+        propertySelect.value =
+            "score";
+
+        propertySelect.dispatchEvent(
+            new Event(
+                "change",
+                {
+                    bubbles: true,
+                },
+            ),
+        );
+
+        await flushActions();
+
+        expect(
+            onPropertyChange,
+        ).toHaveBeenCalledExactlyOnceWith(
+            "score",
         );
     });
 

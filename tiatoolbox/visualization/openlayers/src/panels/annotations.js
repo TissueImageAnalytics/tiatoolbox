@@ -20,13 +20,26 @@ function createAnnotationsPanelController({
     showAllButton,
     hideAllButton,
     exportButton,
+    colourBySelect,
+    propertyField,
+    propertySelect,
+    propertyLegend,
+    propertyLegendCaption,
+    propertyMin,
+    propertyMax,
     getAnnotationGroups,
     getAnnotationColour,
+    getDisplayMode,
+    getAnnotationProperties,
+    getAnnotationProperty,
+    getPropertyRange,
     isAnnotationTypeVisible,
     getAnnotationOpacity,
     onColourChange,
     onVisibilityChange,
     onOpacityChange,
+    onDisplayModeChange,
+    onPropertyChange,
     onSetAllVisibility,
     onExport,
     onOpen,
@@ -52,14 +65,140 @@ function createAnnotationsPanelController({
             });
     }
 
+    function updatePropertyOptions(
+        properties,
+    ) {
+        const currentProperties =
+            [...propertySelect.options].map(
+                (option) => option.value,
+            );
+
+        if (
+            currentProperties.length ===
+                properties.length &&
+            currentProperties.every(
+                (property, index) =>
+                    property ===
+                    properties[index],
+            )
+        ) {
+            return;
+        }
+
+        const options =
+            properties.map(
+                (property) => {
+                    const option =
+                        document.createElement(
+                            "option",
+                        );
+
+                    option.value =
+                        property;
+
+                    option.textContent =
+                        property;
+
+                    return option;
+                },
+            );
+
+        propertySelect.replaceChildren(
+            ...options,
+        );
+    }
+
     function render() {
         list.replaceChildren();
 
         const annotationGroups =
             getAnnotationGroups();
 
+        const displayMode =
+            getDisplayMode();
+
+        const properties =
+            getAnnotationProperties();
+
         const hasAnnotations =
             annotationGroups.length > 0;
+
+        colourBySelect.value =
+            displayMode;
+
+        colourBySelect.disabled =
+            !hasAnnotations;
+
+        colourBySelect
+            .closest(
+                ".annotations-panel-display-field",
+            )
+            ?.classList.toggle(
+                "disabled",
+                !hasAnnotations,
+            );
+
+        const propertyModeOption =
+            colourBySelect.querySelector(
+                'option[value="property"]',
+            );
+
+        propertyModeOption.disabled =
+            !hasAnnotations ||
+            properties.length === 0;
+
+        propertyField.hidden =
+            displayMode !== "property";
+
+        updatePropertyOptions(
+            properties,
+        );
+
+        const selectedProperty =
+            getAnnotationProperty();
+
+        if (
+            selectedProperty !== null &&
+            properties.includes(
+                selectedProperty,
+            )
+        ) {
+            propertySelect.value =
+                selectedProperty;
+        }
+
+        const propertyRange =
+            getPropertyRange();
+
+        const showPropertyLegend =
+            displayMode === "property" &&
+            propertyRange !== null;
+
+        propertyLegend.hidden =
+            !showPropertyLegend;
+
+        if (showPropertyLegend) {
+            const [
+                minimum,
+                maximum,
+            ] = propertyRange;
+
+            propertyLegendCaption.textContent =
+                `${selectedProperty} values · low → high`;
+
+            propertyMin.textContent =
+                Number(
+                    minimum.toPrecision(4),
+                ).toString();
+
+            propertyMax.textContent =
+                Number(
+                    maximum.toPrecision(4),
+                ).toString();
+        }
+
+        propertySelect.disabled =
+            properties.length === 0;
 
         showAllButton.disabled =
             !hasAnnotations;
@@ -68,7 +207,8 @@ function createAnnotationsPanelController({
             !hasAnnotations;
 
         exportButton.disabled =
-            !hasAnnotations;
+            !hasAnnotations ||
+            displayMode === "property";
 
         if (annotationGroups.length === 0) {
             const empty =
@@ -170,6 +310,9 @@ function createAnnotationsPanelController({
                 colour.title =
                     `Change ${annotationName} colour`;
 
+                colour.disabled =
+                    displayMode === "property";
+
                 colour.addEventListener(
                     "change",
                     () => {
@@ -230,6 +373,9 @@ function createAnnotationsPanelController({
                         annotationType,
                     ).toString();
 
+                slider.disabled =
+                    displayMode === "property";
+
                 const value =
                     document.createElement("span");
 
@@ -279,6 +425,26 @@ function createAnnotationsPanelController({
             list.appendChild(group);
         }
     }
+
+    colourBySelect.addEventListener(
+        "change",
+        () => {
+            runAction(() =>
+                onDisplayModeChange(
+                    colourBySelect.value,
+                ));
+        },
+    );
+
+    propertySelect.addEventListener(
+        "change",
+        () => {
+            runAction(() =>
+                onPropertyChange(
+                    propertySelect.value,
+                ));
+        },
+    );
 
     showAllButton.addEventListener(
         "click",

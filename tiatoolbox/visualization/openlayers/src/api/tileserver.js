@@ -226,6 +226,75 @@ async function getAnnotationPropertyValues(
     return response.json();
 }
 
+async function setAnnotationProperty(property) {
+    const formData = new FormData();
+
+    formData.append(
+        "val",
+        JSON.stringify(property),
+    );
+
+    const response = await fetch(
+        "/tileserver/renderer/score_prop",
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update annotation property.",
+        );
+    }
+}
+
+async function setAnnotationMapper(mapper) {
+    const formData = new FormData();
+
+    formData.append(
+        "cmap",
+        JSON.stringify(mapper),
+    );
+
+    const response = await fetch(
+        "/tileserver/cmap",
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update annotation colour map.",
+        );
+    }
+}
+
+async function setAnnotationPropertyRange(range) {
+    const formData = new FormData();
+
+    formData.append(
+        "range",
+        JSON.stringify(range),
+    );
+
+    const response = await fetch(
+        "/tileserver/prop_range",
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update annotation property range.",
+        );
+    }
+}
+
 export {
     clearOverlays,
     createSession,
@@ -238,4 +307,7 @@ export {
     getAnnotationProperties,
     getAnnotationPropertyValues,
     setAnnotationColors,
+    setAnnotationMapper,
+    setAnnotationProperty,
+    setAnnotationPropertyRange,
 };

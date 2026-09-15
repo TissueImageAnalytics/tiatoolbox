@@ -17,8 +17,11 @@ import {
     getAnnotationColors,
     getAnnotationProperties,
     getAnnotationPropertyValues,
-    setAnnotationFilter,
     setAnnotationColors,
+    setAnnotationFilter,
+    setAnnotationMapper,
+    setAnnotationProperty,
+    setAnnotationPropertyRange,
 } from "../../../tiatoolbox/visualization/openlayers/src/api/tileserver.js";
 
 function mockResponse({
@@ -761,6 +764,161 @@ describe("annotation properties", () => {
             ),
         ).rejects.toThrow(
             "Failed to get annotation property values.",
+        );
+    });
+});
+
+describe("annotation display", () => {
+    it("sets the annotation property", async () => {
+        // Test changing the property used to colour annotations.
+        const fetchMock = vi.fn().mockResolvedValue(
+            mockResponse(),
+        );
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        await expect(
+            setAnnotationProperty("prob"),
+        ).resolves.toBeUndefined();
+
+        const [
+            url,
+            options,
+        ] = fetchMock.mock.calls[0];
+
+        expect(url).toBe(
+            "/tileserver/renderer/score_prop",
+        );
+
+        expect(options.method).toBe("PUT");
+
+        expect(
+            options.body.get("val"),
+        ).toBe(
+            JSON.stringify("prob"),
+        );
+    });
+
+    it("sets the annotation mapper", async () => {
+        // Test changing the annotation colour mapper.
+        const fetchMock = vi.fn().mockResolvedValue(
+            mockResponse(),
+        );
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        await expect(
+            setAnnotationMapper("viridis"),
+        ).resolves.toBeUndefined();
+
+        const [
+            url,
+            options,
+        ] = fetchMock.mock.calls[0];
+
+        expect(url).toBe(
+            "/tileserver/cmap",
+        );
+
+        expect(options.method).toBe("PUT");
+
+        expect(
+            options.body.get("cmap"),
+        ).toBe(
+            JSON.stringify("viridis"),
+        );
+    });
+
+    it("sets the annotation property range", async () => {
+        // Test changing the range used by the annotation mapper.
+        const fetchMock = vi.fn().mockResolvedValue(
+            mockResponse(),
+        );
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        await expect(
+            setAnnotationPropertyRange([
+                0.2,
+                0.8,
+            ]),
+        ).resolves.toBeUndefined();
+
+        const [
+            url,
+            options,
+        ] = fetchMock.mock.calls[0];
+
+        expect(url).toBe(
+            "/tileserver/prop_range",
+        );
+
+        expect(options.method).toBe("PUT");
+
+        expect(
+            options.body.get("range"),
+        ).toBe(
+            JSON.stringify([
+                0.2,
+                0.8,
+            ]),
+        );
+    });
+
+    it("rejects a failed annotation property update", async () => {
+        // Test error handling when the annotation property cannot be updated.
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue(
+                mockResponse({
+                    ok: false,
+                }),
+            ),
+        );
+
+        await expect(
+            setAnnotationProperty("prob"),
+        ).rejects.toThrow(
+            "Failed to update annotation property.",
+        );
+    });
+
+    it("rejects a failed annotation mapper update", async () => {
+        // Test error handling when the annotation mapper cannot be updated.
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue(
+                mockResponse({
+                    ok: false,
+                }),
+            ),
+        );
+
+        await expect(
+            setAnnotationMapper("viridis"),
+        ).rejects.toThrow(
+            "Failed to update annotation colour map.",
+        );
+    });
+
+    it("rejects a failed annotation property range update", async () => {
+        // Test error handling when the annotation property range cannot be updated.
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue(
+                mockResponse({
+                    ok: false,
+                }),
+            ),
+        );
+
+        await expect(
+            setAnnotationPropertyRange([
+                0,
+                1,
+            ]),
+        ).rejects.toThrow(
+            "Failed to update annotation property range.",
         );
     });
 });

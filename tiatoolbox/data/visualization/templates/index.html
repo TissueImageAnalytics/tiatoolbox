@@ -100,6 +100,54 @@
                 Annotations
             </div>
 
+            <div class="annotations-panel-display">
+                <label
+                    class="annotations-panel-display-field"
+                    for="annotations-colour-by"
+                >
+                    <span>Colour by</span>
+
+                    <select id="annotations-colour-by">
+                        <option value="type">Class</option>
+                        <option value="property">Property</option>
+                    </select>
+                </label>
+
+                <label
+                    id="annotations-property-field"
+                    class="annotations-panel-display-field"
+                    for="annotations-property"
+                    hidden
+                >
+                    <span>Property</span>
+
+                    <select id="annotations-property"></select>
+                </label>
+
+                <div
+                    id="annotations-property-legend"
+                    class="annotations-property-legend"
+                    hidden
+                >
+                    <div
+                        id="annotations-property-legend-caption"
+                        class="annotations-property-legend-caption"
+                    >
+                        Viridis colour scale
+                    </div>
+
+                    <div
+                        class="annotations-property-gradient"
+                        aria-hidden="true"
+                    ></div>
+
+                    <div class="annotations-property-range">
+                        <span id="annotations-property-min"></span>
+                        <span id="annotations-property-max"></span>
+                    </div>
+                </div>
+            </div>
+
             <div
                 id="annotations-panel-list"
                 class="annotations-panel-list"

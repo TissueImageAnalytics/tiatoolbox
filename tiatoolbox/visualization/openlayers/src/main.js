@@ -22,8 +22,13 @@ import {
     removeOverlay as removeTileServerOverlay,
     removeSlide as removeTileServerSlide,
     getAnnotationColors as getTileServerAnnotationColors,
+    getAnnotationProperties,
+    getAnnotationPropertyValues,
     setAnnotationFilter as setTileServerAnnotationFilter,
     setAnnotationColors as setTileServerAnnotationColors,
+    setAnnotationMapper,
+    setAnnotationProperty,
+    setAnnotationPropertyRange,
 } from "./api/tileserver.js";
 import {
     createMapControlsController,
@@ -97,6 +102,41 @@ const annotationsToggle = document.getElementById(
 const annotationsList = document.getElementById(
     "annotations-panel-list",
 );
+
+const annotationsColourBySelect =
+    document.getElementById(
+        "annotations-colour-by",
+    );
+
+const annotationsPropertyField =
+    document.getElementById(
+        "annotations-property-field",
+    );
+
+const annotationsPropertySelect =
+    document.getElementById(
+        "annotations-property",
+    );
+
+const annotationsPropertyLegend =
+    document.getElementById(
+        "annotations-property-legend",
+    );
+
+const annotationsPropertyLegendCaption =
+    document.getElementById(
+        "annotations-property-legend-caption",
+    );
+
+const annotationsPropertyMin =
+    document.getElementById(
+        "annotations-property-min",
+    );
+
+const annotationsPropertyMax =
+    document.getElementById(
+        "annotations-property-max",
+    );
 
 const annotationsShowAllButton =
     document.getElementById(
@@ -268,6 +308,13 @@ if (
     annotationsShowAllButton === null ||
     annotationsHideAllButton === null ||
     annotationsExportColoursButton === null ||
+    annotationsColourBySelect === null ||
+    annotationsPropertyField === null ||
+    annotationsPropertySelect === null ||
+    annotationsPropertyLegend === null ||
+    annotationsPropertyLegendCaption === null ||
+    annotationsPropertyMin === null ||
+    annotationsPropertyMax === null ||
     settingsPanel === null ||
     settingsToggle === null ||
     settingsCloseButton === null ||
@@ -409,6 +456,11 @@ const annotationColours = new Map();
 const annotationTypesByLayer = new Map();
 const annotationTypeVisibility = new Map();
 const annotationTypeOpacity = new Map();
+let annotationDisplayMode = "type";
+let annotationProperty = null;
+let annotationProperties = [];
+const annotationPropertyRanges =
+    new Map();
 
 function getAnnotationTypes() {
     const annotationTypes = new Set();
@@ -429,6 +481,227 @@ function getAnnotationGroups() {
             annotationTypes,
         }),
     );
+}
+
+async function getCommonAnnotationProperties() {
+    const layerNames =
+        [...annotationLayerNames];
+
+    if (layerNames.length === 0) {
+        return [];
+    }
+
+    const propertiesByLayer =
+        await Promise.all(
+            layerNames.map(
+                (layerName) =>
+                    getAnnotationProperties(
+                        layerName,
+                    ),
+            ),
+        );
+
+    const commonProperties =
+        propertiesByLayer[0].filter(
+            (property) =>
+                ![
+                    "type",
+                    "class",
+                ].includes(
+                    property.toLowerCase(),
+                ) &&
+                propertiesByLayer
+                    .slice(1)
+                    .every(
+                        (properties) =>
+                            properties.includes(
+                                property,
+                            ),
+                    ),
+        );
+
+    const numericProperties = [];
+
+    for (const property of commonProperties) {
+        const valuesByLayer =
+            await Promise.all(
+                layerNames.map(
+                    (layerName) =>
+                        getAnnotationPropertyValues(
+                            layerName,
+                            property,
+                        ),
+                ),
+            );
+
+        const values =
+            valuesByLayer.flat();
+
+        if (
+            values.length > 0 &&
+            values.every(
+                (value) =>
+                    typeof value === "number" &&
+                    Number.isFinite(value),
+            )
+        ) {
+            annotationPropertyRanges.set(
+                property,
+                [
+                    Math.min(...values),
+                    Math.max(...values),
+                ],
+            );
+
+            numericProperties.push(
+                property,
+            );
+        }
+    }
+
+    return numericProperties.sort();
+}
+
+function getAnnotationPropertyRenderRange(
+    property,
+) {
+    const range =
+        annotationPropertyRanges.get(
+            property,
+        );
+
+    if (range === undefined) {
+        throw new Error(
+            `Annotation property range is not available: ${property}`,
+        );
+    }
+
+    const [
+        minimum,
+        maximum,
+    ] = range;
+
+    if (minimum === maximum) {
+        return [
+            minimum,
+            minimum + 1,
+        ];
+    }
+
+    return range;
+}
+
+async function setAnnotationTypeMode({
+    refresh = true,
+} = {}) {
+    await setAnnotationProperty(
+        "type",
+    );
+
+    await setAnnotationPropertyRange(
+        null,
+    );
+
+    await setTileServerAnnotationColors(
+        annotationColours,
+    );
+
+    annotationDisplayMode = "type";
+    annotationProperty = null;
+
+    if (refresh) {
+        refreshAnnotationLayers();
+    }
+}
+
+async function resetAnnotationRenderer() {
+    await setAnnotationProperty(
+        "type",
+    );
+
+    await setAnnotationPropertyRange(
+        null,
+    );
+}
+
+async function setAnnotationPropertyMode(
+    property,
+    {
+        refresh = true,
+    } = {},
+) {
+    const range =
+        getAnnotationPropertyRenderRange(
+            property,
+        );
+
+    await setAnnotationProperty(
+        property,
+    );
+
+    await setAnnotationMapper(
+        "viridis",
+    );
+
+    await setAnnotationPropertyRange(
+        range,
+    );
+
+    annotationDisplayMode =
+        "property";
+
+    annotationProperty =
+        property;
+
+    if (refresh) {
+        refreshAnnotationLayers();
+    }
+}
+
+async function updateAnnotationProperties({
+    refresh = true,
+} = {}) {
+    if (annotationLayerNames.size === 0) {
+        await resetAnnotationRenderer();
+
+        annotationProperties = [];
+        annotationPropertyRanges.clear();
+        annotationDisplayMode = "type";
+        annotationProperty = null;
+
+        annotationsPanelController.render();
+        return;
+    }
+
+    annotationProperties = [];
+    annotationPropertyRanges.clear();
+
+    annotationsPanelController.render();
+
+    annotationProperties =
+        await getCommonAnnotationProperties();
+
+    if (annotationDisplayMode === "property") {
+        if (
+            annotationProperty === null ||
+            !annotationProperties.includes(
+                annotationProperty,
+            )
+        ) {
+            await setAnnotationTypeMode({
+                refresh,
+            });
+        } else {
+            await setAnnotationPropertyMode(
+                annotationProperty,
+                {
+                    refresh,
+                },
+            );
+        }
+    }
+
+    annotationsPanelController.render();
 }
 
 function exportAnnotationColours() {
@@ -574,10 +847,16 @@ function getAnnotationFilter() {
         .join(" | ");
 }
 
-function refreshAnnotationLayers() {
+function refreshAnnotationLayers(
+    excludedLayerName = null,
+) {
     overlayVersion += 1;
 
     for (const layerName of annotationLayerNames) {
+        if (layerName === excludedLayerName) {
+            continue;
+        }
+
         const overlayLayer =
             overlayLayers[layerName];
 
@@ -600,7 +879,9 @@ function refreshAnnotationLayers() {
     }
 }
 
-async function updateAnnotationFilter() {
+async function updateAnnotationFilter({
+    refresh = true,
+} = {}) {
     if (annotationLayerNames.size === 0) {
         return;
     }
@@ -609,7 +890,9 @@ async function updateAnnotationFilter() {
         getAnnotationFilter(),
     );
 
-    refreshAnnotationLayers();
+    if (refresh) {
+        refreshAnnotationLayers();
+    }
 }
 
 const configuredSlides =
@@ -663,6 +946,20 @@ const annotationsPanelController =
         panel: annotationsPanel,
         toggle: annotationsToggle,
         list: annotationsList,
+        colourBySelect:
+            annotationsColourBySelect,
+        propertyField:
+            annotationsPropertyField,
+        propertySelect:
+            annotationsPropertySelect,
+        propertyLegend:
+            annotationsPropertyLegend,
+        propertyLegendCaption:
+            annotationsPropertyLegendCaption,
+        propertyMin:
+            annotationsPropertyMin,
+        propertyMax:
+            annotationsPropertyMax,
         showAllButton:
             annotationsShowAllButton,
         hideAllButton:
@@ -671,6 +968,22 @@ const annotationsPanelController =
             annotationsExportColoursButton,
 
         getAnnotationGroups,
+
+        getDisplayMode: () =>
+            annotationDisplayMode,
+
+        getAnnotationProperties: () =>
+            annotationProperties,
+
+        getAnnotationProperty: () =>
+            annotationProperty,
+
+        getPropertyRange: () =>
+            annotationProperty === null
+                ? null
+                : annotationPropertyRanges.get(
+                    annotationProperty,
+                ) ?? null,
 
         getAnnotationColour: (annotationType) =>
             annotationColours.get(annotationType) ??
@@ -685,6 +998,33 @@ const annotationsPanelController =
             annotationTypeOpacity.get(
                 annotationType,
             ) ?? 1,
+
+        async onDisplayModeChange(mode) {
+            if (mode === "type") {
+                await setAnnotationTypeMode();
+                return;
+            }
+
+            const property =
+                annotationProperty ??
+                annotationProperties[0];
+
+            if (property === undefined) {
+                throw new Error(
+                    "No annotation properties are available.",
+                );
+            }
+
+            await setAnnotationPropertyMode(
+                property,
+            );
+        },
+
+        async onPropertyChange(property) {
+            await setAnnotationPropertyMode(
+                property,
+            );
+        },
 
         async onColourChange(
             annotationType,
@@ -1172,6 +1512,11 @@ function clearOverlayLayers() {
 
     pruneAnnotationTypeState();
 
+    annotationDisplayMode = "type";
+    annotationProperty = null;
+    annotationProperties = [];
+    annotationPropertyRanges.clear();
+
     annotationsPanelController.render();
     layersPanelController.render();
     filesPanelController.updateActionState();
@@ -1181,7 +1526,8 @@ async function clearOverlays() {
     await clearTileServerOverlays();
 
     clearOverlayLayers();
-    filesPanelController.updateActionState();
+
+    await resetAnnotationRenderer();
 }
 
 function getUrlViewState() {
@@ -1251,6 +1597,8 @@ async function removeSlide() {
 
     clearOverlayLayers();
 
+    await resetAnnotationRenderer();
+
     currentSlidePath = null;
     currentSlideInfo = null;
     layersData.length = 0;
@@ -1318,6 +1666,8 @@ async function switchSlide(slidePath) {
     }
 
     clearOverlayLayers();
+
+    await resetAnnotationRenderer();
 
     const slideInfo = await loadSlide(slidePath);
     currentSlideInfo = slideInfo;
@@ -1457,9 +1807,11 @@ async function loadOverlay(overlayPath) {
             annotationTypes,
         );
 
-        await setTileServerAnnotationColors(
-            annotationColours,
-        );
+        if (annotationDisplayMode === "type") {
+            await setTileServerAnnotationColors(
+                annotationColours,
+            );
+        }
     } else if (wasAnnotation) {
         annotationLayerNames.delete(layerName);
         annotationTypesByLayer.delete(layerName);
@@ -1467,7 +1819,21 @@ async function loadOverlay(overlayPath) {
         pruneAnnotationTypeState();
     }
 
-    overlayVersion += 1;
+    if (isAnnotation || wasAnnotation) {
+        await updateAnnotationProperties({
+            refresh: false,
+        });
+
+        await updateAnnotationFilter({
+            refresh: false,
+        });
+
+        refreshAnnotationLayers(
+            layerName,
+        );
+    } else {
+        overlayVersion += 1;
+    }
 
     const source = new Zoomify({
         url:
@@ -1507,12 +1873,6 @@ async function loadOverlay(overlayPath) {
 
         map.addLayer(overlayLayer);
         layers.push(overlayLayer);
-    }
-
-    if (isAnnotation || wasAnnotation) {
-        annotationsPanelController.render();
-
-        await updateAnnotationFilter();
     }
 
     layersPanelController.render();
@@ -1560,9 +1920,16 @@ async function removeOverlay(layerName) {
 
     if (wasAnnotation) {
         pruneAnnotationTypeState();
-        annotationsPanelController.render();
 
-        await updateAnnotationFilter();
+        await updateAnnotationProperties({
+            refresh: false,
+        });
+
+        await updateAnnotationFilter({
+            refresh: false,
+        });
+
+        refreshAnnotationLayers();
     }
 
     layersPanelController.render();
