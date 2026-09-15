@@ -40,6 +40,42 @@ class BayesianModelWrapper(torch.nn.Module):
     (mean_probs, aleatoric, epistemic, total, mc_probs) is appended to
     `self.uncertainty_stats` in inference order, so it can be aligned with
     the `coordinates` array written to the engine's output `.zarr`.
+
+    Example:
+        Wrap a pretrained patch classifier and run inference with the
+        patch predictor, collecting uncertainty per patch:
+
+        >>> from tiatoolbox.models.architecture import get_pretrained_model
+        >>> from tiatoolbox.models.engine.patch_predictor import PatchPredictor
+        >>> from tiatoolbox.models.architecture.bayesian_wrapper import (
+        ...     BayesianModelWrapper,
+        ... )
+        >>>
+        >>> model, _ = get_pretrained_model("resnet18-kather100k")
+        >>> bayesian_model = BayesianModelWrapper(
+        ...     base_model=model,
+        ...     n_samples=30,  # number of MC forward passes
+        ...     inject_dropout=True,  # model ships without Dropout
+        ...     dropout_p=0.2,
+        ... )
+        >>>
+        >>> predictor = PatchPredictor(model=bayesian_model)
+        >>> outputs = predictor.run(images=["sample_img.png"], patch_mode=True)
+        >>>
+        >>> # After predict() finishes, concatenate the per-batch stats:
+        >>> import numpy as np
+        >>> epistemic = np.concatenate(
+        ...     [s["epistemic"] for s in bayesian_model.uncertainty_stats], axis=0
+        ... )  # one value per patch, aligned with outputs["coordinates"]
+        >>> total = np.concatenate(
+        ...     [s["total"] for s in bayesian_model.uncertainty_stats], axis=0
+        ... )
+
+    Note:
+        The wrapped model must be a classification model whose
+        ``infer_batch(model, images, device)`` returns per-sample class
+        probabilities of shape ``[B, C]`` (e.g. :class:`CNNModel`,
+        :class:`TimmModel`).
     """
 
     def __init__(

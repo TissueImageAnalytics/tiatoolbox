@@ -25,7 +25,17 @@ _MIN_SEQ_LEN_FOR_DROPOUT = 2
 
 
 class mc_dropout_mode:  # noqa: N801 - intentional snake_case context-manager name
-    """Context manager: enable only Dropout layers, everything else stays in eval."""
+    """Context manager: enable only Dropout layers, everything else stays in eval.
+
+    Example:
+        Run 3 stochastic forward passes with dropout active while keeping
+        BatchNorm in eval mode:
+
+        >>> model.eval()
+        >>> with mc_dropout_mode(model):
+        ...     samples = [model(images) for _ in range(3)]
+        >>> # on exit, all modules are back to their previous training state
+    """
 
     def __init__(self, model: nn.Module) -> None:
         """Initialize :class:`mc_dropout_mode`.

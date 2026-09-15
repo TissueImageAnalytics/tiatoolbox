@@ -265,6 +265,81 @@ def test_getattr_raises_if_attribute_missing_everywhere() -> None:
         _ = wrapper.this_attribute_does_not_exist_anywhere
 
 
+class _ParamlessDropoutModel(nn.Module):
+    """Dropout-only model with no parameters, to hit the StopIteration branch."""
+
+    def __init__(self) -> None:
+        """Initialize :class:`_ParamlessDropoutModel`."""
+        super().__init__()
+        self.dropout = nn.Dropout(0.5)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Pass input through the dropout layer."""
+        return self.dropout(x)
+
+    @staticmethod
+    def infer_batch(
+        model: _ParamlessDropoutModel, batch_data: torch.Tensor, device: str = "cpu"
+    ) -> torch.Tensor:
+        """Return softmax probabilities, mimicking CNNModel.infer_batch."""
+        with torch.no_grad():
+            return torch.softmax(model(batch_data.to(device)), dim=-1)
+
+
+def test_getattr_raises_when_base_model_unset() -> None:
+    """__getattr__ raises AttributeError when base_model has not been assigned."""
+    wrapper = BayesianModelWrapper.__new__(BayesianModelWrapper)
+    nn.Module.__init__(wrapper)  # empty module: no base_model registered
+
+    with pytest.raises(AttributeError, match=r"has no attribute"):
+        _ = wrapper.any_attribute
+
+
+def test_bayesian_wrapper_infer_batch_model_without_parameters() -> None:
+    """infer_batch falls back to CPU device when the model has no parameters."""
+    model = _ParamlessDropoutModel()
+    wrapper = BayesianModelWrapper(base_model=model, n_samples=3, class_dim=-1)
+    dummy_batch = torch.rand(2, 4)
+
+    mean_probs = wrapper.infer_batch(wrapper, dummy_batch, device="cpu")
+
+    assert isinstance(mean_probs, np.ndarray)
+    assert mean_probs.shape == (2, 4)
+    assert len(wrapper.uncertainty_stats) == 1
+
+
+def test_vanilla_infer_batch_preserves_mc_dropout() -> None:
+    """``_infer_batch`` must not revert dropout layers set by ``mc_dropout_mode``.
+
+    Regression test: ``_infer_batch`` used to call ``model.eval()`` internally,
+    which silently deactivated the Dropout layers enabled by
+    :class:`mc_dropout_mode`, making all MC samples identical (epistemic = 0)
+    for every CNNModel/TimmModel-based model.
+    """
+    import importlib  # noqa: PLC0415
+
+    vanilla = importlib.import_module("tiatoolbox.models.architecture.vanilla")
+
+    model = DummyCNNModel(with_dropout=True)
+    model.eval()
+    dummy_batch = torch.rand(4, 8, 8, 3)  # NHWC, as _infer_batch expects
+
+    with mc_dropout_mode(model):
+        outputs = [
+            vanilla._infer_batch(model, dummy_batch, device="cpu") for _ in range(5)
+        ]
+        # Dropout layers must still be in train mode after repeated calls
+        assert model.classifier[0].training is True
+
+    stacks = np.stack(outputs, axis=0)
+    # At least one forward pass must differ (dropout was actually active)
+    assert not np.allclose(stacks, stacks[0])
+
+    # Outside the context the model is back in full eval mode
+    assert model.training is False
+    assert model.classifier[0].training is False
+
+
 def test_bayesian_wrapper_infer_batch_populates_uncertainty_stats() -> None:
     """``infer_batch`` returns mean probs and appends a per-batch uncertainty dict."""
     model = DummyCNNModel(with_dropout=True)

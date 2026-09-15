@@ -1,6 +1,8 @@
 """Uncertainty Quantification with Monte Carlo (MC Dropout).
 
 Gal & Ghahramani (2015), used by Policastro (2020) WSI analysis project.
+The main entry point is :class:`BayesianModelWrapper
+<tiatoolbox.models.architecture.bayesian_wrapper.BayesianModelWrapper>`.
 """
 
 from __future__ import annotations
@@ -24,6 +26,12 @@ def decompose_uncertainty(
     Returns:
         dict: mean_probs, epistemic, aleatoric, total uncertainty.
 
+    Example:
+        >>> # mc_probs: [T=30 MC passes, B=4 patches, C=2 classes]
+        >>> stats = decompose_uncertainty(mc_probs, class_dim=-1)
+        >>> stats["mean_probs"].shape  # [B, C] predictive probabilities
+        >>> stats["epistemic"].shape  # [B] model (reducible) uncertainty
+        >>> stats["aleatoric"].shape  # [B] data (irreducible) uncertainty
     """
     mean_probs = mc_probs.mean(dim=0)  # [..., C]
     var_probs = mc_probs.var(dim=0)  # [..., C]

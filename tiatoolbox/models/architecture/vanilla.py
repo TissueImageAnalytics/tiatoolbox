@@ -245,8 +245,10 @@ def _infer_batch(
     )  # to NCHW
     img_patches_device = img_patches_device.permute(0, 3, 1, 2).contiguous()
 
-    # Inference mode
-    model.eval()
+    # NOTE: model.eval() is intentionally not called here. Inference
+    # workflows (engines) must set eval mode once before inference. This
+    # allows Monte Carlo Dropout to keep Dropout layers active during
+    # inference without eval() silently reverting them inside this function.
     # Do not compute the gradient (not training)
     with torch.inference_mode():
         output = model(img_patches_device)
