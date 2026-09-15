@@ -1408,7 +1408,12 @@ class TileServer(Flask):
 
         """
         session_id = self._get_session_id()
-        anns = self.get_ann_layer(session_id).store.query(
+        layer_name = request.args.get("layer")
+
+        anns = self.get_ann_layer(
+            session_id,
+            layer_name,
+        ).store.query(
             Point(x, y),
         )
         if len(anns) == 0:

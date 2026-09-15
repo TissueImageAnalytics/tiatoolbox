@@ -1895,6 +1895,22 @@ def test_point_query(app: TileServer) -> None:
     assert json.loads(response.data) == {}
 
 
+def test_point_query_by_layer(app: TileServer) -> None:
+    """Test point query on a named annotation layer."""
+    layer = app.pyramids["default"]["store_geojson"]
+
+    annotation = next(iter(layer.store.values()))
+    point = annotation.geometry.representative_point()
+
+    with app.test_client() as client:
+        response = client.get(
+            f"/tileserver/tap_query/{point.x}/{point.y}?layer=store_geojson",
+        )
+
+    assert response.status_code == 200
+    assert response.get_json() == annotation.properties
+
+
 def test_prop_range(app: TileServer) -> None:
     """Test setting range in which color mapper will operate."""
     with app.test_client() as client:

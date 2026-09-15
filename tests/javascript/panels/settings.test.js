@@ -140,7 +140,10 @@ function createHarness() {
         createInput("100");
 
     const controlOpacityValue =
-        document.createElement("span");
+    document.createElement("span");
+
+    const annotationInspectionEnabledInput =
+        createCheckbox();
 
     const zoomVisibleInput =
         createCheckbox();
@@ -259,6 +262,9 @@ function createHarness() {
             "metric",
         );
 
+    const onAnnotationInspectionChange =
+    vi.fn();
+
     const onThemeChange = vi.fn();
 
     const onControlVisibilityChange =
@@ -293,6 +299,7 @@ function createHarness() {
             themeSelect,
             controlOpacityInput,
             controlOpacityValue,
+            annotationInspectionEnabledInput,
             zoomVisibleInput,
             zoomLevelVisibleInput,
             rotationVisibleInput,
@@ -314,6 +321,7 @@ function createHarness() {
             scaleBarOpacityInput,
             scaleBarSizeSelect,
             scaleBarUnitsSelect,
+            onAnnotationInspectionChange,
             onThemeChange,
             onControlVisibilityChange,
             onReset,
@@ -330,6 +338,7 @@ function createHarness() {
         themeSelect,
         controlOpacityInput,
         controlOpacityValue,
+        annotationInspectionEnabledInput,
         zoomVisibleInput,
         zoomLevelVisibleInput,
         rotationVisibleInput,
@@ -351,6 +360,7 @@ function createHarness() {
         scaleBarOpacityInput,
         scaleBarSizeSelect,
         scaleBarUnitsSelect,
+        onAnnotationInspectionChange,
         onThemeChange,
         onControlVisibilityChange,
         onReset,
@@ -659,6 +669,9 @@ describe("saving settings", () => {
         harness.controlOpacityInput.value =
             "75";
 
+        harness.annotationInspectionEnabledInput.checked =
+            false;
+
         harness.zoomVisibleInput.checked =
             false;
 
@@ -737,6 +750,7 @@ describe("saving settings", () => {
             interfaceOpacity: "75",
 
             controls: {
+                annotationInspection: false,
                 zoom: false,
                 zoomLevel: false,
                 rotation: false,
@@ -804,6 +818,38 @@ describe("saving settings", () => {
 
         expect(
             saved.controls.zoom,
+        ).toBe(false);
+    });
+
+    it("saves annotation inspection changes", () => {
+        // Test annotation inspection changes are applied and saved.
+        const {
+            annotationInspectionEnabledInput,
+            onAnnotationInspectionChange,
+            controller,
+        } = createHarness();
+
+        controller.bindEvents();
+
+        annotationInspectionEnabledInput.checked =
+            false;
+
+        dispatchChange(
+            annotationInspectionEnabledInput,
+        );
+
+        expect(
+            onAnnotationInspectionChange,
+        ).toHaveBeenCalledOnce();
+
+        const saved = JSON.parse(
+            window.localStorage.getItem(
+                settingsStorageKey,
+            ),
+        );
+
+        expect(
+            saved.controls.annotationInspection,
         ).toBe(false);
     });
 
@@ -902,6 +948,7 @@ describe("loading settings", () => {
                 interfaceOpacity: "65",
 
                 controls: {
+                    annotationInspection: false,
                     zoom: false,
                     zoomLevel: true,
                     rotation: false,
@@ -950,6 +997,10 @@ describe("loading settings", () => {
         expect(
             harness.controlOpacityInput.value,
         ).toBe("65");
+
+        expect(
+            harness.annotationInspectionEnabledInput.checked,
+        ).toBe(false);
 
         expect(
             harness.zoomVisibleInput.checked,
@@ -1048,6 +1099,7 @@ describe("loading settings", () => {
                 interfaceOpacity: "33",
 
                 controls: {
+                    annotationInspection: "false",
                     zoom: "false",
                     zoomLevel: 0,
                     rotation: null,
@@ -1098,6 +1150,7 @@ describe("loading settings", () => {
         ).toBe("100");
 
         for (const input of [
+            harness.annotationInspectionEnabledInput,
             harness.zoomVisibleInput,
             harness.zoomLevelVisibleInput,
             harness.rotationVisibleInput,
@@ -1225,6 +1278,7 @@ describe("resetting settings", () => {
             "40";
 
         for (const input of [
+            harness.annotationInspectionEnabledInput,
             harness.zoomVisibleInput,
             harness.zoomLevelVisibleInput,
             harness.rotationVisibleInput,
@@ -1285,6 +1339,7 @@ describe("resetting settings", () => {
         ).toBe("100");
 
         for (const input of [
+            harness.annotationInspectionEnabledInput,
             harness.zoomVisibleInput,
             harness.zoomLevelVisibleInput,
             harness.rotationVisibleInput,

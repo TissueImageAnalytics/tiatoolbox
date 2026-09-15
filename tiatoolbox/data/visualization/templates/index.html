@@ -186,6 +186,36 @@
             </div>
         </aside>
 
+        <aside
+            id="annotation-inspector"
+            class="annotation-inspector"
+            hidden
+        >
+            <div
+                id="annotation-inspector-header"
+                class="annotation-inspector-header"
+            >
+                <span id="annotation-inspector-title">
+                    Annotation
+                </span>
+
+                <button
+                    id="annotation-inspector-close"
+                    class="annotation-inspector-close"
+                    type="button"
+                    title="Close annotation information"
+                    aria-label="Close annotation information"
+                >
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div
+                id="annotation-inspector-properties"
+                class="annotation-inspector-properties"
+            ></div>
+        </aside>
+
         <aside id="settings-panel" class="settings-panel hidden">
             <div class="settings-panel-header">
                 <span>Settings</span>
@@ -329,6 +359,27 @@
                     class="settings-tab-panel hidden"
                     data-settings-panel="controls"
                 >
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Annotation inspection
+                            </div>
+                            <div class="settings-option-description">
+                                Show annotation information when selecting an annotation.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-annotation-inspection"
+                                type="checkbox"
+                                aria-label="Enable annotation inspection"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
                     <div class="settings-option">
                         <div class="settings-option-text">
                             <div class="settings-option-label">

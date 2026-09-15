@@ -15,6 +15,7 @@ import {
     removeOverlay,
     removeSlide,
     getAnnotationColors,
+    getAnnotationAtPoint,
     getAnnotationProperties,
     getAnnotationPropertyValues,
     setAnnotationColors,
@@ -724,6 +725,61 @@ describe("annotation properties", () => {
             0.2,
             0.8,
         ]);
+    });
+
+    it("gets an annotation at a point for a layer", async () => {
+        // Test annotation inspection targets the selected annotation layer.
+        const annotation = {
+            type: 1,
+            prob: 0.91,
+        };
+
+        const fetchMock = vi.fn().mockResolvedValue(
+            mockResponse({
+                json: annotation,
+            }),
+        );
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        const result =
+            await getAnnotationAtPoint(
+                "nucleus_detection",
+                123.5,
+                456.25,
+            );
+
+        expect(
+            fetchMock,
+        ).toHaveBeenCalledExactlyOnceWith(
+            "/tileserver/tap_query/123.5/456.25?layer=nucleus_detection",
+        );
+
+        expect(result).toEqual(
+            annotation,
+        );
+    });
+
+    it("rejects failed annotation inspection requests", async () => {
+        // Test a failed annotation inspection request is rejected.
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue(
+                mockResponse({
+                    ok: false,
+                }),
+            ),
+        );
+
+        await expect(
+            getAnnotationAtPoint(
+                "annotations",
+                10,
+                20,
+            ),
+        ).rejects.toThrow(
+            "Failed to inspect annotation.",
+        );
     });
 
     it("rejects failed annotation property requests", async () => {

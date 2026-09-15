@@ -22,6 +22,7 @@ import {
     removeOverlay as removeTileServerOverlay,
     removeSlide as removeTileServerSlide,
     getAnnotationColors as getTileServerAnnotationColors,
+    getAnnotationAtPoint,
     getAnnotationProperties,
     getAnnotationPropertyValues,
     setAnnotationFilter as setTileServerAnnotationFilter,
@@ -138,6 +139,31 @@ const annotationsPropertyMax =
         "annotations-property-max",
     );
 
+const annotationInspector =
+    document.getElementById(
+        "annotation-inspector",
+    );
+
+const annotationInspectorHeader =
+    document.getElementById(
+        "annotation-inspector-header",
+    );
+
+const annotationInspectorTitle =
+    document.getElementById(
+        "annotation-inspector-title",
+    );
+
+const annotationInspectorProperties =
+    document.getElementById(
+        "annotation-inspector-properties",
+    );
+
+const annotationInspectorClose =
+    document.getElementById(
+        "annotation-inspector-close",
+    );
+
 const annotationsShowAllButton =
     document.getElementById(
         "annotations-show-all",
@@ -172,6 +198,11 @@ const settingsTabs = document.querySelectorAll(
 const settingsTabPanels = document.querySelectorAll(
     ".settings-tab-panel",
 );
+
+const annotationInspectionEnabledInput =
+    document.getElementById(
+        "settings-annotation-inspection",
+    );
 
 const zoomVisibleInput = document.getElementById(
     "settings-zoom-visible",
@@ -315,9 +346,15 @@ if (
     annotationsPropertyLegendCaption === null ||
     annotationsPropertyMin === null ||
     annotationsPropertyMax === null ||
+    annotationInspector === null ||
+    annotationInspectorHeader === null ||
+    annotationInspectorTitle === null ||
+    annotationInspectorProperties === null ||
+    annotationInspectorClose === null ||
     settingsPanel === null ||
     settingsToggle === null ||
     settingsCloseButton === null ||
+    annotationInspectionEnabledInput === null ||
     zoomVisibleInput === null ||
     zoomLevelVisibleInput === null ||
     rotationVisibleInput === null ||
@@ -373,6 +410,7 @@ const settingsPanelController =
         themeSelect,
         controlOpacityInput,
         controlOpacityValue,
+        annotationInspectionEnabledInput,
         zoomVisibleInput,
         zoomLevelVisibleInput,
         rotationVisibleInput,
@@ -394,6 +432,14 @@ const settingsPanelController =
         scaleBarOpacityInput,
         scaleBarSizeSelect,
         scaleBarUnitsSelect,
+
+        onAnnotationInspectionChange() {
+            if (
+                !annotationInspectionEnabledInput.checked
+            ) {
+                annotationInspector.hidden = true;
+            }
+        },
 
         onThemeChange() {
             scaleBarColourInput.value =
@@ -893,6 +939,246 @@ async function updateAnnotationFilter({
     if (refresh) {
         refreshAnnotationLayers();
     }
+}
+
+async function inspectAnnotationAtCoordinate(
+    coordinate,
+) {
+    const [
+        x,
+        y,
+    ] = coordinate;
+
+    const layerNames =
+        [...annotationLayerNames]
+            .filter(
+                (layerName) =>
+                    overlayLayers[
+                        layerName
+                    ]?.getVisible() !== false,
+            )
+            .sort(
+                (firstLayerName, secondLayerName) =>
+                    (
+                        overlayLayers[
+                            secondLayerName
+                        ]?.getZIndex() ?? 0
+                    ) -
+                    (
+                        overlayLayers[
+                            firstLayerName
+                        ]?.getZIndex() ?? 0
+                    ),
+            );
+
+    for (const layerName of layerNames) {
+        const properties =
+            await getAnnotationAtPoint(
+                layerName,
+                x,
+                -y,
+            );
+
+        if (
+            Object.keys(
+                properties,
+            ).length === 0
+        ) {
+            continue;
+        }
+
+        if (
+            properties.type !== undefined &&
+            annotationTypeVisibility.get(
+                properties.type,
+            ) === false
+        ) {
+            continue;
+        }
+
+        return {
+            layerName,
+            properties,
+        };
+    }
+
+    return null;
+}
+
+function formatAnnotationPropertyName(property) {
+    const labels = {
+        box: "Bounding box (px)",
+        centroid: "Centroid (px)",
+        prob: "Probability",
+        type: "Type",
+    };
+
+    return labels[property] ?? property;
+}
+
+function formatAnnotationPropertyValue(
+    property,
+    value,
+) {
+    if (
+        property === "prob" &&
+        typeof value === "number"
+    ) {
+        return `${value.toFixed(4)} (${(value * 100).toFixed(2)}%)`;
+    }
+
+    if (
+        property === "centroid" &&
+        Array.isArray(value) &&
+        value.length >= 2
+    ) {
+        const [
+            x,
+            y,
+        ] = value;
+
+        return (
+            `x: ${typeof x === "number" ? x.toFixed(2) : x}, ` +
+            `y: ${typeof y === "number" ? y.toFixed(2) : y}`
+        );
+    }
+
+    if (
+        property === "box" &&
+        Array.isArray(value) &&
+        value.length === 4
+    ) {
+        return `x: ${value[0]}–${value[2]}, y: ${value[1]}–${value[3]}`;
+    }
+
+    if (Array.isArray(value)) {
+        return value.join(", ");
+    }
+
+    if (
+        typeof value === "number" &&
+        !Number.isInteger(value)
+    ) {
+        return value.toFixed(4);
+    }
+
+    if (
+        value !== null &&
+        typeof value === "object"
+    ) {
+        return JSON.stringify(value);
+    }
+
+    return String(value);
+}
+
+function positionAnnotationInspector(
+    requestedLeft,
+    requestedTop,
+) {
+    const margin = 8;
+
+    const maxLeft = Math.max(
+        margin,
+        viewerApp.clientWidth -
+            annotationInspector.offsetWidth -
+            margin,
+    );
+
+    const maxTop = Math.max(
+        margin,
+        viewerApp.clientHeight -
+            annotationInspector.offsetHeight -
+            margin,
+    );
+
+    annotationInspector.style.left =
+        `${Math.min(
+            Math.max(requestedLeft, margin),
+            maxLeft,
+        )}px`;
+
+    annotationInspector.style.top =
+        `${Math.min(
+            Math.max(requestedTop, margin),
+            maxTop,
+        )}px`;
+}
+
+function showAnnotationInspector(
+    inspection,
+    pixel,
+) {
+    annotationInspectorTitle.textContent =
+        inspection.layerName;
+
+    annotationInspectorProperties.replaceChildren();
+
+    for (
+        const [
+            property,
+            value,
+        ] of Object.entries(
+            inspection.properties,
+        )
+    ) {
+        const row =
+            document.createElement("div");
+
+        row.className =
+            "annotation-inspector-property";
+
+        const name =
+            document.createElement("div");
+
+        name.className =
+            "annotation-inspector-property-name";
+
+        name.textContent =
+            formatAnnotationPropertyName(
+                property,
+            );
+
+        const propertyValue =
+            document.createElement("div");
+
+        propertyValue.className =
+            "annotation-inspector-property-value";
+
+        propertyValue.textContent =
+            formatAnnotationPropertyValue(
+                property,
+                value,
+            );
+
+        row.append(
+            name,
+            propertyValue,
+        );
+
+        annotationInspectorProperties.append(
+            row,
+        );
+    }
+
+    annotationInspector.hidden = false;
+
+    const mapRect =
+        mapElement.getBoundingClientRect();
+
+    const viewerRect =
+        viewerApp.getBoundingClientRect();
+
+    positionAnnotationInspector(
+        mapRect.left -
+            viewerRect.left +
+            pixel[0] +
+            12,
+        mapRect.top -
+            viewerRect.top +
+            pixel[1] +
+            12,
+    );
 }
 
 const configuredSlides =
@@ -1491,6 +1777,120 @@ map.on("moveend", () => {
     mapControlsController.updateZoomLevel();
 });
 
+map.on("singleclick", async (event) => {
+    if (
+        !annotationInspectionEnabledInput.checked ||
+        annotationLayerNames.size === 0
+    ) {
+        return;
+    }
+
+    try {
+        const inspection =
+            await inspectAnnotationAtCoordinate(
+                event.coordinate,
+            );
+
+        if (inspection === null) {
+            return;
+        }
+
+        showAnnotationInspector(
+            inspection,
+            event.pixel,
+        );
+    } catch (error) {
+        console.error(
+            "Failed to inspect annotation.",
+            error,
+        );
+    }
+});
+
+annotationInspectorClose.addEventListener(
+    "click",
+    () => {
+        annotationInspector.hidden = true;
+    },
+);
+
+let annotationInspectorDragging = false;
+let annotationInspectorDragOffsetX = 0;
+let annotationInspectorDragOffsetY = 0;
+
+annotationInspectorHeader.addEventListener(
+    "pointerdown",
+    (event) => {
+        if (
+            event.target.closest("button") !== null
+        ) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const inspectorRect =
+            annotationInspector.getBoundingClientRect();
+
+        annotationInspectorDragging = true;
+
+        annotationInspectorDragOffsetX =
+            event.clientX -
+            inspectorRect.left;
+
+        annotationInspectorDragOffsetY =
+            event.clientY -
+            inspectorRect.top;
+
+        annotationInspectorHeader.setPointerCapture(
+            event.pointerId,
+        );
+
+        annotationInspector.classList.add(
+            "dragging",
+        );
+    },
+);
+
+annotationInspectorHeader.addEventListener(
+    "pointermove",
+    (event) => {
+        if (!annotationInspectorDragging) {
+            return;
+        }
+
+        const viewerRect =
+            viewerApp.getBoundingClientRect();
+
+        positionAnnotationInspector(
+            event.clientX -
+                viewerRect.left -
+                annotationInspectorDragOffsetX,
+            event.clientY -
+                viewerRect.top -
+                annotationInspectorDragOffsetY,
+        );
+    },
+);
+
+function stopAnnotationInspectorDrag() {
+    annotationInspectorDragging = false;
+
+    annotationInspector.classList.remove(
+        "dragging",
+    );
+}
+
+annotationInspectorHeader.addEventListener(
+    "pointerup",
+    stopAnnotationInspectorDrag,
+);
+
+annotationInspectorHeader.addEventListener(
+    "pointercancel",
+    stopAnnotationInspectorDrag,
+);
+
 function clearOverlayLayers() {
     for (const overlayLayer of Object.values(overlayLayers)) {
         overlayLayer.setSource(null);
@@ -1509,6 +1909,8 @@ function clearOverlayLayers() {
 
     annotationLayerNames.clear();
     annotationTypesByLayer.clear();
+
+    annotationInspector.hidden = true;
 
     pruneAnnotationTypeState();
 

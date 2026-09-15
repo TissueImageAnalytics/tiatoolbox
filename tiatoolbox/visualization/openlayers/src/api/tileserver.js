@@ -226,6 +226,29 @@ async function getAnnotationPropertyValues(
     return response.json();
 }
 
+async function getAnnotationAtPoint(
+    layerName,
+    x,
+    y,
+) {
+    const params =
+        new URLSearchParams({
+            layer: layerName,
+        });
+
+    const response = await fetch(
+        `/tileserver/tap_query/${x}/${y}?${params}`,
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to inspect annotation.",
+        );
+    }
+
+    return response.json();
+}
+
 async function setAnnotationProperty(property) {
     const formData = new FormData();
 
@@ -304,6 +327,7 @@ export {
     removeOverlay,
     removeSlide,
     getAnnotationColors,
+    getAnnotationAtPoint,
     getAnnotationProperties,
     getAnnotationPropertyValues,
     setAnnotationColors,

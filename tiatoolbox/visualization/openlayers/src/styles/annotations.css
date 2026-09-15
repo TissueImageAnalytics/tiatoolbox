@@ -284,3 +284,92 @@
 
     border-top: 1px solid var(--viewer-control-border);
 }
+
+
+/* Annotation inspector */
+
+.annotation-inspector {
+    position: absolute;
+    z-index: 1200;
+    width: 280px;
+    max-height: min(420px, calc(100% - 24px));
+    overflow: hidden;
+
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+
+    border: 1px solid var(--viewer-control-border);
+    border-radius: 8px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+
+    font-size: 12px;
+}
+
+
+.annotation-inspector[hidden] {
+    display: none;
+}
+
+
+.annotation-inspector-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 10px;
+
+    border-bottom: 1px solid var(--viewer-control-border);
+
+    font-weight: 600;
+
+    cursor: move;
+    touch-action: none;
+    user-select: none;
+}
+
+
+.annotation-inspector.dragging .annotation-inspector-header {
+    cursor: grabbing;
+}
+
+
+.annotation-inspector-close {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    padding: 0;
+
+    background: transparent;
+    color: inherit;
+
+    border: 0;
+    border-radius: 4px;
+
+    cursor: pointer;
+}
+
+
+.annotation-inspector-properties {
+    max-height: 360px;
+    padding: 8px 10px;
+    overflow: auto;
+}
+
+
+.annotation-inspector-property {
+    display: grid;
+    grid-template-columns: minmax(70px, 0.4fr) minmax(0, 0.6fr);
+    gap: 10px;
+    padding: 4px 0;
+}
+
+
+.annotation-inspector-property-name {
+    color: var(--viewer-control-muted-foreground);
+}
+
+
+.annotation-inspector-property-value {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
