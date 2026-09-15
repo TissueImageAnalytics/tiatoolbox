@@ -62,6 +62,9 @@ import {
     createAnnotationColourConfig,
 } from "./utils/annotation-colours.js";
 import { hexToRgb } from "./utils/colours.js";
+import {
+    getFiniteNumberRange,
+} from "./utils/numbers.js";
 import { getFileStem } from "./utils/paths.js";
 
 // Create a Zoomify source with versions to avoid reusing tiles from an old slide.
@@ -598,20 +601,15 @@ async function getCommonAnnotationProperties() {
         const values =
             valuesByLayer.flat();
 
-        if (
-            values.length > 0 &&
-            values.every(
-                (value) =>
-                    typeof value === "number" &&
-                    Number.isFinite(value),
-            )
-        ) {
+        const range =
+            getFiniteNumberRange(
+                values,
+            );
+
+        if (range !== null) {
             annotationPropertyRanges.set(
                 property,
-                [
-                    Math.min(...values),
-                    Math.max(...values),
-                ],
+                range,
             );
 
             numericProperties.push(
