@@ -1786,6 +1786,31 @@ def test_secondary_cmap(app: TileServer) -> None:
             colormaps["viridis"](1.0),
         )
 
+        # Test a constant range is expanded for normalisation.
+        response = client.put(
+            "/tileserver/secondary_cmap",
+            data={
+                "type_id": json.dumps(0),
+                "prop": "prob",
+                "cmap": json.dumps("viridis"),
+                "range": json.dumps([0.5, 0.5]),
+            },
+        )
+
+        assert response.status_code == 200
+
+        mapper = layer.renderer.secondary_cmap["mapper"]
+
+        np.testing.assert_allclose(
+            mapper(0.5),
+            colormaps["viridis"](0),
+        )
+
+        np.testing.assert_allclose(
+            mapper(1.5),
+            colormaps["viridis"](1.0),
+        )
+
 
 def test_get_props(app_alt: TileServer) -> None:
     """Test getting props."""
@@ -2190,14 +2215,14 @@ def test_annotation_colours_are_deterministic(app: TileServer) -> None:
     with app.test_client() as client:
         response = client.put(
             "/tileserver/annotation_colours",
-            data={"types": json.dumps([0, 1, 2])},
+            data={"types": json.dumps([0, -1, "Tumour"])},
         )
         assert response.status_code == 200
         first = response.get_json()
 
         response = client.put(
             "/tileserver/annotation_colours",
-            data={"types": json.dumps([2, 1, 0])},
+            data={"types": json.dumps(["Tumour", -1, 0])},
         )
         assert response.status_code == 200
         second = response.get_json()

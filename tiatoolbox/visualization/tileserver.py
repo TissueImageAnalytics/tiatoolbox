@@ -715,6 +715,7 @@ class TileServer(Flask):
 
         return response
 
+    # skipcq: PY-R1000  # noqa: ERA001
     def get_configured_files(
         self: TileServer,
         kind: str,
