@@ -50,19 +50,19 @@ function createHarness({
             <div id="list"></div>
 
             <button
-                id="show-all"
+                id="select-all"
                 type="button"
                 disabled
             >
-                Show all
+                Select all
             </button>
 
             <button
-                id="hide-all"
+                id="deselect-all"
                 type="button"
                 disabled
             >
-                Hide all
+                Deselect all
             </button>
 
             <button
@@ -123,11 +123,11 @@ function createHarness({
             "property-max",
         );
 
-    const showAllButton =
-        document.getElementById("show-all");
+    const selectAllButton =
+        document.getElementById("select-all");
 
-    const hideAllButton =
-        document.getElementById("hide-all");
+    const deselectAllButton =
+        document.getElementById("deselect-all");
 
     const exportButton =
         document.getElementById("export");
@@ -209,8 +209,8 @@ function createHarness({
             propertyLegendCaption,
             propertyMin,
             propertyMax,
-            showAllButton,
-            hideAllButton,
+            selectAllButton,
+            deselectAllButton,
             exportButton,
 
             getAnnotationGroups: () =>
@@ -283,8 +283,8 @@ function createHarness({
         propertyLegendCaption,
         propertyMin,
         propertyMax,
-        showAllButton,
-        hideAllButton,
+        selectAllButton,
+        deselectAllButton,
         exportButton,
         colours,
         visibility,
@@ -317,8 +317,8 @@ describe("createAnnotationsPanelController", () => {
             controller,
             list,
             colourBySelect,
-            showAllButton,
-            hideAllButton,
+            selectAllButton,
+            deselectAllButton,
             exportButton,
         } = createHarness();
 
@@ -344,8 +344,8 @@ describe("createAnnotationsPanelController", () => {
             )?.textContent,
         ).toBe("No annotations loaded");
 
-        expect(showAllButton.disabled).toBe(true);
-        expect(hideAllButton.disabled).toBe(true);
+        expect(selectAllButton.disabled).toBe(true);
+        expect(deselectAllButton.disabled).toBe(true);
         expect(exportButton.disabled).toBe(true);
     });
 
@@ -354,8 +354,8 @@ describe("createAnnotationsPanelController", () => {
         const {
             controller,
             list,
-            showAllButton,
-            hideAllButton,
+            selectAllButton,
+            deselectAllButton,
             exportButton,
             colours,
         } = createHarness({
@@ -439,8 +439,8 @@ describe("createAnnotationsPanelController", () => {
         expect(sliders[0].value).toBe("1");
         expect(sliders[1].value).toBe("0.5");
 
-        expect(showAllButton.disabled).toBe(false);
-        expect(hideAllButton.disabled).toBe(false);
+        expect(selectAllButton.disabled).toBe(false);
+        expect(deselectAllButton.disabled).toBe(false);
         expect(exportButton.disabled).toBe(false);
     });
 
@@ -1050,11 +1050,11 @@ describe("createAnnotationsPanelController", () => {
     });
 
     it("calls the bulk visibility callbacks", async () => {
-        // Test Show all and Hide all call the bulk visibility callback.
+        // Test Select all and Deselect all call the bulk visibility callback.
         const {
             controller,
-            showAllButton,
-            hideAllButton,
+            selectAllButton,
+            deselectAllButton,
             onSetAllVisibility,
         } = createHarness({
             annotationGroups: [
@@ -1069,7 +1069,7 @@ describe("createAnnotationsPanelController", () => {
 
         controller.render();
 
-        showAllButton.click();
+        selectAllButton.click();
 
         await flushActions();
 
@@ -1077,7 +1077,7 @@ describe("createAnnotationsPanelController", () => {
             onSetAllVisibility,
         ).toHaveBeenCalledWith(true);
 
-        hideAllButton.click();
+        deselectAllButton.click();
 
         await flushActions();
 

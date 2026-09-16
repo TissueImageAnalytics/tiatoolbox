@@ -139,7 +139,7 @@ annotation layers are shown.
 **Class + Property** keeps the normal class colours while allowing one selected
 class to be coloured by a numeric property.
 
-**Show all** and **Hide all** can be used to change the visibility of all
+**Select all** and **Deselect all** can be used to change the visibility of all
 annotation types at once.
 
 Selecting an annotation in the viewer shows its layer and annotation

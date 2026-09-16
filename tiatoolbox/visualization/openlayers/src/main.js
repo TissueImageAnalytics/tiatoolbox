@@ -182,14 +182,14 @@ const annotationInspectorClose =
         "annotation-inspector-close",
     );
 
-const annotationsShowAllButton =
+const annotationsSelectAllButton =
     document.getElementById(
-        "annotations-show-all",
+        "annotations-select-all",
     );
 
-const annotationsHideAllButton =
+const annotationsDeselectAllButton =
     document.getElementById(
-        "annotations-hide-all",
+        "annotations-deselect-all",
     );
 
 const annotationsExportColoursButton =
@@ -354,8 +354,8 @@ if (
     annotationsPanel === null ||
     annotationsToggle === null ||
     annotationsList === null ||
-    annotationsShowAllButton === null ||
-    annotationsHideAllButton === null ||
+    annotationsSelectAllButton === null ||
+    annotationsDeselectAllButton === null ||
     annotationsExportColoursButton === null ||
     annotationsColourBySelect === null ||
     annotationsPropertyField === null ||
@@ -1333,10 +1333,10 @@ const annotationsPanelController =
             annotationsPropertyMin,
         propertyMax:
             annotationsPropertyMax,
-        showAllButton:
-            annotationsShowAllButton,
-        hideAllButton:
-            annotationsHideAllButton,
+        selectAllButton:
+            annotationsSelectAllButton,
+        deselectAllButton:
+            annotationsDeselectAllButton,
         exportButton:
             annotationsExportColoursButton,
 

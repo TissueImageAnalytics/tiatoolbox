@@ -17,8 +17,8 @@ function createAnnotationsPanelController({
     panel,
     toggle,
     list,
-    showAllButton,
-    hideAllButton,
+    selectAllButton,
+    deselectAllButton,
     exportButton,
     colourBySelect,
     secondaryTypeField,
@@ -309,10 +309,10 @@ function createAnnotationsPanelController({
         propertySelect.disabled =
             properties.length === 0;
 
-        showAllButton.disabled =
+        selectAllButton.disabled =
             !hasAnnotations;
 
-        hideAllButton.disabled =
+        deselectAllButton.disabled =
             !hasAnnotations;
 
         exportButton.disabled =
@@ -577,7 +577,7 @@ function createAnnotationsPanelController({
         },
     );
 
-    showAllButton.addEventListener(
+    selectAllButton.addEventListener(
         "click",
         () => {
             runAction(() =>
@@ -585,7 +585,7 @@ function createAnnotationsPanelController({
         },
     );
 
-    hideAllButton.addEventListener(
+    deselectAllButton.addEventListener(
         "click",
         () => {
             runAction(() =>
