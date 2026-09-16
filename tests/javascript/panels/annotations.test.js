@@ -357,6 +357,7 @@ describe("createAnnotationsPanelController", () => {
             showAllButton,
             hideAllButton,
             exportButton,
+            colours,
         } = createHarness({
             annotationGroups: [
                 {
@@ -369,6 +370,11 @@ describe("createAnnotationsPanelController", () => {
                 },
             ],
         });
+
+        colours.set(
+            "Tumour",
+            "#ff8000",
+        );
 
         controller.render();
 

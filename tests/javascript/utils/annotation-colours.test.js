@@ -371,4 +371,33 @@ describe("createAnnotationColourConfig", () => {
             },
         });
     });
+
+    it("skips loaded types without assigned colours", () => {
+        // Test loaded annotation types without colours are not exported.
+        const colourMap = new Map([
+            [
+                "Tumour",
+                [1, 0, 0, 1],
+            ],
+        ]);
+
+        expect(
+            createAnnotationColourConfig(
+                colourMap,
+                [
+                    "Tumour",
+                    "Stroma",
+                ],
+            ),
+        ).toEqual({
+            color_dict: {
+                Tumour: [
+                    255,
+                    0,
+                    0,
+                    255,
+                ],
+            },
+        });
+    });
 });

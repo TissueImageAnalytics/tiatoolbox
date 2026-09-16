@@ -967,6 +967,7 @@ class TileServer(Flask):
             def normalised_mapper(
                 value: float,
             ) -> tuple[float, ...]:
+                """Map a value normalised to the configured property range."""
                 normalised_value = round(
                     (value - minimum) / (maximum - minimum),
                     15,

@@ -665,6 +665,26 @@ describe("setAnnotationColors", () => {
             ],
         ]);
     });
+
+    it("rejects failed annotation colour generation", async () => {
+        // Test error handling when annotation colours cannot be generated.
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue(
+                mockResponse({
+                    ok: false,
+                }),
+            ),
+        );
+
+        await expect(
+            getAnnotationColors([
+                "Tumour",
+            ]),
+        ).rejects.toThrow(
+            "Failed to generate annotation colours.",
+        );
+    });
 });
 
 describe("annotation properties", () => {
@@ -1077,6 +1097,24 @@ describe("annotation display", () => {
         expect(
             options.body.get("val"),
         ).toBe("null");
+    });
+
+    it("rejects failed secondary annotation mapper clearing", async () => {
+        // Test error handling when the secondary mapper cannot be cleared.
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue(
+                mockResponse({
+                    ok: false,
+                }),
+            ),
+        );
+
+        await expect(
+            clearAnnotationSecondaryMapper(),
+        ).rejects.toThrow(
+            "Failed to clear secondary annotation colour map.",
+        );
     });
 
     it("preserves numeric secondary annotation types", async () => {
