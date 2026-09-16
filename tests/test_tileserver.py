@@ -413,6 +413,70 @@ def test_configured_files(tmp_path: Path) -> None:
         }
 
 
+def test_configured_overlay_files_load_config(
+    tmp_path: Path,
+) -> None:
+    """Test overlay config is returned without being listed as an overlay."""
+    overlays = tmp_path / "overlays"
+    overlays.mkdir()
+
+    overlay = overlays / "annotations.json"
+    overlay.touch()
+
+    config_file = overlays / "demo_config.json"
+    config_file.write_text(
+        """
+{
+    "color_dict": {
+        "Tumour": [252, 161, 3, 255],
+        "Stroma": [3, 252, 40, 255]
+    }
+}
+""".strip(),
+        encoding="utf-8",
+    )
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        overlay_directory=overlays,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get(
+            "/tileserver/files/overlay",
+        )
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "directory": "overlays",
+        "files": [
+            {
+                "name": "annotations.json",
+                "path": "overlays/annotations.json",
+            },
+        ],
+        "config": {
+            "color_dict": {
+                "Tumour": [
+                    252,
+                    161,
+                    3,
+                    255,
+                ],
+                "Stroma": [
+                    3,
+                    252,
+                    40,
+                    255,
+                ],
+            },
+        },
+    }
+
+
 def test_configured_files_skips_external_symlink(
     tmp_path: Path,
 ) -> None:
@@ -1119,6 +1183,12 @@ def test_change_cmap(app: TileServer) -> None:
         client.put("/tileserver/cmap", data={"cmap": json.dumps(None)})
         assert layer.renderer.mapper(0.5) == colormaps["jet"](0.5)
 
+        client.put(
+            "/tileserver/cmap",
+            data={"cmap": json.dumps("viridis")},
+        )
+        assert layer.renderer.mapper(0.5) == colormaps["viridis"](0.5)
+
         cdict = {"type1": [1, 0, 0], "type2": [0, 1, 0]}
         req_data = {"keys": list(cdict.keys()), "values": list(cdict.values())}
         client.put("/tileserver/cmap", data={"cmap": json.dumps(req_data)})
@@ -1630,6 +1700,12 @@ def test_update_renderer(app: TileServer) -> None:
         assert app.overlaps["default"] == int(5 * 1.5)
 
         client.put(
+            "/tileserver/renderer/score_prop",
+            data={"val": json.dumps("prob")},
+        )
+        assert app.pyramids["default"]["overlay"].renderer.score_prop == "prob"
+
+        client.put(
             "/tileserver/renderer/where",
             data={"val": json.dumps(None)},
         )
@@ -1680,6 +1756,61 @@ def test_secondary_cmap(app: TileServer) -> None:
         )
         assert layer.renderer.secondary_cmap["mapper"]("type2") == [0, 1, 0]
 
+        # Test a secondary continuous mapper with its own range.
+        response = client.put(
+            "/tileserver/secondary_cmap",
+            data={
+                "type_id": json.dumps(0),
+                "prop": "prob",
+                "cmap": json.dumps("viridis"),
+                "range": json.dumps([0.2, 0.8]),
+            },
+        )
+
+        assert response.status_code == 200
+
+        mapper = layer.renderer.secondary_cmap["mapper"]
+
+        np.testing.assert_allclose(
+            mapper(0.2),
+            colormaps["viridis"](0),
+        )
+
+        np.testing.assert_allclose(
+            mapper(0.5),
+            colormaps["viridis"](0.5),
+        )
+
+        np.testing.assert_allclose(
+            mapper(0.8),
+            colormaps["viridis"](1.0),
+        )
+
+        # Test a constant range is expanded for normalisation.
+        response = client.put(
+            "/tileserver/secondary_cmap",
+            data={
+                "type_id": json.dumps(0),
+                "prop": "prob",
+                "cmap": json.dumps("viridis"),
+                "range": json.dumps([0.5, 0.5]),
+            },
+        )
+
+        assert response.status_code == 200
+
+        mapper = layer.renderer.secondary_cmap["mapper"]
+
+        np.testing.assert_allclose(
+            mapper(0.5),
+            colormaps["viridis"](0),
+        )
+
+        np.testing.assert_allclose(
+            mapper(1.5),
+            colormaps["viridis"](1.0),
+        )
+
 
 def test_get_props(app_alt: TileServer) -> None:
     """Test getting props."""
@@ -1691,6 +1822,25 @@ def test_get_props(app_alt: TileServer) -> None:
 
         response = client.get("/tileserver/prop_names/'cell'")
         assert set(json.loads(response.data)) == {"prob", "type"}
+
+
+def test_get_props_by_layer(app: TileServer) -> None:
+    """Test getting properties from a named annotation layer."""
+    layer = app.pyramids["default"]["store_geojson"]
+    ann_props = layer.store.pquery(
+        select="*",
+        where=None,
+        unique=False,
+    )
+    expected = {prop for prop_dict in ann_props.values() for prop in prop_dict}
+
+    with app.test_client() as client:
+        response = client.get(
+            "/tileserver/prop_names/all?layer=store_geojson",
+        )
+
+    assert response.status_code == 200
+    assert set(json.loads(response.data)) == expected
 
 
 def test_get_property_values(app: TileServer) -> None:
@@ -1707,6 +1857,45 @@ def test_get_property_values(app: TileServer) -> None:
         assert response.content_type == "text/html; charset=utf-8"
         # the only value of property 'type' for annotations of type 1 is 1
         assert set(json.loads(response.data)) == {1}
+
+
+def test_get_property_values_by_layer(app: TileServer) -> None:
+    """Test getting property values from a named annotation layer."""
+    layer = app.pyramids["default"]["store_geojson"]
+    expected = set(
+        layer.store.pquery(
+            select="props['type']",
+            where=None,
+            unique=True,
+        ),
+    )
+
+    with app.test_client() as client:
+        response = client.get(
+            "/tileserver/prop_values/type/all?layer=store_geojson",
+        )
+
+    assert response.status_code == 200
+    assert set(json.loads(response.data)) == expected
+
+
+def test_get_ann_layer_by_name(app: TileServer) -> None:
+    """Test getting a named annotation layer."""
+    layer = app.get_ann_layer(
+        "default",
+        "store_geojson",
+    )
+
+    assert layer is app.pyramids["default"]["store_geojson"]
+
+    with pytest.raises(
+        ValueError,
+        match="Annotation layer not found: missing",
+    ):
+        app.get_ann_layer(
+            "default",
+            "missing",
+        )
 
 
 def test_get_property_values_no_overlay(empty_app: TileServer) -> None:
@@ -1759,6 +1948,22 @@ def test_point_query(app: TileServer) -> None:
 
     assert response.status_code == 200
     assert json.loads(response.data) == {}
+
+
+def test_point_query_by_layer(app: TileServer) -> None:
+    """Test point query on a named annotation layer."""
+    layer = app.pyramids["default"]["store_geojson"]
+
+    annotation = next(iter(layer.store.values()))
+    point = annotation.geometry.representative_point()
+
+    with app.test_client() as client:
+        response = client.get(
+            f"/tileserver/tap_query/{point.x}/{point.y}?layer=store_geojson",
+        )
+
+    assert response.status_code == 200
+    assert response.get_json() == annotation.properties
 
 
 def test_prop_range(app: TileServer) -> None:
@@ -2003,3 +2208,27 @@ def test_enhance_set_nopostproc(app: TileServer) -> None:
         )
         assert response.status_code == 200
         assert response.data.decode() == "done"
+
+
+def test_annotation_colours_are_deterministic(app: TileServer) -> None:
+    """Test annotation colours do not depend on type order."""
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={"types": json.dumps([0, -1, "Tumour"])},
+        )
+        assert response.status_code == 200
+        first = response.get_json()
+
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={"types": json.dumps(["Tumour", -1, 0])},
+        )
+        assert response.status_code == 200
+        second = response.get_json()
+
+    first_colours = dict(zip(first["keys"], first["values"], strict=False))
+    second_colours = dict(zip(second["keys"], second["values"], strict=False))
+
+    assert first_colours == second_colours
+    assert all(len(colour) == 4 for colour in first_colours.values())

@@ -4,7 +4,7 @@ import "./style.css";
 
 import { defaults as defaultControls } from "ol/control/defaults.js";
 import TileLayer from "ol/layer/Tile.js";
-import Map from "ol/Map.js";
+import OlMap from "ol/Map.js";
 import Projection from "ol/proj/Projection.js";
 import { addProjection } from "ol/proj.js";
 import Zoomify from "ol/source/Zoomify.js";
@@ -14,6 +14,7 @@ import LayerSwitcher from "ol-ext/control/LayerSwitcher.js";
 
 import { defaults as defaultInteractions } from "ol/interaction/defaults.js";
 import {
+    clearAnnotationSecondaryMapper,
     clearOverlays as clearTileServerOverlays,
     createSession,
     getConfiguredFiles,
@@ -21,7 +22,16 @@ import {
     loadSlide,
     removeOverlay as removeTileServerOverlay,
     removeSlide as removeTileServerSlide,
+    getAnnotationColors as getTileServerAnnotationColors,
+    getAnnotationAtPoint,
+    getAnnotationProperties,
+    getAnnotationPropertyValues,
+    setAnnotationFilter as setTileServerAnnotationFilter,
     setAnnotationColors as setTileServerAnnotationColors,
+    setAnnotationMapper,
+    setAnnotationProperty,
+    setAnnotationPropertyRange,
+    setAnnotationSecondaryMapper,
 } from "./api/tileserver.js";
 import {
     createMapControlsController,
@@ -42,8 +52,22 @@ import {
     createLayersPanelController,
 } from "./panels/layers.js";
 import {
+    createAnnotationsPanelController,
+} from "./panels/annotations.js";
+import {
     createSettingsPanelController,
 } from "./panels/settings.js";
+import {
+    assignAnnotationColours,
+    createAnnotationColourConfig,
+} from "./utils/annotation-colours.js";
+import {
+    getAnnotationFilter,
+} from "./utils/annotation-filters.js";
+import { hexToRgb } from "./utils/colours.js";
+import {
+    getFiniteNumberRange,
+} from "./utils/numbers.js";
 import { getFileStem } from "./utils/paths.js";
 
 // Create a Zoomify source with versions to avoid reusing tiles from an old slide.
@@ -76,6 +100,103 @@ const layerEditorList = document.getElementById(
     "layer-editor-list",
 );
 
+const annotationsPanel = document.getElementById(
+    "annotations-panel",
+);
+
+const annotationsToggle = document.getElementById(
+    "annotations-toggle",
+);
+
+const annotationsList = document.getElementById(
+    "annotations-panel-list",
+);
+
+const annotationsColourBySelect =
+    document.getElementById(
+        "annotations-colour-by",
+    );
+
+const annotationsSecondaryTypeField =
+    document.getElementById(
+        "annotations-secondary-type-field",
+    );
+
+const annotationsSecondaryTypeSelect =
+    document.getElementById(
+        "annotations-secondary-type",
+    );
+
+const annotationsPropertyField =
+    document.getElementById(
+        "annotations-property-field",
+    );
+
+const annotationsPropertySelect =
+    document.getElementById(
+        "annotations-property",
+    );
+
+const annotationsPropertyLegend =
+    document.getElementById(
+        "annotations-property-legend",
+    );
+
+const annotationsPropertyLegendCaption =
+    document.getElementById(
+        "annotations-property-legend-caption",
+    );
+
+const annotationsPropertyMin =
+    document.getElementById(
+        "annotations-property-min",
+    );
+
+const annotationsPropertyMax =
+    document.getElementById(
+        "annotations-property-max",
+    );
+
+const annotationInspector =
+    document.getElementById(
+        "annotation-inspector",
+    );
+
+const annotationInspectorHeader =
+    document.getElementById(
+        "annotation-inspector-header",
+    );
+
+const annotationInspectorTitle =
+    document.getElementById(
+        "annotation-inspector-title",
+    );
+
+const annotationInspectorProperties =
+    document.getElementById(
+        "annotation-inspector-properties",
+    );
+
+const annotationInspectorClose =
+    document.getElementById(
+        "annotation-inspector-close",
+    );
+
+const annotationsShowAllButton =
+    document.getElementById(
+        "annotations-show-all",
+    );
+
+const annotationsHideAllButton =
+    document.getElementById(
+        "annotations-hide-all",
+    );
+
+const annotationsExportColoursButton =
+    document.getElementById(
+        "annotations-export-colours",
+    );
+
 const settingsPanel = document.getElementById(
     "settings-panel",
 );
@@ -95,6 +216,11 @@ const settingsTabs = document.querySelectorAll(
 const settingsTabPanels = document.querySelectorAll(
     ".settings-tab-panel",
 );
+
+const annotationInspectionEnabledInput =
+    document.getElementById(
+        "settings-annotation-inspection",
+    );
 
 const zoomVisibleInput = document.getElementById(
     "settings-zoom-visible",
@@ -225,9 +351,30 @@ if (
     layerEditor === null ||
     layerEditorToggle === null ||
     layerEditorList === null ||
+    annotationsPanel === null ||
+    annotationsToggle === null ||
+    annotationsList === null ||
+    annotationsShowAllButton === null ||
+    annotationsHideAllButton === null ||
+    annotationsExportColoursButton === null ||
+    annotationsColourBySelect === null ||
+    annotationsPropertyField === null ||
+    annotationsPropertySelect === null ||
+    annotationsPropertyLegend === null ||
+    annotationsPropertyLegendCaption === null ||
+    annotationsPropertyMin === null ||
+    annotationsPropertyMax === null ||
+    annotationInspector === null ||
+    annotationInspectorHeader === null ||
+    annotationInspectorTitle === null ||
+    annotationInspectorProperties === null ||
+    annotationInspectorClose === null ||
+    annotationsSecondaryTypeField === null ||
+    annotationsSecondaryTypeSelect === null ||
     settingsPanel === null ||
     settingsToggle === null ||
     settingsCloseButton === null ||
+    annotationInspectionEnabledInput === null ||
     zoomVisibleInput === null ||
     zoomLevelVisibleInput === null ||
     rotationVisibleInput === null ||
@@ -262,6 +409,17 @@ if (
     throw new Error("The OpenLayers viewer controls could not be found.");
 }
 
+let annotationInspectionRequestId = 0;
+
+function invalidateAnnotationInspectionRequests() {
+    annotationInspectionRequestId += 1;
+}
+
+function hideAnnotationInspector() {
+    invalidateAnnotationInspectionRequests();
+    annotationInspector.hidden = true;
+}
+
 const scaleBarThemeColours = {
     dark: "#ffffff",
     light: "#000000",
@@ -283,6 +441,7 @@ const settingsPanelController =
         themeSelect,
         controlOpacityInput,
         controlOpacityValue,
+        annotationInspectionEnabledInput,
         zoomVisibleInput,
         zoomLevelVisibleInput,
         rotationVisibleInput,
@@ -304,6 +463,14 @@ const settingsPanelController =
         scaleBarOpacityInput,
         scaleBarSizeSelect,
         scaleBarUnitsSelect,
+
+        onAnnotationInspectionChange() {
+            if (
+                !annotationInspectionEnabledInput.checked
+            ) {
+                hideAnnotationInspector();
+            }
+        },
 
         onThemeChange() {
             scaleBarColourInput.value =
@@ -350,6 +517,7 @@ const layersPanelController =
 
         onOpen() {
             filesPanelController.setOpen(false);
+            annotationsPanelController.setOpen(false);
         },
     });
 
@@ -361,12 +529,749 @@ let currentSlideInfo = null;
 let currentSlidePath = null;
 const overlayLayers = {};
 const annotationLayerNames = new Set();
+const annotationColours = new Map();
+const annotationTypesByLayer = new Map();
+const annotationTypeVisibility = new Map();
+const annotationTypeOpacity = new Map();
+let annotationDisplayMode = "type";
+let annotationProperty = null;
+let annotationSecondaryType = null;
+let annotationProperties = [];
+const annotationPropertyRanges =
+    new Map();
+
+function getAnnotationTypes() {
+    const annotationTypes = new Set();
+
+    for (const types of annotationTypesByLayer.values()) {
+        for (const type of types) {
+            annotationTypes.add(type);
+        }
+    }
+
+    return [...annotationTypes];
+}
+
+function getAnnotationGroups() {
+    return [...annotationTypesByLayer.entries()].map(
+        ([layerName, annotationTypes]) => ({
+            layerName,
+            annotationTypes,
+        }),
+    );
+}
+
+async function getCommonAnnotationProperties() {
+    const layerNames =
+        [...annotationLayerNames];
+
+    if (layerNames.length === 0) {
+        return [];
+    }
+
+    const propertiesByLayer =
+        await Promise.all(
+            layerNames.map(
+                (layerName) =>
+                    getAnnotationProperties(
+                        layerName,
+                    ),
+            ),
+        );
+
+    const commonProperties =
+        propertiesByLayer[0].filter(
+            (property) =>
+                ![
+                    "type",
+                    "class",
+                ].includes(
+                    property.toLowerCase(),
+                ) &&
+                propertiesByLayer
+                    .slice(1)
+                    .every(
+                        (properties) =>
+                            properties.includes(
+                                property,
+                            ),
+                    ),
+        );
+
+    const numericProperties = [];
+
+    for (const property of commonProperties) {
+        const valuesByLayer =
+            await Promise.all(
+                layerNames.map(
+                    (layerName) =>
+                        getAnnotationPropertyValues(
+                            layerName,
+                            property,
+                        ),
+                ),
+            );
+
+        const values =
+            valuesByLayer.flat();
+
+        const range =
+            getFiniteNumberRange(
+                values,
+            );
+
+        if (range !== null) {
+            annotationPropertyRanges.set(
+                property,
+                range,
+            );
+
+            numericProperties.push(
+                property,
+            );
+        }
+    }
+
+    return numericProperties.sort();
+}
+
+function getAnnotationPropertyRenderRange(
+    property,
+) {
+    const range =
+        annotationPropertyRanges.get(
+            property,
+        );
+
+    if (range === undefined) {
+        throw new Error(
+            `Annotation property range is not available: ${property}`,
+        );
+    }
+
+    const [
+        minimum,
+        maximum,
+    ] = range;
+
+    if (minimum === maximum) {
+        return [
+            minimum,
+            minimum + 1,
+        ];
+    }
+
+    return range;
+}
+
+async function setAnnotationTypeMode({
+    refresh = true,
+} = {}) {
+    await clearAnnotationSecondaryMapper();
+
+    await setAnnotationProperty(
+        "type",
+    );
+
+    await setAnnotationPropertyRange(
+        null,
+    );
+
+    await setTileServerAnnotationColors(
+        annotationColours,
+    );
+
+    annotationDisplayMode = "type";
+    annotationProperty = null;
+    annotationSecondaryType = null;
+
+    if (refresh) {
+        refreshAnnotationLayers();
+    }
+}
+
+async function resetAnnotationRenderer() {
+    await clearAnnotationSecondaryMapper();
+
+    await setAnnotationProperty(
+        "type",
+    );
+
+    await setAnnotationPropertyRange(
+        null,
+    );
+}
+
+async function setAnnotationPropertyMode(
+    property,
+    {
+        refresh = true,
+    } = {},
+) {
+    const range =
+        getAnnotationPropertyRenderRange(
+            property,
+        );
+
+    await clearAnnotationSecondaryMapper();
+
+    await setAnnotationProperty(
+        property,
+    );
+
+    await setAnnotationMapper(
+        "viridis",
+    );
+
+    await setAnnotationPropertyRange(
+        range,
+    );
+
+    annotationDisplayMode =
+        "property";
+
+    annotationProperty =
+        property;
+
+    annotationSecondaryType =
+        null;
+
+    if (refresh) {
+        refreshAnnotationLayers();
+    }
+}
+
+async function setAnnotationSecondaryMode(
+    annotationType,
+    property,
+    {
+        refresh = true,
+    } = {},
+) {
+    const range =
+        getAnnotationPropertyRenderRange(
+            property,
+        );
+
+    await setAnnotationProperty(
+        "type",
+    );
+
+    await setAnnotationPropertyRange(
+        null,
+    );
+
+    await setTileServerAnnotationColors(
+        annotationColours,
+    );
+
+    await setAnnotationSecondaryMapper(
+        annotationType,
+        property,
+        "viridis",
+        range,
+    );
+
+    annotationDisplayMode =
+        "secondary";
+
+    annotationProperty =
+        property;
+
+    annotationSecondaryType =
+        annotationType;
+
+    if (refresh) {
+        refreshAnnotationLayers();
+    }
+}
+
+async function updateAnnotationProperties({
+    refresh = true,
+} = {}) {
+    if (annotationLayerNames.size === 0) {
+        await resetAnnotationRenderer();
+
+        annotationProperties = [];
+        annotationPropertyRanges.clear();
+        annotationDisplayMode = "type";
+        annotationProperty = null;
+        annotationSecondaryType = null;
+
+        annotationsPanelController.render();
+        return;
+    }
+
+    annotationProperties = [];
+    annotationPropertyRanges.clear();
+
+    annotationsPanelController.render();
+
+    annotationProperties =
+        await getCommonAnnotationProperties();
+
+    if (annotationDisplayMode === "property") {
+        if (
+            annotationProperty === null ||
+            !annotationProperties.includes(
+                annotationProperty,
+            )
+        ) {
+            await setAnnotationTypeMode({
+                refresh,
+            });
+        } else {
+            await setAnnotationPropertyMode(
+                annotationProperty,
+                {
+                    refresh,
+                },
+            );
+        }
+    }
+
+    if (annotationDisplayMode === "secondary") {
+        const annotationTypes =
+            getAnnotationTypes();
+
+        if (
+            annotationSecondaryType === null ||
+            !annotationTypes.includes(
+                annotationSecondaryType,
+            ) ||
+            annotationProperty === null ||
+            !annotationProperties.includes(
+                annotationProperty,
+            )
+        ) {
+            await setAnnotationTypeMode({
+                refresh,
+            });
+        } else {
+            await setAnnotationSecondaryMode(
+                annotationSecondaryType,
+                annotationProperty,
+                {
+                    refresh,
+                },
+            );
+        }
+    }
+
+    annotationsPanelController.render();
+}
+
+function exportAnnotationColours() {
+    const config =
+        createAnnotationColourConfig(
+            annotationColours,
+            getAnnotationTypes(),
+        );
+
+    const json = `${JSON.stringify(
+        config,
+        null,
+        4,
+    )}\n`;
+
+    const blob = new Blob(
+        [json],
+        {
+            type: "application/json",
+        },
+    );
+
+    const url =
+        URL.createObjectURL(blob);
+
+    const downloadLink =
+        document.createElement("a");
+
+    downloadLink.href = url;
+    downloadLink.download =
+        "annotation_config.json";
+
+    document.body.appendChild(
+        downloadLink,
+    );
+
+    downloadLink.click();
+    downloadLink.remove();
+
+    URL.revokeObjectURL(url);
+}
+
+function initialiseAnnotationTypeState(annotationTypes) {
+    for (const annotationType of annotationTypes) {
+        if (!annotationTypeVisibility.has(annotationType)) {
+            annotationTypeVisibility.set(
+                annotationType,
+                true,
+            );
+        }
+
+        if (!annotationTypeOpacity.has(annotationType)) {
+            annotationTypeOpacity.set(
+                annotationType,
+                1,
+            );
+
+            const colour =
+                annotationColours.get(annotationType);
+
+            if (colour !== undefined) {
+                annotationColours.set(
+                    annotationType,
+                    [
+                        colour[0],
+                        colour[1],
+                        colour[2],
+                        1,
+                    ],
+                );
+            }
+        }
+    }
+}
+
+function pruneAnnotationTypeState() {
+    const loadedTypes =
+        new Set(getAnnotationTypes());
+
+    const trackedTypes = new Set([
+        ...annotationTypeVisibility.keys(),
+        ...annotationTypeOpacity.keys(),
+    ]);
+
+    for (const annotationType of trackedTypes) {
+        if (loadedTypes.has(annotationType)) {
+            continue;
+        }
+
+        annotationTypeVisibility.delete(
+            annotationType,
+        );
+
+        annotationTypeOpacity.delete(
+            annotationType,
+        );
+
+        const colour =
+            annotationColours.get(annotationType);
+
+        if (colour !== undefined) {
+            annotationColours.set(
+                annotationType,
+                [
+                    colour[0],
+                    colour[1],
+                    colour[2],
+                    1,
+                ],
+            );
+        }
+    }
+}
+
+function refreshAnnotationLayers(
+    excludedLayerName = null,
+) {
+    overlayVersion += 1;
+
+    for (const layerName of annotationLayerNames) {
+        if (layerName === excludedLayerName) {
+            continue;
+        }
+
+        const overlayLayer =
+            overlayLayers[layerName];
+
+        if (overlayLayer === undefined) {
+            continue;
+        }
+
+        const source = new Zoomify({
+            url:
+                `/tileserver/layer/${encodeURIComponent(layerName)}/` +
+                `${sessionId}/zoomify/` +
+                `{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${overlayVersion}`,
+            size:
+                currentSlideInfo.slide_dimensions,
+            crossOrigin: "anonymous",
+            zDirection: -1,
+        });
+
+        overlayLayer.setSource(source);
+    }
+}
+
+async function updateAnnotationFilter({
+    refresh = true,
+} = {}) {
+    if (annotationLayerNames.size === 0) {
+        return;
+    }
+
+    await setTileServerAnnotationFilter(
+        getAnnotationFilter(
+            getAnnotationTypes(),
+            annotationTypeVisibility,
+        )
+    );
+
+    if (refresh) {
+        refreshAnnotationLayers();
+    }
+}
+
+async function inspectAnnotationAtCoordinate(
+    coordinate,
+) {
+    const [
+        x,
+        y,
+    ] = coordinate;
+
+    const layerNames =
+        [...annotationLayerNames]
+            .filter(
+                (layerName) =>
+                    overlayLayers[
+                        layerName
+                    ]?.getVisible() !== false,
+            )
+            .sort(
+                (firstLayerName, secondLayerName) =>
+                    (
+                        overlayLayers[
+                            secondLayerName
+                        ]?.getZIndex() ?? 0
+                    ) -
+                    (
+                        overlayLayers[
+                            firstLayerName
+                        ]?.getZIndex() ?? 0
+                    ),
+            );
+
+    for (const layerName of layerNames) {
+        const properties =
+            await getAnnotationAtPoint(
+                layerName,
+                x,
+                -y,
+            );
+
+        if (
+            Object.keys(
+                properties,
+            ).length === 0
+        ) {
+            continue;
+        }
+
+        if (
+            properties.type !== undefined &&
+            annotationTypeVisibility.get(
+                properties.type,
+            ) === false
+        ) {
+            continue;
+        }
+
+        return {
+            layerName,
+            properties,
+        };
+    }
+
+    return null;
+}
+
+function formatAnnotationPropertyName(property) {
+    const labels = {
+        box: "Bounding box (px)",
+        centroid: "Centroid (px)",
+        prob: "Probability",
+        type: "Type",
+    };
+
+    return labels[property] ?? property;
+}
+
+function formatAnnotationPropertyValue(
+    property,
+    value,
+) {
+    if (
+        property === "prob" &&
+        typeof value === "number"
+    ) {
+        return `${value.toFixed(4)} (${(value * 100).toFixed(2)}%)`;
+    }
+
+    if (
+        property === "centroid" &&
+        Array.isArray(value) &&
+        value.length >= 2
+    ) {
+        const [
+            x,
+            y,
+        ] = value;
+
+        return (
+            `x: ${typeof x === "number" ? x.toFixed(2) : x}, ` +
+            `y: ${typeof y === "number" ? y.toFixed(2) : y}`
+        );
+    }
+
+    if (
+        property === "box" &&
+        Array.isArray(value) &&
+        value.length === 4
+    ) {
+        return `x: ${value[0]}–${value[2]}, y: ${value[1]}–${value[3]}`;
+    }
+
+    if (Array.isArray(value)) {
+        return value.join(", ");
+    }
+
+    if (
+        typeof value === "number" &&
+        !Number.isInteger(value)
+    ) {
+        return value.toFixed(4);
+    }
+
+    if (
+        value !== null &&
+        typeof value === "object"
+    ) {
+        return JSON.stringify(value);
+    }
+
+    return String(value);
+}
+
+function positionAnnotationInspector(
+    requestedLeft,
+    requestedTop,
+) {
+    const margin = 8;
+
+    const maxLeft = Math.max(
+        margin,
+        viewerApp.clientWidth -
+            annotationInspector.offsetWidth -
+            margin,
+    );
+
+    const maxTop = Math.max(
+        margin,
+        viewerApp.clientHeight -
+            annotationInspector.offsetHeight -
+            margin,
+    );
+
+    annotationInspector.style.left =
+        `${Math.min(
+            Math.max(requestedLeft, margin),
+            maxLeft,
+        )}px`;
+
+    annotationInspector.style.top =
+        `${Math.min(
+            Math.max(requestedTop, margin),
+            maxTop,
+        )}px`;
+}
+
+function showAnnotationInspector(
+    inspection,
+    pixel,
+) {
+    annotationInspectorTitle.textContent =
+        inspection.layerName;
+
+    annotationInspectorProperties.replaceChildren();
+
+    for (
+        const [
+            property,
+            value,
+        ] of Object.entries(
+            inspection.properties,
+        )
+    ) {
+        const row =
+            document.createElement("div");
+
+        row.className =
+            "annotation-inspector-property";
+
+        const name =
+            document.createElement("div");
+
+        name.className =
+            "annotation-inspector-property-name";
+
+        name.textContent =
+            formatAnnotationPropertyName(
+                property,
+            );
+
+        const propertyValue =
+            document.createElement("div");
+
+        propertyValue.className =
+            "annotation-inspector-property-value";
+
+        propertyValue.textContent =
+            formatAnnotationPropertyValue(
+                property,
+                value,
+            );
+
+        row.append(
+            name,
+            propertyValue,
+        );
+
+        annotationInspectorProperties.append(
+            row,
+        );
+    }
+
+    annotationInspector.hidden = false;
+
+    const mapRect =
+        mapElement.getBoundingClientRect();
+
+    const viewerRect =
+        viewerApp.getBoundingClientRect();
+
+    positionAnnotationInspector(
+        mapRect.left -
+            viewerRect.left +
+            pixel[0] +
+            12,
+        mapRect.top -
+            viewerRect.top +
+            pixel[1] +
+            12,
+    );
+}
 
 const configuredSlides =
     await getConfiguredFiles("slide");
 
 const configuredOverlays =
     await getConfiguredFiles("overlay");
+
+const configuredColourDict =
+    configuredOverlays.config?.color_dict ?? {};
 
 const filesPanelController =
     createFilesPanelController({
@@ -400,9 +1305,311 @@ const filesPanelController =
             clearOverlays(),
 
         onOpen() {
-            layersPanelController.setOpen(
-                false,
+            layersPanelController.setOpen(false);
+            annotationsPanelController.setOpen(false);
+        },
+    });
+
+const annotationsPanelController =
+    createAnnotationsPanelController({
+        panel: annotationsPanel,
+        toggle: annotationsToggle,
+        list: annotationsList,
+        colourBySelect:
+            annotationsColourBySelect,
+        secondaryTypeField:
+            annotationsSecondaryTypeField,
+        secondaryTypeSelect:
+            annotationsSecondaryTypeSelect,
+        propertyField:
+            annotationsPropertyField,
+        propertySelect:
+            annotationsPropertySelect,
+        propertyLegend:
+            annotationsPropertyLegend,
+        propertyLegendCaption:
+            annotationsPropertyLegendCaption,
+        propertyMin:
+            annotationsPropertyMin,
+        propertyMax:
+            annotationsPropertyMax,
+        showAllButton:
+            annotationsShowAllButton,
+        hideAllButton:
+            annotationsHideAllButton,
+        exportButton:
+            annotationsExportColoursButton,
+
+        getAnnotationGroups,
+        getAnnotationTypes,
+
+        getDisplayMode: () =>
+            annotationDisplayMode,
+
+        getAnnotationProperties: () =>
+            annotationProperties,
+
+        getAnnotationProperty: () =>
+            annotationProperty,
+
+        getSecondaryType: () =>
+            annotationSecondaryType,
+
+        getPropertyRange: () =>
+            annotationProperty === null
+                ? null
+                : annotationPropertyRanges.get(
+                    annotationProperty,
+                ) ?? null,
+
+        getAnnotationColour: (annotationType) =>
+            annotationColours.get(annotationType) ??
+            [0, 0, 0, 1],
+
+        isAnnotationTypeVisible: (annotationType) =>
+            annotationTypeVisibility.get(
+                annotationType,
+            ) ?? true,
+
+        getAnnotationOpacity: (annotationType) =>
+            annotationTypeOpacity.get(
+                annotationType,
+            ) ?? 1,
+
+        async onDisplayModeChange(mode) {
+            if (mode === "type") {
+                await setAnnotationTypeMode();
+                return;
+            }
+
+            const property =
+                annotationProperty ??
+                annotationProperties[0];
+
+            if (property === undefined) {
+                throw new Error(
+                    "No annotation properties are available.",
+                );
+            }
+
+            if (mode === "property") {
+                await setAnnotationPropertyMode(
+                    property,
+                );
+
+                return;
+            }
+
+            if (mode === "secondary") {
+                const annotationType =
+                    annotationSecondaryType ??
+                    getAnnotationTypes()[0];
+
+                if (annotationType === undefined) {
+                    throw new Error(
+                        "No annotation classes are available.",
+                    );
+                }
+
+                await setAnnotationSecondaryMode(
+                    annotationType,
+                    property,
+                );
+
+                return;
+            }
+
+            throw new Error(
+                `Unknown annotation display mode: ${mode}`,
             );
+        },
+
+        async onPropertyChange(property) {
+            if (
+                annotationDisplayMode ===
+                "secondary"
+            ) {
+                if (
+                    annotationSecondaryType ===
+                    null
+                ) {
+                    throw new Error(
+                        "No secondary annotation class is selected.",
+                    );
+                }
+
+                await setAnnotationSecondaryMode(
+                    annotationSecondaryType,
+                    property,
+                );
+
+                return;
+            }
+
+            await setAnnotationPropertyMode(
+                property,
+            );
+        },
+
+        async onSecondaryTypeChange(
+            annotationType,
+        ) {
+            const property =
+                annotationProperty ??
+                annotationProperties[0];
+
+            if (property === undefined) {
+                throw new Error(
+                    "No annotation properties are available.",
+                );
+            }
+
+            await setAnnotationSecondaryMode(
+                annotationType,
+                property,
+            );
+        },
+
+        async onColourChange(
+            annotationType,
+            colourValue,
+        ) {
+            const rgb = hexToRgb(colourValue);
+
+            const opacity =
+                annotationTypeOpacity.get(
+                    annotationType,
+                ) ?? 1;
+
+            const updatedColours =
+                new Map(annotationColours);
+
+            updatedColours.set(
+                annotationType,
+                [
+                    rgb.r / 255,
+                    rgb.g / 255,
+                    rgb.b / 255,
+                    opacity,
+                ],
+            );
+
+            await setAnnotationColors(
+                updatedColours,
+            );
+        },
+
+        async onVisibilityChange(
+            annotationType,
+            visible,
+        ) {
+            const previousVisibility =
+                annotationTypeVisibility.get(
+                    annotationType,
+                ) ?? true;
+
+            annotationTypeVisibility.set(
+                annotationType,
+                visible,
+            );
+
+            try {
+                await updateAnnotationFilter();
+            } catch (error) {
+                annotationTypeVisibility.set(
+                    annotationType,
+                    previousVisibility,
+                );
+
+                throw error;
+            }
+        },
+
+        async onOpacityChange(
+            annotationType,
+            opacity,
+        ) {
+            const colour =
+                annotationColours.get(
+                    annotationType,
+                );
+
+            if (colour === undefined) {
+                throw new Error(
+                    "Annotation colour is not available.",
+                );
+            }
+
+            const updatedColours =
+                new Map(annotationColours);
+
+            updatedColours.set(
+                annotationType,
+                [
+                    colour[0],
+                    colour[1],
+                    colour[2],
+                    opacity,
+                ],
+            );
+
+            await setAnnotationColors(
+                updatedColours,
+            );
+
+            annotationTypeOpacity.set(
+                annotationType,
+                opacity,
+            );
+        },
+
+        async onSetAllVisibility(visible) {
+            const annotationTypes =
+                getAnnotationTypes();
+
+            const previousVisibility =
+                new Map(
+                    annotationTypes.map(
+                        (annotationType) => [
+                            annotationType,
+                            annotationTypeVisibility.get(
+                                annotationType,
+                            ) ?? true,
+                        ],
+                    ),
+                );
+
+            for (const annotationType of annotationTypes) {
+                annotationTypeVisibility.set(
+                    annotationType,
+                    visible,
+                );
+            }
+
+            try {
+                await updateAnnotationFilter();
+            } catch (error) {
+                for (const [
+                    annotationType,
+                    previousValue,
+                ] of previousVisibility) {
+                    annotationTypeVisibility.set(
+                        annotationType,
+                        previousValue,
+                    );
+                }
+
+                throw error;
+            }
+        },
+
+        onExport() {
+            exportAnnotationColours();
+        },
+
+        onOpen() {
+            filesPanelController.setOpen(false);
+            layersPanelController.setOpen(false);
         },
     });
 
@@ -538,7 +1745,7 @@ const view = new View({
     resolution: resolutions[0],
 });
 
-const map = new Map({
+const map = new OlMap({
     target: mapElement,
     layers,
     view,
@@ -728,6 +1935,139 @@ map.on("moveend", () => {
     mapControlsController.updateZoomLevel();
 });
 
+map.on("singleclick", async (event) => {
+    if (
+        !annotationInspectionEnabledInput.checked ||
+        annotationLayerNames.size === 0
+    ) {
+        return;
+    }
+
+    annotationInspectionRequestId += 1;
+
+    const requestId =
+        annotationInspectionRequestId;
+
+    try {
+        const inspection =
+            await inspectAnnotationAtCoordinate(
+                event.coordinate,
+            );
+
+        if (
+            requestId !==
+                annotationInspectionRequestId ||
+            !annotationInspectionEnabledInput.checked ||
+            annotationLayerNames.size === 0
+        ) {
+            return;
+        }
+
+        if (inspection === null) {
+            return;
+        }
+
+        showAnnotationInspector(
+            inspection,
+            event.pixel,
+        );
+    } catch (error) {
+        if (
+            requestId !==
+            annotationInspectionRequestId
+        ) {
+            return;
+        }
+
+        console.error(
+            "Failed to inspect annotation.",
+            error,
+        );
+    }
+});
+
+annotationInspectorClose.addEventListener(
+    "click",
+    hideAnnotationInspector,
+);
+
+let annotationInspectorDragging = false;
+let annotationInspectorDragOffsetX = 0;
+let annotationInspectorDragOffsetY = 0;
+
+annotationInspectorHeader.addEventListener(
+    "pointerdown",
+    (event) => {
+        if (
+            event.target.closest("button") !== null
+        ) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const inspectorRect =
+            annotationInspector.getBoundingClientRect();
+
+        annotationInspectorDragging = true;
+
+        annotationInspectorDragOffsetX =
+            event.clientX -
+            inspectorRect.left;
+
+        annotationInspectorDragOffsetY =
+            event.clientY -
+            inspectorRect.top;
+
+        annotationInspectorHeader.setPointerCapture(
+            event.pointerId,
+        );
+
+        annotationInspector.classList.add(
+            "dragging",
+        );
+    },
+);
+
+annotationInspectorHeader.addEventListener(
+    "pointermove",
+    (event) => {
+        if (!annotationInspectorDragging) {
+            return;
+        }
+
+        const viewerRect =
+            viewerApp.getBoundingClientRect();
+
+        positionAnnotationInspector(
+            event.clientX -
+                viewerRect.left -
+                annotationInspectorDragOffsetX,
+            event.clientY -
+                viewerRect.top -
+                annotationInspectorDragOffsetY,
+        );
+    },
+);
+
+function stopAnnotationInspectorDrag() {
+    annotationInspectorDragging = false;
+
+    annotationInspector.classList.remove(
+        "dragging",
+    );
+}
+
+annotationInspectorHeader.addEventListener(
+    "pointerup",
+    stopAnnotationInspectorDrag,
+);
+
+annotationInspectorHeader.addEventListener(
+    "pointercancel",
+    stopAnnotationInspectorDrag,
+);
+
 function clearOverlayLayers() {
     for (const overlayLayer of Object.values(overlayLayers)) {
         overlayLayer.setSource(null);
@@ -745,7 +2085,19 @@ function clearOverlayLayers() {
     }
 
     annotationLayerNames.clear();
+    annotationTypesByLayer.clear();
 
+    hideAnnotationInspector();
+
+    pruneAnnotationTypeState();
+
+    annotationDisplayMode = "type";
+    annotationProperty = null;
+    annotationSecondaryType = null;
+    annotationProperties = [];
+    annotationPropertyRanges.clear();
+
+    annotationsPanelController.render();
     layersPanelController.render();
     filesPanelController.updateActionState();
 }
@@ -754,7 +2106,8 @@ async function clearOverlays() {
     await clearTileServerOverlays();
 
     clearOverlayLayers();
-    filesPanelController.updateActionState();
+
+    await resetAnnotationRenderer();
 }
 
 function getUrlViewState() {
@@ -824,6 +2177,8 @@ async function removeSlide() {
 
     clearOverlayLayers();
 
+    await resetAnnotationRenderer();
+
     currentSlidePath = null;
     currentSlideInfo = null;
     layersData.length = 0;
@@ -891,6 +2246,8 @@ async function switchSlide(slidePath) {
     }
 
     clearOverlayLayers();
+
+    await resetAnnotationRenderer();
 
     const slideInfo = await loadSlide(slidePath);
     currentSlideInfo = slideInfo;
@@ -992,6 +2349,8 @@ async function loadOverlay(overlayPath) {
     );
 
     const layerName = getFileStem(overlayPath);
+    const wasAnnotation =
+        annotationLayerNames.has(layerName);
 
     if (layerName === "slide") {
         throw new Error(
@@ -1006,11 +2365,55 @@ async function loadOverlay(overlayPath) {
 
     if (isAnnotation) {
         annotationLayerNames.add(layerName);
-    } else {
+
+        const annotationTypes =
+            [...new Set(result)];
+
+        annotationTypesByLayer.set(
+            layerName,
+            annotationTypes,
+        );
+
+        pruneAnnotationTypeState();
+
+        await assignAnnotationColours(
+            annotationColours,
+            annotationTypes,
+            getTileServerAnnotationColors,
+            configuredColourDict,
+        );
+
+        initialiseAnnotationTypeState(
+            annotationTypes,
+        );
+
+        if (annotationDisplayMode === "type") {
+            await setTileServerAnnotationColors(
+                annotationColours,
+            );
+        }
+    } else if (wasAnnotation) {
         annotationLayerNames.delete(layerName);
+        annotationTypesByLayer.delete(layerName);
+
+        pruneAnnotationTypeState();
     }
 
-    overlayVersion += 1;
+    if (isAnnotation || wasAnnotation) {
+        await updateAnnotationProperties({
+            refresh: false,
+        });
+
+        await updateAnnotationFilter({
+            refresh: false,
+        });
+
+        refreshAnnotationLayers(
+            layerName,
+        );
+    } else {
+        overlayVersion += 1;
+    }
 
     const source = new Zoomify({
         url:
@@ -1061,6 +2464,8 @@ async function loadOverlay(overlayPath) {
 
 async function removeOverlay(layerName) {
     const overlayLayer = overlayLayers[layerName];
+    const wasAnnotation =
+        annotationLayerNames.has(layerName);
 
     if (overlayLayer === undefined) {
         throw new Error(`Overlay is not loaded: ${layerName}`);
@@ -1090,7 +2495,24 @@ async function removeOverlay(layerName) {
     }
 
     annotationLayerNames.delete(layerName);
+    annotationTypesByLayer.delete(layerName);
     delete overlayLayers[layerName];
+
+    if (wasAnnotation) {
+        hideAnnotationInspector();
+
+        pruneAnnotationTypeState();
+
+        await updateAnnotationProperties({
+            refresh: false,
+        });
+
+        await updateAnnotationFilter({
+            refresh: false,
+        });
+
+        refreshAnnotationLayers();
+    }
 
     layersPanelController.render();
     filesPanelController.updateActionState();
@@ -1101,29 +2523,28 @@ async function setAnnotationColors(colorMap) {
         throw new Error("No annotation overlay is loaded.");
     }
 
-    await setTileServerAnnotationColors(colorMap);
+    const entries =
+        colorMap instanceof Map
+            ? [...colorMap.entries()]
+            : Object.entries(colorMap);
 
-    overlayVersion += 1;
+    const updatedColours =
+        new Map(entries);
 
-    for (const layerName of annotationLayerNames) {
-        const overlayLayer = overlayLayers[layerName];
+    await setTileServerAnnotationColors(
+        updatedColours,
+    );
 
-        if (overlayLayer === undefined) {
-            continue;
-        }
+    annotationColours.clear();
 
-        const source = new Zoomify({
-            url:
-                `/tileserver/layer/${encodeURIComponent(layerName)}/` +
-                `${sessionId}/zoomify/` +
-                `{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${overlayVersion}`,
-            size: currentSlideInfo.slide_dimensions,
-            crossOrigin: "anonymous",
-            zDirection: -1,
-        });
-
-        overlayLayer.setSource(source);
+    for (const [type, colour] of updatedColours) {
+        annotationColours.set(
+            type,
+            colour,
+        );
     }
+
+    refreshAnnotationLayers();
 }
 
 // Preserve variables exposed by the original inline viewer.

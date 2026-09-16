@@ -97,13 +97,46 @@ async function removeOverlay(layerName) {
     }
 }
 
-async function setAnnotationColors(colorMap) {
+export async function setAnnotationFilter(where) {
     const formData = new FormData();
+
+    formData.append(
+        "val",
+        JSON.stringify(where),
+    );
+
+    const response = await fetch(
+        "/tileserver/renderer/where",
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update annotation visibility.",
+        );
+    }
+}
+
+async function setAnnotationColors(colorMap) {
+    const entries =
+        colorMap instanceof Map
+            ? [...colorMap.entries()]
+            : Object.entries(colorMap);
+
+    const formData = new FormData();
+
     formData.append(
         "cmap",
         JSON.stringify({
-            keys: Object.keys(colorMap),
-            values: Object.values(colorMap),
+            keys: entries.map(
+                ([key]) => key,
+            ),
+            values: entries.map(
+                ([, value]) => value,
+            ),
         }),
     );
 
@@ -117,7 +150,248 @@ async function setAnnotationColors(colorMap) {
     }
 }
 
+async function getAnnotationColors(annotationTypes) {
+    const formData = new FormData();
+
+    formData.append(
+        "types",
+        JSON.stringify(annotationTypes),
+    );
+
+    const response = await fetch(
+        "/tileserver/annotation_colours",
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to generate annotation colours.",
+        );
+    }
+
+    const colourMap =
+        await response.json();
+
+    return new Map(
+        colourMap.keys.map(
+            (key, index) => [
+                key,
+                colourMap.values[index],
+            ],
+        ),
+    );
+}
+
+async function getAnnotationProperties(layerName) {
+    const params =
+        new URLSearchParams({
+            layer: layerName,
+        });
+
+    const response = await fetch(
+        `/tileserver/prop_names/all?${params}`,
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to get annotation properties.",
+        );
+    }
+
+    return response.json();
+}
+
+async function getAnnotationPropertyValues(
+    layerName,
+    property,
+) {
+    const params =
+        new URLSearchParams({
+            layer: layerName,
+        });
+
+    const response = await fetch(
+        `/tileserver/prop_values/${encodeURIComponent(property)}/all?${params}`,
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to get annotation property values.",
+        );
+    }
+
+    return response.json();
+}
+
+async function getAnnotationAtPoint(
+    layerName,
+    x,
+    y,
+) {
+    const params =
+        new URLSearchParams({
+            layer: layerName,
+        });
+
+    const response = await fetch(
+        `/tileserver/tap_query/${x}/${y}?${params}`,
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to inspect annotation.",
+        );
+    }
+
+    return response.json();
+}
+
+async function setAnnotationProperty(property) {
+    const formData = new FormData();
+
+    formData.append(
+        "val",
+        JSON.stringify(property),
+    );
+
+    const response = await fetch(
+        "/tileserver/renderer/score_prop",
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update annotation property.",
+        );
+    }
+}
+
+async function setAnnotationMapper(mapper) {
+    const formData = new FormData();
+
+    formData.append(
+        "cmap",
+        JSON.stringify(mapper),
+    );
+
+    const response = await fetch(
+        "/tileserver/cmap",
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update annotation colour map.",
+        );
+    }
+}
+
+async function setAnnotationPropertyRange(range) {
+    const formData = new FormData();
+
+    formData.append(
+        "range",
+        JSON.stringify(range),
+    );
+
+    const response = await fetch(
+        "/tileserver/prop_range",
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update annotation property range.",
+        );
+    }
+}
+
+async function setAnnotationSecondaryMapper(
+    annotationType,
+    property,
+    mapper,
+    range,
+) {
+    const formData = new FormData();
+
+    formData.append(
+        "type_id",
+        JSON.stringify(
+            annotationType,
+        ),
+    );
+
+    formData.append(
+        "prop",
+        property,
+    );
+
+    formData.append(
+        "cmap",
+        JSON.stringify(
+            mapper,
+        ),
+    );
+
+    formData.append(
+        "range",
+        JSON.stringify(
+            range,
+        ),
+    );
+
+    const response = await fetch(
+        "/tileserver/secondary_cmap",
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update secondary annotation colour map.",
+        );
+    }
+}
+
+async function clearAnnotationSecondaryMapper() {
+    const formData = new FormData();
+
+    formData.append(
+        "val",
+        JSON.stringify(null),
+    );
+
+    const response = await fetch(
+        "/tileserver/renderer/secondary_cmap",
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to clear secondary annotation colour map.",
+        );
+    }
+}
+
 export {
+    clearAnnotationSecondaryMapper,
     clearOverlays,
     createSession,
     getConfiguredFiles,
@@ -125,5 +399,13 @@ export {
     loadSlide,
     removeOverlay,
     removeSlide,
+    getAnnotationColors,
+    getAnnotationAtPoint,
+    getAnnotationProperties,
+    getAnnotationPropertyValues,
     setAnnotationColors,
+    setAnnotationMapper,
+    setAnnotationProperty,
+    setAnnotationPropertyRange,
+    setAnnotationSecondaryMapper,
 };

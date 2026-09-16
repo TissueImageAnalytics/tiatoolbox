@@ -26,6 +26,7 @@ function createSettingsPanelController({
     themeSelect,
     controlOpacityInput,
     controlOpacityValue,
+    annotationInspectionEnabledInput,
     zoomVisibleInput,
     zoomLevelVisibleInput,
     rotationVisibleInput,
@@ -47,6 +48,7 @@ function createSettingsPanelController({
     scaleBarOpacityInput,
     scaleBarSizeSelect,
     scaleBarUnitsSelect,
+    onAnnotationInspectionChange,
     onThemeChange,
     onControlVisibilityChange,
     onReset,
@@ -255,6 +257,8 @@ function createSettingsPanelController({
                 controlOpacityInput.value,
 
             controls: {
+                annotationInspection:
+                    annotationInspectionEnabledInput.checked,
                 zoom: zoomVisibleInput.checked,
                 zoomLevel:
                     zoomLevelVisibleInput.checked,
@@ -383,6 +387,14 @@ function createSettingsPanelController({
             controls !== null &&
             typeof controls === "object"
         ) {
+            if (
+                typeof controls.annotationInspection ===
+                "boolean"
+            ) {
+                annotationInspectionEnabledInput.checked =
+                    controls.annotationInspection;
+            }
+
             if (
                 typeof controls.zoom ===
                 "boolean"
@@ -646,6 +658,7 @@ function createSettingsPanelController({
         controlOpacityInput.value = "100";
 
         for (const input of [
+            annotationInspectionEnabledInput,
             zoomVisibleInput,
             zoomLevelVisibleInput,
             rotationVisibleInput,
@@ -749,6 +762,14 @@ function createSettingsPanelController({
             "input",
             () => {
                 updateAppearance();
+                save();
+            },
+        );
+
+        annotationInspectionEnabledInput.addEventListener(
+            "change",
+            () => {
+                onAnnotationInspectionChange();
                 save();
             },
         );

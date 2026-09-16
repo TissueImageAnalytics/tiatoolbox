@@ -58,6 +58,17 @@
             </div>
         </div>
 
+        <div class="annotation-control ol-unselectable ol-control">
+            <button
+                id="annotations-toggle"
+                type="button"
+                title="Annotations"
+                aria-label="Annotations"
+            >
+                <i class="fas fa-tags"></i>
+            </button>
+        </div>
+
         <div class="settings-control ol-unselectable ol-control">
             <button
                 id="settings-toggle"
@@ -79,6 +90,144 @@
                     No layers loaded
                 </div>
             </div>
+        </aside>
+
+        <aside
+            id="annotations-panel"
+            class="annotations-panel hidden"
+        >
+            <div class="annotations-panel-header">
+                Annotations
+            </div>
+
+            <div class="annotations-panel-display">
+                <label
+                    class="annotations-panel-display-field"
+                    for="annotations-colour-by"
+                >
+                    <span>Colour by</span>
+
+                    <select id="annotations-colour-by">
+                        <option value="type">Class</option>
+                        <option value="property">Property</option>
+                        <option value="secondary">
+                            Class + Property
+                        </option>
+                    </select>
+                </label>
+
+                <label
+                    id="annotations-secondary-type-field"
+                    class="annotations-panel-display-field"
+                    for="annotations-secondary-type"
+                    hidden
+                >
+                    <span>Class</span>
+
+                    <select id="annotations-secondary-type"></select>
+                </label>
+
+                <label
+                    id="annotations-property-field"
+                    class="annotations-panel-display-field"
+                    for="annotations-property"
+                    hidden
+                >
+                    <span>Property</span>
+
+                    <select id="annotations-property"></select>
+                </label>
+
+                <div
+                    id="annotations-property-legend"
+                    class="annotations-property-legend"
+                    hidden
+                >
+                    <div
+                        id="annotations-property-legend-caption"
+                        class="annotations-property-legend-caption"
+                    >
+                        Viridis colour scale
+                    </div>
+
+                    <div
+                        class="annotations-property-gradient"
+                        aria-hidden="true"
+                    ></div>
+
+                    <div class="annotations-property-range">
+                        <span id="annotations-property-min"></span>
+                        <span id="annotations-property-max"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                id="annotations-panel-list"
+                class="annotations-panel-list"
+            >
+                <div class="annotations-panel-empty">
+                    No annotations loaded
+                </div>
+            </div>
+
+            <div class="annotations-panel-actions">
+                <div class="annotations-panel-visibility-actions">
+                    <button
+                        id="annotations-show-all"
+                        type="button"
+                        disabled
+                    >
+                        Show all
+                    </button>
+
+                    <button
+                        id="annotations-hide-all"
+                        type="button"
+                        disabled
+                    >
+                        Hide all
+                    </button>
+                </div>
+
+                <button
+                    id="annotations-export-colours"
+                    type="button"
+                    disabled
+                >
+                    Export colours
+                </button>
+            </div>
+        </aside>
+
+        <aside
+            id="annotation-inspector"
+            class="annotation-inspector"
+            hidden
+        >
+            <div
+                id="annotation-inspector-header"
+                class="annotation-inspector-header"
+            >
+                <span id="annotation-inspector-title">
+                    Annotation
+                </span>
+
+                <button
+                    id="annotation-inspector-close"
+                    class="annotation-inspector-close"
+                    type="button"
+                    title="Close annotation information"
+                    aria-label="Close annotation information"
+                >
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div
+                id="annotation-inspector-properties"
+                class="annotation-inspector-properties"
+            ></div>
         </aside>
 
         <aside id="settings-panel" class="settings-panel hidden">
@@ -224,6 +373,27 @@
                     class="settings-tab-panel hidden"
                     data-settings-panel="controls"
                 >
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Annotation inspection
+                            </div>
+                            <div class="settings-option-description">
+                                Show annotation information when selecting an annotation.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-annotation-inspection"
+                                type="checkbox"
+                                aria-label="Enable annotation inspection"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
                     <div class="settings-option">
                         <div class="settings-option-text">
                             <div class="settings-option-label">
