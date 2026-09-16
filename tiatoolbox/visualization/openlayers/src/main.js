@@ -61,6 +61,9 @@ import {
     assignAnnotationColours,
     createAnnotationColourConfig,
 } from "./utils/annotation-colours.js";
+import {
+    getAnnotationFilter,
+} from "./utils/annotation-filters.js";
 import { hexToRgb } from "./utils/colours.js";
 import {
     getFiniteNumberRange,
@@ -970,37 +973,6 @@ function pruneAnnotationTypeState() {
     }
 }
 
-function getAnnotationFilter() {
-    const annotationTypes =
-        getAnnotationTypes();
-
-    const visibleTypes =
-        annotationTypes.filter(
-            (annotationType) =>
-                annotationTypeVisibility.get(
-                    annotationType,
-                ) ?? true,
-        );
-
-    if (
-        visibleTypes.length ===
-        annotationTypes.length
-    ) {
-        return null;
-    }
-
-    if (visibleTypes.length === 0) {
-        return 'props["type"]=="None"';
-    }
-
-    return visibleTypes
-        .map(
-            (annotationType) =>
-                `(props["type"]==${JSON.stringify(annotationType)})`,
-        )
-        .join(" | ");
-}
-
 function refreshAnnotationLayers(
     excludedLayerName = null,
 ) {
@@ -1041,7 +1013,10 @@ async function updateAnnotationFilter({
     }
 
     await setTileServerAnnotationFilter(
-        getAnnotationFilter(),
+        getAnnotationFilter(
+            getAnnotationTypes(),
+            annotationTypeVisibility,
+        )
     );
 
     if (refresh) {

@@ -133,7 +133,8 @@ be shown or hidden, assigned a colour and given a different fill opacity.
 
 Annotations can be coloured by **Class**, **Property** or **Class + Property**.
 Property colouring uses the viridis colour map and shows the property range in
-the Annotations panel.
+the Annotations panel. Only numeric properties available in all loaded
+annotation layers are shown.
 
 **Class + Property** keeps the normal class colours while allowing one selected
 class to be coloured by a numeric property.
