@@ -187,10 +187,14 @@ def test_segformer_postproc_with_numpy_and_dask() -> None:
     probs_da = da.from_array(probs_np, chunks=(16, 16, 2))
     mask_da = model.postproc(probs_da)
 
+    assert isinstance(mask_np, np.ndarray)
     assert mask_np.shape == (32, 32)
     assert mask_np.dtype == np.uint8
+
+    assert isinstance(mask_da, da.Array)
     assert mask_da.shape == (32, 32)
     assert mask_da.dtype == np.uint8
+    np.testing.assert_array_equal(mask_da.compute(), mask_np)
 
 
 def test_segformer_infer_batch_probability_output() -> None:
@@ -308,5 +312,22 @@ def test_native_hf_state_dict_still_loads() -> None:
         decoder_segmentation_channels=32,
     )
     incompatible = other.load_state_dict(state, strict=True)
+    assert incompatible.missing_keys == []
+    assert incompatible.unexpected_keys == []
+
+
+def test_wrapped_model_key_checkpoint_loads() -> None:
+    """Checkpoints nested under a ``model`` key should unwrap and load."""
+    model = Segformer(
+        encoder_name="mit_b0", classes=3, decoder_segmentation_channels=32
+    )
+    wrapped = {"model": model.state_dict(), "epoch": 10}
+
+    other = Segformer(
+        encoder_name="mit_b0",
+        classes=3,
+        decoder_segmentation_channels=32,
+    )
+    incompatible = other.load_state_dict(wrapped, strict=True)
     assert incompatible.missing_keys == []
     assert incompatible.unexpected_keys == []
