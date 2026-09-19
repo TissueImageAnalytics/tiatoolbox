@@ -389,7 +389,7 @@ class SemanticSegmentor(PatchPredictor):
             wsireader_kwargs=wsireader_kwargs,
         )
 
-    def infer_wsi(
+    def infer_wsi(  # noqa: PLR0915  (eval-mode setup nudged statement count)
         self: SemanticSegmentor,
         dataloader: DataLoader,
         save_path: Path,
@@ -502,6 +502,10 @@ class SemanticSegmentor(PatchPredictor):
         min_x, min_y, _, _ = self.mask_padding
         _, canvas_width = masked_output_shape
 
+        # Set inference mode once here; infer_batch no longer calls
+        # model.eval() internally (needed for Monte Carlo Dropout wrappers).
+        if isinstance(self.model, torch.nn.Module):
+            self.model.eval()
         infer_batch = self._get_model_attr("infer_batch")
         for batch_idx, batch_data in enumerate(tqdm_loop):
             batch_output = infer_batch(

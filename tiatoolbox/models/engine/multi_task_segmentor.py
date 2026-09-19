@@ -416,6 +416,10 @@ class MultiTaskSegmentor(SemanticSegmentor):
         keys = ["probabilities"]
         coordinates = []
 
+        # Set inference mode once here; infer_batch no longer calls
+        # model.eval() internally (needed for Monte Carlo Dropout wrappers).
+        if isinstance(self.model, torch.nn.Module):
+            self.model.eval()
         # Expected number of outputs from the model
         infer_batch = self._get_model_attr("infer_batch")
         batch_output = infer_batch(
@@ -591,6 +595,10 @@ class MultiTaskSegmentor(SemanticSegmentor):
             disable=not self.verbose,
         )
 
+        # Set inference mode once here; infer_batch no longer calls
+        # model.eval() internally (needed for Monte Carlo Dropout wrappers).
+        if isinstance(self.model, torch.nn.Module):
+            self.model.eval()
         # Expected number of outputs from the model
         infer_batch = self._get_model_attr("infer_batch")
         batch_output = infer_batch(
