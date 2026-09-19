@@ -288,7 +288,7 @@ class _ParamlessDropoutModel(nn.Module):
 
 def test_getattr_raises_when_base_model_unset() -> None:
     """__getattr__ raises AttributeError when base_model has not been assigned."""
-    wrapper = BayesianModelWrapper.__new__(BayesianModelWrapper)
+    wrapper = object.__new__(BayesianModelWrapper)
     nn.Module.__init__(wrapper)  # empty module: no base_model registered
 
     with pytest.raises(AttributeError, match=r"has no attribute"):
