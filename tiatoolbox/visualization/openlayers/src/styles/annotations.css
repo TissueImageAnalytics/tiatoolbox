@@ -273,6 +273,13 @@
 }
 
 
+.annotations-panel-colour-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+
 .annotations-panel-actions button {
     width: 100%;
     box-sizing: border-box;

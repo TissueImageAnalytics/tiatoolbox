@@ -1753,9 +1753,12 @@ def test_annotation_opacities(app_alt: TileServer) -> None:
     """Test annotation fill opacity by type."""
     layer = app_alt.pyramids["default"]["layer-1"]
 
-    annotation = next(
-        ann for ann in layer.store.values() if ann.properties.get("type") == "cell"
-    )
+    try:
+        annotation = next(
+            ann for ann in layer.store.values() if ann.properties.get("type") == "cell"
+        )
+    except StopIteration:
+        pytest.fail("Expected a cell annotation in layer-1.")
 
     layer.renderer.score_prop = "prob"
     layer.renderer.mapper = "viridis"

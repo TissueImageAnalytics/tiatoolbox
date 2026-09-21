@@ -19,6 +19,8 @@ function createAnnotationsPanelController({
     list,
     selectAllButton,
     deselectAllButton,
+    importButton,
+    importInput,
     exportButton,
     colourBySelect,
     secondaryTypeField,
@@ -49,6 +51,7 @@ function createAnnotationsPanelController({
     onPropertyChange,
     onSecondaryTypeChange,
     onSetAllVisibility,
+    onImport,
     onExport,
     onOpen,
 }) {
@@ -367,6 +370,10 @@ function createAnnotationsPanelController({
             !hasAnnotations ||
             displayMode === "secondary";
 
+        importButton.disabled =
+            !hasAnnotations ||
+            displayMode === "property";
+
         exportButton.disabled =
             !hasAnnotations ||
             displayMode === "property";
@@ -643,6 +650,30 @@ function createAnnotationsPanelController({
                 onOpacityLinkChange(
                     linkOpacityInput.checked,
                 ));
+        },
+    );
+
+    importButton.addEventListener(
+        "click",
+        () => {
+            importInput.click();
+        },
+    );
+
+    importInput.addEventListener(
+        "change",
+        () => {
+            const file =
+                importInput.files?.[0];
+
+            importInput.value = "";
+
+            if (file === undefined) {
+                return;
+            }
+
+            runAction(() =>
+                onImport(file));
         },
     );
 

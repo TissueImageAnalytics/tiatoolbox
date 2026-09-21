@@ -199,13 +199,30 @@
                     </button>
                 </div>
 
-                <button
-                    id="annotations-export-colours"
-                    type="button"
-                    disabled
+                <div class="annotations-panel-colour-actions">
+                    <button
+                        id="annotations-import-colours"
+                        type="button"
+                        disabled
+                    >
+                        Import colours
+                    </button>
+
+                    <button
+                        id="annotations-export-colours"
+                        type="button"
+                        disabled
+                    >
+                        Export colours
+                    </button>
+                </div>
+
+                <input
+                    id="annotations-import-colours-file"
+                    type="file"
+                    accept=".json,application/json"
+                    hidden
                 >
-                    Export colours
-                </button>
             </div>
         </aside>
 

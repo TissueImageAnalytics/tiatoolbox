@@ -8,6 +8,8 @@ import {
 import {
     assignAnnotationColours,
     createAnnotationColourConfig,
+    mergeAnnotationColourConfig,
+    parseAnnotationColourConfig,
 } from "../../../tiatoolbox/visualization/openlayers/src/utils/annotation-colours.js";
 
 function createColourGenerator() {
@@ -399,5 +401,310 @@ describe("createAnnotationColourConfig", () => {
                 ],
             },
         });
+    });
+});
+
+describe("parseAnnotationColourConfig", () => {
+    it("parses an old flat colour config", () => {
+        const config =
+            parseAnnotationColourConfig({
+                color_dict: {
+                    Tumour: [
+                        255,
+                        0,
+                        0,
+                        255,
+                    ],
+                },
+            });
+
+        expect(
+            config,
+        ).toEqual({
+            colorDict: {
+                Tumour: [
+                    255,
+                    0,
+                    0,
+                    255,
+                ],
+            },
+            layerColorDicts: {},
+        });
+    });
+
+    it("parses layer-specific colour config", () => {
+        const config =
+            parseAnnotationColourConfig({
+                color_dict: {
+                    Tumour: [
+                        255,
+                        0,
+                        0,
+                    ],
+                },
+                layer_color_dicts: {
+                    nuclei: {
+                        Tumour: [
+                            0,
+                            255,
+                            0,
+                            255,
+                        ],
+                    },
+                },
+            });
+
+        expect(
+            config.layerColorDicts,
+        ).toEqual({
+            nuclei: {
+                Tumour: [
+                    0,
+                    255,
+                    0,
+                    255,
+                ],
+            },
+        });
+    });
+
+    it("rejects configs without colour dictionaries", () => {
+        expect(
+            () =>
+                parseAnnotationColourConfig(
+                    {},
+                ),
+        ).toThrow(
+            "Annotation colour config must contain color_dict or layer_color_dicts.",
+        );
+    });
+
+    it("rejects invalid colour values", () => {
+        expect(
+            () =>
+                parseAnnotationColourConfig({
+                    color_dict: {
+                        Tumour: [
+                            256,
+                            0,
+                            0,
+                        ],
+                    },
+                }),
+        ).toThrow(
+            "Invalid annotation colour for color_dict.Tumour.",
+        );
+    });
+
+    it("rejects invalid layer colour dictionaries", () => {
+        expect(
+            () =>
+                parseAnnotationColourConfig({
+                    layer_color_dicts: {
+                        nuclei:
+                            "invalid",
+                    },
+                }),
+        ).toThrow(
+            "layer_color_dicts.nuclei must be an object.",
+        );
+    });
+
+    it("rejects invalid config objects", () => {
+        expect(
+            () =>
+                parseAnnotationColourConfig(
+                    [],
+                ),
+        ).toThrow(
+            "Annotation colour config must be an object.",
+        );
+
+        expect(
+            () =>
+                parseAnnotationColourConfig({
+                    layer_color_dicts: [],
+                }),
+        ).toThrow(
+            "layer_color_dicts must be an object.",
+        );
+    });
+});
+
+
+describe("mergeAnnotationColourConfig", () => {
+    it("applies flat colours to matching annotation types", () => {
+        const colours =
+            new Map([
+                [
+                    "Tumour",
+                    [
+                        0,
+                        0,
+                        1,
+                        0.4,
+                    ],
+                ],
+                [
+                    "Stroma",
+                    [
+                        0,
+                        1,
+                        0,
+                        0.7,
+                    ],
+                ],
+            ]);
+
+        const result =
+            mergeAnnotationColourConfig(
+                colours,
+                [
+                    "Tumour",
+                    "Stroma",
+                ],
+                {
+                    Tumour: [
+                        255,
+                        128,
+                        0,
+                        255,
+                    ],
+                },
+            );
+
+        expect(
+            result.get("Tumour"),
+        ).toEqual([
+            1,
+            128 / 255,
+            0,
+            0.4,
+        ]);
+
+        expect(
+            result.get("Stroma"),
+        ).toEqual([
+            0,
+            1,
+            0,
+            0.7,
+        ]);
+    });
+
+    it("prefers layer colours over flat colours", () => {
+        const result =
+            mergeAnnotationColourConfig(
+                new Map([
+                    [
+                        "Tumour",
+                        [
+                            0,
+                            0,
+                            0,
+                            0.5,
+                        ],
+                    ],
+                ]),
+                [
+                    "Tumour",
+                ],
+                {
+                    Tumour: [
+                        255,
+                        0,
+                        0,
+                    ],
+                },
+                {
+                    Tumour: [
+                        0,
+                        255,
+                        0,
+                    ],
+                },
+            );
+
+        expect(
+            result.get("Tumour"),
+        ).toEqual([
+            0,
+            1,
+            0,
+            0.5,
+        ]);
+    });
+
+    it("supports numeric annotation type keys", () => {
+        const result =
+            mergeAnnotationColourConfig(
+                new Map([
+                    [
+                        0,
+                        [
+                            0,
+                            0,
+                            0,
+                            1,
+                        ],
+                    ],
+                ]),
+                [
+                    0,
+                ],
+                {
+                    0: [
+                        64,
+                        128,
+                        255,
+                    ],
+                },
+            );
+
+        expect(
+            result.get(0),
+        ).toEqual([
+            64 / 255,
+            128 / 255,
+            1,
+            1,
+        ]);
+    });
+
+    it("ignores colours for unloaded annotation types", () => {
+        const original =
+            new Map([
+                [
+                    "Tumour",
+                    [
+                        1,
+                        0,
+                        0,
+                        0.6,
+                    ],
+                ],
+            ]);
+
+        const result =
+            mergeAnnotationColourConfig(
+                original,
+                [
+                    "Tumour",
+                ],
+                {
+                    Missing: [
+                        0,
+                        255,
+                        0,
+                    ],
+                },
+            );
+
+        expect(
+            result,
+        ).toEqual(
+            original,
+        );
     });
 });

@@ -61,6 +61,8 @@ import {
 import {
     assignAnnotationColours,
     createAnnotationColourConfig,
+    mergeAnnotationColourConfig,
+    parseAnnotationColourConfig,
 } from "./utils/annotation-colours.js";
 import {
     getAnnotationFilter,
@@ -196,6 +198,16 @@ const annotationsSelectAllButton =
 const annotationsDeselectAllButton =
     document.getElementById(
         "annotations-deselect-all",
+    );
+
+const annotationsImportColoursButton =
+    document.getElementById(
+        "annotations-import-colours",
+    );
+
+const annotationsImportColoursInput =
+    document.getElementById(
+        "annotations-import-colours-file",
     );
 
 const annotationsExportColoursButton =
@@ -362,6 +374,8 @@ if (
     annotationsList === null ||
     annotationsSelectAllButton === null ||
     annotationsDeselectAllButton === null ||
+    annotationsImportColoursButton === null ||
+    annotationsImportColoursInput === null ||
     annotationsExportColoursButton === null ||
     annotationsColourBySelect === null ||
     annotationsPropertyField === null ||
@@ -943,6 +957,104 @@ async function updateAnnotationProperties({
     }
 
     annotationsPanelController.render();
+}
+
+async function importAnnotationColours(file) {
+    let config;
+
+    try {
+        config = JSON.parse(
+            await file.text(),
+        );
+    } catch {
+        throw new Error(
+            "Annotation colour file is not valid JSON.",
+        );
+    }
+
+    const {
+        colorDict,
+        layerColorDicts,
+    } = parseAnnotationColourConfig(
+        config,
+    );
+
+    const updates = [];
+
+    for (const [
+        layerName,
+        annotationTypes,
+    ] of annotationTypesByLayer) {
+        const currentColours =
+            annotationColoursByLayer.get(
+                layerName,
+            );
+
+        if (currentColours === undefined) {
+            continue;
+        }
+
+        const updatedColours =
+            mergeAnnotationColourConfig(
+                currentColours,
+                annotationTypes,
+                colorDict,
+                layerColorDicts[
+                    layerName
+                ] ?? {},
+            );
+
+        updates.push({
+            layerName,
+            previousColours:
+                new Map(
+                    currentColours,
+                ),
+            updatedColours,
+        });
+    }
+
+    try {
+        await Promise.all(
+            updates.map(
+                ({
+                    layerName,
+                    updatedColours,
+                }) =>
+                    setTileServerAnnotationColors(
+                        updatedColours,
+                        layerName,
+                    ),
+            ),
+        );
+    } catch (error) {
+        await Promise.allSettled(
+            updates.map(
+                ({
+                    layerName,
+                    previousColours,
+                }) =>
+                    setTileServerAnnotationColors(
+                        previousColours,
+                        layerName,
+                    ),
+            ),
+        );
+
+        throw error;
+    }
+
+    for (const {
+        layerName,
+        updatedColours,
+    } of updates) {
+        annotationColoursByLayer.set(
+            layerName,
+            updatedColours,
+        );
+    }
+
+    refreshAnnotationLayers();
 }
 
 function exportAnnotationColours() {
@@ -1552,6 +1664,10 @@ const annotationsPanelController =
             annotationsSelectAllButton,
         deselectAllButton:
             annotationsDeselectAllButton,
+        importButton:
+            annotationsImportColoursButton,
+        importInput:
+            annotationsImportColoursInput,
         exportButton:
             annotationsExportColoursButton,
 
@@ -1948,6 +2064,12 @@ const annotationsPanelController =
 
         async onOpacityLinkChange(linked) {
             annotationOpacityLinked = linked;
+        },
+
+        async onImport(file) {
+            await importAnnotationColours(
+                file,
+            );
         },
 
         onExport() {

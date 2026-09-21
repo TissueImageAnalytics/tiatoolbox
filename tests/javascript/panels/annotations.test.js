@@ -21,6 +21,7 @@ function createHarness({
     onSecondaryTypeChange = vi.fn(async () => {}),
     opacityLinked = false,
     onOpacityLinkChange = vi.fn(async () => {}),
+    onImport = vi.fn(async () => {}),
     propertyRange = [0.2, 0.8],
 } = {}) {
     document.body.innerHTML = `
@@ -74,6 +75,19 @@ function createHarness({
             >
                 Deselect all
             </button>
+
+            <button
+                id="import"
+                type="button"
+                disabled
+            >
+                Import colours
+            </button>
+
+            <input
+                id="import-file"
+                type="file"
+            >
 
             <button
                 id="export"
@@ -143,6 +157,16 @@ function createHarness({
 
     const deselectAllButton =
         document.getElementById("deselect-all");
+
+    const importButton =
+        document.getElementById(
+            "import",
+        );
+
+    const importInput =
+        document.getElementById(
+            "import-file",
+        );
 
     const exportButton =
         document.getElementById("export");
@@ -249,6 +273,8 @@ function createHarness({
             linkOpacityInput,
             selectAllButton,
             deselectAllButton,
+            importButton,
+            importInput,
             exportButton,
 
             getAnnotationGroups: () =>
@@ -317,6 +343,7 @@ function createHarness({
             onPropertyChange,
             onSecondaryTypeChange,
             onSetAllVisibility,
+            onImport,
             onExport,
             onOpen,
         });
@@ -338,6 +365,8 @@ function createHarness({
         linkOpacityInput,
         selectAllButton,
         deselectAllButton,
+        importButton,
+        importInput,
         exportButton,
         colours,
         visibility,
@@ -350,6 +379,7 @@ function createHarness({
         onPropertyChange,
         onSecondaryTypeChange,
         onSetAllVisibility,
+        onImport,
         onExport,
         onOpen,
     };
@@ -373,6 +403,7 @@ describe("createAnnotationsPanelController", () => {
             colourBySelect,
             selectAllButton,
             deselectAllButton,
+            importButton,
             exportButton,
             linkOpacityInput,
         } = createHarness();
@@ -401,6 +432,7 @@ describe("createAnnotationsPanelController", () => {
 
         expect(selectAllButton.disabled).toBe(true);
         expect(deselectAllButton.disabled).toBe(true);
+        expect(importButton.disabled).toBe(true);
         expect(exportButton.disabled).toBe(true);
 
         expect(
@@ -415,6 +447,7 @@ describe("createAnnotationsPanelController", () => {
             list,
             selectAllButton,
             deselectAllButton,
+            importButton,
             exportButton,
             colours,
         } = createHarness({
@@ -500,6 +533,7 @@ describe("createAnnotationsPanelController", () => {
 
         expect(selectAllButton.disabled).toBe(false);
         expect(deselectAllButton.disabled).toBe(false);
+        expect(importButton.disabled).toBe(false);
         expect(exportButton.disabled).toBe(false);
     });
 
@@ -556,6 +590,7 @@ describe("createAnnotationsPanelController", () => {
             propertyLegendCaption,
             propertyMin,
             propertyMax,
+            importButton,
             exportButton,
         } = createHarness({
             annotationGroups: [
@@ -607,6 +642,10 @@ describe("createAnnotationsPanelController", () => {
         ).toBe("0.8");
 
         expect(
+            importButton.disabled,
+        ).toBe(true);
+
+        expect(
             exportButton.disabled,
         ).toBe(true);
 
@@ -634,6 +673,7 @@ describe("createAnnotationsPanelController", () => {
             propertySelect,
             propertyLegend,
             propertyLegendCaption,
+            importButton,
             exportButton,
             selectAllButton,
             deselectAllButton,
@@ -751,6 +791,10 @@ describe("createAnnotationsPanelController", () => {
 
         expect(
             sliders[1].disabled,
+        ).toBe(false);
+
+        expect(
+            importButton.disabled,
         ).toBe(false);
 
         expect(
@@ -1308,6 +1352,127 @@ describe("createAnnotationsPanelController", () => {
         expect(
             onSetAllVisibility,
         ).toHaveBeenCalledTimes(2);
+    });
+
+    it("opens the colour import file picker", () => {
+        // Test Import colours opens the file input.
+        const {
+            controller,
+            importButton,
+            importInput,
+        } = createHarness({
+            annotationGroups: [
+                {
+                    layerName: "annotations",
+                    annotationTypes: [
+                        "Tumour",
+                    ],
+                },
+            ],
+        });
+
+        const clickSpy =
+            vi.spyOn(
+                importInput,
+                "click",
+            );
+
+        controller.render();
+
+        importButton.click();
+
+        expect(
+            clickSpy,
+        ).toHaveBeenCalledOnce();
+    });
+
+    it("ignores an empty colour file selection", () => {
+        const {
+            controller,
+            importInput,
+            onImport,
+        } = createHarness({
+            annotationGroups: [
+                {
+                    layerName: "annotations",
+                    annotationTypes: [
+                        "Tumour",
+                    ],
+                },
+            ],
+        });
+
+        controller.render();
+
+        importInput.dispatchEvent(
+            new Event(
+                "change",
+                {
+                    bubbles: true,
+                },
+            ),
+        );
+
+        expect(
+            onImport,
+        ).not.toHaveBeenCalled();
+    });
+
+    it("imports the selected colour file", async () => {
+        // Test selecting a file calls the import callback.
+        const {
+            controller,
+            importInput,
+            onImport,
+        } = createHarness({
+            annotationGroups: [
+                {
+                    layerName: "annotations",
+                    annotationTypes: [
+                        "Tumour",
+                    ],
+                },
+            ],
+        });
+
+        const file = {
+            name:
+                "annotation_config.json",
+        };
+
+        Object.defineProperty(
+            importInput,
+            "files",
+            {
+                configurable: true,
+                value: [
+                    file,
+                ],
+            },
+        );
+
+        controller.render();
+
+        importInput.dispatchEvent(
+            new Event(
+                "change",
+                {
+                    bubbles: true,
+                },
+            ),
+        );
+
+        await flushActions();
+
+        expect(
+            onImport,
+        ).toHaveBeenCalledExactlyOnceWith(
+            file,
+        );
+
+        expect(
+            importInput.value,
+        ).toBe("");
     });
 
     it("exports annotation colours", () => {
