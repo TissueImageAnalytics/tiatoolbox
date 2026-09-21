@@ -29,6 +29,7 @@ function createAnnotationsPanelController({
     propertyLegendCaption,
     propertyMin,
     propertyMax,
+    linkOpacityInput,
     getAnnotationGroups,
     getAnnotationTypes,
     getAnnotationColour,
@@ -39,9 +40,11 @@ function createAnnotationsPanelController({
     getPropertyRange,
     isAnnotationTypeVisible,
     getAnnotationOpacity,
+    getOpacityLinked,
     onColourChange,
     onVisibilityChange,
     onOpacityChange,
+    onOpacityLinkChange,
     onDisplayModeChange,
     onPropertyChange,
     onSecondaryTypeChange,
@@ -209,6 +212,21 @@ function createAnnotationsPanelController({
 
         const hasAnnotations =
             annotationGroups.length > 0;
+
+        linkOpacityInput.checked =
+            getOpacityLinked();
+
+        linkOpacityInput.disabled =
+            !hasAnnotations;
+
+        linkOpacityInput
+            .closest(
+                ".annotations-panel-link-opacity",
+            )
+            ?.classList.toggle(
+                "disabled",
+                !hasAnnotations,
+            );
 
         colourBySelect.value =
             displayMode;
@@ -538,8 +556,8 @@ function createAnnotationsPanelController({
                     ).toString();
 
                 slider.disabled =
-                    displayMode === "property" ||
-                    displayMode === "secondary";
+                    displayMode === "secondary" &&
+                    !secondaryTypeSelected;
 
                 const value =
                     document.createElement("span");
@@ -555,10 +573,36 @@ function createAnnotationsPanelController({
                 slider.addEventListener(
                     "input",
                     () => {
-                        value.textContent =
+                        const percentage =
                             `${Math.round(
                                 Number(slider.value) * 100,
                             )}%`;
+
+                        value.textContent =
+                            percentage;
+
+                        if (linkOpacityInput.checked) {
+                            for (
+                                const linkedSlider of
+                                list.querySelectorAll(
+                                    ".annotations-panel-slider",
+                                )
+                            ) {
+                                linkedSlider.value =
+                                    slider.value;
+
+                                linkedSlider
+                                    .closest(
+                                        ".annotations-panel-opacity",
+                                    )
+                                    ?.querySelector(
+                                        ".annotations-panel-value",
+                                    )
+                                    ?.replaceChildren(
+                                        percentage,
+                                    );
+                            }
+                        }
                     },
                 );
 
@@ -591,6 +635,16 @@ function createAnnotationsPanelController({
             list.appendChild(group);
         }
     }
+
+    linkOpacityInput.addEventListener(
+        "change",
+        () => {
+            runAction(() =>
+                onOpacityLinkChange(
+                    linkOpacityInput.checked,
+                ));
+        },
+    );
 
     colourBySelect.addEventListener(
         "change",

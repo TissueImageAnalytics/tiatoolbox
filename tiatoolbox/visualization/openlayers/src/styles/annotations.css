@@ -80,6 +80,39 @@
 }
 
 
+.annotations-panel-link-opacity {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    margin-left: 88px;
+
+    color: var(--viewer-control-muted-foreground);
+
+    font-size: 11px;
+    cursor: pointer;
+}
+
+
+.annotations-panel-link-opacity input {
+    margin: 0;
+
+    accent-color: var(--viewer-control-selected-background);
+    cursor: pointer;
+}
+
+
+.annotations-panel-link-opacity.disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+
+.annotations-panel-link-opacity input:disabled {
+    cursor: default;
+}
+
+
 .annotations-property-legend {
     margin-top: 10px;
     margin-left: 88px;

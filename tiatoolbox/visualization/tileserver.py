@@ -183,6 +183,10 @@ class TileServer(Flask):
             methods=["PUT"],
         )(self.get_annotation_colours)
         self.route(
+            "/tileserver/annotation_opacities",
+            methods=["PUT"],
+        )(self.change_annotation_opacities)
+        self.route(
             "/tileserver/annotations",
             methods=["PUT"],
         )(self.load_annotations)
@@ -943,6 +947,30 @@ class TileServer(Flask):
         """Return colours for annotation types."""
         types = json.loads(request.form["types"])
         return jsonify(self.annotation_colours(types))
+
+    def change_annotation_opacities(self: TileServer) -> str:
+        """Change fill opacity for annotation types."""
+        session_id = self._get_session_id()
+        layer_name = request.args.get("layer")
+
+        renderer = self._get_annotation_renderer(
+            session_id,
+            layer_name,
+        )
+
+        opacity_map = json.loads(
+            request.form["opacities"],
+        )
+
+        renderer.type_opacities = dict(
+            zip(
+                opacity_map["keys"],
+                opacity_map["values"],
+                strict=False,
+            )
+        )
+
+        return "done"
 
     def change_mapper(self: TileServer) -> str:
         """Change the colour mapper for the overlay."""

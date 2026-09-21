@@ -22,6 +22,7 @@ import {
     setAnnotationColors,
     setAnnotationFilter,
     setAnnotationMapper,
+    setAnnotationOpacities,
     setAnnotationProperty,
     setAnnotationPropertyRange,
     setAnnotationSecondaryMapper,
@@ -490,6 +491,90 @@ describe("setAnnotationFilter", () => {
             setAnnotationFilter(null),
         ).rejects.toThrow(
             "Failed to update annotation visibility.",
+        );
+    });
+});
+
+describe("setAnnotationOpacities", () => {
+    it("sends annotation opacity by layer", async () => {
+        // Test sending opacity while preserving numeric annotation types.
+        const fetchMock = vi.fn().mockResolvedValue(
+            mockResponse(),
+        );
+
+        vi.stubGlobal(
+            "fetch",
+            fetchMock,
+        );
+
+        await expect(
+            setAnnotationOpacities(
+                new Map([
+                    [0, 0.4],
+                    [1, 0.8],
+                ]),
+                "nucleus_detection",
+            ),
+        ).resolves.toBeUndefined();
+
+        expect(
+            fetchMock,
+        ).toHaveBeenCalledOnce();
+
+        const [
+            url,
+            options,
+        ] = fetchMock.mock.calls[0];
+
+        expect(url).toBe(
+            "/tileserver/annotation_opacities?layer=nucleus_detection",
+        );
+
+        expect(
+            options.method,
+        ).toBe("PUT");
+
+        expect(
+            options.body,
+        ).toBeInstanceOf(FormData);
+
+        expect(
+            JSON.parse(
+                options.body.get(
+                    "opacities",
+                ),
+            ),
+        ).toEqual({
+            keys: [
+                0,
+                1,
+            ],
+            values: [
+                0.4,
+                0.8,
+            ],
+        });
+    });
+
+    it("throws when annotation opacity cannot be updated", async () => {
+        // Test opacity update error handling.
+        vi.stubGlobal(
+            "fetch",
+            vi.fn().mockResolvedValue(
+                mockResponse({
+                    ok: false,
+                }),
+            ),
+        );
+
+        await expect(
+            setAnnotationOpacities(
+                new Map([
+                    ["Tumour", 0.5],
+                ]),
+            ),
+        ).rejects.toThrow(
+            "Failed to update annotation opacity.",
         );
     });
 });

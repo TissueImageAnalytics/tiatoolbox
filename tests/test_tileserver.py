@@ -1749,6 +1749,77 @@ def test_update_renderer(app: TileServer) -> None:
         assert app.pyramids["default"]["overlay"].renderer.where is None
 
 
+def test_annotation_opacities(app_alt: TileServer) -> None:
+    """Test annotation fill opacity by type."""
+    layer = app_alt.pyramids["default"]["layer-1"]
+
+    annotation = next(
+        ann for ann in layer.store.values() if ann.properties.get("type") == "cell"
+    )
+
+    layer.renderer.score_prop = "prob"
+    layer.renderer.mapper = "viridis"
+
+    base_colour = layer.renderer.get_color(
+        annotation,
+        edge=False,
+    )
+
+    with app_alt.test_client() as client:
+        response = client.put(
+            "/tileserver/annotation_opacities?layer=layer-1",
+            data={
+                "opacities": json.dumps(
+                    {
+                        "keys": [
+                            "cell",
+                            0,
+                        ],
+                        "values": [
+                            0.4,
+                            0.25,
+                        ],
+                    },
+                ),
+            },
+        )
+
+    assert response.status_code == 200
+
+    assert layer.renderer.type_opacities == {
+        "cell": 0.4,
+        0: 0.25,
+    }
+
+    colour = layer.renderer.get_color(
+        annotation,
+        edge=False,
+    )
+
+    assert colour[:3] == base_colour[:3]
+    assert colour[3] == int(0.4 * 255)
+
+    layer.renderer.secondary_cmap = {
+        "type": "cell",
+        "score_prop": "prob",
+        "mapper": colormaps["viridis"],
+    }
+
+    secondary_colour = layer.renderer.get_color(
+        annotation,
+        edge=False,
+    )
+
+    assert secondary_colour[3] == int(0.4 * 255)
+
+    secondary_edge_colour = layer.renderer.get_color(
+        annotation,
+        edge=True,
+    )
+
+    assert secondary_edge_colour[3] == 255
+
+
 def test_secondary_cmap(app: TileServer) -> None:
     """Test secondary cmap."""
     with app.test_client() as client:

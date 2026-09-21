@@ -19,6 +19,8 @@ function createHarness({
     onDisplayModeChange = vi.fn(async () => {}),
     onPropertyChange = vi.fn(async () => {}),
     onSecondaryTypeChange = vi.fn(async () => {}),
+    opacityLinked = false,
+    onOpacityLinkChange = vi.fn(async () => {}),
     propertyRange = [0.2, 0.8],
 } = {}) {
     document.body.innerHTML = `
@@ -46,6 +48,14 @@ function createHarness({
                 <span id="property-min"></span>
                 <span id="property-max"></span>
             </div>
+
+            <label class="annotations-panel-link-opacity">
+                <input
+                    id="link-opacity"
+                    type="checkbox"
+                >
+                Link opacity
+            </label>
 
             <div id="list"></div>
 
@@ -121,6 +131,11 @@ function createHarness({
     const propertyMax =
         document.getElementById(
             "property-max",
+        );
+
+    const linkOpacityInput =
+        document.getElementById(
+            "link-opacity",
         );
 
     const selectAllButton =
@@ -231,6 +246,7 @@ function createHarness({
             propertyLegendCaption,
             propertyMin,
             propertyMax,
+            linkOpacityInput,
             selectAllButton,
             deselectAllButton,
             exportButton,
@@ -290,9 +306,13 @@ function createHarness({
                         annotationType,
                     ) ?? 1,
 
+            getOpacityLinked: () =>
+                opacityLinked,
+
             onColourChange,
             onVisibilityChange,
             onOpacityChange,
+            onOpacityLinkChange,
             onDisplayModeChange,
             onPropertyChange,
             onSecondaryTypeChange,
@@ -315,6 +335,7 @@ function createHarness({
         propertyLegendCaption,
         propertyMin,
         propertyMax,
+        linkOpacityInput,
         selectAllButton,
         deselectAllButton,
         exportButton,
@@ -324,6 +345,7 @@ function createHarness({
         onColourChange,
         onVisibilityChange,
         onOpacityChange,
+        onOpacityLinkChange,
         onDisplayModeChange,
         onPropertyChange,
         onSecondaryTypeChange,
@@ -352,6 +374,7 @@ describe("createAnnotationsPanelController", () => {
             selectAllButton,
             deselectAllButton,
             exportButton,
+            linkOpacityInput,
         } = createHarness();
 
         controller.render();
@@ -379,6 +402,10 @@ describe("createAnnotationsPanelController", () => {
         expect(selectAllButton.disabled).toBe(true);
         expect(deselectAllButton.disabled).toBe(true);
         expect(exportButton.disabled).toBe(true);
+
+        expect(
+            linkOpacityInput.disabled,
+        ).toBe(true);
     });
 
     it("renders annotation groups and their state", () => {
@@ -593,7 +620,7 @@ describe("createAnnotationsPanelController", () => {
             list.querySelector(
                 ".annotations-panel-slider",
             ).disabled,
-        ).toBe(true);
+        ).toBe(false);
     });
 
     it("renders class and property mode", () => {
@@ -724,7 +751,7 @@ describe("createAnnotationsPanelController", () => {
 
         expect(
             sliders[1].disabled,
-        ).toBe(true);
+        ).toBe(false);
 
         expect(
             exportButton.disabled,
@@ -989,6 +1016,120 @@ describe("createAnnotationsPanelController", () => {
             "Tumour",
             0.4,
         );
+    });
+
+    it("renders and changes linked opacity", async () => {
+        // Test the Link opacity control reflects state and reports changes.
+        const {
+            controller,
+            linkOpacityInput,
+            onOpacityLinkChange,
+        } = createHarness({
+            annotationGroups: [
+                {
+                    layerName: "annotations",
+                    annotationTypes: [
+                        "Tumour",
+                    ],
+                },
+            ],
+            opacityLinked: true,
+        });
+
+        controller.render();
+
+        expect(
+            linkOpacityInput.checked,
+        ).toBe(true);
+
+        expect(
+            linkOpacityInput.disabled,
+        ).toBe(false);
+
+        linkOpacityInput.checked = false;
+
+        linkOpacityInput.dispatchEvent(
+            new Event(
+                "change",
+                {
+                    bubbles: true,
+                },
+            ),
+        );
+
+        await flushActions();
+
+        expect(
+            onOpacityLinkChange,
+        ).toHaveBeenCalledExactlyOnceWith(
+            false,
+        );
+    });
+
+    it("previews linked opacity across all sliders", () => {
+        // Test linked opacity updates all displayed slider values before commit.
+        const {
+            controller,
+            list,
+            onOpacityChange,
+        } = createHarness({
+            annotationGroups: [
+                {
+                    layerName: "annotations",
+                    annotationTypes: [
+                        "Tumour",
+                        "Stroma",
+                    ],
+                },
+            ],
+            opacityLinked: true,
+        });
+
+        controller.render();
+
+        const sliders =
+            list.querySelectorAll(
+                ".annotations-panel-slider",
+            );
+
+        sliders[0].value = "0.35";
+
+        sliders[0].dispatchEvent(
+            new Event(
+                "input",
+                {
+                    bubbles: true,
+                },
+            ),
+        );
+
+        expect(
+            [...sliders].map(
+                (slider) =>
+                    slider.value,
+            ),
+        ).toEqual([
+            "0.35",
+            "0.35",
+        ]);
+
+        expect(
+            [
+                ...list.querySelectorAll(
+                    ".annotations-panel-value",
+                ),
+            ].map(
+                (value) =>
+                    value.textContent,
+            ),
+        ).toEqual([
+            "35%",
+            "35%",
+        ]);
+
+        expect(
+            onOpacityChange,
+        ).not.toHaveBeenCalled();
     });
 
     it("changes annotation display mode", async () => {

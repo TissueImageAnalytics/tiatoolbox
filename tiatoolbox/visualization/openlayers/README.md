@@ -142,6 +142,10 @@ property. Other annotation classes are hidden while this mode is active.
 **Select all** and **Deselect all** can be used to change the visibility of all
 annotation types at once.
 
+Fill opacity can be adjusted in all three display modes. Enable **Link opacity**
+to apply the same opacity to all loaded annotation classes. When it is disabled,
+only the changed class is affected.
+
 Selecting an annotation in the viewer shows its layer and annotation
 properties. Annotation inspection can be enabled or disabled in Settings.
 

@@ -181,6 +181,47 @@ async function setAnnotationColors(
     }
 }
 
+async function setAnnotationOpacities(
+    opacityMap,
+    layerName = null,
+) {
+    const entries =
+        opacityMap instanceof Map
+            ? [...opacityMap.entries()]
+            : Object.entries(opacityMap);
+
+    const formData = new FormData();
+
+    formData.append(
+        "opacities",
+        JSON.stringify({
+            keys: entries.map(
+                ([key]) => key,
+            ),
+            values: entries.map(
+                ([, value]) => value,
+            ),
+        }),
+    );
+
+    const response = await fetch(
+        getAnnotationRendererUrl(
+            "/tileserver/annotation_opacities",
+            layerName,
+        ),
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update annotation opacity.",
+        );
+    }
+}
+
 async function getAnnotationColors(annotationTypes) {
     const formData = new FormData();
 
@@ -464,6 +505,7 @@ export {
     setAnnotationColors,
     setAnnotationFilter,
     setAnnotationMapper,
+    setAnnotationOpacities,
     setAnnotationProperty,
     setAnnotationPropertyRange,
     setAnnotationSecondaryMapper,
