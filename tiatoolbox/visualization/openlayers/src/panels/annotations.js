@@ -342,10 +342,12 @@ function createAnnotationsPanelController({
             properties.length === 0;
 
         selectAllButton.disabled =
-            !hasAnnotations;
+            !hasAnnotations ||
+            displayMode === "secondary";
 
         deselectAllButton.disabled =
-            !hasAnnotations;
+            !hasAnnotations ||
+            displayMode === "secondary";
 
         exportButton.disabled =
             !hasAnnotations ||
@@ -426,10 +428,15 @@ function createAnnotationsPanelController({
                     "annotations-panel-visibility";
 
                 visibility.checked =
-                    isAnnotationTypeVisible(
-                        layerName,
-                        annotationType,
-                    );
+                    displayMode === "secondary"
+                        ? secondaryTypeSelected
+                        : isAnnotationTypeVisible(
+                            layerName,
+                            annotationType,
+                        );
+
+                visibility.disabled =
+                    displayMode === "secondary";
 
                 visibility.title =
                     `Toggle ${annotationName}`;
@@ -466,7 +473,7 @@ function createAnnotationsPanelController({
 
                 colour.disabled =
                     displayMode === "property" ||
-                    secondaryTypeSelected;
+                    displayMode === "secondary";
 
                 colour.addEventListener(
                     "change",
@@ -532,7 +539,7 @@ function createAnnotationsPanelController({
 
                 slider.disabled =
                     displayMode === "property" ||
-                    secondaryTypeSelected;
+                    displayMode === "secondary";
 
                 const value =
                     document.createElement("span");

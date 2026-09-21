@@ -608,6 +608,8 @@ describe("createAnnotationsPanelController", () => {
             propertyLegend,
             propertyLegendCaption,
             exportButton,
+            selectAllButton,
+            deselectAllButton,
         } = createHarness({
             annotationGroups: [
                 {
@@ -622,7 +624,7 @@ describe("createAnnotationsPanelController", () => {
             annotationProperty: "prob",
             secondarySelection: {
                 layerName: "annotations",
-                annotationType: "Tumour",
+                annotationType: "Stroma",
             },
         });
 
@@ -651,7 +653,7 @@ describe("createAnnotationsPanelController", () => {
         ).toBe(
             JSON.stringify([
                 "annotations",
-                "Tumour",
+                "Stroma",
             ]),
         );
 
@@ -666,8 +668,37 @@ describe("createAnnotationsPanelController", () => {
         expect(
             propertyLegendCaption.textContent,
         ).toBe(
-            "annotations · Tumour · prob values · low → high",
+            "annotations · Stroma · prob values · low → high",
         );
+
+        const visibilityInputs =
+            list.querySelectorAll(
+                ".annotations-panel-visibility",
+            );
+
+        expect(
+            visibilityInputs[0].checked,
+        ).toBe(false);
+
+        expect(
+            visibilityInputs[1].checked,
+        ).toBe(true);
+
+        expect(
+            visibilityInputs[0].disabled,
+        ).toBe(true);
+
+        expect(
+            visibilityInputs[1].disabled,
+        ).toBe(true);
+
+        expect(
+            selectAllButton.disabled,
+        ).toBe(true);
+
+        expect(
+            deselectAllButton.disabled,
+        ).toBe(true);
 
         const colours =
             list.querySelectorAll(
@@ -680,7 +711,7 @@ describe("createAnnotationsPanelController", () => {
 
         expect(
             colours[1].disabled,
-        ).toBe(false);
+        ).toBe(true);
 
         const sliders =
             list.querySelectorAll(
@@ -693,7 +724,7 @@ describe("createAnnotationsPanelController", () => {
 
         expect(
             sliders[1].disabled,
-        ).toBe(false);
+        ).toBe(true);
 
         expect(
             exportButton.disabled,

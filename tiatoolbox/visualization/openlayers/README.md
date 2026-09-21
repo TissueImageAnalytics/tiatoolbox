@@ -136,8 +136,8 @@ Property colouring uses the viridis colour map and shows the property range in
 the Annotations panel. Only numeric properties available in all loaded
 annotation layers are shown.
 
-**Class + Property** keeps the normal class colours while allowing one selected
-class to be coloured by a numeric property.
+**Class + Property** shows one selected class and colours it by a numeric
+property. Other annotation classes are hidden while this mode is active.
 
 **Select all** and **Deselect all** can be used to change the visibility of all
 annotation types at once.

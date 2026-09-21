@@ -16263,7 +16263,7 @@ function Qh({ panel: e, toggle: t, list: n, selectAllButton: r, deselectAllButto
 			let [e, n] = te;
 			f.textContent = t === "secondary" && A !== null ? `${A.layerName} · ${String(A.annotationType)} · ${P} values · low → high` : `${P} values · low → high`, p.textContent = Number(e.toPrecision(4)).toString(), m.textContent = Number(n.toPrecision(4)).toString();
 		}
-		if (u.disabled = O.length === 0, r.disabled = !j, i.disabled = !j, a.disabled = !j || t === "property", e.length === 0) {
+		if (u.disabled = O.length === 0, r.disabled = !j || t === "secondary", i.disabled = !j || t === "secondary", a.disabled = !j || t === "property", e.length === 0) {
 			let e = document.createElement("div");
 			e.className = "annotations-panel-empty", e.textContent = "No annotations loaded", n.appendChild(e);
 			return;
@@ -16279,11 +16279,11 @@ function Qh({ panel: e, toggle: t, list: n, selectAllButton: r, deselectAllButto
 				let s = document.createElement("div");
 				s.className = "annotations-panel-item-header";
 				let c = document.createElement("input");
-				c.type = "checkbox", c.className = "annotations-panel-visibility", c.checked = C(r, n), c.title = `Toggle ${i}`, c.addEventListener("change", () => {
+				c.type = "checkbox", c.className = "annotations-panel-visibility", c.checked = t === "secondary" ? a : C(r, n), c.disabled = t === "secondary", c.title = `Toggle ${i}`, c.addEventListener("change", () => {
 					F(() => E(r, n, c.checked));
 				});
 				let l = document.createElement("input");
-				l.type = "color", l.className = "annotations-panel-colour", l.value = Zh(_(r, n)), l.title = `Change ${i} colour`, l.disabled = t === "property" || a, l.addEventListener("change", () => {
+				l.type = "color", l.className = "annotations-panel-colour", l.value = Zh(_(r, n)), l.title = `Change ${i} colour`, l.disabled = t === "property" || t === "secondary", l.addEventListener("change", () => {
 					F(() => T(r, n, l.value));
 				});
 				let u = document.createElement("span");
@@ -16293,7 +16293,7 @@ function Qh({ panel: e, toggle: t, list: n, selectAllButton: r, deselectAllButto
 				let f = document.createElement("span");
 				f.className = "annotations-panel-opacity-label", f.textContent = "Fill opacity";
 				let p = document.createElement("input");
-				p.type = "range", p.className = "annotations-panel-slider", p.min = "0", p.max = "1", p.step = "0.05", p.value = w(r, n).toString(), p.disabled = t === "property" || a;
+				p.type = "range", p.className = "annotations-panel-slider", p.min = "0", p.max = "1", p.step = "0.05", p.value = w(r, n).toString(), p.disabled = t === "property" || t === "secondary";
 				let m = document.createElement("span");
 				m.className = "annotations-panel-value", m.textContent = `${Math.round(Number(p.value) * 100)}%`, p.addEventListener("input", () => {
 					m.textContent = `${Math.round(Number(p.value) * 100)}%`;
@@ -16673,13 +16673,13 @@ var y_ = {
 		Bg.checked || v_();
 	},
 	onThemeChange() {
-		d_.value = y_[n_.value] ?? y_.dark, kv.updateColour(), kv.updateOpacity(), Fv.updateAppearance();
+		d_.value = y_[n_.value] ?? y_.dark, jv.updateColour(), jv.updateOpacity(), Lv.updateAppearance();
 	},
 	onControlVisibilityChange() {
-		zv();
+		Vv();
 	},
 	onReset() {
-		Bv();
+		Hv();
 	}
 });
 b_.load(), b_.updateAppearance();
@@ -16687,12 +16687,12 @@ var x_ = Xh({
 	panel: fg,
 	toggle: pg,
 	list: mg,
-	getSlideLayer: () => hv,
+	getSlideLayer: () => _v,
 	getCurrentSlidePath: () => D_,
 	getOverlayLayers: () => O_,
-	onRemoveLayer: (e) => $v(e),
+	onRemoveLayer: (e) => ty(e),
 	onOpen() {
-		dv.setOpen(!1), fv.setOpen(!1);
+		pv.setOpen(!1), mv.setOpen(!1);
 	}
 }), S_ = JSON.parse(sg.dataset.layers ?? "[]"), C_ = null, w_ = Date.now(), T_ = Date.now(), E_ = null, D_ = null, O_ = {}, k_ = /* @__PURE__ */ new Set(), A_ = /* @__PURE__ */ new Map(), j_ = /* @__PURE__ */ new Map(), M_ = /* @__PURE__ */ new Map(), N_ = /* @__PURE__ */ new Map(), P_ = /* @__PURE__ */ new Map(), F_ = "type", I_ = null, L_ = null, R_ = [], z_ = /* @__PURE__ */ new Map();
 function B_() {
@@ -16735,7 +16735,7 @@ async function G_(e) {
 	await oh(e), await nh("type", e), await ih(null, e), await Zm(t, e);
 }
 async function K_({ refresh: e = !0 } = {}) {
-	await Promise.all([...k_].map((e) => G_(e))), F_ = "type", I_ = null, L_ = null, e && ev();
+	await Promise.all([...k_].map((e) => G_(e))), F_ = "type", I_ = null, L_ = null, await rv({ refresh: e });
 }
 async function q_() {
 	await oh(), await nh("type"), await ih(null);
@@ -16744,25 +16744,25 @@ async function J_(e, { refresh: t = !0 } = {}) {
 	let n = W_(e);
 	await Promise.all([...k_].map(async (t) => {
 		await oh(t), await nh(e, t), await rh("viridis", t), await ih(n, t);
-	})), F_ = "property", I_ = e, L_ = null, t && ev();
+	})), F_ = "property", I_ = e, L_ = null, await rv({ refresh: t });
 }
 async function Y_(e, t, n, { refresh: r = !0 } = {}) {
 	let i = W_(n);
 	await Promise.all([...k_].map((e) => G_(e))), await ah(t, n, "viridis", i, e), F_ = "secondary", I_ = n, L_ = {
 		layerName: e,
 		annotationType: t
-	}, r && ev();
+	}, await rv({ refresh: r });
 }
 async function X_({ refresh: e = !0 } = {}) {
 	if (k_.size === 0) {
-		await q_(), R_ = [], z_.clear(), F_ = "type", I_ = null, L_ = null, fv.render();
+		await q_(), R_ = [], z_.clear(), F_ = "type", I_ = null, L_ = null, mv.render();
 		return;
 	}
-	if (R_ = [], z_.clear(), fv.render(), R_ = await U_(), F_ === "property" && (I_ === null || !R_.includes(I_) ? await K_({ refresh: e }) : await J_(I_, { refresh: e })), F_ === "secondary") {
+	if (R_ = [], z_.clear(), mv.render(), R_ = await U_(), F_ === "property" && (I_ === null || !R_.includes(I_) ? await K_({ refresh: e }) : await J_(I_, { refresh: e })), F_ === "secondary") {
 		let t = L_, n = t === null ? void 0 : M_.get(t.layerName);
 		t === null || n === void 0 || !n.some((e) => Object.is(e, t.annotationType)) || I_ === null || !R_.includes(I_) ? await K_({ refresh: e }) : await Y_(t.layerName, t.annotationType, I_, { refresh: e });
 	}
-	fv.render();
+	mv.render();
 }
 function Z_() {
 	let e = /* @__PURE__ */ new Map(), t = {};
@@ -16803,26 +16803,32 @@ function ev(e = null) {
 		});
 		n.setSource(r);
 	}
-	Cv.render();
+	Tv.render();
 }
-async function tv(e, { refresh: t = !0 } = {}) {
+function tv(e, t) {
+	return F_ === "secondary" && L_ !== null ? e === L_.layerName && Object.is(t, L_.annotationType) : N_.get(e)?.get(t) ?? !0;
+}
+async function nv(e, { refresh: t = !0 } = {}) {
 	if (!k_.has(e)) return;
 	let n = M_.get(e) ?? [], r = N_.get(e);
 	if (r === void 0) throw Error(`Annotation visibility is not available for layer: ${e}`);
-	await Xm(ig(n, r), e), t && ev();
+	await Xm(ig(n, F_ === "secondary" ? new Map(n.map((t) => [t, tv(e, t)])) : r), e), t && ev();
 }
-async function nv(e) {
+async function rv({ refresh: e = !0 } = {}) {
+	await Promise.all([...k_].map((e) => nv(e, { refresh: !1 }))), e && ev();
+}
+async function iv(e) {
 	let [t, n] = e, r = [...k_].filter((e) => O_[e]?.getVisible() !== !1).sort((e, t) => (O_[t]?.getZIndex() ?? 0) - (O_[e]?.getZIndex() ?? 0));
 	for (let e of r) {
 		let r = await th(e, t, -n);
-		if (Object.keys(r).length !== 0 && (r.type === void 0 || N_.get(e)?.get(r.type) !== !1)) return {
+		if (Object.keys(r).length !== 0 && (r.type === void 0 || tv(e, r.type))) return {
 			layerName: e,
 			properties: r
 		};
 	}
 	return null;
 }
-function rv(e) {
+function av(e) {
 	return {
 		box: "Bounding box (px)",
 		centroid: "Centroid (px)",
@@ -16830,7 +16836,7 @@ function rv(e) {
 		type: "Type"
 	}[e] ?? e;
 }
-function iv(e, t) {
+function ov(e, t) {
 	if (e === "prob" && typeof t == "number") return `${t.toFixed(4)} (${(t * 100).toFixed(2)}%)`;
 	if (e === "centroid" && Array.isArray(t) && t.length >= 2) {
 		let [e, n] = t;
@@ -16838,41 +16844,41 @@ function iv(e, t) {
 	}
 	return e === "box" && Array.isArray(t) && t.length === 4 ? `x: ${t[0]}–${t[2]}, y: ${t[1]}–${t[3]}` : Array.isArray(t) ? t.join(", ") : typeof t == "number" && !Number.isInteger(t) ? t.toFixed(4) : typeof t == "object" && t ? JSON.stringify(t) : String(t);
 }
-function av(e, t) {
+function sv(e, t) {
 	let n = Math.max(8, cg.clientWidth - Dg.offsetWidth - 8), r = Math.max(8, cg.clientHeight - Dg.offsetHeight - 8);
 	Dg.style.left = `${Math.min(Math.max(e, 8), n)}px`, Dg.style.top = `${Math.min(Math.max(t, 8), r)}px`;
 }
-function ov(e, t) {
+function cv(e, t) {
 	kg.textContent = e.layerName, Ag.replaceChildren();
 	for (let [t, n] of Object.entries(e.properties)) {
 		let e = document.createElement("div");
 		e.className = "annotation-inspector-property";
 		let r = document.createElement("div");
-		r.className = "annotation-inspector-property-name", r.textContent = rv(t);
+		r.className = "annotation-inspector-property-name", r.textContent = av(t);
 		let i = document.createElement("div");
-		i.className = "annotation-inspector-property-value", i.textContent = iv(t, n), e.append(r, i), Ag.append(e);
+		i.className = "annotation-inspector-property-value", i.textContent = ov(t, n), e.append(r, i), Ag.append(e);
 	}
 	Dg.hidden = !1;
 	let n = sg.getBoundingClientRect(), r = cg.getBoundingClientRect();
-	av(n.left - r.left + t[0] + 12, n.top - r.top + t[1] + 12);
+	sv(n.left - r.left + t[0] + 12, n.top - r.top + t[1] + 12);
 }
-var sv = await Wm("slide"), cv = await Wm("overlay"), lv = cv.config?.color_dict ?? {}, uv = cv.config?.layer_color_dicts ?? {}, dv = Yh({
+var lv = await Wm("slide"), uv = await Wm("overlay"), dv = uv.config?.color_dict ?? {}, fv = uv.config?.layer_color_dicts ?? {}, pv = Yh({
 	panel: lg,
 	toggle: ug,
 	container: dg,
-	configuredSlides: sv,
-	configuredOverlays: cv,
+	configuredSlides: lv,
+	configuredOverlays: uv,
 	getCurrentSlidePath: () => D_,
 	hasSlide: () => E_ !== null,
 	hasOverlays: () => Object.keys(O_).length > 0,
-	onSlideSelected: (e) => Zv(e),
-	onOverlaySelected: (e) => Qv(e),
-	onClearSlide: () => Xv(),
-	onClearOverlays: () => qv(),
+	onSlideSelected: (e) => $v(e),
+	onOverlaySelected: (e) => ey(e),
+	onClearSlide: () => Qv(),
+	onClearOverlays: () => Yv(),
 	onOpen() {
-		x_.setOpen(!1), fv.setOpen(!1);
+		x_.setOpen(!1), mv.setOpen(!1);
 	}
-}), fv = Qh({
+}), mv = Qh({
 	panel: hg,
 	toggle: gg,
 	list: _g,
@@ -16952,7 +16958,7 @@ var sv = await Wm("slide"), cv = await Wm("overlay"), lv = cv.config?.color_dict
 		let i = r.get(t) ?? !0;
 		r.set(t, n);
 		try {
-			await tv(e);
+			await nv(e);
 		} catch (e) {
 			throw r.set(t, i), e;
 		}
@@ -16982,10 +16988,10 @@ var sv = await Wm("slide"), cv = await Wm("overlay"), lv = cv.config?.color_dict
 			for (let t of i) r.set(t, e);
 		}
 		try {
-			await Promise.all([...k_].map((e) => tv(e, { refresh: !1 })));
+			await Promise.all([...k_].map((e) => nv(e, { refresh: !1 })));
 		} catch (e) {
 			for (let [e, n] of t) N_.set(e, n);
-			throw await Promise.allSettled([...k_].map((e) => tv(e, { refresh: !1 }))), ev(), e;
+			throw await Promise.allSettled([...k_].map((e) => nv(e, { refresh: !1 }))), ev(), e;
 		}
 		ev();
 	},
@@ -16993,23 +16999,23 @@ var sv = await Wm("slide"), cv = await Wm("overlay"), lv = cv.config?.color_dict
 		Z_();
 	},
 	onOpen() {
-		dv.setOpen(!1), x_.setOpen(!1);
+		pv.setOpen(!1), x_.setOpen(!1);
 	}
 });
-dv.setOpen(!0);
-var pv = new URLSearchParams(window.location.search).get("slide") ?? (S_.length === 0 ? sv.files[0]?.path ?? null : null);
-if (pv !== null) {
-	D_ = pv, C_ = await Hm();
-	let e = await Um(pv);
-	E_ = e, dv.setSlide(pv), dv.updateOverlaySelect(), S_ = [{
+pv.setOpen(!0);
+var hv = new URLSearchParams(window.location.search).get("slide") ?? (S_.length === 0 ? lv.files[0]?.path ?? null : null);
+if (hv !== null) {
+	D_ = hv, C_ = await Hm();
+	let e = await Um(hv);
+	E_ = e, pv.setSlide(hv), pv.updateOverlaySelect(), S_ = [{
 		name: "slide",
 		url: `/tileserver/layer/slide/${C_}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${w_}`,
 		size: e.slide_dimensions,
 		mpp: e.mpp[0]
 	}];
 } else S_.length === 0 && (C_ = await Hm());
-dv.updateActionState();
-var mv = S_.map((e) => {
+pv.updateActionState();
+var gv = S_.map((e) => {
 	let t = new Wu({
 		url: e.url,
 		size: e.size,
@@ -17020,37 +17026,37 @@ var mv = S_.map((e) => {
 		title: e.name,
 		source: t
 	});
-}), hv = mv[0];
-hv === void 0 && (hv = new Co({ title: "slide" }), mv.push(hv)), hv.setZIndex(0);
-var gv = hv.getSource(), _v, vv, yv;
-if (gv !== null) {
-	let e = gv.getTileGrid();
-	_v = e.getResolutions(), vv = e.getExtent(), yv = new sn({
+}), _v = gv[0];
+_v === void 0 && (_v = new Co({ title: "slide" }), gv.push(_v)), _v.setZIndex(0);
+var vv = _v.getSource(), yv, bv, xv;
+if (vv !== null) {
+	let e = vv.getTileGrid();
+	yv = e.getResolutions(), bv = e.getExtent(), xv = new sn({
 		code: "ZoomifyProjection",
 		units: "pixels",
-		extent: vv,
+		extent: bv,
 		metersPerUnit: S_[0].mpp * 1e-6,
 		getPointResolution(e) {
 			return e;
 		}
 	});
-} else _v = [1], vv = [
+} else yv = [1], bv = [
 	0,
 	-1,
 	1,
 	0
-], yv = new sn({
+], xv = new sn({
 	code: "ZoomifyProjectionEmpty",
 	units: "pixels",
-	extent: vv,
+	extent: bv,
 	metersPerUnit: 1,
 	getPointResolution(e) {
 		return e;
 	}
 });
-var bv = .1;
-function xv(e) {
-	let t = e[2] - e[0], n = e[3] - e[1], r = t * bv, i = n * bv;
+var Sv = .1;
+function Cv(e) {
+	let t = e[2] - e[0], n = e[3] - e[1], r = t * Sv, i = n * Sv;
 	return [
 		e[0] - r,
 		e[1] - i,
@@ -17058,29 +17064,29 @@ function xv(e) {
 		e[3] + i
 	];
 }
-pr(yv);
-var Sv = new uo({
-	projection: yv,
-	resolutions: _v,
-	extent: xv(vv),
+pr(xv);
+var wv = new uo({
+	projection: xv,
+	resolutions: yv,
+	extent: Cv(bv),
 	constrainOnlyCenter: !0,
 	smoothExtentConstraint: !0,
 	smoothResolutionConstraint: !1,
 	center: [.5, -.5],
-	resolution: _v[0]
-}), Cv = new hu({
+	resolution: yv[0]
+}), Tv = new hu({
 	target: sg,
-	layers: mv,
-	view: Sv,
+	layers: gv,
+	view: wv,
 	controls: Fe({
 		zoom: !1,
 		rotate: !1
 	}),
 	interactions: gs({ mouseWheelZoom: !1 })
-}), wv = vh({
-	map: Cv,
+}), Ev = vh({
+	map: Tv,
 	viewerApp: cg,
-	getSlideSource: () => hv.getSource(),
+	getSlideSource: () => _v.getSource(),
 	zoomVisibleInput: Vg,
 	zoomLevelVisibleInput: Hg,
 	rotationVisibleInput: Ug,
@@ -17091,9 +17097,9 @@ var Sv = new uo({
 	mousePositionVisibleInput: Xg,
 	mouseWheelZoomSensitivitySelect: $g,
 	zoomButtonStepSelect: e_
-}), { fullscreen: Tv, mousePositionControl: Ev, rotate: Dv } = wv, Ov = null, kv = Rh({
-	map: Cv,
-	hasSlide: () => hv.getSource() !== null,
+}), { fullscreen: Dv, mousePositionControl: Ov, rotate: kv } = Ev, Av = null, jv = Rh({
+	map: Tv,
+	hasSlide: () => _v.getSource() !== null,
 	enabledInput: t_,
 	colourInput: d_,
 	opacityInput: f_,
@@ -17101,21 +17107,21 @@ var Sv = new uo({
 	sizeSelect: m_,
 	unitsSelect: h_,
 	onControlChange(e) {
-		Ov = e, window.scaleLineControl = e;
+		Av = e, window.scaleLineControl = e;
 	}
-}), Av = Gh({
-	map: Cv,
-	source: gv,
-	projection: yv,
-	extent: vv,
+}), Mv = Gh({
+	map: Tv,
+	source: vv,
+	projection: xv,
+	extent: bv,
 	sizeSelect: Qg,
 	visibleInput: Zg,
-	hasSlide: () => hv.getSource() !== null
-}), jv = Av.control, Mv = new Vm();
-Cv.addControl(Mv);
-var Nv = null, Pv = null, Fv = Mh({
-	map: Cv,
-	projection: yv,
+	hasSlide: () => _v.getSource() !== null
+}), Nv = Mv.control, Pv = new Vm();
+Tv.addControl(Pv);
+var Fv = null, Iv = null, Lv = Mh({
+	map: Tv,
+	projection: xv,
 	themeSelect: n_,
 	gridThemeSelect: r_,
 	gridOpacityInput: i_,
@@ -17125,86 +17131,86 @@ var Nv = null, Pv = null, Fv = Mh({
 	graticuleVisibleInput: Wg,
 	screenSpaceGraticuleVisibleInput: Gg,
 	onGraticulesChange(e, t) {
-		Nv = e, Pv = t, window.graticule = Nv, window.screenSpaceGraticule = Pv;
+		Fv = e, Iv = t, window.graticule = Fv, window.screenSpaceGraticule = Iv;
 	}
-}), { graticuleToggle: Iv, screenSpaceGraticuleToggle: Lv } = Fv, Rv = document.createElement("div");
-Rv.className = "viewer-tools-group ol-unselectable", Cv.getOverlayContainerStopEvent().append(Rv), Rv.append(Dv.element, Iv.element, Lv.element);
-function zv() {
-	wv.updateVisibility(), Fv.updateVisibility(), Av.updateVisibility();
+}), { graticuleToggle: Rv, screenSpaceGraticuleToggle: zv } = Lv, Bv = document.createElement("div");
+Bv.className = "viewer-tools-group ol-unselectable", Tv.getOverlayContainerStopEvent().append(Bv), Bv.append(kv.element, Rv.element, zv.element);
+function Vv() {
+	Ev.updateVisibility(), Lv.updateVisibility(), Mv.updateVisibility();
 }
-function Bv() {
-	b_.resetValues(), b_.updateAppearance(), Fv.updateAppearance(), Fv.updateSpacing(), Fv.updateLabels(), zv(), Av.updateSize(), wv.updateMouseWheelZoomSensitivity(), wv.updateZoomButtonStep(), kv.updateSize(), kv.updateUnits(), kv.updateVisibility(), kv.updateColour(), kv.updateOpacity(), b_.clearSavedSettings();
+function Hv() {
+	b_.resetValues(), b_.updateAppearance(), Lv.updateAppearance(), Lv.updateSpacing(), Lv.updateLabels(), Vv(), Mv.updateSize(), Ev.updateMouseWheelZoomSensitivity(), Ev.updateZoomButtonStep(), jv.updateSize(), jv.updateUnits(), jv.updateVisibility(), jv.updateColour(), jv.updateOpacity(), b_.clearSavedSettings();
 }
 b_.bindEvents();
-function Vv(e) {
-	wv.setViewerEnabled(e), Fv.setViewerEnabled(e), kv.setViewerEnabled(e), Av.setViewerEnabled(e);
+function Uv(e) {
+	Ev.setViewerEnabled(e), Lv.setViewerEnabled(e), jv.setViewerEnabled(e), Mv.setViewerEnabled(e);
 }
-if (Vv(gv !== null), zv(), gv !== null) {
-	Cv.getView().fit(vv);
-	let e = Jv();
-	e !== null && (Cv.getView().setCenter(e.center), Cv.getView().setZoom(e.zoom));
+if (Uv(vv !== null), Vv(), vv !== null) {
+	Tv.getView().fit(bv);
+	let e = Xv();
+	e !== null && (Tv.getView().setCenter(e.center), Tv.getView().setZoom(e.zoom));
 }
-Cv.on("moveend", () => {
-	Yv(), wv.updateZoomLevel();
-}), Cv.on("singleclick", async (e) => {
+Tv.on("moveend", () => {
+	Zv(), Ev.updateZoomLevel();
+}), Tv.on("singleclick", async (e) => {
 	if (!Bg.checked || k_.size === 0) return;
 	g_ += 1;
 	let t = g_;
 	try {
-		let n = await nv(e.coordinate);
+		let n = await iv(e.coordinate);
 		if (t !== g_ || !Bg.checked || k_.size === 0 || n === null) return;
-		ov(n, e.pixel);
+		cv(n, e.pixel);
 	} catch (e) {
 		if (t !== g_) return;
 		console.error("Failed to inspect annotation.", e);
 	}
 }), jg.addEventListener("click", v_);
-var Hv = !1, Uv = 0, Wv = 0;
+var Wv = !1, Gv = 0, Kv = 0;
 Og.addEventListener("pointerdown", (e) => {
 	if (e.target.closest("button") !== null) return;
 	e.preventDefault();
 	let t = Dg.getBoundingClientRect();
-	Hv = !0, Uv = e.clientX - t.left, Wv = e.clientY - t.top, Og.setPointerCapture(e.pointerId), Dg.classList.add("dragging");
+	Wv = !0, Gv = e.clientX - t.left, Kv = e.clientY - t.top, Og.setPointerCapture(e.pointerId), Dg.classList.add("dragging");
 }), Og.addEventListener("pointermove", (e) => {
-	if (!Hv) return;
+	if (!Wv) return;
 	let t = cg.getBoundingClientRect();
-	av(e.clientX - t.left - Uv, e.clientY - t.top - Wv);
+	sv(e.clientX - t.left - Gv, e.clientY - t.top - Kv);
 });
-function Gv() {
-	Hv = !1, Dg.classList.remove("dragging");
+function qv() {
+	Wv = !1, Dg.classList.remove("dragging");
 }
-Og.addEventListener("pointerup", Gv), Og.addEventListener("pointercancel", Gv);
-function Kv() {
+Og.addEventListener("pointerup", qv), Og.addEventListener("pointercancel", qv);
+function Jv() {
 	for (let e of Object.values(O_)) {
-		e.setSource(null), Cv.removeLayer(e);
-		let t = mv.indexOf(e);
-		t !== -1 && mv.splice(t, 1);
+		e.setSource(null), Tv.removeLayer(e);
+		let t = gv.indexOf(e);
+		t !== -1 && gv.splice(t, 1);
 	}
 	for (let e of Object.keys(O_)) delete O_[e];
-	k_.clear(), M_.clear(), j_.clear(), N_.clear(), P_.clear(), v_(), F_ = "type", I_ = null, L_ = null, R_ = [], z_.clear(), fv.render(), x_.render(), dv.updateActionState();
+	k_.clear(), M_.clear(), j_.clear(), N_.clear(), P_.clear(), v_(), F_ = "type", I_ = null, L_ = null, R_ = [], z_.clear(), mv.render(), x_.render(), pv.updateActionState();
 }
-async function qv() {
-	await Gm(), Kv(), await q_();
+async function Yv() {
+	await Gm(), Jv(), await q_();
 }
-function Jv() {
+function Xv() {
 	let e = new URLSearchParams(window.location.search), t = Number(e.get("x")), n = Number(e.get("y")), r = Number(e.get("zoom"));
 	return e.get("x") === null || e.get("y") === null || e.get("zoom") === null || !Number.isFinite(t) || !Number.isFinite(n) || !Number.isFinite(r) ? null : {
 		center: [t, n],
 		zoom: r
 	};
 }
-function Yv() {
+function Zv() {
 	if (D_ === null) return;
-	let e = Cv.getView(), t = e.getCenter(), n = e.getZoom();
+	let e = Tv.getView(), t = e.getCenter(), n = e.getZoom();
 	if (t === void 0 || n === void 0) return;
 	let r = new URL(window.location.href);
 	r.searchParams.set("slide", D_), r.searchParams.set("x", t[0].toFixed(2)), r.searchParams.set("y", t[1].toFixed(2)), r.searchParams.set("zoom", n.toString());
 	let i = r.searchParams.toString().replace(/%2F/gi, "/");
 	window.history.replaceState({}, "", `${r.pathname}?${i}${r.hash}`);
 }
-async function Xv() {
+async function Qv() {
 	if (C_ === null) throw Error("No TileServer session is available.");
-	await Km(), Kv(), await q_(), D_ = null, E_ = null, S_.length = 0, w_ += 1, T_ += 1, hv.setSource(null), Av.setSource(null), x_.render();
+	await Km(), Jv(), await q_(), D_ = null, E_ = null, S_.length = 0, w_ += 1, T_ += 1, _v.setSource(null), Mv.setSource(null), x_.render();
 	let e = [
 		0,
 		-1,
@@ -17227,15 +17233,15 @@ async function Xv() {
 		center: [.5, -.5],
 		resolution: t[0]
 	});
-	Cv.setView(r), Av.setView(n, e), Fv.setProjection(n, { preserveActive: !1 });
+	Tv.setView(r), Mv.setView(n, e), Lv.setProjection(n, { preserveActive: !1 });
 	let i = new URL(window.location.href);
-	i.search = "", i.hash = "", window.history.replaceState({}, "", i), Vv(!1), wv.updateZoomLevel(), dv.updateActionState();
+	i.search = "", i.hash = "", window.history.replaceState({}, "", i), Uv(!1), Ev.updateZoomLevel(), pv.updateActionState();
 }
-async function Zv(e) {
+async function $v(e) {
 	if (C_ === null) throw Error("Dynamic slide switching requires a TileServer session.");
-	Kv(), await q_();
+	Jv(), await q_();
 	let t = await Um(e);
-	E_ = t, D_ = e, dv.setSlide(e), dv.updateOverlaySelect(), dv.updateActionState(), w_ += 1;
+	E_ = t, D_ = e, pv.setSlide(e), pv.updateOverlaySelect(), pv.updateActionState(), w_ += 1;
 	let n = og(C_, t, w_), r = n.getTileGrid(), i = r.getExtent(), a = r.getResolutions(), o = new sn({
 		code: "ZoomifyProjection",
 		units: "pixels",
@@ -17246,17 +17252,17 @@ async function Zv(e) {
 	let s = [(i[0] + i[2]) / 2, (i[1] + i[3]) / 2], c = new uo({
 		projection: o,
 		resolutions: a,
-		extent: xv(i),
+		extent: Cv(i),
 		constrainOnlyCenter: !0,
 		smoothExtentConstraint: !0,
 		smoothResolutionConstraint: !1,
 		center: s,
 		resolution: a[0]
 	});
-	c.fit(i, { size: Cv.getSize() }), Cv.setView(c), Av.setView(o, i), Fv.setProjection(o), hv.setSource(n), Av.setSource(n), x_.render(), Vv(!0), Yv(), wv.updateZoomLevel();
+	c.fit(i, { size: Tv.getSize() }), Tv.setView(c), Mv.setView(o, i), Lv.setProjection(o), _v.setSource(n), Mv.setSource(n), x_.render(), Uv(!0), Zv(), Ev.updateZoomLevel();
 }
 x_.render();
-async function Qv(e) {
+async function ey(e) {
 	if (C_ === null || E_ === null) throw Error("Dynamic overlay loading requires a loaded slide.");
 	let t = e.split(".").pop().toLowerCase();
 	if (t === "npy" || t === "mha") throw Error("Registration overlays are not supported yet.");
@@ -17273,13 +17279,13 @@ async function Qv(e) {
 		M_.set(r, e);
 		let t = /* @__PURE__ */ new Map();
 		await ng(t, e, Qm, {
-			...lv,
-			...uv[r] ?? {}
+			...dv,
+			...fv[r] ?? {}
 		});
 		for (let [e, n] of t) A_.has(e) || A_.set(e, n);
 		Q_(r, e, t), F_ === "type" && await Zm(j_.get(r), r);
 	} else i && (k_.delete(r), M_.delete(r), $_(r));
-	n || i ? (await X_({ refresh: !1 }), n && await tv(r, { refresh: !1 }), ev(r)) : T_ += 1;
+	n || i ? (await X_({ refresh: !1 }), n && await nv(r, { refresh: !1 }), ev(r)) : T_ += 1;
 	let o = new Wu({
 		url: `/tileserver/layer/${encodeURIComponent(r)}/${C_}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?v=${T_}`,
 		size: E_.slide_dimensions,
@@ -17288,29 +17294,29 @@ async function Qv(e) {
 	});
 	if (O_[r] !== void 0) O_[r].setSource(o), O_[r].setVisible(!0);
 	else {
-		let e = [hv, ...Object.values(O_)], t = Math.max(...e.map((e) => e.getZIndex() ?? 0)), n = new Co({
+		let e = [_v, ...Object.values(O_)], t = Math.max(...e.map((e) => e.getZIndex() ?? 0)), n = new Co({
 			title: r,
 			source: o,
 			opacity: .75
 		});
-		n.setZIndex(t + 1), O_[r] = n, Cv.addLayer(n), mv.push(n);
+		n.setZIndex(t + 1), O_[r] = n, Tv.addLayer(n), gv.push(n);
 	}
-	return x_.render(), dv.updateActionState(), a;
+	return x_.render(), pv.updateActionState(), a;
 }
-async function $v(e) {
+async function ty(e) {
 	let t = O_[e], n = k_.has(e);
 	if (t === void 0) throw Error(`Overlay is not loaded: ${e}`);
 	let r = t.getSource();
-	t.setVisible(!1), t.setSource(null), Cv.removeLayer(t);
+	t.setVisible(!1), t.setSource(null), Tv.removeLayer(t);
 	try {
 		await Jm(e);
 	} catch (e) {
-		throw t.setSource(r), t.setVisible(!0), Cv.addLayer(t), e;
+		throw t.setSource(r), t.setVisible(!0), Tv.addLayer(t), e;
 	}
-	let i = mv.indexOf(t);
-	i !== -1 && mv.splice(i, 1), k_.delete(e), M_.delete(e), $_(e), delete O_[e], n && (v_(), await X_({ refresh: !1 }), ev()), x_.render(), dv.updateActionState();
+	let i = gv.indexOf(t);
+	i !== -1 && gv.splice(i, 1), k_.delete(e), M_.delete(e), $_(e), delete O_[e], n && (v_(), await X_({ refresh: !1 }), ev()), x_.render(), pv.updateActionState();
 }
-async function ey(e) {
+async function ny(e) {
 	if (k_.size === 0) throw Error("No annotation overlay is loaded.");
 	let t = e instanceof Map ? [...e.entries()] : Object.entries(e), n = new Map(t);
 	await Zm(n), A_.clear();
@@ -17318,29 +17324,29 @@ async function ey(e) {
 	ev();
 }
 Object.assign(window, {
-	clearOverlays: qv,
-	extent: vv,
-	fullscreen: Tv,
-	graticule: Nv,
-	graticuleToggle: Iv,
-	layerSwitcher: Mv,
-	layers: mv,
+	clearOverlays: Yv,
+	extent: bv,
+	fullscreen: Dv,
+	graticule: Fv,
+	graticuleToggle: Rv,
+	layerSwitcher: Pv,
+	layers: gv,
 	layersData: S_,
-	loadOverlay: Qv,
-	map: Cv,
-	mousePositionControl: Ev,
+	loadOverlay: ey,
+	map: Tv,
+	mousePositionControl: Ov,
 	overlayLayers: O_,
-	overviewMapControl: jv,
-	projection: yv,
-	removeOverlay: $v,
-	removeSlide: Xv,
-	resolutions: _v,
-	rotate: Dv,
-	scaleLineControl: Ov,
-	screenSpaceGraticule: Pv,
-	screenSpaceGraticuleToggle: Lv,
-	setAnnotationColors: ey,
-	switchSlide: Zv,
-	view: Sv
+	overviewMapControl: Nv,
+	projection: xv,
+	removeOverlay: ty,
+	removeSlide: Qv,
+	resolutions: yv,
+	rotate: kv,
+	scaleLineControl: Av,
+	screenSpaceGraticule: Iv,
+	screenSpaceGraticuleToggle: zv,
+	setAnnotationColors: ny,
+	switchSlide: $v,
+	view: wv
 });
 //#endregion

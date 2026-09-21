@@ -738,9 +738,9 @@ async function setAnnotationTypeMode({
     annotationProperty = null;
     annotationSecondarySelection = null;
 
-    if (refresh) {
-        refreshAnnotationLayers();
-    }
+    await updateAnnotationFilters({
+        refresh,
+    });
 }
 
 async function resetAnnotationRenderer() {
@@ -800,9 +800,9 @@ async function setAnnotationPropertyMode(
     annotationSecondarySelection =
         null;
 
-    if (refresh) {
-        refreshAnnotationLayers();
-    }
+    await updateAnnotationFilters({
+        refresh,
+    });
 }
 
 async function setAnnotationSecondaryMode(
@@ -843,9 +843,9 @@ async function setAnnotationSecondaryMode(
         annotationType,
     };
 
-    if (refresh) {
-        refreshAnnotationLayers();
-    }
+    await updateAnnotationFilters({
+        refresh,
+    });
 }
 
 async function updateAnnotationProperties({
@@ -1118,6 +1118,34 @@ function refreshAnnotationLayers(
     map.render();
 }
 
+function isAnnotationTypeDisplayed(
+    layerName,
+    annotationType,
+) {
+    if (
+        annotationDisplayMode ===
+            "secondary" &&
+        annotationSecondarySelection !==
+            null
+    ) {
+        return (
+            layerName ===
+                annotationSecondarySelection.layerName &&
+            Object.is(
+                annotationType,
+                annotationSecondarySelection.annotationType,
+            )
+        );
+    }
+
+    return (
+        annotationTypeVisibilityByLayer
+            .get(layerName)
+            ?.get(annotationType) ??
+        true
+    );
+}
+
 async function updateAnnotationLayerFilter(
     layerName,
     {
@@ -1144,12 +1172,48 @@ async function updateAnnotationLayerFilter(
         );
     }
 
+    const displayVisibility =
+        annotationDisplayMode ===
+        "secondary"
+            ? new Map(
+                annotationTypes.map(
+                    (annotationType) => [
+                        annotationType,
+                        isAnnotationTypeDisplayed(
+                            layerName,
+                            annotationType,
+                        ),
+                    ],
+                ),
+            )
+            : visibility;
+
     await setTileServerAnnotationFilter(
         getAnnotationFilter(
             annotationTypes,
-            visibility,
+            displayVisibility,
         ),
         layerName,
+    );
+
+    if (refresh) {
+        refreshAnnotationLayers();
+    }
+}
+
+async function updateAnnotationFilters({
+    refresh = true,
+} = {}) {
+    await Promise.all(
+        [...annotationLayerNames].map(
+            (layerName) =>
+                updateAnnotationLayerFilter(
+                    layerName,
+                    {
+                        refresh: false,
+                    },
+                ),
+        ),
     );
 
     if (refresh) {
@@ -1205,11 +1269,10 @@ async function inspectAnnotationAtCoordinate(
 
         if (
             properties.type !== undefined &&
-            annotationTypeVisibilityByLayer
-                .get(layerName)
-                ?.get(
-                    properties.type,
-                ) === false
+            !isAnnotationTypeDisplayed(
+                layerName,
+                properties.type,
+            )
         ) {
             continue;
         }
