@@ -97,7 +97,26 @@ async function removeOverlay(layerName) {
     }
 }
 
-export async function setAnnotationFilter(where) {
+function getAnnotationRendererUrl(
+    path,
+    layerName,
+) {
+    if (layerName === null) {
+        return path;
+    }
+
+    const params =
+        new URLSearchParams({
+            layer: layerName,
+        });
+
+    return `${path}?${params}`;
+}
+
+async function setAnnotationFilter(
+    where,
+    layerName = null,
+) {
     const formData = new FormData();
 
     formData.append(
@@ -106,7 +125,10 @@ export async function setAnnotationFilter(where) {
     );
 
     const response = await fetch(
-        "/tileserver/renderer/where",
+        getAnnotationRendererUrl(
+            "/tileserver/renderer/where",
+            layerName,
+        ),
         {
             method: "PUT",
             body: formData,
@@ -120,7 +142,10 @@ export async function setAnnotationFilter(where) {
     }
 }
 
-async function setAnnotationColors(colorMap) {
+async function setAnnotationColors(
+    colorMap,
+    layerName = null,
+) {
     const entries =
         colorMap instanceof Map
             ? [...colorMap.entries()]
@@ -140,10 +165,16 @@ async function setAnnotationColors(colorMap) {
         }),
     );
 
-    const response = await fetch("/tileserver/cmap", {
-        method: "PUT",
-        body: formData,
-    });
+    const response = await fetch(
+        getAnnotationRendererUrl(
+            "/tileserver/cmap",
+            layerName,
+        ),
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
 
     if (!response.ok) {
         throw new Error("Failed to update annotation colours.");
@@ -249,7 +280,10 @@ async function getAnnotationAtPoint(
     return response.json();
 }
 
-async function setAnnotationProperty(property) {
+async function setAnnotationProperty(
+    property,
+    layerName = null,
+) {
     const formData = new FormData();
 
     formData.append(
@@ -258,7 +292,10 @@ async function setAnnotationProperty(property) {
     );
 
     const response = await fetch(
-        "/tileserver/renderer/score_prop",
+        getAnnotationRendererUrl(
+            "/tileserver/renderer/score_prop",
+            layerName,
+        ),
         {
             method: "PUT",
             body: formData,
@@ -272,7 +309,10 @@ async function setAnnotationProperty(property) {
     }
 }
 
-async function setAnnotationMapper(mapper) {
+async function setAnnotationMapper(
+    mapper,
+    layerName = null,
+) {
     const formData = new FormData();
 
     formData.append(
@@ -281,7 +321,10 @@ async function setAnnotationMapper(mapper) {
     );
 
     const response = await fetch(
-        "/tileserver/cmap",
+        getAnnotationRendererUrl(
+            "/tileserver/cmap",
+            layerName,
+        ),
         {
             method: "PUT",
             body: formData,
@@ -295,7 +338,10 @@ async function setAnnotationMapper(mapper) {
     }
 }
 
-async function setAnnotationPropertyRange(range) {
+async function setAnnotationPropertyRange(
+    range,
+    layerName = null,
+) {
     const formData = new FormData();
 
     formData.append(
@@ -304,7 +350,10 @@ async function setAnnotationPropertyRange(range) {
     );
 
     const response = await fetch(
-        "/tileserver/prop_range",
+        getAnnotationRendererUrl(
+            "/tileserver/prop_range",
+            layerName,
+        ),
         {
             method: "PUT",
             body: formData,
@@ -323,6 +372,7 @@ async function setAnnotationSecondaryMapper(
     property,
     mapper,
     range,
+    layerName = null,
 ) {
     const formData = new FormData();
 
@@ -353,7 +403,10 @@ async function setAnnotationSecondaryMapper(
     );
 
     const response = await fetch(
-        "/tileserver/secondary_cmap",
+        getAnnotationRendererUrl(
+            "/tileserver/secondary_cmap",
+            layerName,
+        ),
         {
             method: "PUT",
             body: formData,
@@ -367,7 +420,9 @@ async function setAnnotationSecondaryMapper(
     }
 }
 
-async function clearAnnotationSecondaryMapper() {
+async function clearAnnotationSecondaryMapper(
+    layerName = null,
+) {
     const formData = new FormData();
 
     formData.append(
@@ -376,7 +431,10 @@ async function clearAnnotationSecondaryMapper() {
     );
 
     const response = await fetch(
-        "/tileserver/renderer/secondary_cmap",
+        getAnnotationRendererUrl(
+            "/tileserver/renderer/secondary_cmap",
+            layerName,
+        ),
         {
             method: "PUT",
             body: formData,
@@ -404,6 +462,7 @@ export {
     getAnnotationProperties,
     getAnnotationPropertyValues,
     setAnnotationColors,
+    setAnnotationFilter,
     setAnnotationMapper,
     setAnnotationProperty,
     setAnnotationPropertyRange,

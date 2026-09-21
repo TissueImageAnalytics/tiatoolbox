@@ -1542,6 +1542,38 @@ def test_named_annotation_overlays(
         )
         assert response.status_code == 200
 
+        first_layer = empty_app.pyramids[session_id]["first"]
+        second_layer = empty_app.pyramids[session_id]["second"]
+
+        assert first_layer.renderer is not second_layer.renderer
+
+        second_where = second_layer.renderer.where
+        second_score_prop = second_layer.renderer.score_prop
+
+        response = client.put(
+            "/tileserver/renderer/where?layer=first",
+            data={
+                "val": json.dumps(
+                    'props["type"]==0',
+                ),
+            },
+        )
+        assert response.status_code == 200
+
+        assert first_layer.renderer.where == 'props["type"]==0'
+        assert second_layer.renderer.where == second_where
+
+        response = client.put(
+            "/tileserver/renderer/score_prop?layer=first",
+            data={
+                "val": json.dumps("prob"),
+            },
+        )
+        assert response.status_code == 200
+
+        assert first_layer.renderer.score_prop == "prob"
+        assert second_layer.renderer.score_prop == second_score_prop
+
         assert set(empty_app.layers[session_id]) == {
             "slide",
             "first",

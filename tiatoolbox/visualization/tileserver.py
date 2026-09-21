@@ -602,6 +602,20 @@ class TileServer(Flask):
         msg = "No annotation layer found."
         raise ValueError(msg)
 
+    def _get_annotation_renderer(
+        self: TileServer,
+        session_id: str,
+        layer_name: str | None = None,
+    ) -> AnnotationRenderer:
+        """Get the renderer for an annotation layer or session."""
+        if layer_name is None:
+            return self.renderers[session_id]
+
+        return self.get_ann_layer(
+            session_id,
+            layer_name,
+        ).renderer
+
     def index(self: TileServer) -> Response:
         """Serve the index page.
 
@@ -933,18 +947,37 @@ class TileServer(Flask):
     def change_mapper(self: TileServer) -> str:
         """Change the colour mapper for the overlay."""
         session_id = self._get_session_id()
+        layer_name = request.args.get("layer")
+        renderer = self._get_annotation_renderer(
+            session_id,
+            layer_name,
+        )
+
         cmap = json.loads(request.form["cmap"])
+
         if isinstance(cmap, dict):
-            cmap = dict(zip(cmap["keys"], cmap["values"], strict=False))
-            self.renderers[session_id].score_fn = lambda x: x
-        self.renderers[session_id].mapper = cmap
-        self.renderers[session_id].function_mapper = None
+            cmap = dict(
+                zip(
+                    cmap["keys"],
+                    cmap["values"],
+                    strict=False,
+                )
+            )
+            renderer.score_fn = lambda x: x
+
+        renderer.mapper = cmap
+        renderer.function_mapper = None
 
         return "done"
 
     def change_secondary_cmap(self: TileServer) -> str:
         """Change the type-specific colour mapper for the overlay."""
         session_id = self._get_session_id()
+        layer_name = request.args.get("layer")
+        renderer = self._get_annotation_renderer(
+            session_id,
+            layer_name,
+        )
         cmap = json.loads(request.form["cmap"])
         type_id = request.form["type_id"]
         prop = request.form["prop"]
@@ -986,7 +1019,7 @@ class TileServer(Flask):
             "mapper": mapper,
         }
 
-        self.renderers[session_id].secondary_cmap = cmap_dict
+        renderer.secondary_cmap = cmap_dict
 
         return "done"
 
@@ -998,14 +1031,28 @@ class TileServer(Flask):
 
         """
         session_id = self._get_session_id()
+        layer_name = request.args.get("layer")
+
+        renderer = self._get_annotation_renderer(
+            session_id,
+            layer_name,
+        )
+
         val = request.form["val"]
         val = json.loads(val)
+
         if val in ["None", "null"]:
             val = None
-        self.renderers[session_id].__setattr__(prop, val)
+
+        renderer.__setattr__(prop, val)
+
         if prop == "blur_radius":
             self.overlaps[session_id] = int(1.5 * val)
-            self.get_ann_layer(session_id).overlap = self.overlaps[session_id]
+            self.get_ann_layer(
+                session_id,
+                layer_name,
+            ).overlap = self.overlaps[session_id]
+
         return "done"
 
     def load_annotations(self: TileServer) -> str:
@@ -1185,6 +1232,7 @@ class TileServer(Flask):
         overlay_path: Path,
         layer_name: str | None = None,
     ) -> str:
+        is_named_layer = layer_name is not None
         if overlay_path.suffix == ".geojson":
 
             def unpack_qupath(ann: Annotation) -> Annotation:
@@ -1244,10 +1292,18 @@ class TileServer(Flask):
 
             layer_name = "overlay"
 
+        renderer = (
+            copy.deepcopy(
+                self.renderers[session_id],
+            )
+            if is_named_layer
+            else self.renderers[session_id]
+        )
+
         self.pyramids[session_id][layer_name] = AnnotationTileGenerator(
             self.layers[session_id]["slide"].info,
             sq,
-            self.renderers[session_id],
+            renderer,
             overlap=self.overlaps[session_id],
         )
 
@@ -1464,12 +1520,23 @@ class TileServer(Flask):
 
         """
         session_id = self._get_session_id()
+        layer_name = request.args.get("layer")
+
+        renderer = self._get_annotation_renderer(
+            session_id,
+            layer_name,
+        )
+
         prop_range = json.loads(request.form["range"])
+
         if prop_range is None:
-            self.renderers[session_id].score_fn = lambda x: x
+            renderer.score_fn = lambda x: x
             return "done"
+
         minv, maxv = prop_range
-        self.renderers[session_id].score_fn = lambda x: (x - minv) / (maxv - minv)
+
+        renderer.score_fn = lambda x: (x - minv) / (maxv - minv)
+
         return "done"
 
     def get_channels(self: TileServer) -> Response:

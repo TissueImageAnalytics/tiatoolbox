@@ -165,6 +165,8 @@ The **Export colours** button downloads the colours for the currently loaded
 annotation types as `annotation_config.json`. This file can be placed in the
 overlay directory and reused when the viewer is started again.
 
+Exported colour files also save colours separately for each annotation layer. `color_dict` provides the default colours.
+
 The viewer can also be launched without predefined directories:
 
 ```bash

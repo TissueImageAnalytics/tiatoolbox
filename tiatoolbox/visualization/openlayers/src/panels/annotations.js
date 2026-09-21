@@ -114,14 +114,32 @@ function createAnnotationsPanelController({
     }
 
     function updateSecondaryTypeOptions(
-        annotationTypes,
+        annotationGroups,
     ) {
-        const values =
-            annotationTypes.map(
-                (annotationType) =>
-                    JSON.stringify(
-                        annotationType,
+        const selections =
+            annotationGroups.flatMap(
+                ({
+                    layerName,
+                    annotationTypes,
+                }) =>
+                    annotationTypes.map(
+                        (annotationType) => ({
+                            layerName,
+                            annotationType,
+                        }),
                     ),
+            );
+
+        const values =
+            selections.map(
+                ({
+                    layerName,
+                    annotationType,
+                }) =>
+                    JSON.stringify([
+                        layerName,
+                        annotationType,
+                    ]),
             );
 
         const currentValues =
@@ -134,30 +152,33 @@ function createAnnotationsPanelController({
                 values.length &&
             currentValues.every(
                 (value, index) =>
-                    value ===
-                    values[index],
+                    value === values[index],
             )
         ) {
             return;
         }
 
         const options =
-            annotationTypes.map(
-                (annotationType) => {
+            selections.map(
+                ({
+                    layerName,
+                    annotationType,
+                }) => {
                     const option =
                         document.createElement(
                             "option",
                         );
 
                     option.value =
-                        JSON.stringify(
+                        JSON.stringify([
+                            layerName,
                             annotationType,
-                        );
+                        ]);
 
                     option.textContent =
-                        String(
+                        `${layerName} · ${String(
                             annotationType,
-                        );
+                        )}`;
 
                     return option;
                 },
@@ -183,7 +204,7 @@ function createAnnotationsPanelController({
         const annotationTypes =
             getAnnotationTypes();
 
-        const selectedSecondaryType =
+        const selectedSecondarySelection =
             getSecondaryType();
 
         const hasAnnotations =
@@ -234,7 +255,7 @@ function createAnnotationsPanelController({
         );
 
         updateSecondaryTypeOptions(
-            annotationTypes,
+            annotationGroups,
         );
 
         const selectedProperty =
@@ -251,19 +272,24 @@ function createAnnotationsPanelController({
         }
 
         if (
-            selectedSecondaryType !== null &&
-            annotationTypes.some(
-                (annotationType) =>
-                    Object.is(
-                        annotationType,
-                        selectedSecondaryType,
-                    ),
-            )
+            selectedSecondarySelection !== null
         ) {
-            secondaryTypeSelect.value =
-                JSON.stringify(
-                    selectedSecondaryType,
-                );
+            const selectedValue =
+                JSON.stringify([
+                    selectedSecondarySelection.layerName,
+                    selectedSecondarySelection.annotationType,
+                ]);
+
+            if (
+                [...secondaryTypeSelect.options].some(
+                    (option) =>
+                        option.value ===
+                        selectedValue,
+                )
+            ) {
+                secondaryTypeSelect.value =
+                    selectedValue;
+            }
         }
 
         secondaryTypeSelect.disabled =
@@ -288,12 +314,18 @@ function createAnnotationsPanelController({
                 maximum,
             ] = propertyRange;
 
-            propertyLegendCaption.textContent =
-                displayMode === "secondary"
-                    ? `${String(
-                        selectedSecondaryType,
-                    )} · ${selectedProperty} values · low → high`
-                    : `${selectedProperty} values · low → high`;
+            if (
+                displayMode === "secondary" &&
+                selectedSecondarySelection !== null
+            ) {
+                propertyLegendCaption.textContent =
+                    `${selectedSecondarySelection.layerName} · ${String(
+                        selectedSecondarySelection.annotationType,
+                    )} · ${selectedProperty} values · low → high`;
+            } else {
+                propertyLegendCaption.textContent =
+                    `${selectedProperty} values · low → high`;
+            }
 
             propertyMin.textContent =
                 Number(
@@ -366,10 +398,12 @@ function createAnnotationsPanelController({
 
                 const secondaryTypeSelected =
                     displayMode === "secondary" &&
-                    selectedSecondaryType !== null &&
+                    selectedSecondarySelection !== null &&
+                    layerName ===
+                        selectedSecondarySelection.layerName &&
                     Object.is(
                         annotationType,
-                        selectedSecondaryType,
+                        selectedSecondarySelection.annotationType,
                     );
 
                 const item =
@@ -393,6 +427,7 @@ function createAnnotationsPanelController({
 
                 visibility.checked =
                     isAnnotationTypeVisible(
+                        layerName,
                         annotationType,
                     );
 
@@ -404,6 +439,7 @@ function createAnnotationsPanelController({
                     () => {
                         runAction(() =>
                             onVisibilityChange(
+                                layerName,
                                 annotationType,
                                 visibility.checked,
                             ));
@@ -420,8 +456,9 @@ function createAnnotationsPanelController({
                 colour.value =
                     colourToHex(
                         getAnnotationColour(
+                            layerName,
                             annotationType,
-                        ),
+                        )
                     );
 
                 colour.title =
@@ -436,6 +473,7 @@ function createAnnotationsPanelController({
                     () => {
                         runAction(() =>
                             onColourChange(
+                                layerName,
                                 annotationType,
                                 colour.value,
                             ));
@@ -488,6 +526,7 @@ function createAnnotationsPanelController({
 
                 slider.value =
                     getAnnotationOpacity(
+                        layerName,
                         annotationType,
                     ).toString();
 
@@ -521,6 +560,7 @@ function createAnnotationsPanelController({
                     () => {
                         runAction(() =>
                             onOpacityChange(
+                                layerName,
                                 annotationType,
                                 Number(slider.value),
                             ));
@@ -568,11 +608,17 @@ function createAnnotationsPanelController({
     secondaryTypeSelect.addEventListener(
         "change",
         () => {
+            const [
+                layerName,
+                annotationType,
+            ] = JSON.parse(
+                secondaryTypeSelect.value,
+            );
+
             runAction(() =>
                 onSecondaryTypeChange(
-                    JSON.parse(
-                        secondaryTypeSelect.value,
-                    ),
+                    layerName,
+                    annotationType,
                 ));
         },
     );

@@ -15,7 +15,7 @@ function createHarness({
     displayMode = "type",
     annotationProperties = ["prob"],
     annotationProperty = null,
-    secondaryType = null,
+    secondarySelection = null,
     onDisplayModeChange = vi.fn(async () => {}),
     onPropertyChange = vi.fn(async () => {}),
     onSecondaryTypeChange = vi.fn(async () => {}),
@@ -161,6 +161,25 @@ function createHarness({
         ["Inflammatory", true],
     ]);
 
+    const visibilityByLayer =
+        new Map(
+            annotationGroups.map(
+                (group) => [
+                    group.layerName,
+                    new Map(
+                        group.annotationTypes.map(
+                            (annotationType) => [
+                                annotationType,
+                                visibility.get(
+                                    annotationType,
+                                ) ?? true,
+                            ],
+                        ),
+                    ),
+                ],
+            ),
+        );
+
     const opacities = new Map([
         ["Tumour", 1],
         ["Stroma", 0.5],
@@ -173,13 +192,16 @@ function createHarness({
     const onVisibilityChange =
         vi.fn(
             async (
+                layerName,
                 annotationType,
                 visible,
             ) => {
-                visibility.set(
-                    annotationType,
-                    visible,
-                );
+                visibilityByLayer
+                    .get(layerName)
+                    ?.set(
+                        annotationType,
+                        visible,
+                    );
             },
         );
 
@@ -235,25 +257,35 @@ function createHarness({
                 annotationProperty,
 
             getSecondaryType: () =>
-                secondaryType,
+                secondarySelection,
 
             getPropertyRange: () =>
                 propertyRange,
 
             getAnnotationColour:
-                (annotationType) =>
+                (
+                    _layerName,
+                    annotationType,
+                ) =>
                     colours.get(
                         annotationType,
                     ),
 
             isAnnotationTypeVisible:
-                (annotationType) =>
-                    visibility.get(
-                        annotationType,
-                    ) ?? true,
+                (
+                    layerName,
+                    annotationType,
+                ) =>
+                    visibilityByLayer
+                        .get(layerName)
+                        ?.get(annotationType) ??
+                    true,
 
             getAnnotationOpacity:
-                (annotationType) =>
+                (
+                    _layerName,
+                    annotationType,
+                ) =>
                     opacities.get(
                         annotationType,
                     ) ?? 1,
@@ -588,7 +620,10 @@ describe("createAnnotationsPanelController", () => {
             ],
             displayMode: "secondary",
             annotationProperty: "prob",
-            secondaryType: "Tumour",
+            secondarySelection: {
+                layerName: "annotations",
+                annotationType: "Tumour",
+            },
         });
 
         controller.render();
@@ -607,14 +642,17 @@ describe("createAnnotationsPanelController", () => {
                     option.textContent,
             ),
         ).toEqual([
-            "Tumour",
-            "Stroma",
+            "annotations · Tumour",
+            "annotations · Stroma",
         ]);
 
         expect(
             secondaryTypeSelect.value,
         ).toBe(
-            JSON.stringify("Tumour"),
+            JSON.stringify([
+                "annotations",
+                "Tumour",
+            ]),
         );
 
         expect(
@@ -628,7 +666,7 @@ describe("createAnnotationsPanelController", () => {
         expect(
             propertyLegendCaption.textContent,
         ).toBe(
-            "Tumour · prob values · low → high",
+            "annotations · Tumour · prob values · low → high",
         );
 
         const colours =
@@ -765,6 +803,7 @@ describe("createAnnotationsPanelController", () => {
         expect(
             onVisibilityChange,
         ).toHaveBeenCalledExactlyOnceWith(
+            "first",
             "Inflammatory",
             false,
         );
@@ -780,7 +819,7 @@ describe("createAnnotationsPanelController", () => {
 
         expect(
             rerenderedInputs[1].checked,
-        ).toBe(false);
+        ).toBe(true);
     });
 
     it("calls the colour change callback", async () => {
@@ -823,6 +862,7 @@ describe("createAnnotationsPanelController", () => {
         expect(
             onColourChange,
         ).toHaveBeenCalledExactlyOnceWith(
+            "annotations",
             "Tumour",
             "#123456",
         );
@@ -914,6 +954,7 @@ describe("createAnnotationsPanelController", () => {
         expect(
             onOpacityChange,
         ).toHaveBeenCalledExactlyOnceWith(
+            "annotations",
             "Tumour",
             0.4,
         );
@@ -1023,13 +1064,19 @@ describe("createAnnotationsPanelController", () => {
             ],
             displayMode: "secondary",
             annotationProperty: "prob",
-            secondaryType: 0,
+            secondarySelection: {
+                layerName: "annotations",
+                annotationType: 0,
+            },
         });
 
         controller.render();
 
         secondaryTypeSelect.value =
-            JSON.stringify(1);
+            JSON.stringify([
+                "annotations",
+                1,
+            ]);
 
         secondaryTypeSelect.dispatchEvent(
             new Event(
@@ -1045,6 +1092,7 @@ describe("createAnnotationsPanelController", () => {
         expect(
             onSecondaryTypeChange,
         ).toHaveBeenCalledExactlyOnceWith(
+            "annotations",
             1,
         );
     });

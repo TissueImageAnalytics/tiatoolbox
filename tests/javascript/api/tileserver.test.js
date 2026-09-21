@@ -544,6 +544,7 @@ describe("setAnnotationColors", () => {
     });
 
     it("preserves numeric annotation type keys from a map", async () => {
+        // Test preserving numeric annotation type keys when sending colours.
         const fetchMock = vi.fn().mockResolvedValue(
             mockResponse(),
         );
@@ -605,6 +606,7 @@ describe("setAnnotationColors", () => {
     });
 
     it("gets annotation colours while preserving type keys", async () => {
+        // Test generated annotation colours preserve annotation type keys.
         const fetchMock = vi.fn().mockResolvedValue({
             ok: true,
 
@@ -1118,6 +1120,7 @@ describe("annotation display", () => {
     });
 
     it("preserves numeric secondary annotation types", async () => {
+        // Test preserving numeric secondary annotation type values.
         const fetchMock =
             vi.fn().mockResolvedValue(
                 mockResponse(),
@@ -1153,6 +1156,7 @@ describe("annotation display", () => {
     });
 
     it("rejects failed secondary annotation mapper updates", async () => {
+        // Test error handling when the secondary mapper cannot be updated.
         vi.stubGlobal(
             "fetch",
             vi.fn().mockResolvedValue(
@@ -1175,5 +1179,43 @@ describe("annotation display", () => {
         ).rejects.toThrow(
             "Failed to update secondary annotation colour map.",
         );
+    });
+
+    it("targets annotation display updates by layer", async () => {
+        // Test annotation display updates target the selected layer.
+        const fetchMock =
+            vi.fn().mockResolvedValue(
+                mockResponse(),
+            );
+
+        vi.stubGlobal(
+            "fetch",
+            fetchMock,
+        );
+
+        await setAnnotationProperty(
+            "prob",
+            "annotations",
+        );
+
+        await setAnnotationMapper(
+            "viridis",
+            "annotations",
+        );
+
+        await setAnnotationPropertyRange(
+            [0, 1],
+            "annotations",
+        );
+
+        expect(
+            fetchMock.mock.calls.map(
+                ([url]) => url,
+            ),
+        ).toEqual([
+            "/tileserver/renderer/score_prop?layer=annotations",
+            "/tileserver/cmap?layer=annotations",
+            "/tileserver/prop_range?layer=annotations",
+        ]);
     });
 });
