@@ -1001,9 +1001,14 @@ class TileServer(Flask):
                 types,
                 palette_name,
             )
-        except ValueError as error:
+        except ValueError:
+            logger.warning(
+                "Invalid annotation colour request.",
+                exc_info=True,
+            )
+
             return Response(
-                str(error),
+                "Invalid annotation colour request.",
                 status=400,
             )
 

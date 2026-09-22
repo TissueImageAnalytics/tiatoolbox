@@ -2444,3 +2444,4 @@ def test_annotation_colours_reject_unknown_palette(
         )
 
     assert response.status_code == 400
+    assert response.get_data(as_text=True) == "Invalid annotation colour request."
