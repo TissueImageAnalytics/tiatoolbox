@@ -393,9 +393,17 @@
 
 /* Annotation inspector */
 
+.annotation-inspectors {
+    position: absolute;
+    inset: 0;
+    z-index: 1200;
+
+    pointer-events: none;
+}
+
+
 .annotation-inspector {
     position: absolute;
-    z-index: 1200;
     width: 280px;
     max-height: min(420px, calc(100% - 24px));
     overflow: hidden;
@@ -408,6 +416,7 @@
     box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
 
     font-size: 12px;
+    pointer-events: auto;
 }
 
 

@@ -19,7 +19,7 @@ from flask import Flask, Response, jsonify, make_response, request, send_file
 from flask.templating import render_template
 from matplotlib import colormaps
 from PIL import Image
-from shapely.geometry import Point
+from shapely.geometry import Point, mapping
 
 from tiatoolbox import data, logger
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
@@ -1584,8 +1584,8 @@ class TileServer(Flask):
             y (float): The y coordinate.
 
         Returns:
-            Response: The jsonified dict of the properties of the
-            smallest annotation returned from the query at the point.
+            Response: The selected annotation properties, or detailed
+            annotation information when requested.
 
         """
         session_id = self._get_session_id()
@@ -1597,9 +1597,28 @@ class TileServer(Flask):
         ).store.query(
             Point(x, y),
         )
+
         if len(anns) == 0:
             return json.dumps({})
-        return jsonify(list(anns.values())[-1].properties)
+
+        annotation_id, annotation = list(
+            anns.items(),
+        )[-1]
+
+        if request.args.get("details") == "1":
+            return jsonify(
+                {
+                    "id": str(annotation_id),
+                    "properties": annotation.properties,
+                    "geometry": mapping(
+                        annotation.geometry,
+                    ),
+                },
+            )
+
+        return jsonify(
+            annotation.properties,
+        )
 
     def prop_range(self: TileServer) -> str:
         """Set the range which the color mapper will map to.

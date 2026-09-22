@@ -146,8 +146,13 @@ Fill opacity can be adjusted in all three display modes. Enable **Link opacity**
 to apply the same opacity to all loaded annotation classes. When it is disabled,
 only the changed class is affected.
 
-Selecting an annotation in the viewer shows its layer and annotation
-properties. Annotation inspection can be enabled or disabled in Settings.
+Selecting an annotation highlights its geometry and shows its layer and
+properties in a movable information card. Closing the card removes the
+highlight.
+
+Annotation inspection can be enabled or disabled in Settings. Enable
+**Multiple annotation selection** to keep multiple annotation cards and
+highlights open at once.
 
 Default annotation colours can be provided using a JSON file in the root of
 the overlay directory. The filename must end in `config.json`, for example

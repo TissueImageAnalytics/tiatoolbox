@@ -27,6 +27,7 @@ function createSettingsPanelController({
     controlOpacityInput,
     controlOpacityValue,
     annotationInspectionEnabledInput,
+    multipleAnnotationSelectionInput,
     zoomVisibleInput,
     zoomLevelVisibleInput,
     rotationVisibleInput,
@@ -49,6 +50,7 @@ function createSettingsPanelController({
     scaleBarSizeSelect,
     scaleBarUnitsSelect,
     onAnnotationInspectionChange,
+    onMultipleAnnotationSelectionChange,
     onThemeChange,
     onControlVisibilityChange,
     onReset,
@@ -259,6 +261,8 @@ function createSettingsPanelController({
             controls: {
                 annotationInspection:
                     annotationInspectionEnabledInput.checked,
+                multipleAnnotationSelection:
+                    multipleAnnotationSelectionInput.checked,
                 zoom: zoomVisibleInput.checked,
                 zoomLevel:
                     zoomLevelVisibleInput.checked,
@@ -393,6 +397,14 @@ function createSettingsPanelController({
             ) {
                 annotationInspectionEnabledInput.checked =
                     controls.annotationInspection;
+            }
+
+            if (
+                typeof controls.multipleAnnotationSelection ===
+                "boolean"
+            ) {
+                multipleAnnotationSelectionInput.checked =
+                    controls.multipleAnnotationSelection;
             }
 
             if (
@@ -657,6 +669,9 @@ function createSettingsPanelController({
 
         controlOpacityInput.value = "100";
 
+        multipleAnnotationSelectionInput.checked =
+            false;
+
         for (const input of [
             annotationInspectionEnabledInput,
             zoomVisibleInput,
@@ -770,6 +785,14 @@ function createSettingsPanelController({
             "change",
             () => {
                 onAnnotationInspectionChange();
+                save();
+            },
+        );
+
+        multipleAnnotationSelectionInput.addEventListener(
+            "change",
+            () => {
+                onMultipleAnnotationSelectionChange();
                 save();
             },
         );

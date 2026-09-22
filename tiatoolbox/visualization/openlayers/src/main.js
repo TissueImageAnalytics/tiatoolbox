@@ -3,11 +3,20 @@ import "ol-ext/dist/ol-ext.css";
 import "./style.css";
 
 import { defaults as defaultControls } from "ol/control/defaults.js";
+import GeoJSON from "ol/format/GeoJSON.js";
 import TileLayer from "ol/layer/Tile.js";
+import VectorLayer from "ol/layer/Vector.js";
 import OlMap from "ol/Map.js";
 import Projection from "ol/proj/Projection.js";
 import { addProjection } from "ol/proj.js";
+import VectorSource from "ol/source/Vector.js";
 import Zoomify from "ol/source/Zoomify.js";
+import {
+    Circle as CircleStyle,
+    Fill,
+    Stroke,
+    Style,
+} from "ol/style.js";
 import View from "ol/View.js";
 
 import LayerSwitcher from "ol-ext/control/LayerSwitcher.js";
@@ -185,29 +194,9 @@ const annotationsLinkOpacityInput =
         "annotations-link-opacity",
     );
 
-const annotationInspector =
+const annotationInspectors =
     document.getElementById(
-        "annotation-inspector",
-    );
-
-const annotationInspectorHeader =
-    document.getElementById(
-        "annotation-inspector-header",
-    );
-
-const annotationInspectorTitle =
-    document.getElementById(
-        "annotation-inspector-title",
-    );
-
-const annotationInspectorProperties =
-    document.getElementById(
-        "annotation-inspector-properties",
-    );
-
-const annotationInspectorClose =
-    document.getElementById(
-        "annotation-inspector-close",
+        "annotation-inspectors",
     );
 
 const annotationsSelectAllButton =
@@ -258,6 +247,11 @@ const settingsTabPanels = document.querySelectorAll(
 const annotationInspectionEnabledInput =
     document.getElementById(
         "settings-annotation-inspection",
+    );
+
+const multipleAnnotationSelectionInput =
+    document.getElementById(
+        "settings-multiple-annotation-selection",
     );
 
 const zoomVisibleInput = document.getElementById(
@@ -409,17 +403,14 @@ if (
     annotationsPropertyMin === null ||
     annotationsPropertyMax === null ||
     annotationsLinkOpacityInput === null ||
-    annotationInspector === null ||
-    annotationInspectorHeader === null ||
-    annotationInspectorTitle === null ||
-    annotationInspectorProperties === null ||
-    annotationInspectorClose === null ||
+    annotationInspectors === null ||
     annotationsSecondaryTypeField === null ||
     annotationsSecondaryTypeSelect === null ||
     settingsPanel === null ||
     settingsToggle === null ||
     settingsCloseButton === null ||
     annotationInspectionEnabledInput === null ||
+    multipleAnnotationSelectionInput === null ||
     zoomVisibleInput === null ||
     zoomLevelVisibleInput === null ||
     rotationVisibleInput === null ||
@@ -455,14 +446,116 @@ if (
 }
 
 let annotationInspectionRequestId = 0;
+let annotationInspectionClickId = 0;
+
+const annotationSelections =
+    new Map();
+
+const annotationHighlightSource =
+    new VectorSource();
 
 function invalidateAnnotationInspectionRequests() {
     annotationInspectionRequestId += 1;
+    annotationInspectionClickId += 1;
+}
+
+function removeAnnotationSelection(
+    selectionKey,
+) {
+    const selection =
+        annotationSelections.get(
+            selectionKey,
+        );
+
+    if (selection === undefined) {
+        return;
+    }
+
+    annotationHighlightSource.removeFeature(
+        selection.feature,
+    );
+
+    selection.card.remove();
+
+    annotationSelections.delete(
+        selectionKey,
+    );
+}
+
+function clearAnnotationSelections() {
+    annotationHighlightSource.clear();
+
+    annotationInspectors.replaceChildren();
+
+    annotationSelections.clear();
+}
+
+function removeAnnotationSelectionsForLayer(
+    layerName,
+) {
+    for (const [
+        selectionKey,
+        selection,
+    ] of annotationSelections) {
+        if (
+            selection.layerName !==
+            layerName
+        ) {
+            continue;
+        }
+
+        removeAnnotationSelection(
+            selectionKey,
+        );
+    }
+}
+
+function keepLatestAnnotationSelection() {
+    if (
+        annotationSelections.size <= 1
+    ) {
+        return;
+    }
+
+    let latestSelectionKey = null;
+    let latestOrder = -1;
+
+    for (const [
+        selectionKey,
+        selection,
+    ] of annotationSelections) {
+        if (
+            selection.order >
+            latestOrder
+        ) {
+            latestSelectionKey =
+                selectionKey;
+
+            latestOrder =
+                selection.order;
+        }
+    }
+
+    for (
+        const selectionKey of
+        [...annotationSelections.keys()]
+    ) {
+        if (
+            selectionKey ===
+            latestSelectionKey
+        ) {
+            continue;
+        }
+
+        removeAnnotationSelection(
+            selectionKey,
+        );
+    }
 }
 
 function hideAnnotationInspector() {
     invalidateAnnotationInspectionRequests();
-    annotationInspector.hidden = true;
+    clearAnnotationSelections();
 }
 
 const scaleBarThemeColours = {
@@ -487,6 +580,7 @@ const settingsPanelController =
         controlOpacityInput,
         controlOpacityValue,
         annotationInspectionEnabledInput,
+        multipleAnnotationSelectionInput,
         zoomVisibleInput,
         zoomLevelVisibleInput,
         rotationVisibleInput,
@@ -514,6 +608,16 @@ const settingsPanelController =
                 !annotationInspectionEnabledInput.checked
             ) {
                 hideAnnotationInspector();
+            }
+        },
+
+        onMultipleAnnotationSelectionChange() {
+            invalidateAnnotationInspectionRequests();
+
+            if (
+                !multipleAnnotationSelectionInput.checked
+            ) {
+                keepLatestAnnotationSelection();
             }
         },
 
@@ -1563,26 +1667,40 @@ async function inspectAnnotationAtCoordinate(
             );
 
     for (const layerName of layerNames) {
-        const properties =
+        const annotation =
             await getAnnotationAtPoint(
                 layerName,
                 x,
                 -y,
+                {
+                    details: true,
+                },
             );
 
         if (
             Object.keys(
-                properties,
+                annotation,
             ).length === 0
         ) {
             continue;
         }
 
         if (
-            properties.type !== undefined &&
+            annotation.id === undefined ||
+            annotation.geometry === undefined ||
+            annotation.properties === undefined
+        ) {
+            throw new Error(
+                "Annotation inspection response is incomplete.",
+            );
+        }
+
+        if (
+            annotation.properties.type !==
+                undefined &&
             !isAnnotationTypeDisplayed(
                 layerName,
-                properties.type,
+                annotation.properties.type,
             )
         ) {
             continue;
@@ -1590,7 +1708,12 @@ async function inspectAnnotationAtCoordinate(
 
         return {
             layerName,
-            properties,
+            annotationId:
+                annotation.id,
+            geometry:
+                annotation.geometry,
+            properties:
+                annotation.properties,
         };
     }
 
@@ -1665,6 +1788,7 @@ function formatAnnotationPropertyValue(
 }
 
 function positionAnnotationInspector(
+    inspector,
     requestedLeft,
     requestedTop,
 ) {
@@ -1673,55 +1797,241 @@ function positionAnnotationInspector(
     const maxLeft = Math.max(
         margin,
         viewerApp.clientWidth -
-            annotationInspector.offsetWidth -
+            inspector.offsetWidth -
             margin,
     );
 
     const maxTop = Math.max(
         margin,
         viewerApp.clientHeight -
-            annotationInspector.offsetHeight -
+            inspector.offsetHeight -
             margin,
     );
 
-    annotationInspector.style.left =
+    inspector.style.left =
         `${Math.min(
-            Math.max(requestedLeft, margin),
+            Math.max(
+                requestedLeft,
+                margin,
+            ),
             maxLeft,
         )}px`;
 
-    annotationInspector.style.top =
+    inspector.style.top =
         `${Math.min(
-            Math.max(requestedTop, margin),
+            Math.max(
+                requestedTop,
+                margin,
+            ),
             maxTop,
         )}px`;
 }
 
-function showAnnotationInspector(
-    inspection,
-    pixel,
+function bindAnnotationInspectorDragging(
+    inspector,
+    header,
 ) {
-    annotationInspectorTitle.textContent =
+    let dragging = false;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+
+    header.addEventListener(
+        "pointerdown",
+        (event) => {
+            if (
+                event.target.closest(
+                    "button",
+                ) !== null
+            ) {
+                return;
+            }
+
+            event.preventDefault();
+
+            const inspectorRect =
+                inspector.getBoundingClientRect();
+
+            dragging = true;
+
+            dragOffsetX =
+                event.clientX -
+                inspectorRect.left;
+
+            dragOffsetY =
+                event.clientY -
+                inspectorRect.top;
+
+            header.setPointerCapture(
+                event.pointerId,
+            );
+
+            inspector.classList.add(
+                "dragging",
+            );
+        },
+    );
+
+    header.addEventListener(
+        "pointermove",
+        (event) => {
+            if (!dragging) {
+                return;
+            }
+
+            const viewerRect =
+                viewerApp.getBoundingClientRect();
+
+            positionAnnotationInspector(
+                inspector,
+                event.clientX -
+                    viewerRect.left -
+                    dragOffsetX,
+                event.clientY -
+                    viewerRect.top -
+                    dragOffsetY,
+            );
+        },
+    );
+
+    const stopDragging = () => {
+        dragging = false;
+
+        inspector.classList.remove(
+            "dragging",
+        );
+    };
+
+    header.addEventListener(
+        "pointerup",
+        stopDragging,
+    );
+
+    header.addEventListener(
+        "pointercancel",
+        stopDragging,
+    );
+}
+
+function createAnnotationHighlightFeature(
+    inspection,
+) {
+    const feature =
+        new GeoJSON().readFeature({
+            type: "Feature",
+            geometry:
+                inspection.geometry,
+            properties: {},
+        });
+
+    const geometry =
+        feature.getGeometry();
+
+    if (geometry === undefined) {
+        throw new Error(
+            "Annotation geometry is not available.",
+        );
+    }
+
+    // Annotation coordinates use positive-down slide Y,
+    // while the OpenLayers view uses negative Y.
+    geometry.scale(
+        1,
+        -1,
+        [0, 0],
+    );
+
+    return feature;
+}
+
+function createAnnotationInspectorCard(
+    selectionKey,
+    inspection,
+) {
+    const inspector =
+        document.createElement(
+            "aside",
+        );
+
+    inspector.className =
+        "annotation-inspector";
+
+    const header =
+        document.createElement(
+            "div",
+        );
+
+    header.className =
+        "annotation-inspector-header";
+
+    const title =
+        document.createElement(
+            "span",
+        );
+
+    title.textContent =
         inspection.layerName;
 
-    annotationInspectorProperties.replaceChildren();
+    const closeButton =
+        document.createElement(
+            "button",
+        );
 
-    for (
-        const [
-            property,
-            value,
-        ] of Object.entries(
-            inspection.properties,
-        )
-    ) {
+    closeButton.className =
+        "annotation-inspector-close";
+
+    closeButton.type = "button";
+
+    closeButton.title =
+        "Close annotation information";
+
+    closeButton.setAttribute(
+        "aria-label",
+        "Close annotation information",
+    );
+
+    const closeIcon =
+        document.createElement(
+            "i",
+        );
+
+    closeIcon.className =
+        "fas fa-times";
+
+    closeButton.appendChild(
+        closeIcon,
+    );
+
+    header.append(
+        title,
+        closeButton,
+    );
+
+    const properties =
+        document.createElement(
+            "div",
+        );
+
+    properties.className =
+        "annotation-inspector-properties";
+
+    for (const [
+        property,
+        value,
+    ] of Object.entries(
+        inspection.properties,
+    )) {
         const row =
-            document.createElement("div");
+            document.createElement(
+                "div",
+            );
 
         row.className =
             "annotation-inspector-property";
 
         const name =
-            document.createElement("div");
+            document.createElement(
+                "div",
+            );
 
         name.className =
             "annotation-inspector-property-name";
@@ -1732,7 +2042,9 @@ function showAnnotationInspector(
             );
 
         const propertyValue =
-            document.createElement("div");
+            document.createElement(
+                "div",
+            );
 
         propertyValue.className =
             "annotation-inspector-property-value";
@@ -1748,12 +2060,57 @@ function showAnnotationInspector(
             propertyValue,
         );
 
-        annotationInspectorProperties.append(
+        properties.appendChild(
             row,
         );
     }
 
-    annotationInspector.hidden = false;
+    inspector.append(
+        header,
+        properties,
+    );
+
+    closeButton.addEventListener(
+        "click",
+        () => {
+            removeAnnotationSelection(
+                selectionKey,
+            );
+        },
+    );
+
+    bindAnnotationInspectorDragging(
+        inspector,
+        header,
+    );
+
+    return inspector;
+}
+
+function showAnnotationInspector(
+    inspection,
+    pixel,
+    selectionOrder,
+) {
+    const selectionKey =
+        JSON.stringify([
+            inspection.layerName,
+            String(
+                inspection.annotationId,
+            ),
+        ]);
+
+    const multipleSelection =
+        multipleAnnotationSelectionInput.checked;
+
+    if (!multipleSelection) {
+        clearAnnotationSelections();
+    }
+
+    const existingSelection =
+        annotationSelections.get(
+            selectionKey,
+        );
 
     const mapRect =
         mapElement.getBoundingClientRect();
@@ -1761,15 +2118,90 @@ function showAnnotationInspector(
     const viewerRect =
         viewerApp.getBoundingClientRect();
 
+    if (
+        existingSelection !==
+        undefined
+    ) {
+        existingSelection.order =
+            selectionOrder;
+
+        annotationSelections.delete(
+            selectionKey,
+        );
+
+        annotationSelections.set(
+            selectionKey,
+            existingSelection,
+        );
+
+        annotationInspectors.appendChild(
+            existingSelection.card,
+        );
+
+        positionAnnotationInspector(
+            existingSelection.card,
+            mapRect.left -
+                viewerRect.left +
+                pixel[0] +
+                12,
+            mapRect.top -
+                viewerRect.top +
+                pixel[1] +
+                12,
+        );
+
+        return;
+    }
+
+    const feature =
+        createAnnotationHighlightFeature(
+            inspection,
+        );
+
+    const card =
+        createAnnotationInspectorCard(
+            selectionKey,
+            inspection,
+        );
+
+    const offset =
+        multipleSelection
+            ? annotationSelections.size *
+                18
+            : 0;
+
+    annotationSelections.set(
+        selectionKey,
+        {
+            layerName:
+                inspection.layerName,
+            feature,
+            card,
+            order:
+                selectionOrder,
+        },
+    );
+
+    annotationHighlightSource.addFeature(
+        feature,
+    );
+
+    annotationInspectors.appendChild(
+        card,
+    );
+
     positionAnnotationInspector(
+        card,
         mapRect.left -
             viewerRect.left +
             pixel[0] +
-            12,
+            12 +
+            offset,
         mapRect.top -
             viewerRect.top +
             pixel[1] +
-            12,
+            12 +
+            offset,
     );
 }
 
@@ -2577,6 +3009,49 @@ const map = new OlMap({
     }),
 });
 
+const annotationHighlightStyle =
+    new Style({
+        fill: new Fill({
+            color:
+                "rgba(255, 215, 0, 0.22)",
+        }),
+
+        stroke: new Stroke({
+            color: "#ffd700",
+            width: 3,
+        }),
+
+        image: new CircleStyle({
+            radius: 7,
+
+            fill: new Fill({
+                color:
+                    "rgba(255, 215, 0, 0.45)",
+            }),
+
+            stroke: new Stroke({
+                color: "#ffd700",
+                width: 3,
+            }),
+        }),
+    });
+
+const annotationHighlightLayer =
+    new VectorLayer({
+        source:
+            annotationHighlightSource,
+        style:
+            annotationHighlightStyle,
+    });
+
+annotationHighlightLayer.setZIndex(
+    10000,
+);
+
+map.addLayer(
+    annotationHighlightLayer,
+);
+
 const mapControlsController =
     createMapControlsController({
         map,
@@ -2701,6 +3176,9 @@ function updateControlVisibility() {
 function resetSettingsToDefaults() {
     settingsPanelController.resetValues();
 
+    invalidateAnnotationInspectionRequests();
+    keepLatestAnnotationSelection();
+
     settingsPanelController.updateAppearance();
 
     gridController.updateAppearance();
@@ -2762,10 +3240,16 @@ map.on("singleclick", async (event) => {
         return;
     }
 
-    annotationInspectionRequestId += 1;
+    annotationInspectionClickId += 1;
+
+    const clickId =
+        annotationInspectionClickId;
 
     const requestId =
         annotationInspectionRequestId;
+
+    const multipleSelection =
+        multipleAnnotationSelectionInput.checked;
 
     try {
         const inspection =
@@ -2777,7 +3261,12 @@ map.on("singleclick", async (event) => {
             requestId !==
                 annotationInspectionRequestId ||
             !annotationInspectionEnabledInput.checked ||
-            annotationLayerNames.size === 0
+            annotationLayerNames.size === 0 ||
+            (
+                !multipleSelection &&
+                clickId !==
+                    annotationInspectionClickId
+            )
         ) {
             return;
         }
@@ -2789,6 +3278,7 @@ map.on("singleclick", async (event) => {
         showAnnotationInspector(
             inspection,
             event.pixel,
+            clickId,
         );
     } catch (error) {
         if (
@@ -2804,88 +3294,6 @@ map.on("singleclick", async (event) => {
         );
     }
 });
-
-annotationInspectorClose.addEventListener(
-    "click",
-    hideAnnotationInspector,
-);
-
-let annotationInspectorDragging = false;
-let annotationInspectorDragOffsetX = 0;
-let annotationInspectorDragOffsetY = 0;
-
-annotationInspectorHeader.addEventListener(
-    "pointerdown",
-    (event) => {
-        if (
-            event.target.closest("button") !== null
-        ) {
-            return;
-        }
-
-        event.preventDefault();
-
-        const inspectorRect =
-            annotationInspector.getBoundingClientRect();
-
-        annotationInspectorDragging = true;
-
-        annotationInspectorDragOffsetX =
-            event.clientX -
-            inspectorRect.left;
-
-        annotationInspectorDragOffsetY =
-            event.clientY -
-            inspectorRect.top;
-
-        annotationInspectorHeader.setPointerCapture(
-            event.pointerId,
-        );
-
-        annotationInspector.classList.add(
-            "dragging",
-        );
-    },
-);
-
-annotationInspectorHeader.addEventListener(
-    "pointermove",
-    (event) => {
-        if (!annotationInspectorDragging) {
-            return;
-        }
-
-        const viewerRect =
-            viewerApp.getBoundingClientRect();
-
-        positionAnnotationInspector(
-            event.clientX -
-                viewerRect.left -
-                annotationInspectorDragOffsetX,
-            event.clientY -
-                viewerRect.top -
-                annotationInspectorDragOffsetY,
-        );
-    },
-);
-
-function stopAnnotationInspectorDrag() {
-    annotationInspectorDragging = false;
-
-    annotationInspector.classList.remove(
-        "dragging",
-    );
-}
-
-annotationInspectorHeader.addEventListener(
-    "pointerup",
-    stopAnnotationInspectorDrag,
-);
-
-annotationInspectorHeader.addEventListener(
-    "pointercancel",
-    stopAnnotationInspectorDrag,
-);
 
 function clearOverlayLayers() {
     for (const overlayLayer of Object.values(overlayLayers)) {
@@ -3184,6 +3592,14 @@ async function loadOverlay(overlayPath) {
         layerName,
     );
 
+    if (wasAnnotation) {
+        invalidateAnnotationInspectionRequests();
+
+        removeAnnotationSelectionsForLayer(
+            layerName,
+        );
+    }
+
     if (isAnnotation) {
         annotationLayerNames.add(layerName);
 
@@ -3387,7 +3803,11 @@ async function removeOverlay(layerName) {
     delete overlayLayers[layerName];
 
     if (wasAnnotation) {
-        hideAnnotationInspector();
+        invalidateAnnotationInspectionRequests();
+
+        removeAnnotationSelectionsForLayer(
+            layerName,
+        );
 
         await updateAnnotationProperties({
             refresh: false,

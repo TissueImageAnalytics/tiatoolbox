@@ -914,6 +914,63 @@ describe("annotation properties", () => {
         );
     });
 
+    it("gets annotation geometry for highlighting", async () => {
+        // Test detailed annotation inspection includes geometry and ID.
+        const annotation = {
+            id: "annotation-1",
+
+            properties: {
+                type: 1,
+                prob: 0.91,
+            },
+
+            geometry: {
+                type: "Polygon",
+
+                coordinates: [
+                    [
+                        [10, 20],
+                        [30, 20],
+                        [30, 40],
+                        [10, 20],
+                    ],
+                ],
+            },
+        };
+
+        const fetchMock =
+            vi.fn().mockResolvedValue(
+                mockResponse({
+                    json: annotation,
+                }),
+            );
+
+        vi.stubGlobal(
+            "fetch",
+            fetchMock,
+        );
+
+        const result =
+            await getAnnotationAtPoint(
+                "nucleus_detection",
+                123.5,
+                456.25,
+                {
+                    details: true,
+                },
+            );
+
+        expect(
+            fetchMock,
+        ).toHaveBeenCalledExactlyOnceWith(
+            "/tileserver/tap_query/123.5/456.25?layer=nucleus_detection&details=1",
+        );
+
+        expect(result).toEqual(
+            annotation,
+        );
+    });
+
     it("rejects failed annotation inspection requests", async () => {
         // Test a failed annotation inspection request is rejected.
         vi.stubGlobal(

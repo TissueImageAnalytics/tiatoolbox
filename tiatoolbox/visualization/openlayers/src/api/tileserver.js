@@ -312,11 +312,21 @@ async function getAnnotationAtPoint(
     layerName,
     x,
     y,
+    {
+        details = false,
+    } = {},
 ) {
     const params =
         new URLSearchParams({
             layer: layerName,
         });
+
+    if (details) {
+        params.set(
+            "details",
+            "1",
+        );
+    }
 
     const response = await fetch(
         `/tileserver/tap_query/${x}/${y}?${params}`,
