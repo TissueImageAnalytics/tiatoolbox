@@ -13,6 +13,12 @@ import {
 function createHarness({
     annotationGroups = [],
     displayMode = "type",
+    palette = "automatic",
+    colourMap = "viridis",
+    onPaletteChange =
+        vi.fn(async () => {}),
+    onColourMapChange =
+        vi.fn(async () => {}),
     annotationProperties = ["prob"],
     annotationProperty = null,
     secondarySelection = null,
@@ -33,6 +39,59 @@ function createHarness({
                     <option value="type">Class</option>
                     <option value="property">Property</option>
                     <option value="secondary">Class + Property</option>
+                </select>
+            </label>
+
+            <label
+                id="palette-field"
+                class="annotations-panel-display-field"
+            >
+                <select id="palette">
+                    <option value="automatic">
+                        Automatic
+                    </option>
+                    <option value="Set1">
+                        Set1
+                    </option>
+                    <option value="tab10">
+                        tab10
+                    </option>
+                    <option value="tab20">
+                        tab20
+                    </option>
+                    <option
+                        value="custom"
+                        disabled
+                    >
+                        Custom
+                    </option>
+                </select>
+            </label>
+
+            <label
+                id="colour-map-field"
+                class="annotations-panel-display-field"
+                hidden
+            >
+                <select id="colour-map">
+                    <option value="viridis">
+                        viridis
+                    </option>
+                    <option value="plasma">
+                        plasma
+                    </option>
+                    <option value="inferno">
+                        inferno
+                    </option>
+                    <option value="magma">
+                        magma
+                    </option>
+                    <option value="cividis">
+                        cividis
+                    </option>
+                    <option value="turbo">
+                        turbo
+                    </option>
                 </select>
             </label>
 
@@ -110,6 +169,26 @@ function createHarness({
 
     const colourBySelect =
         document.getElementById("colour-by");
+
+    const paletteField =
+        document.getElementById(
+            "palette-field",
+        );
+
+    const paletteSelect =
+        document.getElementById(
+            "palette",
+        );
+
+    const colourMapField =
+        document.getElementById(
+            "colour-map-field",
+        );
+
+    const colourMapSelect =
+        document.getElementById(
+            "colour-map",
+        );
 
     const secondaryTypeField =
         document.getElementById(
@@ -262,6 +341,10 @@ function createHarness({
             toggle,
             list,
             colourBySelect,
+            paletteField,
+            paletteSelect,
+            colourMapField,
+            colourMapSelect,
             secondaryTypeField,
             secondaryTypeSelect,
             propertyField,
@@ -291,6 +374,12 @@ function createHarness({
 
             getDisplayMode: () =>
                 displayMode,
+
+            getPalette: () =>
+                palette,
+
+            getColourMap: () =>
+                colourMap,
 
             getAnnotationProperties: () =>
                 annotationProperties,
@@ -339,6 +428,8 @@ function createHarness({
             onVisibilityChange,
             onOpacityChange,
             onOpacityLinkChange,
+            onPaletteChange,
+            onColourMapChange,
             onDisplayModeChange,
             onPropertyChange,
             onSecondaryTypeChange,
@@ -354,6 +445,10 @@ function createHarness({
         toggle,
         list,
         colourBySelect,
+        paletteField,
+        paletteSelect,
+        colourMapField,
+        colourMapSelect,
         secondaryTypeField,
         secondaryTypeSelect,
         propertyField,
@@ -375,6 +470,8 @@ function createHarness({
         onVisibilityChange,
         onOpacityChange,
         onOpacityLinkChange,
+        onPaletteChange,
+        onColourMapChange,
         onDisplayModeChange,
         onPropertyChange,
         onSecondaryTypeChange,
@@ -542,6 +639,9 @@ describe("createAnnotationsPanelController", () => {
         const {
             controller,
             colourBySelect,
+            paletteField,
+            paletteSelect,
+            colourMapField,
             propertyField,
         } = createHarness({
             annotationGroups: [
@@ -575,6 +675,18 @@ describe("createAnnotationsPanelController", () => {
         ).toBe(false);
 
         expect(
+            paletteField.hidden,
+        ).toBe(false);
+
+        expect(
+            paletteSelect.value,
+        ).toBe("automatic");
+
+        expect(
+            colourMapField.hidden,
+        ).toBe(true);
+
+        expect(
             propertyField.hidden,
         ).toBe(true);
     });
@@ -584,6 +696,9 @@ describe("createAnnotationsPanelController", () => {
         const {
             controller,
             list,
+            paletteField,
+            colourMapField,
+            colourMapSelect,
             propertyField,
             propertySelect,
             propertyLegend,
@@ -606,6 +721,22 @@ describe("createAnnotationsPanelController", () => {
         });
 
         controller.render();
+
+        expect(
+            paletteField.hidden,
+        ).toBe(true);
+
+        expect(
+            colourMapField.hidden,
+        ).toBe(false);
+
+        expect(
+            colourMapSelect.value,
+        ).toBe("viridis");
+
+        expect(
+            propertyLegend.dataset.colourMap,
+        ).toBe("viridis");
 
         expect(
             propertyField.hidden,
@@ -795,11 +926,11 @@ describe("createAnnotationsPanelController", () => {
 
         expect(
             importButton.disabled,
-        ).toBe(false);
+        ).toBe(true);
 
         expect(
             exportButton.disabled,
-        ).toBe(false);
+        ).toBe(true);
     });
 
     it("renders repeated annotation types in separate groups", () => {
@@ -1216,6 +1347,88 @@ describe("createAnnotationsPanelController", () => {
         );
     });
 
+    it("changes the annotation palette", async () => {
+        // Test selecting a categorical palette.
+        const {
+            controller,
+            paletteSelect,
+            onPaletteChange,
+        } = createHarness({
+            annotationGroups: [
+                {
+                    layerName: "annotations",
+                    annotationTypes: [
+                        "Tumour",
+                    ],
+                },
+            ],
+        });
+
+        controller.render();
+
+        paletteSelect.value =
+            "tab10";
+
+        paletteSelect.dispatchEvent(
+            new Event(
+                "change",
+                {
+                    bubbles: true,
+                },
+            ),
+        );
+
+        await flushActions();
+
+        expect(
+            onPaletteChange,
+        ).toHaveBeenCalledExactlyOnceWith(
+            "tab10",
+        );
+    });
+
+    it("changes the annotation colour map", async () => {
+        // Test selecting a continuous colour map.
+        const {
+            controller,
+            colourMapSelect,
+            onColourMapChange,
+        } = createHarness({
+            annotationGroups: [
+                {
+                    layerName: "annotations",
+                    annotationTypes: [
+                        "Tumour",
+                    ],
+                },
+            ],
+            displayMode: "property",
+            annotationProperty: "prob",
+        });
+
+        controller.render();
+
+        colourMapSelect.value =
+            "plasma";
+
+        colourMapSelect.dispatchEvent(
+            new Event(
+                "change",
+                {
+                    bubbles: true,
+                },
+            ),
+        );
+
+        await flushActions();
+
+        expect(
+            onColourMapChange,
+        ).toHaveBeenCalledExactlyOnceWith(
+            "plasma",
+        );
+    });
+
     it("changes annotation property", async () => {
         // Test changing the property used to colour annotations.
         const {
@@ -1329,6 +1542,8 @@ describe("createAnnotationsPanelController", () => {
                     ],
                 },
             ],
+            displayMode: "property",
+            annotationProperty: "prob",
         });
 
         controller.render();

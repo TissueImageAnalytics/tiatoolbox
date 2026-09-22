@@ -2338,3 +2338,68 @@ def test_annotation_colours_are_deterministic(app: TileServer) -> None:
 
     assert first_colours == second_colours
     assert all(len(colour) == 4 for colour in first_colours.values())
+
+
+def test_annotation_colours_support_named_palette(
+    app: TileServer,
+) -> None:
+    """Test a named Matplotlib annotation palette."""
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={
+                "types": json.dumps(
+                    [
+                        0,
+                        1,
+                    ]
+                ),
+                "palette": "tab10",
+            },
+        )
+
+    assert response.status_code == 200
+
+    result = response.get_json()
+
+    expected = [
+        [
+            *map(
+                float,
+                colormaps["tab10"].colors[index][:3],
+            ),
+            1.0,
+        ]
+        for index in (
+            0,
+            1,
+        )
+    ]
+
+    assert result == {
+        "keys": [
+            0,
+            1,
+        ],
+        "values": expected,
+    }
+
+
+def test_annotation_colours_reject_unknown_palette(
+    app: TileServer,
+) -> None:
+    """Test unsupported annotation palettes are rejected."""
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={
+                "types": json.dumps(
+                    [
+                        0,
+                    ]
+                ),
+                "palette": "not-a-palette",
+            },
+        )
+
+    assert response.status_code == 400

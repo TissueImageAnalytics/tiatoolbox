@@ -145,6 +145,71 @@
 }
 
 
+.annotations-property-legend[data-colour-map="plasma"]
+.annotations-property-gradient {
+    background: linear-gradient(
+        to right,
+        #0d0887,
+        #7e03a8,
+        #cc4778,
+        #f89540,
+        #f0f921
+    );
+}
+
+
+.annotations-property-legend[data-colour-map="inferno"]
+.annotations-property-gradient {
+    background: linear-gradient(
+        to right,
+        #000004,
+        #420a68,
+        #932667,
+        #dd513a,
+        #fcffa4
+    );
+}
+
+
+.annotations-property-legend[data-colour-map="magma"]
+.annotations-property-gradient {
+    background: linear-gradient(
+        to right,
+        #000004,
+        #3b0f70,
+        #8c2981,
+        #de4968,
+        #fcfdbf
+    );
+}
+
+
+.annotations-property-legend[data-colour-map="cividis"]
+.annotations-property-gradient {
+    background: linear-gradient(
+        to right,
+        #00224e,
+        #424086,
+        #7b7b78,
+        #bcae6c,
+        #fee838
+    );
+}
+
+
+.annotations-property-legend[data-colour-map="turbo"]
+.annotations-property-gradient {
+    background: linear-gradient(
+        to right,
+        #30123b,
+        #466be3,
+        #1ae4b6,
+        #f9e721,
+        #7a0403
+    );
+}
+
+
 .annotations-property-range {
     display: flex;
     justify-content: space-between;

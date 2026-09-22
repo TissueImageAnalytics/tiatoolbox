@@ -132,15 +132,15 @@ Annotation types are grouped by their loaded annotation layer. Each type can
 be shown or hidden, assigned a colour and given a different fill opacity.
 
 Annotations can be coloured by **Class**, **Property** or **Class + Property**.
-Property colouring uses the viridis colour map and shows the property range in
-the Annotations panel. Only numeric properties available in all loaded
-annotation layers are shown.
+Property colouring uses the selected continuous colour map and shows the
+property range in the Annotations panel. Only numeric properties available in
+all loaded annotation layers are shown.
 
 **Class + Property** shows one selected class and colours it by a numeric
 property. Other annotation classes are hidden while this mode is active.
 
-**Select all** and **Deselect all** can be used to change the visibility of all
-annotation types at once.
+In **Class** and **Property** modes, **Select all** and **Deselect all** can be
+used to change the visibility of all annotation types at once.
 
 Fill opacity can be adjusted in all three display modes. Enable **Link opacity**
 to apply the same opacity to all loaded annotation classes. When it is disabled,
@@ -165,17 +165,26 @@ the overlay directory. The filename must end in `config.json`, for example
 
 Types not included in `color_dict` are assigned colours automatically.
 
-The **Export colours** button downloads the colours for the currently loaded
-annotation types as `annotation_config.json`. This file can be placed in the
+In **Class** mode, the **Export colours** button downloads the colours for the
+currently loaded annotation types as `annotation_config.json`. This file can be placed in the
 overlay directory and reused when the viewer is started again.
 
 Exported colour files also save colours separately for each annotation layer.
 `color_dict` provides the default colours.
 
-Use **Import colours** to load colours from a JSON annotation configuration file.
+In **Class** mode, use **Import colours** to load colours from a JSON annotation
+configuration file.
 Both `color_dict` and `layer_color_dicts` are supported. Layer-specific colours
 take priority over `color_dict`. Colours for classes or layers that are not
 currently loaded are ignored.
+
+In **Class** mode, the **Palette** control can recolour loaded annotation
+classes using the default automatic colours or Matplotlib `Set1`, `tab10`,
+and `tab20` palettes. Colours loaded from an overlay configuration file,
+manually edited, or imported are shown as **Custom**.
+
+In **Property** and **Class + Property** modes, the **Colour map** control
+supports `viridis`, `plasma`, `inferno`, `magma`, `cividis`, and `turbo`.
 
 The viewer can also be launched without predefined directories:
 

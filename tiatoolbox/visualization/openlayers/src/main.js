@@ -120,6 +120,26 @@ const annotationsColourBySelect =
         "annotations-colour-by",
     );
 
+const annotationsPaletteField =
+    document.getElementById(
+        "annotations-palette-field",
+    );
+
+const annotationsPaletteSelect =
+    document.getElementById(
+        "annotations-palette",
+    );
+
+const annotationsColourMapField =
+    document.getElementById(
+        "annotations-colour-map-field",
+    );
+
+const annotationsColourMapSelect =
+    document.getElementById(
+        "annotations-colour-map",
+    );
+
 const annotationsSecondaryTypeField =
     document.getElementById(
         "annotations-secondary-type-field",
@@ -378,6 +398,10 @@ if (
     annotationsImportColoursInput === null ||
     annotationsExportColoursButton === null ||
     annotationsColourBySelect === null ||
+    annotationsPaletteField === null ||
+    annotationsPaletteSelect === null ||
+    annotationsColourMapField === null ||
+    annotationsColourMapSelect === null ||
     annotationsPropertyField === null ||
     annotationsPropertySelect === null ||
     annotationsPropertyLegend === null ||
@@ -564,6 +588,9 @@ const annotationTypeOpacityByLayer =
 let annotationDisplayMode = "type";
 let annotationProperty = null;
 let annotationSecondarySelection = null;
+
+let annotationPalette = "automatic";
+let annotationColourMap = "viridis";
 let annotationProperties = [];
 const annotationPropertyRanges =
     new Map();
@@ -580,6 +607,19 @@ function getAnnotationTypes() {
     }
 
     return [...annotationTypes];
+}
+
+function getAnnotationPaletteRequest(
+    palette = annotationPalette,
+) {
+    if (
+        palette === "automatic" ||
+        palette === "custom"
+    ) {
+        return null;
+    }
+
+    return palette;
 }
 
 function getAnnotationGroups() {
@@ -802,7 +842,7 @@ async function setAnnotationPropertyMode(
                 );
 
                 await setAnnotationMapper(
-                    "viridis",
+                    annotationColourMap,
                     layerName,
                 );
 
@@ -853,7 +893,7 @@ async function setAnnotationSecondaryMode(
     await setAnnotationSecondaryMapper(
         annotationType,
         property,
-        "viridis",
+        annotationColourMap,
         range,
         layerName,
     );
@@ -959,6 +999,153 @@ async function updateAnnotationProperties({
     annotationsPanelController.render();
 }
 
+async function applyAnnotationPalette(
+    palette,
+) {
+    const paletteColours =
+        await getTileServerAnnotationColors(
+            getAnnotationTypes(),
+            getAnnotationPaletteRequest(
+                palette,
+            ),
+        );
+
+    const updates = [];
+
+    for (const [
+        layerName,
+        annotationTypes,
+    ] of annotationTypesByLayer) {
+        const currentColours =
+            annotationColoursByLayer.get(
+                layerName,
+            );
+
+        if (currentColours === undefined) {
+            continue;
+        }
+
+        const opacities =
+            annotationTypeOpacityByLayer.get(
+                layerName,
+            );
+
+        const updatedColours =
+            new Map(currentColours);
+
+        for (
+            const annotationType of
+            annotationTypes
+        ) {
+            const paletteColour =
+                paletteColours.get(
+                    annotationType,
+                );
+
+            if (paletteColour === undefined) {
+                continue;
+            }
+
+            const currentColour =
+                currentColours.get(
+                    annotationType,
+                );
+
+            const opacity =
+                opacities?.get(
+                    annotationType,
+                ) ??
+                currentColour?.[3] ??
+                1;
+
+            updatedColours.set(
+                annotationType,
+                [
+                    paletteColour[0],
+                    paletteColour[1],
+                    paletteColour[2],
+                    opacity,
+                ],
+            );
+        }
+
+        updates.push({
+            layerName,
+            previousColours:
+                new Map(
+                    currentColours,
+                ),
+            updatedColours,
+        });
+    }
+
+    try {
+        await Promise.all(
+            updates.map(
+                ({
+                    layerName,
+                    updatedColours,
+                }) =>
+                    setTileServerAnnotationColors(
+                        updatedColours,
+                        layerName,
+                    ),
+            ),
+        );
+    } catch (error) {
+        await Promise.allSettled(
+            updates.map(
+                ({
+                    layerName,
+                    previousColours,
+                }) =>
+                    setTileServerAnnotationColors(
+                        previousColours,
+                        layerName,
+                    ),
+            ),
+        );
+
+        throw error;
+    }
+
+    for (const {
+        layerName,
+        updatedColours,
+    } of updates) {
+        annotationColoursByLayer.set(
+            layerName,
+            updatedColours,
+        );
+    }
+
+    for (const [
+        annotationType,
+        paletteColour,
+    ] of paletteColours) {
+        const currentColour =
+            annotationColours.get(
+                annotationType,
+            );
+
+        annotationColours.set(
+            annotationType,
+            [
+                paletteColour[0],
+                paletteColour[1],
+                paletteColour[2],
+                currentColour?.[3] ??
+                    paletteColour[3] ??
+                    1,
+            ],
+        );
+    }
+
+    annotationPalette = palette;
+
+    refreshAnnotationLayers();
+}
+
 async function importAnnotationColours(file) {
     let config;
 
@@ -1054,6 +1241,7 @@ async function importAnnotationColours(file) {
         );
     }
 
+    annotationPalette = "custom";
     refreshAnnotationLayers();
 }
 
@@ -1642,6 +1830,14 @@ const annotationsPanelController =
         list: annotationsList,
         colourBySelect:
             annotationsColourBySelect,
+        paletteField:
+            annotationsPaletteField,
+        paletteSelect:
+            annotationsPaletteSelect,
+        colourMapField:
+            annotationsColourMapField,
+        colourMapSelect:
+            annotationsColourMapSelect,
         secondaryTypeField:
             annotationsSecondaryTypeField,
         secondaryTypeSelect:
@@ -1676,6 +1872,12 @@ const annotationsPanelController =
 
         getDisplayMode: () =>
             annotationDisplayMode,
+
+        getPalette: () =>
+            annotationPalette,
+
+        getColourMap: () =>
+            annotationColourMap,
 
         getAnnotationProperties: () =>
             annotationProperties,
@@ -1722,6 +1924,69 @@ const annotationsPanelController =
 
         getOpacityLinked: () =>
             annotationOpacityLinked,
+
+        async onPaletteChange(palette) {
+            await applyAnnotationPalette(
+                palette,
+            );
+        },
+
+        async onColourMapChange(colourMap) {
+            const previousColourMap =
+                annotationColourMap;
+
+            annotationColourMap =
+                colourMap;
+
+            try {
+                if (
+                    annotationDisplayMode ===
+                    "property"
+                ) {
+                    if (
+                        annotationProperty ===
+                        null
+                    ) {
+                        throw new Error(
+                            "No annotation property is selected.",
+                        );
+                    }
+
+                    await setAnnotationPropertyMode(
+                        annotationProperty,
+                    );
+
+                    return;
+                }
+
+                if (
+                    annotationDisplayMode ===
+                    "secondary"
+                ) {
+                    if (
+                        annotationProperty ===
+                            null ||
+                        annotationSecondarySelection ===
+                            null
+                    ) {
+                        throw new Error(
+                            "Class + Property selection is not available.",
+                        );
+                    }
+
+                    await setAnnotationSecondaryMode(
+                        annotationSecondarySelection.layerName,
+                        annotationSecondarySelection.annotationType,
+                        annotationProperty,
+                    );
+                }
+            } catch (error) {
+                annotationColourMap =
+                    previousColourMap;
+
+                throw error;
+            }
+        },
 
         async onDisplayModeChange(mode) {
             if (mode === "type") {
@@ -1867,6 +2132,8 @@ const annotationsPanelController =
                 layerName,
                 updatedColours,
             );
+
+            annotationPalette = "custom";
 
             refreshAnnotationLayers();
         },
@@ -2064,6 +2331,89 @@ const annotationsPanelController =
 
         async onOpacityLinkChange(linked) {
             annotationOpacityLinked = linked;
+        },
+
+        async onSetAllVisibility(visible) {
+            const previousVisibility =
+                new Map();
+
+            for (
+                const layerName of
+                annotationLayerNames
+            ) {
+                const visibility =
+                    annotationTypeVisibilityByLayer.get(
+                        layerName,
+                    );
+
+                if (visibility === undefined) {
+                    throw new Error(
+                        `Annotation visibility is not available for layer: ${layerName}`,
+                    );
+                }
+
+                previousVisibility.set(
+                    layerName,
+                    new Map(visibility),
+                );
+
+                const annotationTypes =
+                    annotationTypesByLayer.get(
+                        layerName,
+                    ) ?? [];
+
+                for (
+                    const annotationType of
+                    annotationTypes
+                ) {
+                    visibility.set(
+                        annotationType,
+                        visible,
+                    );
+                }
+            }
+
+            try {
+                await Promise.all(
+                    [...annotationLayerNames].map(
+                        (layerName) =>
+                            updateAnnotationLayerFilter(
+                                layerName,
+                                {
+                                    refresh: false,
+                                },
+                            ),
+                    ),
+                );
+            } catch (error) {
+                for (const [
+                    layerName,
+                    visibility,
+                ] of previousVisibility) {
+                    annotationTypeVisibilityByLayer.set(
+                        layerName,
+                        visibility,
+                    );
+                }
+
+                await Promise.allSettled(
+                    [...annotationLayerNames].map(
+                        (layerName) =>
+                            updateAnnotationLayerFilter(
+                                layerName,
+                                {
+                                    refresh: false,
+                                },
+                            ),
+                    ),
+                );
+
+                refreshAnnotationLayers();
+
+                throw error;
+            }
+
+            refreshAnnotationLayers();
         },
 
         async onImport(file) {
@@ -2857,12 +3207,29 @@ async function loadOverlay(overlayPath) {
             ),
         };
 
+        const usesConfiguredColours =
+            annotationTypes.some(
+                (annotationType) =>
+                    Object.hasOwn(
+                        configuredColours,
+                        String(annotationType),
+                    ),
+            );
+
         await assignAnnotationColours(
             layerColours,
             annotationTypes,
-            getTileServerAnnotationColors,
+            (types) =>
+                getTileServerAnnotationColors(
+                    types,
+                    getAnnotationPaletteRequest(),
+                ),
             configuredColours,
         );
+
+        if (usesConfiguredColours) {
+            annotationPalette = "custom";
+        }
 
         for (const [
             annotationType,

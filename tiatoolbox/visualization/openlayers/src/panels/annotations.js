@@ -23,6 +23,10 @@ function createAnnotationsPanelController({
     importInput,
     exportButton,
     colourBySelect,
+    paletteField,
+    paletteSelect,
+    colourMapField,
+    colourMapSelect,
     secondaryTypeField,
     secondaryTypeSelect,
     propertyField,
@@ -36,6 +40,8 @@ function createAnnotationsPanelController({
     getAnnotationTypes,
     getAnnotationColour,
     getDisplayMode,
+    getPalette,
+    getColourMap,
     getAnnotationProperties,
     getAnnotationProperty,
     getSecondaryType,
@@ -47,6 +53,8 @@ function createAnnotationsPanelController({
     onVisibilityChange,
     onOpacityChange,
     onOpacityLinkChange,
+    onPaletteChange,
+    onColourMapChange,
     onDisplayModeChange,
     onPropertyChange,
     onSecondaryTypeChange,
@@ -204,6 +212,12 @@ function createAnnotationsPanelController({
         const displayMode =
             getDisplayMode();
 
+        const palette =
+            getPalette();
+
+        const colourMap =
+            getColourMap();
+
         const properties =
             getAnnotationProperties();
 
@@ -230,6 +244,36 @@ function createAnnotationsPanelController({
                 "disabled",
                 !hasAnnotations,
             );
+
+        paletteField.hidden =
+            displayMode !== "type";
+
+        colourMapField.hidden =
+            displayMode === "type";
+
+        paletteSelect.value =
+            palette;
+
+        colourMapSelect.value =
+            colourMap;
+
+        paletteSelect.disabled =
+            !hasAnnotations;
+
+        colourMapSelect.disabled =
+            !hasAnnotations ||
+            properties.length === 0;
+
+        paletteField.classList.toggle(
+            "disabled",
+            !hasAnnotations,
+        );
+
+        colourMapField.classList.toggle(
+            "disabled",
+            !hasAnnotations ||
+            properties.length === 0,
+        );
 
         colourBySelect.value =
             displayMode;
@@ -329,6 +373,9 @@ function createAnnotationsPanelController({
         propertyLegend.hidden =
             !showPropertyLegend;
 
+        propertyLegend.dataset.colourMap =
+            colourMap;
+
         if (showPropertyLegend) {
             const [
                 minimum,
@@ -372,11 +419,11 @@ function createAnnotationsPanelController({
 
         importButton.disabled =
             !hasAnnotations ||
-            displayMode === "property";
+            displayMode !== "type";
 
         exportButton.disabled =
             !hasAnnotations ||
-            displayMode === "property";
+            displayMode !== "type";
 
         if (annotationGroups.length === 0) {
             const empty =
@@ -674,6 +721,26 @@ function createAnnotationsPanelController({
 
             runAction(() =>
                 onImport(file));
+        },
+    );
+
+    paletteSelect.addEventListener(
+        "change",
+        () => {
+            runAction(() =>
+                onPaletteChange(
+                    paletteSelect.value,
+                ));
+        },
+    );
+
+    colourMapSelect.addEventListener(
+        "change",
+        () => {
+            runAction(() =>
+                onColourMapChange(
+                    colourMapSelect.value,
+                ));
         },
     );
 

@@ -753,6 +753,51 @@ describe("setAnnotationColors", () => {
         ]);
     });
 
+    it("requests a named annotation palette", async () => {
+        const fetchMock =
+            vi.fn().mockResolvedValue({
+                ok: true,
+
+                json:
+                    vi.fn().mockResolvedValue({
+                        keys: [
+                            "Tumour",
+                        ],
+                        values: [
+                            [
+                                1,
+                                0,
+                                0,
+                                1,
+                            ],
+                        ],
+                    }),
+            });
+
+        vi.stubGlobal(
+            "fetch",
+            fetchMock,
+        );
+
+        await getAnnotationColors(
+            [
+                "Tumour",
+            ],
+            "tab10",
+        );
+
+        const [
+            ,
+            options,
+        ] = fetchMock.mock.calls[0];
+
+        expect(
+            options.body.get(
+                "palette",
+            ),
+        ).toBe("tab10");
+    });
+
     it("rejects failed annotation colour generation", async () => {
         // Test error handling when annotation colours cannot be generated.
         vi.stubGlobal(

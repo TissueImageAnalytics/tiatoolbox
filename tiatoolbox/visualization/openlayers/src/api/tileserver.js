@@ -222,13 +222,23 @@ async function setAnnotationOpacities(
     }
 }
 
-async function getAnnotationColors(annotationTypes) {
+async function getAnnotationColors(
+    annotationTypes,
+    palette = null,
+) {
     const formData = new FormData();
 
     formData.append(
         "types",
         JSON.stringify(annotationTypes),
     );
+
+    if (palette !== null) {
+        formData.append(
+            "palette",
+            palette,
+        );
+    }
 
     const response = await fetch(
         "/tileserver/annotation_colours",
