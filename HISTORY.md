@@ -67,7 +67,7 @@ ______________________________________________________________________
 
 ### ⚠️ API Changes
 
-- Python requirement updated → >=3.11, \<3.15
+- Python requirement updated → >=3.11, \<3.16
 
 ### 🐞 Bug Fixes and Other Changes
 
