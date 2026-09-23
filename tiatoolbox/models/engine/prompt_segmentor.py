@@ -6,13 +6,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
+import torch
 
 from tiatoolbox.models.architecture.sam import SAM
 from tiatoolbox.utils.misc import dict_to_store_semantic_segmentor
 
 if TYPE_CHECKING:  # pragma: no cover
-    import torch
-
     from tiatoolbox.type_hints import IntPair
 
 
@@ -71,6 +70,10 @@ class PromptSegmentor:
 
         """
         paths = []
+        # Set inference mode once here; infer_batch no longer calls
+        # model.eval() internally (needed for Monte Carlo Dropout wrappers).
+        if isinstance(self.model, torch.nn.Module):
+            self.model.eval()
         masks, _ = self.model.infer_batch(
             self.model,
             images,
