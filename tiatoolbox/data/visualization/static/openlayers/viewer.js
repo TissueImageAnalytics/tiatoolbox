@@ -18186,45 +18186,45 @@ async function hy({ refresh: e = !0 } = {}) {
 	}
 	Ry.render();
 }
-async function gy(e) {
-	let t = await Qh(iy(), ay(e)), n = [];
-	for (let [e, r] of qv) {
+async function gy(e, { refresh: t = !0 } = {}) {
+	let n = await Qh(iy(), ay(e)), r = [];
+	for (let [e, t] of qv) {
 		let i = Kv.get(e);
 		if (i === void 0) continue;
 		let a = Yv.get(e), o = new Map(i);
-		for (let e of r) {
-			let n = t.get(e);
-			if (n === void 0) continue;
+		for (let e of t) {
+			let t = n.get(e);
+			if (t === void 0) continue;
 			let r = i.get(e), s = a?.get(e) ?? r?.[3] ?? 1;
 			o.set(e, [
-				n[0],
-				n[1],
-				n[2],
+				t[0],
+				t[1],
+				t[2],
 				s
 			]);
 		}
-		n.push({
+		r.push({
 			layerName: e,
 			previousColours: new Map(i),
 			updatedColours: o
 		});
 	}
 	try {
-		await Promise.all(n.map(({ layerName: e, updatedColours: t }) => Xh(t, e)));
+		await Promise.all(r.map(({ layerName: e, updatedColours: t }) => Xh(t, e)));
 	} catch (e) {
-		throw await Promise.allSettled(n.map(({ layerName: e, previousColours: t }) => Xh(t, e))), e;
+		throw await Promise.allSettled(r.map(({ layerName: e, previousColours: t }) => Xh(t, e))), e;
 	}
-	for (let { layerName: e, updatedColours: t } of n) Kv.set(e, t);
-	for (let [e, n] of t) {
-		let t = Gv.get(e);
+	for (let { layerName: e, updatedColours: t } of r) Kv.set(e, t);
+	for (let [e, t] of n) {
+		let n = Gv.get(e);
 		Gv.set(e, [
-			n[0],
-			n[1],
-			n[2],
-			t?.[3] ?? n[3] ?? 1
+			t[0],
+			t[1],
+			t[2],
+			n?.[3] ?? t[3] ?? 1
 		]);
 	}
-	$v = e, xy();
+	$v = e, t && xy();
 }
 async function _y(e) {
 	let t;
@@ -18888,7 +18888,7 @@ async function xb(e) {
 		}, i = e.some((e) => Object.hasOwn(n, String(e)));
 		await n_(t, e, (e) => Qh(e, ay()), n), i && ($v = "custom");
 		for (let [e, n] of t) Gv.has(e) || Gv.set(e, n);
-		yy(r, e, t), await Zh(Yv.get(r), r), Xv === "type" && await Xh(Kv.get(r), r);
+		yy(r, e, t), await Zh(Yv.get(r), r), $v === "custom" ? Xv === "type" && await Xh(Kv.get(r), r) : await gy($v, { refresh: !1 });
 	} else i && (Wv.delete(r), qv.delete(r), by(r));
 	n || i ? (await hy({ refresh: !1 }), n && await Cy(r, { refresh: !1 }), xy(r)) : Bv += 1;
 	let o = new cp({

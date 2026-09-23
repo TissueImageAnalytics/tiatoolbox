@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import copy
-import hashlib
 import io
 import json
 import os
@@ -385,76 +384,171 @@ class TileServer(Flask):
         palette_name: str | None = None,
     ) -> dict:
         """Return deterministic qualitative colours for annotation types."""
+        qualitative_palettes = (
+            "Set1",
+            "Set2",
+            "Set3",
+            "Dark2",
+            "Accent",
+            "Paired",
+            "tab10",
+            "tab20",
+            "tab20b",
+            "tab20c",
+        )
+
+        # Matplotlib stores related shades next to each other in these palettes.
+        # Spread similar shades apart so early class colours are easier to distinguish.
+        palette_index_orders = {
+            "Set1": (
+                0,
+                1,
+                2,
+                3,
+                4,
+                7,
+                5,
+                6,
+                8,
+            ),
+            "Paired": (
+                1,
+                3,
+                5,
+                7,
+                9,
+                11,
+                0,
+                2,
+                4,
+                6,
+                8,
+                10,
+            ),
+            "tab20": (
+                0,
+                2,
+                4,
+                6,
+                8,
+                10,
+                12,
+                14,
+                16,
+                18,
+                1,
+                3,
+                5,
+                7,
+                9,
+                11,
+                13,
+                15,
+                17,
+                19,
+            ),
+            "tab20b": (
+                0,
+                4,
+                8,
+                12,
+                1,
+                5,
+                9,
+                13,
+                2,
+                6,
+                10,
+                14,
+                3,
+                7,
+                11,
+                15,
+            ),
+            "tab20c": (
+                0,
+                4,
+                8,
+                12,
+                1,
+                5,
+                9,
+                13,
+                2,
+                6,
+                10,
+                14,
+                3,
+                7,
+                11,
+                15,
+            ),
+        }
+
         if palette_name is None:
-            set1 = colormaps["Set1"].colors
+            palette = []
 
-            palette = [
-                (*map(float, set1[index][:3]), 1.0)
-                for index in (0, 1, 2, 3, 4, 7, 5, 6, 8)
-            ]
-
-            for cmap_name in (
+            palette_names = (
+                "Set1",
                 "Dark2",
                 "Accent",
                 "tab10",
                 "Paired",
                 "Set3",
-            ):
-                for colour in colormaps[cmap_name].colors:
-                    rgba = (
-                        *map(
-                            float,
-                            colour[:3],
-                        ),
-                        1.0,
-                    )
-
-                    if rgba not in palette:
-                        palette.append(rgba)
-        else:
-            if palette_name not in {
-                "Set1",
-                "tab10",
+                "Set2",
                 "tab20",
-            }:
+                "tab20b",
+                "tab20c",
+            )
+        else:
+            if palette_name not in qualitative_palettes:
                 msg = f"Unsupported annotation palette: {palette_name}"
                 raise ValueError(msg)
 
-            palette = [
-                (
+            palette = []
+
+            palette_names = (
+                palette_name,
+                *(name for name in qualitative_palettes if name != palette_name),
+            )
+
+        for cmap_name in palette_names:
+            colours = colormaps[cmap_name].colors
+            indices = palette_index_orders.get(
+                cmap_name,
+                range(len(colours)),
+            )
+
+            for index in indices:
+                rgba = (
                     *map(
                         float,
-                        colour[:3],
+                        colours[index][:3],
                     ),
                     1.0,
                 )
-                for colour in colormaps[palette_name].colors
-            ]
 
-        values = []
+                if rgba not in palette:
+                    palette.append(rgba)
 
-        for annotation_type in types:
-            if (
-                isinstance(
-                    annotation_type,
-                    int,
-                )
-                and annotation_type >= 0
-            ):
-                colour_index = annotation_type
-            else:
-                key = (f"{type(annotation_type).__name__}:{annotation_type}").encode()
+        type_keys = sorted(
+            {
+                (f"{type(annotation_type).__name__}:{annotation_type}")
+                for annotation_type in types
+            },
+        )
 
-                colour_index = int.from_bytes(
-                    hashlib.sha256(
-                        key,
-                    ).digest()[:8],
-                    "big",
-                )
-
-            values.append(
-                palette[colour_index % len(palette)],
+        colour_by_type = {
+            type_key: palette[index % len(palette)]
+            for index, type_key in enumerate(
+                type_keys,
             )
+        }
+
+        values = [
+            colour_by_type[(f"{type(annotation_type).__name__}:{annotation_type}")]
+            for annotation_type in types
+        ]
 
         return {
             "keys": types,

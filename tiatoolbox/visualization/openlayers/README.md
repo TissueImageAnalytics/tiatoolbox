@@ -184,12 +184,19 @@ take priority over `color_dict`. Colours for classes or layers that are not
 currently loaded are ignored.
 
 In **Class** mode, the **Palette** control can recolour loaded annotation
-classes using the default automatic colours or Matplotlib `Set1`, `tab10`,
-and `tab20` palettes. Colours loaded from an overlay configuration file,
-manually edited, or imported are shown as **Custom**.
+classes using **Automatic** or Matplotlib Set1, Set2, Set3, Dark2, Accent,
+Paired, tab10, tab20, tab20b and tab20c.
+
+Automatic and named palettes assign colours consistently across the currently
+loaded classes. Similar colours are spaced apart where possible, and if the
+selected palette does not have enough colours, colours from the other
+qualitative palettes are used instead of repeating them.
+
+Colours loaded from a configuration file, manually changed or imported are
+shown as **Custom**.
 
 In **Property** and **Class + Property** modes, the **Colour map** control
-supports `viridis`, `plasma`, `inferno`, `magma`, `cividis`, and `turbo`.
+supports viridis, plasma, inferno, magma, cividis and turbo.
 
 The viewer can also be launched without predefined directories:
 

@@ -862,7 +862,8 @@ class AnnotationRenderer:
 
         try:
             if (
-                self.secondary_cmap is not None
+                not edge
+                and self.secondary_cmap is not None
                 and "type" in annotation.properties
                 and annotation.properties["type"] == self.secondary_cmap["type"]
             ):

@@ -53,11 +53,32 @@ function createHarness({
                     <option value="Set1">
                         Set1
                     </option>
+                    <option value="Set2">
+                        Set2
+                    </option>
+                    <option value="Set3">
+                        Set3
+                    </option>
+                    <option value="Dark2">
+                        Dark2
+                    </option>
+                    <option value="Accent">
+                        Accent
+                    </option>
+                    <option value="Paired">
+                        Paired
+                    </option>
                     <option value="tab10">
                         tab10
                     </option>
                     <option value="tab20">
                         tab20
+                    </option>
+                    <option value="tab20b">
+                        tab20b
+                    </option>
+                    <option value="tab20c">
+                        tab20c
                     </option>
                     <option
                         value="custom"

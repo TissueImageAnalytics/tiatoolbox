@@ -1105,6 +1105,9 @@ async function updateAnnotationProperties({
 
 async function applyAnnotationPalette(
     palette,
+    {
+        refresh = true,
+    } = {},
 ) {
     const paletteColours =
         await getTileServerAnnotationColors(
@@ -1247,7 +1250,9 @@ async function applyAnnotationPalette(
 
     annotationPalette = palette;
 
-    refreshAnnotationLayers();
+    if (refresh) {
+        refreshAnnotationLayers();
+    }
 }
 
 async function importAnnotationColours(file) {
@@ -3676,7 +3681,18 @@ async function loadOverlay(overlayPath) {
             layerName,
         );
 
-        if (annotationDisplayMode === "type") {
+        if (
+            annotationPalette !== "custom"
+        ) {
+            await applyAnnotationPalette(
+                annotationPalette,
+                {
+                    refresh: false,
+                },
+            );
+        } else if (
+            annotationDisplayMode === "type"
+        ) {
             await setTileServerAnnotationColors(
                 annotationColoursByLayer.get(
                     layerName,

@@ -1820,7 +1820,7 @@ def test_annotation_opacities(app_alt: TileServer) -> None:
         edge=True,
     )
 
-    assert secondary_edge_colour[3] == 255
+    assert secondary_edge_colour == (0, 0, 0, 255)
 
 
 def test_secondary_cmap(app: TileServer) -> None:
@@ -2424,6 +2424,156 @@ def test_annotation_colours_support_named_palette(
         ],
         "values": expected,
     }
+
+
+@pytest.mark.parametrize(
+    "palette_name",
+    [
+        "Set1",
+        "Set2",
+        "Set3",
+        "Dark2",
+        "Accent",
+        "Paired",
+        "tab10",
+        "tab20",
+        "tab20b",
+        "tab20c",
+    ],
+)
+def test_annotation_colours_named_palettes_are_distinct_and_deterministic(
+    app: TileServer,
+    palette_name: str,
+) -> None:
+    """Test named palettes give stable distinct annotation colours."""
+    annotation_types = [
+        "Tumor",
+        "Background",
+        "Dead",
+        "Other",
+        "Connective",
+        "Inflammatory",
+        "Inflammatory-other",
+        "Neoplastic",
+        "Non-neoplastic epithelial",
+        "Stroma",
+        "Necrosis",
+        "Lymphocyte",
+    ]
+
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={
+                "types": json.dumps(
+                    annotation_types,
+                ),
+                "palette": palette_name,
+            },
+        )
+        assert response.status_code == 200
+        first = response.get_json()
+
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={
+                "types": json.dumps(
+                    list(
+                        reversed(
+                            annotation_types,
+                        ),
+                    ),
+                ),
+                "palette": palette_name,
+            },
+        )
+        assert response.status_code == 200
+        second = response.get_json()
+
+    first_colours = dict(
+        zip(
+            first["keys"],
+            first["values"],
+            strict=False,
+        ),
+    )
+    second_colours = dict(
+        zip(
+            second["keys"],
+            second["values"],
+            strict=False,
+        ),
+    )
+
+    assert first_colours == second_colours
+
+    assert len(
+        {tuple(colour) for colour in first_colours.values()},
+    ) == len(annotation_types)
+
+
+def test_annotation_colours_automatic_are_distinct(
+    app: TileServer,
+) -> None:
+    """Test automatic colours distinguish common annotation classes."""
+    annotation_types = [
+        "Tumor",
+        "Background",
+        "Dead",
+        "Other",
+        "Connective",
+        "Inflammatory",
+        "Inflammatory-other",
+        "Neoplastic",
+        "Non-neoplastic epithelial",
+        "Stroma",
+        "Necrosis",
+        "Lymphocyte",
+    ]
+
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={
+                "types": json.dumps(
+                    annotation_types,
+                ),
+            },
+        )
+
+    assert response.status_code == 200
+
+    colours = response.get_json()["values"]
+
+    assert len(
+        {tuple(colour) for colour in colours},
+    ) == len(annotation_types)
+
+
+def test_annotation_colours_support_many_distinct_classes(
+    app: TileServer,
+) -> None:
+    """Test named palettes support many distinct annotation classes."""
+    annotation_types = [f"class-{index}" for index in range(40)]
+
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={
+                "types": json.dumps(
+                    annotation_types,
+                ),
+                "palette": "Set1",
+            },
+        )
+
+    assert response.status_code == 200
+
+    colours = response.get_json()["values"]
+
+    assert len(
+        {tuple(colour) for colour in colours},
+    ) == len(annotation_types)
 
 
 def test_annotation_colours_reject_unknown_palette(
