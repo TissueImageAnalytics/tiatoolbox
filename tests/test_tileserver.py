@@ -1761,11 +1761,17 @@ def test_annotation_opacities(app_alt: TileServer) -> None:
         pytest.fail("Expected a cell annotation in layer-1.")
 
     layer.renderer.score_prop = "prob"
+    layer.renderer.score_prop_edge = "prob"
     layer.renderer.mapper = "viridis"
 
     base_colour = layer.renderer.get_color(
         annotation,
         edge=False,
+    )
+
+    edge_colour = layer.renderer.get_color(
+        annotation,
+        edge=True,
     )
 
     with app_alt.test_client() as client:
@@ -1801,6 +1807,16 @@ def test_annotation_opacities(app_alt: TileServer) -> None:
 
     assert colour[:3] == base_colour[:3]
     assert colour[3] == int(0.4 * 255)
+
+    assert (
+        layer.renderer.get_color(
+            annotation,
+            edge=True,
+        )
+        == edge_colour
+    )
+
+    layer.renderer.score_prop_edge = None
 
     layer.renderer.secondary_cmap = {
         "type": "cell",

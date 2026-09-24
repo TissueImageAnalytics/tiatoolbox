@@ -804,7 +804,7 @@ class TileServer(Flask):
                 new_session_id,
                 httponly=True,
                 samesite="Lax",
-            )  # skipcq: PTC-W6003
+            )
 
         return response
 
