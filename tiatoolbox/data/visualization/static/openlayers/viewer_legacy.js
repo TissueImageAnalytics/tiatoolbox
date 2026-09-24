@@ -3066,7 +3066,7 @@ var ga = class extends Te {
 		this.collapsible_ !== e && (this.collapsible_ = e, this.element.classList.toggle("ol-uncollapsible"), this.userCollapsed_ && this.handleToggle_());
 	}
 	setCollapsed(e) {
-		this.userCollapsed_ = e, !(!this.collapsible_ || this.collapsed_ === e) && this.handleToggle_();
+		this.userCollapsed_ = e, this.collapsible_ && this.collapsed_ !== e && this.handleToggle_();
 	}
 	getCollapsed() {
 		return this.collapsed_;
@@ -6927,7 +6927,7 @@ var Ll = class extends we {
 			let t = this.getInteractions().getArray().slice();
 			for (let n = t.length - 1; n >= 0; n--) {
 				let r = t[n];
-				if (!(r.getMap() !== this || !r.getActive() || !this.getTargetElement()) && (!r.handleEvent(e) || e.propagationStopped)) break;
+				if (r.getMap() === this && r.getActive() && this.getTargetElement() && (!r.handleEvent(e) || e.propagationStopped)) break;
 			}
 		}
 	}
@@ -7392,7 +7392,7 @@ var zl = {
 		this.collapsible_ !== e && (this.collapsible_ = e, this.element.classList.toggle("ol-uncollapsible"), !e && this.collapsed_ && this.handleToggle_());
 	}
 	setCollapsed(e) {
-		!this.collapsible_ || this.collapsed_ === e || this.handleToggle_();
+		this.collapsible_ && this.collapsed_ !== e && this.handleToggle_();
 	}
 	getCollapsed() {
 		return this.collapsed_;
@@ -9198,13 +9198,12 @@ var ld = class extends $l {
 			T && (u < T[0] && (u = T[0]), f < T[1] && (f = T[1]), l > T[2] && (l = T[2] + g), d > T[3] && (d = T[3] + g));
 			var E = this.getStyle().getStroke() && this.get("stroke"), ee = this.getStyle().getText(), D = this.getStyle().getFill();
 			t.save(), t.scale(r, r), t.beginPath(), t.rect(y, y, i - 2 * y, a - 2 * y), t.clip(), t.beginPath();
-			var O = {
+			for (var O = {
 				top: [],
 				left: [],
 				bottom: [],
 				right: []
-			}, k, te, A, ne, j;
-			for (k = u; k < l; k += g) for (ne = fr([k, f], o, s.getView().getProjection()), ne = s.getPixelFromCoordinate(ne), E && t.moveTo(ne[0], ne[1]), A = ne, te = f + w; te <= d; te += w) j = fr([k, te], o, s.getView().getProjection()), j = s.getPixelFromCoordinate(j), E && t.lineTo(j[0], j[1]), A[1] > 0 && j[1] < 0 && O.top.push([k, A]), A[1] > a && j[1] < a && O.bottom.push([k, A]), A = j;
+			}, k = u, te, A, ne, j; k < l; k += g) for (ne = fr([k, f], o, s.getView().getProjection()), ne = s.getPixelFromCoordinate(ne), E && t.moveTo(ne[0], ne[1]), A = ne, te = f + w; te <= d; te += w) j = fr([k, te], o, s.getView().getProjection()), j = s.getPixelFromCoordinate(j), E && t.lineTo(j[0], j[1]), A[1] > 0 && j[1] < 0 && O.top.push([k, A]), A[1] > a && j[1] < a && O.bottom.push([k, A]), A = j;
 			for (te = f; te < d; te += g) for (ne = fr([u, te], o, s.getView().getProjection()), ne = s.getPixelFromCoordinate(ne), E && t.moveTo(ne[0], ne[1]), A = ne, k = u + w; k <= l; k += w) j = fr([k, te], o, s.getView().getProjection()), j = s.getPixelFromCoordinate(j), E && t.lineTo(j[0], j[1]), A[0] < 0 && j[0] > 0 && O.left.push([te, A]), A[0] < i && j[0] > i && O.right.push([te, A]), A = j;
 			if (E && (t.strokeStyle = this.getStyle().getStroke().getColor(), t.lineWidth = this.getStyle().getStroke().getWidth(), t.stroke()), ee) {
 				t.fillStyle = this.getStyle().getText().getFill().getColor(), t.strokeStyle = this.getStyle().getText().getStroke().getColor(), t.lineWidth = this.getStyle().getText().getStroke().getWidth(), t.font = this.getStyle().getText().getFont(), t.textAlign = "center", t.textBaseline = "hanging";
@@ -11116,7 +11115,7 @@ var Ef = class extends ku {
 		}
 	}
 	renderDeclutter(e) {
-		!this.replayGroup_ || !this.getLayer().getDeclutter() || this.renderWorlds(this.replayGroup_, e, !0);
+		this.replayGroup_ && this.getLayer().getDeclutter() && this.renderWorlds(this.replayGroup_, e, !0);
 	}
 	renderDeferredInternal(e) {
 		this.replayGroup_ && (this.clipExtent_ && this.clipUnrotated(this.context, e, this.clipExtent_), this.replayGroup_.renderDeferred(), this.clipExtent_ &&= (this.context.restore(), null), this.resetDrawContext_());
@@ -13486,7 +13485,7 @@ function mm(e, t, n, r, i) {
 			continue;
 		}
 		let l = c?.[0] ?? c;
-		l === -9999999 && console.warn("The \"has\" operator might return false positives."), l === void 0 ? l = Pp : l === null && (l = 0), e[i + a++] = l, !(!s.size || s.size === 1) && (e[i + a++] = c?.[1] ?? -9999999, !(s.size < 3) && (e[i + a++] = c?.[2] ?? -9999999, !(s.size < 4) && (e[i + a++] = c?.[3] ?? -9999999)));
+		l === -9999999 && console.warn("The \"has\" operator might return false positives."), l === void 0 ? l = Pp : l === null && (l = 0), e[i + a++] = l, s.size && s.size !== 1 && (e[i + a++] = c?.[1] ?? -9999999, !(s.size < 3) && (e[i + a++] = c?.[2] ?? -9999999, !(s.size < 4) && (e[i + a++] = c?.[3] ?? -9999999)));
 	}
 	return a;
 }

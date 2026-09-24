@@ -140,7 +140,13 @@ function createHarness() {
         createInput("100");
 
     const controlOpacityValue =
-        document.createElement("span");
+    document.createElement("span");
+
+    const annotationInspectionEnabledInput =
+        createCheckbox();
+
+    const multipleAnnotationSelectionInput =
+        createCheckbox(false);
 
     const zoomVisibleInput =
         createCheckbox();
@@ -259,6 +265,12 @@ function createHarness() {
             "metric",
         );
 
+    const onAnnotationInspectionChange =
+        vi.fn();
+
+    const onMultipleAnnotationSelectionChange =
+        vi.fn();
+
     const onThemeChange = vi.fn();
 
     const onControlVisibilityChange =
@@ -293,6 +305,8 @@ function createHarness() {
             themeSelect,
             controlOpacityInput,
             controlOpacityValue,
+            annotationInspectionEnabledInput,
+            multipleAnnotationSelectionInput,
             zoomVisibleInput,
             zoomLevelVisibleInput,
             rotationVisibleInput,
@@ -314,6 +328,8 @@ function createHarness() {
             scaleBarOpacityInput,
             scaleBarSizeSelect,
             scaleBarUnitsSelect,
+            onAnnotationInspectionChange,
+            onMultipleAnnotationSelectionChange,
             onThemeChange,
             onControlVisibilityChange,
             onReset,
@@ -330,6 +346,8 @@ function createHarness() {
         themeSelect,
         controlOpacityInput,
         controlOpacityValue,
+        annotationInspectionEnabledInput,
+        multipleAnnotationSelectionInput,
         zoomVisibleInput,
         zoomLevelVisibleInput,
         rotationVisibleInput,
@@ -351,6 +369,8 @@ function createHarness() {
         scaleBarOpacityInput,
         scaleBarSizeSelect,
         scaleBarUnitsSelect,
+        onAnnotationInspectionChange,
+        onMultipleAnnotationSelectionChange,
         onThemeChange,
         onControlVisibilityChange,
         onReset,
@@ -659,6 +679,12 @@ describe("saving settings", () => {
         harness.controlOpacityInput.value =
             "75";
 
+        harness.annotationInspectionEnabledInput.checked =
+            false;
+
+        harness.multipleAnnotationSelectionInput.checked =
+            true;
+
         harness.zoomVisibleInput.checked =
             false;
 
@@ -737,6 +763,9 @@ describe("saving settings", () => {
             interfaceOpacity: "75",
 
             controls: {
+                annotationInspection: false,
+                multipleAnnotationSelection:
+                    true,
                 zoom: false,
                 zoomLevel: false,
                 rotation: false,
@@ -805,6 +834,71 @@ describe("saving settings", () => {
         expect(
             saved.controls.zoom,
         ).toBe(false);
+    });
+
+    it("saves annotation inspection changes", () => {
+        // Test annotation inspection changes are applied and saved.
+        const {
+            annotationInspectionEnabledInput,
+            onAnnotationInspectionChange,
+            controller,
+        } = createHarness();
+
+        controller.bindEvents();
+
+        annotationInspectionEnabledInput.checked =
+            false;
+
+        dispatchChange(
+            annotationInspectionEnabledInput,
+        );
+
+        expect(
+            onAnnotationInspectionChange,
+        ).toHaveBeenCalledOnce();
+
+        const saved = JSON.parse(
+            window.localStorage.getItem(
+                settingsStorageKey,
+            ),
+        );
+
+        expect(
+            saved.controls.annotationInspection,
+        ).toBe(false);
+    });
+
+    it("saves multiple annotation selection changes", () => {
+        // Test multiple annotation selection changes are applied and saved.
+        const {
+            multipleAnnotationSelectionInput,
+            onMultipleAnnotationSelectionChange,
+            controller,
+        } = createHarness();
+
+        controller.bindEvents();
+
+        multipleAnnotationSelectionInput.checked =
+            true;
+
+        dispatchChange(
+            multipleAnnotationSelectionInput,
+        );
+
+        expect(
+            onMultipleAnnotationSelectionChange,
+        ).toHaveBeenCalledOnce();
+
+        const saved = JSON.parse(
+            window.localStorage.getItem(
+                settingsStorageKey,
+            ),
+        );
+
+        expect(
+            saved.controls
+                .multipleAnnotationSelection,
+        ).toBe(true);
     });
 
     it("saves changes from grid and scale bar inputs", () => {
@@ -902,6 +996,9 @@ describe("loading settings", () => {
                 interfaceOpacity: "65",
 
                 controls: {
+                    annotationInspection: false,
+                    multipleAnnotationSelection:
+                        true,
                     zoom: false,
                     zoomLevel: true,
                     rotation: false,
@@ -950,6 +1047,14 @@ describe("loading settings", () => {
         expect(
             harness.controlOpacityInput.value,
         ).toBe("65");
+
+        expect(
+            harness.annotationInspectionEnabledInput.checked,
+        ).toBe(false);
+
+        expect(
+            harness.multipleAnnotationSelectionInput.checked,
+        ).toBe(true);
 
         expect(
             harness.zoomVisibleInput.checked,
@@ -1048,6 +1153,9 @@ describe("loading settings", () => {
                 interfaceOpacity: "33",
 
                 controls: {
+                    annotationInspection: "false",
+                    multipleAnnotationSelection:
+                        "true",
                     zoom: "false",
                     zoomLevel: 0,
                     rotation: null,
@@ -1097,7 +1205,12 @@ describe("loading settings", () => {
             harness.controlOpacityInput.value,
         ).toBe("100");
 
+        expect(
+            harness.multipleAnnotationSelectionInput.checked,
+        ).toBe(false);
+
         for (const input of [
+            harness.annotationInspectionEnabledInput,
             harness.zoomVisibleInput,
             harness.zoomLevelVisibleInput,
             harness.rotationVisibleInput,
@@ -1224,7 +1337,11 @@ describe("resetting settings", () => {
         harness.controlOpacityInput.value =
             "40";
 
+        harness.multipleAnnotationSelectionInput.checked =
+            true;
+
         for (const input of [
+            harness.annotationInspectionEnabledInput,
             harness.zoomVisibleInput,
             harness.zoomLevelVisibleInput,
             harness.rotationVisibleInput,
@@ -1284,7 +1401,12 @@ describe("resetting settings", () => {
             harness.controlOpacityInput.value,
         ).toBe("100");
 
+        expect(
+            harness.multipleAnnotationSelectionInput.checked,
+        ).toBe(false);
+
         for (const input of [
+            harness.annotationInspectionEnabledInput,
             harness.zoomVisibleInput,
             harness.zoomLevelVisibleInput,
             harness.rotationVisibleInput,

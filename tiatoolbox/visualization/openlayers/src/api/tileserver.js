@@ -97,27 +97,420 @@ async function removeOverlay(layerName) {
     }
 }
 
-async function setAnnotationColors(colorMap) {
+function getAnnotationRendererUrl(
+    path,
+    layerName,
+) {
+    if (layerName === null) {
+        return path;
+    }
+
+    const params =
+        new URLSearchParams({
+            layer: layerName,
+        });
+
+    return `${path}?${params}`;
+}
+
+async function setAnnotationFilter(
+    where,
+    layerName = null,
+) {
     const formData = new FormData();
+
+    formData.append(
+        "val",
+        JSON.stringify(where),
+    );
+
+    const response = await fetch(
+        getAnnotationRendererUrl(
+            "/tileserver/renderer/where",
+            layerName,
+        ),
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update annotation visibility.",
+        );
+    }
+}
+
+async function setAnnotationColors(
+    colorMap,
+    layerName = null,
+) {
+    const entries =
+        colorMap instanceof Map
+            ? [...colorMap.entries()]
+            : Object.entries(colorMap);
+
+    const formData = new FormData();
+
     formData.append(
         "cmap",
         JSON.stringify({
-            keys: Object.keys(colorMap),
-            values: Object.values(colorMap),
+            keys: entries.map(
+                ([key]) => key,
+            ),
+            values: entries.map(
+                ([, value]) => value,
+            ),
         }),
     );
 
-    const response = await fetch("/tileserver/cmap", {
-        method: "PUT",
-        body: formData,
-    });
+    const response = await fetch(
+        getAnnotationRendererUrl(
+            "/tileserver/cmap",
+            layerName,
+        ),
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
 
     if (!response.ok) {
         throw new Error("Failed to update annotation colours.");
     }
 }
 
+async function setAnnotationOpacities(
+    opacityMap,
+    layerName = null,
+) {
+    const entries =
+        opacityMap instanceof Map
+            ? [...opacityMap.entries()]
+            : Object.entries(opacityMap);
+
+    const formData = new FormData();
+
+    formData.append(
+        "opacities",
+        JSON.stringify({
+            keys: entries.map(
+                ([key]) => key,
+            ),
+            values: entries.map(
+                ([, value]) => value,
+            ),
+        }),
+    );
+
+    const response = await fetch(
+        getAnnotationRendererUrl(
+            "/tileserver/annotation_opacities",
+            layerName,
+        ),
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update annotation opacity.",
+        );
+    }
+}
+
+async function getAnnotationColors(
+    annotationTypes,
+    palette = null,
+) {
+    const formData = new FormData();
+
+    formData.append(
+        "types",
+        JSON.stringify(annotationTypes),
+    );
+
+    if (palette !== null) {
+        formData.append(
+            "palette",
+            palette,
+        );
+    }
+
+    const response = await fetch(
+        "/tileserver/annotation_colours",
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to generate annotation colours.",
+        );
+    }
+
+    const colourMap =
+        await response.json();
+
+    return new Map(
+        colourMap.keys.map(
+            (key, index) => [
+                key,
+                colourMap.values[index],
+            ],
+        ),
+    );
+}
+
+async function getAnnotationProperties(layerName) {
+    const params =
+        new URLSearchParams({
+            layer: layerName,
+        });
+
+    const response = await fetch(
+        `/tileserver/prop_names/all?${params}`,
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to get annotation properties.",
+        );
+    }
+
+    return response.json();
+}
+
+async function getAnnotationPropertyValues(
+    layerName,
+    property,
+) {
+    const params =
+        new URLSearchParams({
+            layer: layerName,
+        });
+
+    const response = await fetch(
+        `/tileserver/prop_values/${encodeURIComponent(property)}/all?${params}`,
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to get annotation property values.",
+        );
+    }
+
+    return response.json();
+}
+
+async function getAnnotationAtPoint(
+    layerName,
+    x,
+    y,
+    {
+        details = false,
+    } = {},
+) {
+    const params =
+        new URLSearchParams({
+            layer: layerName,
+        });
+
+    if (details) {
+        params.set(
+            "details",
+            "1",
+        );
+    }
+
+    const response = await fetch(
+        `/tileserver/tap_query/${x}/${y}?${params}`,
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to inspect annotation.",
+        );
+    }
+
+    return response.json();
+}
+
+async function setAnnotationProperty(
+    property,
+    layerName = null,
+) {
+    const formData = new FormData();
+
+    formData.append(
+        "val",
+        JSON.stringify(property),
+    );
+
+    const response = await fetch(
+        getAnnotationRendererUrl(
+            "/tileserver/renderer/score_prop",
+            layerName,
+        ),
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update annotation property.",
+        );
+    }
+}
+
+async function setAnnotationMapper(
+    mapper,
+    layerName = null,
+) {
+    const formData = new FormData();
+
+    formData.append(
+        "cmap",
+        JSON.stringify(mapper),
+    );
+
+    const response = await fetch(
+        getAnnotationRendererUrl(
+            "/tileserver/cmap",
+            layerName,
+        ),
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update annotation colour map.",
+        );
+    }
+}
+
+async function setAnnotationPropertyRange(
+    range,
+    layerName = null,
+) {
+    const formData = new FormData();
+
+    formData.append(
+        "range",
+        JSON.stringify(range),
+    );
+
+    const response = await fetch(
+        getAnnotationRendererUrl(
+            "/tileserver/prop_range",
+            layerName,
+        ),
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update annotation property range.",
+        );
+    }
+}
+
+async function setAnnotationSecondaryMapper(
+    annotationType,
+    property,
+    mapper,
+    range,
+    layerName = null,
+) {
+    const formData = new FormData();
+
+    formData.append(
+        "type_id",
+        JSON.stringify(
+            annotationType,
+        ),
+    );
+
+    formData.append(
+        "prop",
+        property,
+    );
+
+    formData.append(
+        "cmap",
+        JSON.stringify(
+            mapper,
+        ),
+    );
+
+    formData.append(
+        "range",
+        JSON.stringify(
+            range,
+        ),
+    );
+
+    const response = await fetch(
+        getAnnotationRendererUrl(
+            "/tileserver/secondary_cmap",
+            layerName,
+        ),
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to update secondary annotation colour map.",
+        );
+    }
+}
+
+async function clearAnnotationSecondaryMapper(
+    layerName = null,
+) {
+    const formData = new FormData();
+
+    formData.append(
+        "val",
+        JSON.stringify(null),
+    );
+
+    const response = await fetch(
+        getAnnotationRendererUrl(
+            "/tileserver/renderer/secondary_cmap",
+            layerName,
+        ),
+        {
+            method: "PUT",
+            body: formData,
+        },
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            "Failed to clear secondary annotation colour map.",
+        );
+    }
+}
+
 export {
+    clearAnnotationSecondaryMapper,
     clearOverlays,
     createSession,
     getConfiguredFiles,
@@ -125,5 +518,15 @@ export {
     loadSlide,
     removeOverlay,
     removeSlide,
+    getAnnotationColors,
+    getAnnotationAtPoint,
+    getAnnotationProperties,
+    getAnnotationPropertyValues,
     setAnnotationColors,
+    setAnnotationFilter,
+    setAnnotationMapper,
+    setAnnotationOpacities,
+    setAnnotationProperty,
+    setAnnotationPropertyRange,
+    setAnnotationSecondaryMapper,
 };

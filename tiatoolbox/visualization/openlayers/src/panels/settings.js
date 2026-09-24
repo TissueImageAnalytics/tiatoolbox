@@ -26,6 +26,8 @@ function createSettingsPanelController({
     themeSelect,
     controlOpacityInput,
     controlOpacityValue,
+    annotationInspectionEnabledInput,
+    multipleAnnotationSelectionInput,
     zoomVisibleInput,
     zoomLevelVisibleInput,
     rotationVisibleInput,
@@ -47,6 +49,8 @@ function createSettingsPanelController({
     scaleBarOpacityInput,
     scaleBarSizeSelect,
     scaleBarUnitsSelect,
+    onAnnotationInspectionChange,
+    onMultipleAnnotationSelectionChange,
     onThemeChange,
     onControlVisibilityChange,
     onReset,
@@ -255,6 +259,10 @@ function createSettingsPanelController({
                 controlOpacityInput.value,
 
             controls: {
+                annotationInspection:
+                    annotationInspectionEnabledInput.checked,
+                multipleAnnotationSelection:
+                    multipleAnnotationSelectionInput.checked,
                 zoom: zoomVisibleInput.checked,
                 zoomLevel:
                     zoomLevelVisibleInput.checked,
@@ -383,6 +391,22 @@ function createSettingsPanelController({
             controls !== null &&
             typeof controls === "object"
         ) {
+            if (
+                typeof controls.annotationInspection ===
+                "boolean"
+            ) {
+                annotationInspectionEnabledInput.checked =
+                    controls.annotationInspection;
+            }
+
+            if (
+                typeof controls.multipleAnnotationSelection ===
+                "boolean"
+            ) {
+                multipleAnnotationSelectionInput.checked =
+                    controls.multipleAnnotationSelection;
+            }
+
             if (
                 typeof controls.zoom ===
                 "boolean"
@@ -645,7 +669,11 @@ function createSettingsPanelController({
 
         controlOpacityInput.value = "100";
 
+        multipleAnnotationSelectionInput.checked =
+            false;
+
         for (const input of [
+            annotationInspectionEnabledInput,
             zoomVisibleInput,
             zoomLevelVisibleInput,
             rotationVisibleInput,
@@ -749,6 +777,22 @@ function createSettingsPanelController({
             "input",
             () => {
                 updateAppearance();
+                save();
+            },
+        );
+
+        annotationInspectionEnabledInput.addEventListener(
+            "change",
+            () => {
+                onAnnotationInspectionChange();
+                save();
+            },
+        );
+
+        multipleAnnotationSelectionInput.addEventListener(
+            "change",
+            () => {
+                onMultipleAnnotationSelectionChange();
                 save();
             },
         );

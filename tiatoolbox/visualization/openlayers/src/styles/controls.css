@@ -8,6 +8,7 @@
 .reset-view-control,
 .viewer-panel-control,
 .layer-editor-control,
+.annotation-control,
 .settings-control {
     padding: 0;
     background: var(--viewer-control-background);
@@ -27,6 +28,7 @@
 .reset-view-control:hover,
 .viewer-panel-control:hover,
 .layer-editor-control:hover,
+.annotation-control:hover,
 .settings-control:hover {
     background: var(--viewer-control-background);
 }
@@ -42,6 +44,7 @@
 .reset-view-control button,
 .viewer-panel-control button,
 .layer-editor-control button,
+.annotation-control button,
 .settings-control button {
     width: 32px;
     height: 32px;
@@ -61,6 +64,7 @@
 .reset-view-control button:hover:not(:disabled),
 .viewer-panel-control button:hover:not(:disabled),
 .layer-editor-control button:hover:not(:disabled),
+.annotation-control button:hover:not(:disabled),
 .settings-control button:hover:not(:disabled) {
     background: var(--viewer-control-hover-background);
     color: var(--viewer-control-hover-foreground);
@@ -77,6 +81,7 @@
 .reset-view-control button:active:not(:disabled),
 .viewer-panel-control button:active:not(:disabled),
 .layer-editor-control button:active:not(:disabled),
+.annotation-control button:active:not(:disabled),
 .settings-control button:active:not(:disabled) {
     background: var(--viewer-control-pressed-background);
     color: var(--viewer-control-pressed-foreground);
@@ -215,11 +220,23 @@
 }
 
 
+/* Annotations control */
+
+.annotation-control,
+.annotation-control:hover {
+    position: absolute;
+    top: 80px;
+    left: 8px;
+    z-index: 1000;
+    background: transparent;
+}
+
+
 /* Viewer tools */
 
 .viewer-tools-group {
     position: absolute;
-    top: 80px;
+    top: 120px;
     left: 8px;
     z-index: 1000;
     display: flex;

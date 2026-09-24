@@ -123,6 +123,81 @@ Use **Clear Overlays** to remove all overlays while keeping the current slide
 loaded. Use **Clear Slide** to remove the slide and its overlays and return the
 viewer to its empty state.
 
+### Annotation overlays
+
+Annotation overlays loaded through the Files panel can be managed using the
+Annotations panel.
+
+Annotation types are grouped by their loaded annotation layer. Each type can
+be shown or hidden, assigned a colour and given a different fill opacity.
+
+Annotations can be coloured by **Class**, **Property** or **Class + Property**.
+Property colouring uses the selected continuous colour map and shows the
+property range in the Annotations panel. Only numeric properties available in
+all loaded annotation layers are shown.
+
+**Class + Property** shows one selected class and colours it by a numeric
+property. Other annotation classes are hidden while this mode is active.
+
+In **Class** and **Property** modes, **Select all** and **Deselect all** can be
+used to change the visibility of all annotation types at once.
+
+Fill opacity can be adjusted in all three display modes. Enable **Link opacity**
+to apply the same opacity to all loaded annotation classes. When it is disabled,
+only the changed class is affected.
+
+Selecting an annotation highlights its geometry and shows its layer and
+properties in a movable information card. Closing the card removes the
+highlight.
+
+Annotation inspection can be enabled or disabled in Settings. Enable
+**Multiple annotation selection** to keep multiple annotation cards and
+highlights open at once.
+
+Default annotation colours can be provided using a JSON file in the root of
+the overlay directory. The filename must end in `config.json`, for example
+`annotation_config.json`:
+
+```json
+{
+    "color_dict": {
+        "Tumour": [214, 39, 40, 255],
+        "Stroma": [31, 119, 180, 255],
+        "Inflammatory": [44, 160, 44, 255]
+    }
+}
+```
+
+Types not included in `color_dict` are assigned colours automatically.
+
+In **Class** mode, the **Export colours** button downloads the colours for the
+currently loaded annotation types as `annotation_config.json`. This file can be placed in the
+overlay directory and reused when the viewer is started again.
+
+Exported colour files also save colours separately for each annotation layer.
+`color_dict` provides the default colours.
+
+In **Class** mode, use **Import colours** to load colours from a JSON annotation
+configuration file.
+Both `color_dict` and `layer_color_dicts` are supported. Layer-specific colours
+take priority over `color_dict`. Colours for classes or layers that are not
+currently loaded are ignored.
+
+In **Class** mode, the **Palette** control can recolour loaded annotation
+classes using **Automatic** or Matplotlib Set1, Set2, Set3, Dark2, Accent,
+Paired, tab10, tab20, tab20b and tab20c.
+
+Automatic and named palettes assign colours consistently across the currently
+loaded classes. Similar colours are spaced apart where possible, and if the
+selected palette does not have enough colours, colours from the other
+qualitative palettes are used instead of repeating them.
+
+Colours loaded from a configuration file, manually changed or imported are
+shown as **Custom**.
+
+In **Property** and **Class + Property** modes, the **Colour map** control
+supports viridis, plasma, inferno, magma, cividis and turbo.
+
 The viewer can also be launched without predefined directories:
 
 ```bash
@@ -201,8 +276,8 @@ The experimental viewer source is split into the following files and directories
   searchable file selector.
 - `src/controls/` contains the map, grid, scale bar and overview map
   controllers.
-- `src/panels/` contains the Files, Layers and Settings panel controllers.
-- `src/utils/` contains shared colour and path helpers.
+- `src/panels/` contains the Files, Layers, Annotations and Settings panel controllers.
+- `src/utils/` contains shared annotation colour, colour and path helpers.
 - `src/style.css` imports the experimental viewer styles.
 - `src/styles/` contains the experimental viewer styling split by feature.
 - `vite.config.js` defines how the experimental viewer is built.
