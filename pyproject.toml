@@ -55,7 +55,7 @@ dependencies = [
   "tqdm>=4.64.1",
   "transformers>=5.15.0",
   "umap-learn>=0.5.3",
-  "wsidicom>=0.18.0",
+  "wsidicom>=0.36.1",
   "zarr>=3.2.1",
 ]
 
