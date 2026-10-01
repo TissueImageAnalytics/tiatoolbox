@@ -3322,8 +3322,12 @@ def test_read_dicom_with_metadata(remote_sample: Callable) -> None:
     assert wsi.info.objective_power == 40.0
 
     wsi = DICOMWSIReader(wsi_path)
+
+    # Trigger _optical_path_sequence access
+    _ = hasattr(wsi.wsi.levels.base_level.datasets[0], "_optical_path_sequence")
+
     # Force delete attribute for objective power.
-    delattr(wsi.wsi.levels.base_level.datasets[0], "OpticalPathSequence")
+    delattr(wsi.wsi.levels.base_level.datasets[0], "_optical_path_sequence")
     wsi._info()
 
     # Assert objective power inferred from mpp.
