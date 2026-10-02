@@ -7,6 +7,7 @@ TIAToolbox ``ModelABC`` inference API. SMP-format checkpoints are auto-remapped 
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 import cv2
@@ -24,8 +25,6 @@ from tiatoolbox.models.architecture.segformer_hf import (
 from tiatoolbox.models.models_abc import ModelABC
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Mapping
-
     from torch.nn.modules.module import _IncompatibleKeys
 
 
@@ -60,6 +59,7 @@ class Segformer(ModelABC):
         classes: int = 1,
         activation: nn.Module | None = None,
         upsampling: int = 4,
+        class_dict: dict | None = None,
     ) -> None:
         """Initializes the SegFormer model."""
         super().__init__()
@@ -85,6 +85,7 @@ class Segformer(ModelABC):
         )
         self.activation = activation if activation is not None else nn.Identity()
         self.name = f"segformer-{encoder_name}"
+        self.class_dict = class_dict
 
     def forward(
         self: Segformer,
@@ -109,6 +110,10 @@ class Segformer(ModelABC):
         differ by output class count load when ``classes`` matches.
         """
         mapped: dict[str, torch.Tensor] = dict(state_dict)
+        nested = mapped.get("model")
+        if isinstance(nested, Mapping) and nested:
+            mapped = dict(nested)
+
         if is_smp_segformer_state_dict(mapped):
             mapped = remap_smp_segformer_state_dict(mapped)
 
@@ -150,19 +155,20 @@ class Segformer(ModelABC):
         return (image / 255.0 - mean) / std
 
     def postproc(  # skipcq: PYL-W0221
-        self: Segformer, image: np.ndarray
-    ) -> np.ndarray:
+        self: Segformer, image: np.ndarray | da.Array
+    ) -> np.ndarray | da.Array:
         """Postprocess model output to generate a class mask.
 
         Applies argmax and morphological operations to classify pixels.
+        Dask inputs stay as Dask arrays so the engine can persist them to Zarr.
 
         Args:
-            image (np.ndarray):
-                Input probability map as a NumPy array of shape (H, W, C).
+            image (np.ndarray | da.Array):
+                Input probability map of shape (H, W, C).
 
         Returns:
-            np.ndarray:
-                Tissue mask
+            np.ndarray | da.Array:
+                Class mask of shape (H, W).
 
         Example:
             >>> model = Segformer(classes=2)
@@ -171,8 +177,11 @@ class Segformer(ModelABC):
             (448, 448)
 
         """
-        if isinstance(image, da.Array):
+        is_dask = isinstance(image, da.Array)
+        dask_chunks = image.chunks[:-1] if is_dask else None
+        if is_dask:
             image = image.compute()
+
         prediction_mask = np.argmax(image, axis=-1).astype(np.uint8)
 
         kernel_diameter = 3
@@ -180,7 +189,11 @@ class Segformer(ModelABC):
             cv2.MORPH_ELLIPSE, (kernel_diameter, kernel_diameter)
         )
         prediction_mask = cv2.morphologyEx(prediction_mask, cv2.MORPH_CLOSE, kernel)
-        return cv2.morphologyEx(prediction_mask, cv2.MORPH_OPEN, kernel)
+        prediction_mask = cv2.morphologyEx(prediction_mask, cv2.MORPH_OPEN, kernel)
+
+        if is_dask:
+            return da.from_array(prediction_mask, chunks=dask_chunks)
+        return prediction_mask
 
     @staticmethod
     def infer_batch(
