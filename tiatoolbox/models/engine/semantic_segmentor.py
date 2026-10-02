@@ -1183,8 +1183,8 @@ def merge_batch_to_canvas(
 
 
 def merge_horizontal(
-    canvas: None | da.Array,
-    count: None | da.Array,
+    canvas: da.Array | None,
+    count: da.Array | None,
     output_locs_y: np.ndarray,
     canvas_np: np.ndarray,
     output_locs: np.ndarray,

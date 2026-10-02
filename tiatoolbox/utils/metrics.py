@@ -140,7 +140,7 @@ def dice(gt_mask: np.ndarray, pred_mask: np.ndarray) -> float:
 
     gt_mask = gt_mask.astype(np.bool_)
     pred_mask = pred_mask.astype(np.bool_)
-    sum_masks = gt_mask.sum() + pred_mask.sum()
+    sum_masks: float = float(gt_mask.sum() + pred_mask.sum())
     if sum_masks == 0:
         return np.nan
     return 2 * np.logical_and(gt_mask, pred_mask).sum() / sum_masks

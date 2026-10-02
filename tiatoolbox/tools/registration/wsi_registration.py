@@ -618,12 +618,12 @@ class DFBRegister:
         pool5_feat = features["block5_pool"].detach().numpy()
         ref_feature_size = pool3_feat.shape[2]
 
-        fixed_feat1 = np.reshape(pool3_feat[0, :, :, :], [-1, 256])
-        moving_feat1 = np.reshape(pool3_feat[1, :, :, :], [-1, 256])
-        fixed_feat2 = np.reshape(pool4_feat[0, :, :, :], [-1, 512])
-        moving_feat2 = np.reshape(pool4_feat[1, :, :, :], [-1, 512])
-        fixed_feat3 = np.reshape(pool5_feat[0, :, :, :], [-1, 512])
-        moving_feat3 = np.reshape(pool5_feat[1, :, :, :], [-1, 512])
+        fixed_feat1: np.ndarray = np.reshape(pool3_feat[0, :, :, :], [-1, 256])
+        moving_feat1: np.ndarray = np.reshape(pool3_feat[1, :, :, :], [-1, 256])
+        fixed_feat2: np.ndarray = np.reshape(pool4_feat[0, :, :, :], [-1, 512])
+        moving_feat2: np.ndarray = np.reshape(pool4_feat[1, :, :, :], [-1, 512])
+        fixed_feat3: np.ndarray = np.reshape(pool5_feat[0, :, :, :], [-1, 512])
+        moving_feat3: np.ndarray = np.reshape(pool5_feat[1, :, :, :], [-1, 512])
 
         fixed_feat1 = fixed_feat1 / np.std(fixed_feat1)
         moving_feat1 = moving_feat1 / np.std(moving_feat1)

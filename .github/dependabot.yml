@@ -10,3 +10,9 @@ updates:
     target-branch: "dev-dep-upgrade"
     schedule:
       interval: "daily"
+
+  - package-ecosystem: "npm"
+    directory: "/tiatoolbox/visualization/openlayers"
+    target-branch: "develop"
+    schedule:
+      interval: "daily"

@@ -80,7 +80,7 @@ if TYPE_CHECKING:  # pragma: no cover
 @cli_auto_get_mask(default=True)
 @cli_overwrite(default=False)
 @cli_verbose(default=True)
-def nucleus_detector(
+def nucleus_detector(  # noqa: PLR0917
     model: str,
     weights: str,
     img_input: str,

@@ -376,12 +376,12 @@ class Annotation:
 
             """
             offset += 5  # byte order and geom type at start of each polygon
-            n_rings = np.frombuffer(wkb, np.int32, 1, offset)[0]
+            n_rings = int(np.frombuffer(wkb, np.int32, 1, offset)[0])
             offset += 4
 
-            rings = []
+            rings: list[np.ndarray] = []
             for _ in range(n_rings):
-                n_points = np.frombuffer(wkb, np.int32, 1, offset)[0]
+                n_points = int(np.frombuffer(wkb, np.int32, 1, offset)[0])
                 offset += 4
                 rings.append(
                     np.frombuffer(wkb, np.double, n_points * 2, offset).reshape(-1, 2),
@@ -402,7 +402,7 @@ class Annotation:
             return decode_polygon()[0]
         if geom_type == 4:  # noqa: PLR2004 - Intentional magic number
             # Multi-point
-            n_points = np.frombuffer(wkb, np.int32, 1, 5)[0]
+            n_points = int(np.frombuffer(wkb, np.int32, 1, 5)[0])
             return [
                 np.frombuffer(wkb, np.double, 2, 14 + i * 21).reshape(1, 2)
                 # each point is 21 bytes
@@ -410,12 +410,12 @@ class Annotation:
             ]
         if geom_type == 5:  # noqa: PLR2004 - Intentional magic number
             # Multi-line
-            n_lines = np.frombuffer(wkb, np.int32, 1, 5)[0]
-            lines = []
+            n_lines = int(np.frombuffer(wkb, np.int32, 1, 5)[0])
+            lines: list[np.ndarray] = []
             offset = 9
             for _ in range(n_lines):
                 offset += 5
-                n_points = np.frombuffer(wkb, np.int32, n_lines, offset)[0]
+                n_points = int(np.frombuffer(wkb, np.int32, n_lines, offset)[0])
                 offset += 4
                 lines.append(
                     np.frombuffer(wkb, np.double, n_points * 2, offset).reshape(-1, 2),
@@ -425,8 +425,8 @@ class Annotation:
 
         if geom_type == 6:  # noqa: PLR2004 - Intentional magic number
             # Multi-polygon
-            n_polygons = np.frombuffer(wkb, np.int32, 1, 5)[0]
-            polygons = []
+            n_polygons = int(np.frombuffer(wkb, np.int32, 1, 5)[0])
+            polygons: list[list[np.ndarray]] = []
             offset = 9
             for _ in range(n_polygons):
                 rings, offset = decode_polygon(offset)

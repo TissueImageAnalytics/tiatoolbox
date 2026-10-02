@@ -90,6 +90,21 @@ If you already have a Python environment set up with all the prerequisite softwa
 
     $ pip install --no-deps tiatoolbox
 
+Optional Model Dependencies
+---------------------------
+
+Some models rely on packages that are not installed by default. These are declared as optional extras and imported lazily, so a standard installation of TIAToolbox works without them.
+
+The available extras are:
+
+* DeepSpot-M: ``deepspotm``
+
+Install one by naming it in brackets:
+
+.. code-block:: console
+
+    $ pip install "tiatoolbox[<extra>]"
+
 If you don't have `pip`_ installed, this `Python installation guide`_ can guide you through the process.
 
 .. _pip: https://pip.pypa.io
@@ -118,12 +133,48 @@ An alternate way to install using conda on Windows could be to install it in `WS
 Using uv
 --------
 
-To install using `uv <https://docs.astral.sh/uv/>`_, a fast Python package and project manager, written in Rust.
+`uv <https://docs.astral.sh/uv/>`_ is a Python package and project manager. First, install uv by following the `official installation guide <https://docs.astral.sh/uv/getting-started/installation/#installing-uv>`_ for your platform (macOS, Linux, and Windows).
+
+**End-user installation**
+
+Create a virtual environment and install the latest stable release from PyPI:
 
 .. code-block:: console
 
-    $ pip install uv
+    $ uv venv
+    $ source .venv/bin/activate   # Linux/macOS
+    $ .venv\Scripts\activate      # Windows
     $ uv pip install tiatoolbox
+
+To upgrade an existing installation to the latest stable release:
+
+.. code-block:: console
+
+    $ uv pip install --upgrade tiatoolbox
+
+To include one of the optional extras listed above:
+
+.. code-block:: console
+
+    $ uv pip install "tiatoolbox[<extra>]"
+
+**Development setup (from source)**
+
+Clone the repository and create a virtual environment with all development dependencies:
+
+.. code-block:: console
+
+    $ git clone https://github.com/TissueImageAnalytics/tiatoolbox.git
+    $ cd tiatoolbox
+    $ uv sync --extra dev
+    $ source .venv/bin/activate   # Linux/macOS
+    $ .venv\Scripts\activate      # Windows
+
+On CPU-only machines (no CUDA GPU):
+
+.. code-block:: console
+
+    $ uv sync --extra dev --index pytorch-cpu=https://download.pytorch.org/whl/cpu
 
 From Sources
 ------------

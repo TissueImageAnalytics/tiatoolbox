@@ -120,8 +120,6 @@ class SAM(ModelABC):
             image = [Image.fromarray(img)]
             embeddings, orig_sizes, reshaped_sizes = self._encode_image(image)
             point_labels = None
-            points = None
-            boxes = None
 
             if box_coords is not None:
                 boxes = box_coords[i]

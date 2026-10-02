@@ -47,6 +47,7 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+tiatoolbox/visualization/openlayers/coverage/
 
 # Translations
 *.mo
@@ -119,3 +120,11 @@ ENV/
 
 # output zarr generated
 *.zarr
+
+# uv lockfile
+uv.lock
+
+# Node.js
+node_modules/
+.vite/
+TXT

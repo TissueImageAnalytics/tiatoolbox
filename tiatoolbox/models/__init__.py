@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from . import architecture, dataset, engine, models_abc
+from .architecture.deepspotm import DeepSpotM
 from .architecture.hovernet import HoVerNet
 from .architecture.hovernetplus import HoVerNetPlus
 from .architecture.idars import IDaRS
@@ -30,6 +31,7 @@ __all__ = [
     "SAM",
     "SCCNN",
     "DeepFeatureExtractor",
+    "DeepSpotM",
     "HoVerNet",
     "HoVerNetPlus",
     "IDaRS",

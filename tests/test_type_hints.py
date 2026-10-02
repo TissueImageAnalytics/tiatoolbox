@@ -18,6 +18,7 @@ def test_aliases_exist() -> None:
         "Units",
         "Bounds",
         "IntBounds",
+        "WSIPostProc",
         "Geometry",
         "Properties",
         "QueryGeometry",

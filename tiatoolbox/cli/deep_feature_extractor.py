@@ -68,7 +68,7 @@ if TYPE_CHECKING:  # pragma: no cover
 @cli_auto_get_mask(default=True)
 @cli_overwrite(default=False)
 @cli_verbose(default=True)
-def deep_feature_extractor(
+def deep_feature_extractor(  # noqa: PLR0917
     model: str,
     weights: str,
     img_input: str,

@@ -1,0 +1,61 @@
+html,
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+
+body {
+    font-family: "Calibri", sans-serif;
+}
+
+
+.viewer-app {
+    --viewer-control-background: rgba(17, 17, 17, 1);
+    --viewer-control-surface-background: rgba(34, 34, 34, 1);
+    --viewer-control-hover-background: rgba(51, 51, 51, 1);
+    --viewer-control-pressed-background: rgba(85, 85, 85, 1);
+
+    --viewer-control-selected-background: #163a59;
+    --viewer-control-selected-hover-background: #1f5278;
+    --viewer-control-selected-pressed-background: #555555;
+
+    --viewer-control-foreground: #ffffff;
+    --viewer-control-hover-foreground: #ffffff;
+    --viewer-control-pressed-foreground: #ffffff;
+    --viewer-control-selected-foreground: #ffffff;
+
+    --viewer-control-muted-foreground: rgba(255, 255, 255, 0.7);
+    --viewer-control-subtle-foreground: rgba(255, 255, 255, 0.55);
+
+    --viewer-control-border: rgba(85, 85, 85, 0.8);
+    --viewer-control-focus-border: rgba(120, 120, 120, 0.95);
+
+    --viewer-control-foreground-shadow: rgba(0, 0, 0, 0.75);
+
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+
+.viewer-app:fullscreen {
+    width: 100%;
+    height: 100%;
+    background: #ffffff;
+}
+
+
+.viewer-app:-webkit-full-screen {
+    width: 100%;
+    height: 100%;
+    background: #ffffff;
+}
+
+
+.map {
+    width: 100%;
+    height: 100%;
+}

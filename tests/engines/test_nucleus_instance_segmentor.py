@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import importlib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
+import pytest
 import torch
 import zarr
 from click.testing import CliRunner
@@ -25,9 +27,8 @@ from .test_multi_task_segmentor import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    import pytest
-
 device = "cuda" if toolbox_env.has_gpu() else "cpu"
+_RUNNING_ON_CI = toolbox_env.running_on_ci()
 OutputType = dict[str, Any] | Any
 
 
@@ -43,6 +44,10 @@ def test_mtsegmentor_init(caplog: pytest.LogCaptureFixture) -> None:
     )
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_mtsegmentor_patches(remote_sample: Callable) -> None:
     """Tests NucleusInstanceSegmentor on image patches."""
     mtsegmentor = NucleusInstanceSegmentor(
@@ -88,6 +93,10 @@ def test_mtsegmentor_patches(remote_sample: Callable) -> None:
 # -------------------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) -> None:
     """Test semantic segmentor CLI single file."""
     wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
@@ -117,6 +126,115 @@ def test_cli_model_single_file(remote_sample: Callable, track_tmp_path: Path) ->
     assert "predictions" in zarr_group
 
 
+def test_nucleus_instance_segmentor_cli_uses_yaml_config(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test that the nucleus_instance_segmentor CLI forwards the prepared IO config."""
+    img_input = track_tmp_path / "input"
+    img_input.mkdir()
+
+    sample_image = img_input / "sample.png"
+    sample_image.write_bytes(b"image")
+
+    yaml_path = track_tmp_path / "config.yaml"
+    yaml_path.write_text(
+        "patch_input_shape: [224, 224]\n",
+        encoding="utf-8",
+    )
+
+    fake_ioconfig = object()
+    run_calls: list[dict[str, object]] = []
+
+    def _fake_prepare_model_cli(
+        img_input: str | Path,
+        output_path: str | Path,
+        masks: str | Path | None,
+        file_types: str,
+    ) -> tuple[list[Path], list[Path] | None, Path]:
+        """Fake prepare model cli."""
+        _ = img_input, masks, file_types
+        return [sample_image], None, Path(output_path)
+
+    def _fake_prepare_ioconfig(
+        config_class: type[object],
+        pretrained_weights: str | Path | None,
+        yaml_config_path: str | Path,
+    ) -> object:
+        """Fake prepared IO config."""
+        _ = config_class, pretrained_weights
+
+        assert Path(yaml_config_path) == yaml_path
+
+        return fake_ioconfig
+
+    class _FakeNucleusInstanceSegmentor:
+        """Minimal stand-in for NucleusInstanceSegmentor."""
+
+        def __init__(
+            self,
+            model: str,
+            weights: str | None,
+            batch_size: int,
+            num_workers: int,
+            *,
+            verbose: bool,
+        ) -> None:
+            _ = model, weights, batch_size, num_workers, verbose
+
+        def run(self, **kwargs: object) -> None:
+            """Record run arguments."""
+            _ = self  # fix PYL-R0201
+            run_calls.append(kwargs)
+
+    # Patch where the CLI command uses these names.
+
+    cli_module = importlib.import_module(
+        "tiatoolbox.cli.nucleus_instance_segment",
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "prepare_model_cli",
+        _fake_prepare_model_cli,
+    )
+
+    monkeypatch.setattr(
+        cli_module,
+        "prepare_ioconfig",
+        _fake_prepare_ioconfig,
+    )
+
+    monkeypatch.setattr(
+        "tiatoolbox.models.NucleusInstanceSegmentor",
+        _FakeNucleusInstanceSegmentor,
+    )
+
+    runner = CliRunner()
+
+    result = runner.invoke(
+        cli.main,
+        [
+            "nucleus-instance-segment",
+            "--img-input",
+            str(img_input),
+            "--output-path",
+            str(track_tmp_path / "output"),
+            "--yaml-config-path",
+            str(yaml_path),
+        ],
+    )
+
+    assert result.exit_code == 0
+
+    assert len(run_calls) == 1
+    assert run_calls[0]["ioconfig"] is fake_ioconfig
+
+
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_cli_default_return_predictions(
     remote_sample: Callable, track_tmp_path: Path
 ) -> None:
@@ -125,6 +243,7 @@ def test_cli_default_return_predictions(
     Regression test: omitting ``--return-predictions`` leaves it as ``None``,
     which previously reached the engine and raised
     ``TypeError: 'NoneType' is not iterable``.
+
     """
     wsi4_512_512_svs = remote_sample("wsi4_512_512_svs")
     runner = CliRunner()

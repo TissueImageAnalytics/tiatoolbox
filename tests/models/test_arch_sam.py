@@ -13,10 +13,170 @@ from tiatoolbox.utils import imread
 from tiatoolbox.utils.misc import select_device
 
 ON_GPU = toolbox_env.has_gpu()
+_RUNNING_ON_CI = toolbox_env.running_on_ci()
+
+
+def test_sam_preproc_torch_tensor() -> None:
+    """Test SAM pre-processing for PyTorch tensor input."""
+    image = torch.arange(
+        4 * 2 * 3,
+        dtype=torch.float32,
+    ).reshape(4, 2, 3)
+
+    result = SAM.preproc(image)
+
+    assert isinstance(result, np.ndarray)
+
+    # CHW -> HWC and alpha channel removed.
+    assert result.shape == (2, 3, 3)
+
+    expected = image.permute(1, 2, 0).cpu().numpy()[..., :3]
+
+    np.testing.assert_array_equal(
+        result,
+        expected,
+    )
+
+
+def test_sam_preproc_numpy_array_with_alpha() -> None:
+    """Test SAM pre-processing for NumPy input."""
+    image = np.zeros(
+        (8, 8, 4),
+        dtype=np.uint8,
+    )
+
+    result = SAM.preproc(image)
+
+    assert result.shape == (8, 8, 3)
+
+
+def test_sam_infer_batch_requires_prompts() -> None:
+    """Test infer_batch raises when no prompts are provided."""
+    model = torch.nn.Identity()
+
+    batch_data = [
+        np.zeros(
+            (8, 8, 3),
+            dtype=np.uint8,
+        ),
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match="At least one of point_coords or box_coords must be provided",
+    ):
+        SAM.infer_batch(
+            model=model,
+            batch_data=batch_data,
+            point_coords=None,
+            box_coords=None,
+            device="cpu",
+        )
+
+
+def test_sam_forward_point_prompts_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test SAM forward pass using point prompts only."""
+    sam = SAM.__new__(SAM)
+
+    captured: dict[str, object] = {}
+
+    def _fake_encode_image(
+        image: list,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Return fake embeddings and size metadata."""
+        _ = image
+
+        return (
+            torch.zeros((1, 1)),
+            torch.tensor([[8, 8]]),
+            torch.tensor([[8, 8]]),
+        )
+
+    def _fake_process_prompts(
+        image: list,
+        embeddings: torch.Tensor,
+        orig_sizes: torch.Tensor,
+        reshaped_sizes: torch.Tensor,
+        points: list | None,
+        boxes: list | None,
+        point_labels: list | None,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Capture point prompt inputs."""
+        _ = (
+            image,
+            embeddings,
+            orig_sizes,
+            reshaped_sizes,
+        )
+
+        captured["points"] = points
+        captured["boxes"] = boxes
+        captured["point_labels"] = point_labels
+
+        return (
+            np.ones((1, 8, 8), dtype=np.uint8),
+            np.array([[0.95]], dtype=np.float32),
+        )
+
+    monkeypatch.setattr(
+        sam,
+        "_encode_image",
+        _fake_encode_image,
+    )
+
+    monkeypatch.setattr(
+        sam,
+        "_process_prompts",
+        _fake_process_prompts,
+    )
+
+    image = np.zeros(
+        (8, 8, 3),
+        dtype=np.uint8,
+    )
+
+    point_coords = [
+        np.array(
+            [
+                [2, 3],
+                [4, 5],
+            ],
+            dtype=np.int32,
+        ),
+    ]
+
+    masks, scores = sam.forward(
+        imgs=[image],
+        point_coords=point_coords,
+        box_coords=None,
+    )
+
+    #
+    # box_coords branch skipped
+    #
+    assert captured["boxes"] is None
+
+    #
+    # point_coords branch executed
+    #
+    assert captured["boxes"] is None
+    assert captured["points"] is not None
+    assert captured["point_labels"] == [[[1], [1]]]
+
+    assert isinstance(masks, np.ndarray)
+    assert isinstance(scores, np.ndarray)
+
+    assert masks.shape == (1, 1, 8, 8)
+    assert scores.shape == (1, 1, 1)
+
 
 # Test pretrained Model =============================
-
-
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_functional_sam(remote_sample: Callable) -> None:
     """Test for SAM."""
     # convert to pathlib Path to prevent wsireader complaint

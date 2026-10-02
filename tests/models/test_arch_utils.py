@@ -4,6 +4,7 @@ import dask.array as da
 import numpy as np
 import pytest
 import torch
+from torch import nn
 
 from tiatoolbox.models.architecture.utils import (
     AttentionModule,
@@ -11,7 +12,9 @@ from tiatoolbox.models.architecture.utils import (
     centre_crop,
     centre_crop_to_shape,
     nms_on_detection_maps,
+    patch_first_conv,
     peak_detection_map_overlap,
+    replace_strides_with_dilation,
 )
 
 
@@ -197,3 +200,60 @@ def test_attention_module() -> None:
 
     with pytest.raises(ValueError, match=r"Attention random_name is not implemented"):
         _ = AttentionModule(name="random_name", in_channels=16)
+
+
+def test_replace_strides_with_dilation_applies_to_nested_convs() -> None:
+    """Strides become dilation and static padding gets removed."""
+    module = nn.Sequential(
+        nn.Conv2d(1, 1, kernel_size=3, stride=2, padding=1),
+    )
+    # attach static_padding to mirror EfficientNet convs
+    module[0].static_padding = nn.Conv2d(1, 1, 1)
+
+    # applying dilation should also strip static padding
+    replace_strides_with_dilation(module, dilation_rate=3)
+    conv = module[0]
+    assert conv.stride == (1, 1)
+    assert conv.dilation == (3, 3)
+    assert conv.padding == (3, 3)
+    assert isinstance(conv.static_padding, nn.Identity)
+
+
+def test_patch_first_conv() -> None:
+    """patch_first_conv should reduce or expand correctly."""
+    # create simple conv
+    model = nn.Sequential(nn.Conv2d(3, 2, kernel_size=1, bias=False))
+    conv = model[0]
+
+    # collapsing 3 channels into 1
+    patch_first_conv(model, new_in_channels=1, pretrained=True)
+    assert conv.in_channels == 1
+
+    # expanding to 5 channels
+    model = nn.Sequential(nn.Conv2d(3, 2, kernel_size=1, bias=False))
+    conv = model[0]
+
+    patch_first_conv(model, new_in_channels=5, pretrained=True)
+    assert conv.in_channels == 5
+
+
+def test_patch_first_conv_reset_weights_when_not_pretrained() -> None:
+    """Ensure random reinit happens when pretrained flag is False."""
+    # start from known weights
+    model = nn.Sequential(nn.Conv2d(3, 1, kernel_size=1, bias=False))
+    original = model[0].weight.clone()
+    # changing channel count without pretrained should reinit parameters
+    patch_first_conv(model, new_in_channels=4, pretrained=False)
+    assert model[0].in_channels == 4
+    assert model[0].weight.shape[1] == 4
+    # Almost surely changed due to reset_parameters
+    assert not torch.equal(original, model[0].weight[:1, :3])
+
+
+def test_patch_first_conv_no_matching_layer_is_safe() -> None:
+    """The function should silently exit when no suitable conv exists."""
+    model = nn.Sequential(nn.Conv2d(5, 1, kernel_size=1))
+    original = model[0].weight.clone()
+    # no conv with default channel count, so weights stay unchanged
+    patch_first_conv(model, new_in_channels=3, pretrained=True)
+    assert torch.equal(original, model[0].weight)

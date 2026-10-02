@@ -1,0 +1,151 @@
+/* Overview map */
+
+.map .ol-custom-overviewmap {
+    --overview-map-width: 300px;
+    --overview-map-height: 250px;
+
+    top: 8px;
+    right: 8px;
+    bottom: auto;
+    left: auto;
+
+    width: var(--overview-map-width);
+    height: calc(var(--overview-map-height) + 42px);
+
+    padding: 0;
+    background: transparent;
+
+    border-radius: 4px;
+
+    overflow: hidden;
+
+    transition:
+        width 180ms ease,
+        height 180ms ease;
+}
+
+
+/* Collapsed overview */
+
+.map .ol-custom-overviewmap.ol-collapsed {
+    width: 72px;
+    height: 32px;
+}
+
+
+/* Overview image */
+
+.map .ol-custom-overviewmap .ol-overviewmap-map,
+.map .ol-custom-overviewmap.ol-collapsed .ol-overviewmap-map {
+    position: absolute;
+
+    top: 40px;
+    right: 0;
+
+    display: block;
+
+    width: var(--overview-map-width);
+    height: var(--overview-map-height);
+    box-sizing: border-box;
+    margin: 0;
+
+    background: #ffffff;
+
+    border: 2px solid var(--viewer-control-border);
+    border-radius: 4px;
+
+    overflow: hidden;
+
+    opacity: 1;
+    transform: translateY(0);
+
+    transition:
+        opacity 160ms ease,
+        transform 180ms ease;
+}
+
+
+/* Hide the overview smoothly rather than instantly */
+
+.map .ol-custom-overviewmap.ol-collapsed .ol-overviewmap-map {
+    opacity: 0;
+    transform: translateY(-8px);
+
+    pointer-events: none;
+}
+
+
+/* Keep unused overview-map pixels white */
+
+.map .ol-custom-overviewmap .ol-overviewmap-map .ol-viewport {
+    background: #ffffff;
+}
+
+
+/* Current main-view extent */
+
+.map .ol-custom-overviewmap .ol-overviewmap-box {
+    border: 3px dotted #163a59;
+    box-sizing: border-box;
+}
+
+
+/* Overview dropdown button */
+
+.map .ol-custom-overviewmap button,
+.map .ol-custom-overviewmap:not(.ol-collapsed) button {
+    position: absolute;
+
+    top: 0;
+    right: 40px;
+    bottom: auto;
+    left: auto;
+
+    z-index: 2;
+
+    width: 32px;
+    height: 32px;
+    margin: 0;
+
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+
+    border: 0;
+    border-radius: 4px;
+
+    cursor: pointer;
+}
+
+
+.map .ol-custom-overviewmap button:hover {
+    background: var(--viewer-control-hover-background);
+    color: var(--viewer-control-hover-foreground);
+    outline: none;
+}
+
+
+.map .ol-custom-overviewmap button:active {
+    background: var(--viewer-control-pressed-background);
+    color: var(--viewer-control-pressed-foreground);
+    outline: none;
+}
+
+
+.map .ol-custom-overviewmap button:focus {
+    color: var(--viewer-control-foreground);
+    outline: none;
+}
+
+
+.overview-toggle-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    height: 100%;
+
+    font-size: 11px;
+
+    transition: transform 180ms ease;
+}

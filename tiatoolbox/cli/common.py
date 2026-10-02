@@ -94,6 +94,64 @@ def cli_output_file(
     )
 
 
+def cli_base_path(
+    usage_help: str = "Path to base directory containing images to be displayed.",
+) -> Callable:
+    """Enable --base-path option for CLI."""
+    return click.option(
+        "--base-path",
+        type=click.Path(
+            exists=True,
+            file_okay=False,
+            path_type=Path,
+        ),
+        help=usage_help,
+    )
+
+
+def cli_slides(
+    usage_help: str = "Path to directory containing slides to be displayed.",
+) -> Callable:
+    """Enable --slides option for CLI."""
+    return click.option(
+        "--slides",
+        type=click.Path(
+            exists=True,
+            file_okay=False,
+            path_type=Path,
+        ),
+        help=usage_help,
+    )
+
+
+def cli_overlays(
+    usage_help: str = "Path to directory containing overlays to be displayed.",
+) -> Callable:
+    """Enable --overlays option for CLI."""
+    return click.option(
+        "--overlays",
+        type=click.Path(
+            exists=True,
+            file_okay=False,
+            path_type=Path,
+        ),
+        help=usage_help,
+    )
+
+
+def cli_port(
+    usage_help: str = "Port to launch the visualization tool on.",
+    default: int = 5000,
+) -> Callable:
+    """Enable --port option for CLI."""
+    return click.option(
+        "--port",
+        type=int,
+        help=usage_help,
+        default=default,
+    )
+
+
 def cli_class_dict(
     usage_help: str = (
         "Mapping of classification outputs to class names. "

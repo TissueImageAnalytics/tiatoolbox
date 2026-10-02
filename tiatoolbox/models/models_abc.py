@@ -98,7 +98,7 @@ class ModelABC(ABC, torch.nn.Module):
     # This is generic abc, else pylint will complain
     def forward(
         self: ModelABC, *args: tuple[Any, ...], **kwargs: dict
-    ) -> None | torch.Tensor:
+    ) -> torch.Tensor | None:
         """Torch method, this contains logic for using layers defined in init."""
         ...  # pragma: no cover
 
