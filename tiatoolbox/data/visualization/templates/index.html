@@ -58,6 +58,17 @@
             </div>
         </div>
 
+        <div class="annotation-control ol-unselectable ol-control">
+            <button
+                id="annotations-toggle"
+                type="button"
+                title="Annotations"
+                aria-label="Annotations"
+            >
+                <i class="fas fa-tags"></i>
+            </button>
+        </div>
+
         <div class="settings-control ol-unselectable ol-control">
             <button
                 id="settings-toggle"
@@ -80,6 +91,226 @@
                 </div>
             </div>
         </aside>
+
+        <aside
+            id="annotations-panel"
+            class="annotations-panel hidden"
+        >
+            <div class="annotations-panel-header">
+                Annotations
+            </div>
+
+            <div class="annotations-panel-display">
+                <label
+                    class="annotations-panel-display-field"
+                    for="annotations-colour-by"
+                >
+                    <span>Colour by</span>
+
+                    <select id="annotations-colour-by">
+                        <option value="type">Class</option>
+                        <option value="property">Property</option>
+                        <option value="secondary">
+                            Class + Property
+                        </option>
+                    </select>
+                </label>
+
+                <label
+                    id="annotations-palette-field"
+                    class="annotations-panel-display-field"
+                    for="annotations-palette"
+                >
+                    <span>Palette</span>
+
+                    <select id="annotations-palette">
+                        <option value="automatic">
+                            Automatic
+                        </option>
+                        <option value="Set1">
+                            Set1
+                        </option>
+                        <option value="Set2">
+                            Set2
+                        </option>
+                        <option value="Set3">
+                            Set3
+                        </option>
+                        <option value="Dark2">
+                            Dark2
+                        </option>
+                        <option value="Accent">
+                            Accent
+                        </option>
+                        <option value="Paired">
+                            Paired
+                        </option>
+                        <option value="tab10">
+                            tab10
+                        </option>
+                        <option value="tab20">
+                            tab20
+                        </option>
+                        <option value="tab20b">
+                            tab20b
+                        </option>
+                        <option value="tab20c">
+                            tab20c
+                        </option>
+                        <option
+                            value="custom"
+                            disabled
+                        >
+                            Custom
+                        </option>
+                    </select>
+                </label>
+
+                <label
+                    id="annotations-colour-map-field"
+                    class="annotations-panel-display-field"
+                    for="annotations-colour-map"
+                    hidden
+                >
+                    <span>Colour map</span>
+
+                    <select id="annotations-colour-map">
+                        <option value="viridis">
+                            viridis
+                        </option>
+                        <option value="plasma">
+                            plasma
+                        </option>
+                        <option value="inferno">
+                            inferno
+                        </option>
+                        <option value="magma">
+                            magma
+                        </option>
+                        <option value="cividis">
+                            cividis
+                        </option>
+                        <option value="turbo">
+                            turbo
+                        </option>
+                    </select>
+                </label>
+
+                <label
+                    id="annotations-secondary-type-field"
+                    class="annotations-panel-display-field"
+                    for="annotations-secondary-type"
+                    hidden
+                >
+                    <span>Class</span>
+
+                    <select id="annotations-secondary-type"></select>
+                </label>
+
+                <label
+                    id="annotations-property-field"
+                    class="annotations-panel-display-field"
+                    for="annotations-property"
+                    hidden
+                >
+                    <span>Property</span>
+
+                    <select id="annotations-property"></select>
+                </label>
+
+                <div
+                    id="annotations-property-legend"
+                    class="annotations-property-legend"
+                    hidden
+                >
+                    <div
+                        id="annotations-property-legend-caption"
+                        class="annotations-property-legend-caption"
+                    >
+                        Viridis colour scale
+                    </div>
+
+                    <div
+                        class="annotations-property-gradient"
+                        aria-hidden="true"
+                    ></div>
+
+                    <div class="annotations-property-range">
+                        <span id="annotations-property-min"></span>
+                        <span id="annotations-property-max"></span>
+                    </div>
+                </div>
+
+                <label class="annotations-panel-link-opacity">
+                    <input
+                        id="annotations-link-opacity"
+                        type="checkbox"
+                        aria-label="Link annotation opacity"
+                    >
+                    <span>Link opacity</span>
+                </label>
+            </div>
+
+            <div
+                id="annotations-panel-list"
+                class="annotations-panel-list"
+            >
+                <div class="annotations-panel-empty">
+                    No annotations loaded
+                </div>
+            </div>
+
+            <div class="annotations-panel-actions">
+                <div class="annotations-panel-visibility-actions">
+                    <button
+                        id="annotations-select-all"
+                        type="button"
+                        disabled
+                    >
+                        Select all
+                    </button>
+
+                    <button
+                        id="annotations-deselect-all"
+                        type="button"
+                        disabled
+                    >
+                        Deselect all
+                    </button>
+                </div>
+
+                <div class="annotations-panel-colour-actions">
+                    <button
+                        id="annotations-import-colours"
+                        type="button"
+                        disabled
+                    >
+                        Import colours
+                    </button>
+
+                    <button
+                        id="annotations-export-colours"
+                        type="button"
+                        disabled
+                    >
+                        Export colours
+                    </button>
+                </div>
+
+                <input
+                    id="annotations-import-colours-file"
+                    type="file"
+                    accept=".json,application/json"
+                    hidden
+                >
+            </div>
+        </aside>
+
+        <div
+            id="annotation-inspectors"
+            class="annotation-inspectors"
+            aria-live="polite"
+        ></div>
 
         <aside id="settings-panel" class="settings-panel hidden">
             <div class="settings-panel-header">
@@ -224,6 +455,47 @@
                     class="settings-tab-panel hidden"
                     data-settings-panel="controls"
                 >
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Annotation inspection
+                            </div>
+                            <div class="settings-option-description">
+                                Show annotation information when selecting an annotation.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-annotation-inspection"
+                                type="checkbox"
+                                aria-label="Enable annotation inspection"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Multiple annotation selection
+                            </div>
+                            <div class="settings-option-description">
+                                Keep multiple annotation information cards and highlights open.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-multiple-annotation-selection"
+                                type="checkbox"
+                                aria-label="Enable multiple annotation selection"
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
                     <div class="settings-option">
                         <div class="settings-option-text">
                             <div class="settings-option-label">
