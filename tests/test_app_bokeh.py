@@ -48,6 +48,7 @@ BOKEH_PATH = importlib_resources.files("tiatoolbox.visualization.bokeh_app")
 FILLED = 0
 MICRON_FORMATTER = 1
 GRIDLINES = 2
+_RUNNING_ON_CI = toolbox_env.running_on_ci()
 
 
 # Helper function
@@ -582,6 +583,10 @@ def test_load_img_overlay(doc: Document, data_path: pytest.TempPathFactory) -> N
     assert full_name in main.UI["vstate"].layer_dict
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test running hovernet on a box."""
     slide_select = doc.get_model_by_name("slide_select0")
@@ -621,6 +626,10 @@ def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> No
     assert len(main.UI["type_column"].children) == 1
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_sam_segment(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test running SAM on a box."""
     slide_select = doc.get_model_by_name("slide_select0")
