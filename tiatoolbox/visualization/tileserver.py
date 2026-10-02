@@ -18,7 +18,7 @@ from flask import Flask, Response, jsonify, make_response, request, send_file
 from flask.templating import render_template
 from matplotlib import colormaps
 from PIL import Image
-from shapely.geometry import Point
+from shapely.geometry import Point, mapping
 
 from tiatoolbox import data, logger
 from tiatoolbox.annotation import AnnotationStore, SQLiteStore
@@ -177,6 +177,14 @@ class TileServer(Flask):
         self.route("/tileserver/slide", methods=["DELETE"])(self.remove_slide)
         self.route("/tileserver/clear_overlays", methods=["PUT"])(self.clear_overlays)
         self.route("/tileserver/cmap", methods=["PUT"])(self.change_mapper)
+        self.route(
+            "/tileserver/annotation_colours",
+            methods=["PUT"],
+        )(self.get_annotation_colours)
+        self.route(
+            "/tileserver/annotation_opacities",
+            methods=["PUT"],
+        )(self.change_annotation_opacities)
         self.route(
             "/tileserver/annotations",
             methods=["PUT"],
@@ -371,6 +379,183 @@ class TileServer(Flask):
         return tuple(types)
 
     @staticmethod
+    def annotation_colours(
+        types: list,
+        palette_name: str | None = None,
+    ) -> dict:
+        """Return deterministic qualitative colours for annotation types."""
+        qualitative_palettes = (
+            "Set1",
+            "Set2",
+            "Set3",
+            "Dark2",
+            "Accent",
+            "Paired",
+            "tab10",
+            "tab20",
+            "tab20b",
+            "tab20c",
+        )
+
+        # Matplotlib stores related shades next to each other in these palettes.
+        # Spread similar shades apart so early class colours are easier to distinguish.
+        palette_index_orders = {
+            "Set1": (
+                0,
+                1,
+                2,
+                3,
+                4,
+                7,
+                5,
+                6,
+                8,
+            ),
+            "Paired": (
+                1,
+                3,
+                5,
+                7,
+                9,
+                11,
+                0,
+                2,
+                4,
+                6,
+                8,
+                10,
+            ),
+            "tab20": (
+                0,
+                2,
+                4,
+                6,
+                8,
+                10,
+                12,
+                14,
+                16,
+                18,
+                1,
+                3,
+                5,
+                7,
+                9,
+                11,
+                13,
+                15,
+                17,
+                19,
+            ),
+            "tab20b": (
+                0,
+                4,
+                8,
+                12,
+                1,
+                5,
+                9,
+                13,
+                2,
+                6,
+                10,
+                14,
+                3,
+                7,
+                11,
+                15,
+            ),
+            "tab20c": (
+                0,
+                4,
+                8,
+                12,
+                1,
+                5,
+                9,
+                13,
+                2,
+                6,
+                10,
+                14,
+                3,
+                7,
+                11,
+                15,
+            ),
+        }
+
+        if palette_name is None:
+            palette = []
+
+            palette_names = (
+                "Set1",
+                "Dark2",
+                "Accent",
+                "tab10",
+                "Paired",
+                "Set3",
+                "Set2",
+                "tab20",
+                "tab20b",
+                "tab20c",
+            )
+        else:
+            if palette_name not in qualitative_palettes:
+                msg = f"Unsupported annotation palette: {palette_name}"
+                raise ValueError(msg)
+
+            palette = []
+
+            palette_names = (
+                palette_name,
+                *(name for name in qualitative_palettes if name != palette_name),
+            )
+
+        for cmap_name in palette_names:
+            colours = colormaps[cmap_name].colors
+            indices = palette_index_orders.get(
+                cmap_name,
+                range(len(colours)),
+            )
+
+            for index in indices:
+                rgba = (
+                    *map(
+                        float,
+                        colours[index][:3],
+                    ),
+                    1.0,
+                )
+
+                if rgba not in palette:
+                    palette.append(rgba)
+
+        type_keys = sorted(
+            {
+                (f"{type(annotation_type).__name__}:{annotation_type}")
+                for annotation_type in types
+            },
+        )
+
+        colour_by_type = {
+            type_key: palette[index % len(palette)]
+            for index, type_key in enumerate(
+                type_keys,
+            )
+        }
+
+        values = [
+            colour_by_type[(f"{type(annotation_type).__name__}:{annotation_type}")]
+            for annotation_type in types
+        ]
+
+        return {
+            "keys": types,
+            "values": values,
+        }
+
+    @staticmethod
     def decode_safe_name(name: str) -> Path:
         """Decode a URL-safe name."""
         return Path(urllib.parse.unquote(name).replace("\\", os.sep))
@@ -400,6 +585,38 @@ class TileServer(Flask):
 
         msg = "Invalid configured file type."
         raise ValueError(msg)
+
+    @staticmethod
+    def _load_overlay_config(
+        directory: Path,
+        kind: str,
+    ) -> dict | None:
+        """Load the first overlay config file, if available."""
+        if kind != "overlay":
+            return None
+
+        config_files = sorted(
+            directory.glob("*config.json"),
+        )
+
+        if not config_files:
+            return None
+
+        with config_files[0].open() as file_handle:
+            return json.load(file_handle)
+
+    @staticmethod
+    def _is_overlay_config_file(
+        path: Path,
+        directory: Path,
+        kind: str,
+    ) -> bool:
+        """Return whether a path is an overlay config file."""
+        return (
+            kind == "overlay"
+            and path.parent == directory
+            and path.name.endswith("config.json")
+        )
 
     @staticmethod
     def _is_directory_image(path: Path) -> bool:
@@ -505,13 +722,38 @@ class TileServer(Flask):
     def get_ann_layer(
         self: TileServer,
         session_id: str,
-    ) -> AnnotationTileGenerator | ValueError:
-        """Get the annotation layer for a session_id."""
+        layer_name: str | None = None,
+    ) -> AnnotationTileGenerator:
+        """Get an annotation layer for a session."""
+        if layer_name is not None:
+            layer = self.pyramids[session_id].get(layer_name)
+
+            if isinstance(layer, AnnotationTileGenerator):
+                return layer
+
+            msg = f"Annotation layer not found: {layer_name}"
+            raise ValueError(msg)
+
         for layer in self.pyramids[session_id].values():
             if isinstance(layer, AnnotationTileGenerator):
                 return layer
+
         msg = "No annotation layer found."
         raise ValueError(msg)
+
+    def _get_annotation_renderer(
+        self: TileServer,
+        session_id: str,
+        layer_name: str | None = None,
+    ) -> AnnotationRenderer:
+        """Get the renderer for an annotation layer or session."""
+        if layer_name is None:
+            return self.renderers[session_id]
+
+        return self.get_ann_layer(
+            session_id,
+            layer_name,
+        ).renderer
 
     def index(self: TileServer) -> Response:
         """Serve the index page.
@@ -562,7 +804,7 @@ class TileServer(Flask):
                 new_session_id,
                 httponly=True,
                 samesite="Lax",
-            )  # skipcq: PTC-W6003
+            )
 
         return response
 
@@ -626,6 +868,7 @@ class TileServer(Flask):
 
         return response
 
+    # skipcq: PY-R1000  # noqa: ERA001
     def get_configured_files(
         self: TileServer,
         kind: str,
@@ -638,7 +881,8 @@ class TileServer(Flask):
 
         Returns:
             flask.Response:
-                A JSON response containing the configured directory and files.
+                A JSON response containing the configured directory, files,
+                and overlay configuration when available.
 
         """
         try:
@@ -659,6 +903,11 @@ class TileServer(Flask):
                 "Configured file directory is unavailable.",
                 status=404,
             )
+
+        config = self._load_overlay_config(
+            directory,
+            kind,
+        )
 
         file_extensions = {
             "slide": {
@@ -715,9 +964,17 @@ class TileServer(Flask):
             for filename in filenames:
                 path = root_path / filename
 
-                if path.suffix.lower() in file_extensions[
-                    kind
-                ] and path.resolve().is_relative_to(directory):
+                if (
+                    not self._is_overlay_config_file(
+                        path,
+                        directory,
+                        kind,
+                    )
+                    and path.suffix.lower() in file_extensions[kind]
+                    and path.resolve().is_relative_to(
+                        directory,
+                    )
+                ):
                     configured_paths.append(path)
 
         configured_paths.sort(
@@ -739,12 +996,15 @@ class TileServer(Flask):
             str(directory) if self.legacy else self._get_public_path_prefix(kind)
         )
 
-        return jsonify(
-            {
-                "directory": public_directory,
-                "files": files,
-            },
-        )
+        response_data = {
+            "directory": public_directory,
+            "files": files,
+        }
+
+        if config is not None:
+            response_data["config"] = config
+
+        return jsonify(response_data)
 
     def reset(self: TileServer, session_id: str) -> str:
         """Reset the tileserver."""
@@ -818,28 +1078,136 @@ class TileServer(Flask):
 
         return Response("done", status=200)
 
+    def get_annotation_colours(
+        self: TileServer,
+    ) -> Response:
+        """Return colours for annotation types."""
+        types = json.loads(
+            request.form["types"],
+        )
+
+        palette_name = request.form.get(
+            "palette",
+        )
+
+        try:
+            colours = self.annotation_colours(
+                types,
+                palette_name,
+            )
+        except ValueError:
+            logger.warning(
+                "Invalid annotation colour request.",
+                exc_info=True,
+            )
+
+            return Response(
+                "Invalid annotation colour request.",
+                status=400,
+            )
+
+        return jsonify(colours)
+
+    def change_annotation_opacities(self: TileServer) -> str:
+        """Change fill opacity for annotation types."""
+        session_id = self._get_session_id()
+        layer_name = request.args.get("layer")
+
+        renderer = self._get_annotation_renderer(
+            session_id,
+            layer_name,
+        )
+
+        opacity_map = json.loads(
+            request.form["opacities"],
+        )
+
+        renderer.type_opacities = dict(
+            zip(
+                opacity_map["keys"],
+                opacity_map["values"],
+                strict=False,
+            )
+        )
+
+        return "done"
+
     def change_mapper(self: TileServer) -> str:
         """Change the colour mapper for the overlay."""
         session_id = self._get_session_id()
+        layer_name = request.args.get("layer")
+        renderer = self._get_annotation_renderer(
+            session_id,
+            layer_name,
+        )
+
         cmap = json.loads(request.form["cmap"])
+
         if isinstance(cmap, dict):
-            cmap = dict(zip(cmap["keys"], cmap["values"], strict=False))
-            self.renderers[session_id].score_fn = lambda x: x
-        self.renderers[session_id].mapper = cmap
-        self.renderers[session_id].function_mapper = None
+            cmap = dict(
+                zip(
+                    cmap["keys"],
+                    cmap["values"],
+                    strict=False,
+                )
+            )
+            renderer.score_fn = lambda x: x
+
+        renderer.mapper = cmap
+        renderer.function_mapper = None
 
         return "done"
 
     def change_secondary_cmap(self: TileServer) -> str:
         """Change the type-specific colour mapper for the overlay."""
         session_id = self._get_session_id()
+        layer_name = request.args.get("layer")
+        renderer = self._get_annotation_renderer(
+            session_id,
+            layer_name,
+        )
         cmap = json.loads(request.form["cmap"])
         type_id = request.form["type_id"]
         prop = request.form["prop"]
-        cmapp = self._get_cmap(cmap)
+        mapper = self._get_cmap(cmap)
 
-        cmap_dict = {"type": json.loads(type_id), "score_prop": prop, "mapper": cmapp}
-        self.renderers[session_id].secondary_cmap = cmap_dict
+        prop_range = json.loads(
+            request.form.get(
+                "range",
+                "null",
+            ),
+        )
+
+        if prop_range is not None and isinstance(cmap, str):
+            minimum, maximum = prop_range
+
+            if minimum == maximum:
+                maximum = minimum + 1
+
+            base_mapper = mapper
+
+            def normalised_mapper(
+                value: float,
+            ) -> tuple[float, ...]:
+                """Map a value normalised to the configured property range."""
+                normalised_value = round(
+                    (value - minimum) / (maximum - minimum),
+                    15,
+                )
+
+                return base_mapper(
+                    normalised_value,
+                )
+
+            mapper = normalised_mapper
+
+        cmap_dict = {
+            "type": json.loads(type_id),
+            "score_prop": prop,
+            "mapper": mapper,
+        }
+
+        renderer.secondary_cmap = cmap_dict
 
         return "done"
 
@@ -851,14 +1219,28 @@ class TileServer(Flask):
 
         """
         session_id = self._get_session_id()
+        layer_name = request.args.get("layer")
+
+        renderer = self._get_annotation_renderer(
+            session_id,
+            layer_name,
+        )
+
         val = request.form["val"]
         val = json.loads(val)
+
         if val in ["None", "null"]:
             val = None
-        self.renderers[session_id].__setattr__(prop, val)
+
+        renderer.__setattr__(prop, val)
+
         if prop == "blur_radius":
             self.overlaps[session_id] = int(1.5 * val)
-            self.get_ann_layer(session_id).overlap = self.overlaps[session_id]
+            self.get_ann_layer(
+                session_id,
+                layer_name,
+            ).overlap = self.overlaps[session_id]
+
         return "done"
 
     def load_annotations(self: TileServer) -> str:
@@ -1038,6 +1420,7 @@ class TileServer(Flask):
         overlay_path: Path,
         layer_name: str | None = None,
     ) -> str:
+        is_named_layer = layer_name is not None
         if overlay_path.suffix == ".geojson":
 
             def unpack_qupath(ann: Annotation) -> Annotation:
@@ -1097,10 +1480,18 @@ class TileServer(Flask):
 
             layer_name = "overlay"
 
+        renderer = (
+            copy.deepcopy(
+                self.renderers[session_id],
+            )
+            if is_named_layer
+            else self.renderers[session_id]
+        )
+
         self.pyramids[session_id][layer_name] = AnnotationTileGenerator(
             self.layers[session_id]["slide"].info,
             sq,
-            self.renderers[session_id],
+            renderer,
             overlap=self.overlaps[session_id],
         )
 
@@ -1127,10 +1518,16 @@ class TileServer(Flask):
 
         """
         session_id = self._get_session_id()
+        layer_name = request.args.get("layer")
         where = None
+
         if ann_type != "all":
             where = f'props["type"]=={ann_type}'
-        ann_props = self.get_ann_layer(session_id).store.pquery(
+
+        ann_props = self.get_ann_layer(
+            session_id,
+            layer_name,
+        ).store.pquery(
             select="*",
             where=where,
             unique=False,
@@ -1151,11 +1548,15 @@ class TileServer(Flask):
             str: A jsonified list of the values of the property.
         """
         session_id = self._get_session_id()
+        layer_name = request.args.get("layer")
         where = None
         if ann_type != "all":
             where = f'props["type"]=={ann_type}'
         try:
-            layer = self.get_ann_layer(session_id)
+            layer = self.get_ann_layer(
+                session_id,
+                layer_name,
+            )
         except ValueError:
             return json.dumps([])
 
@@ -1282,17 +1683,41 @@ class TileServer(Flask):
             y (float): The y coordinate.
 
         Returns:
-            Response: The jsonified dict of the properties of the
-            smallest annotation returned from the query at the point.
+            Response: The selected annotation properties, or detailed
+            annotation information when requested.
 
         """
         session_id = self._get_session_id()
-        anns = self.get_ann_layer(session_id).store.query(
+        layer_name = request.args.get("layer")
+
+        anns = self.get_ann_layer(
+            session_id,
+            layer_name,
+        ).store.query(
             Point(x, y),
         )
+
         if len(anns) == 0:
             return json.dumps({})
-        return jsonify(list(anns.values())[-1].properties)
+
+        annotation_id, annotation = list(
+            anns.items(),
+        )[-1]
+
+        if request.args.get("details") == "1":
+            return jsonify(
+                {
+                    "id": str(annotation_id),
+                    "properties": annotation.properties,
+                    "geometry": mapping(
+                        annotation.geometry,
+                    ),
+                },
+            )
+
+        return jsonify(
+            annotation.properties,
+        )
 
     def prop_range(self: TileServer) -> str:
         """Set the range which the color mapper will map to.
@@ -1302,12 +1727,23 @@ class TileServer(Flask):
 
         """
         session_id = self._get_session_id()
+        layer_name = request.args.get("layer")
+
+        renderer = self._get_annotation_renderer(
+            session_id,
+            layer_name,
+        )
+
         prop_range = json.loads(request.form["range"])
+
         if prop_range is None:
-            self.renderers[session_id].score_fn = lambda x: x
+            renderer.score_fn = lambda x: x
             return "done"
+
         minv, maxv = prop_range
-        self.renderers[session_id].score_fn = lambda x: (x - minv) / (maxv - minv)
+
+        renderer.score_fn = lambda x: (x - minv) / (maxv - minv)
+
         return "done"
 
     def get_channels(self: TileServer) -> Response:
