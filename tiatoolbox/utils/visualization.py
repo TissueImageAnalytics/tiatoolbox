@@ -774,6 +774,7 @@ class AnnotationRenderer:
         self.secondary_cmap = secondary_cmap
         self.blur_radius = blur_radius
         self.function_mapper = function_mapper
+        self.type_opacities: dict[object, float] = {}
         self.blur: ImageFilter.GaussianBlur | None
         if blur_radius > 0:
             self.blur = ImageFilter.GaussianBlur(blur_radius)
@@ -807,6 +808,36 @@ class AnnotationRenderer:
             for ring in coords
         ]
 
+    def _apply_type_opacity(
+        self: AnnotationRenderer,
+        annotation: Annotation,
+        colour: tuple[int, ...],
+        *,
+        edge: bool,
+    ) -> tuple[int, ...]:
+        """Apply configured fill opacity for an annotation type."""
+        if edge:
+            return colour
+
+        annotation_type = annotation.properties.get("type")
+
+        if annotation_type not in self.type_opacities:
+            return colour
+
+        opacity = self.type_opacities[annotation_type]
+        opacity = min(
+            max(
+                float(opacity),
+                0.0,
+            ),
+            1.0,
+        )
+
+        return (
+            *colour[:3],
+            int(opacity * 255),
+        )
+
     def get_color(
         self: AnnotationRenderer,
         annotation: Annotation,
@@ -831,12 +862,13 @@ class AnnotationRenderer:
 
         try:
             if (
-                self.secondary_cmap is not None
+                not edge
+                and self.secondary_cmap is not None
                 and "type" in annotation.properties
                 and annotation.properties["type"] == self.secondary_cmap["type"]
             ):
                 # use secondary colormap to color annotations of specific type
-                return tuple(
+                colour = tuple(
                     int(c * 255)
                     for c in self.secondary_cmap["mapper"](
                         self.score_fn(
@@ -844,8 +876,22 @@ class AnnotationRenderer:
                         ),
                     )
                 )
+
+                return self._apply_type_opacity(
+                    annotation,
+                    colour,
+                    edge=edge,
+                )
             if self.function_mapper:
-                return self.function_mapper(annotation.properties)
+                return self._apply_type_opacity(
+                    annotation,
+                    tuple(
+                        self.function_mapper(
+                            annotation.properties,
+                        )
+                    ),
+                    edge=edge,
+                )
             if score_prop == "color":
                 # use colors directly specified in annotation properties
                 rgb = []
@@ -853,13 +899,25 @@ class AnnotationRenderer:
                     c = cast("int", c)
                     rgb.append(int(255 * c))
                 # rgb = [int(255 * c) for cast(int,c) in annotation.properties["color"]]
-                return (*rgb, 255)
+                return self._apply_type_opacity(
+                    annotation,
+                    (*rgb, 255),
+                    edge=edge,
+                )
             if score_prop is not None:
-                return tuple(
+                colour = tuple(
                     int(c * 255)
                     for c in self.mapper(
-                        self.score_fn(annotation.properties[score_prop]),
+                        self.score_fn(
+                            annotation.properties[score_prop],
+                        ),
                     )
+                )
+
+                return self._apply_type_opacity(
+                    annotation,
+                    colour,
+                    edge=edge,
                 )
         except KeyError:
             logger.warning(
@@ -875,7 +933,12 @@ class AnnotationRenderer:
 
         if edge:
             return 0, 0, 0, 255  # default to black for edge
-        return 0, 255, 0, 255  # default color if no score_prop given
+
+        return self._apply_type_opacity(
+            annotation,
+            (0, 255, 0, 255),
+            edge=False,
+        )  # default color if no score_prop given
 
     def render_poly(
         self: AnnotationRenderer,
