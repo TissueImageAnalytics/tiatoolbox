@@ -6,7 +6,7 @@
   "description": "OpenLayers frontend for TIAToolbox.",
   "devDependencies": {
     "@eslint/js": "10.0.1",
-    "@vitest/coverage-v8": "5.0.2",
+    "@vitest/coverage-v8": "5.0.3",
     "@vitest/eslint-plugin": "1.6.27",
     "eslint": "10.11.0",
     "globals": "17.12.0",
