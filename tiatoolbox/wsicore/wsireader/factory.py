@@ -20,7 +20,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from tiatoolbox.type_hints import WSIPostProc
 
-    from . import AnnotationStoreReader
+    from .annotation_store import AnnotationStoreReader
     from .base import (
         FsspecJsonWSIReader,
         OpenSlideWSIReader,
