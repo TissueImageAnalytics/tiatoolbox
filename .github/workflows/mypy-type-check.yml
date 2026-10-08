@@ -20,7 +20,7 @@ jobs:
     # the type check target matches the matrix (overrides [tool.mypy].python_version).
     strategy:
       matrix:
-        python-version: ["3.12", "3.13", "3.14"]
+        python-version: ["3.12", "3.13", "3.14", "3.15"]
 
     steps:
 
