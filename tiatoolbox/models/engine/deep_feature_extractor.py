@@ -44,6 +44,7 @@ from typing import TYPE_CHECKING, Unpack
 
 import dask.array as da
 import psutil
+import torch
 import zarr
 from dask import compute
 from tqdm.auto import tqdm
@@ -225,6 +226,10 @@ class DeepFeatureExtractor(PatchPredictor):
         probabilities_zarr, coordinates_zarr = None, None
 
         probabilities_used_percent = 0
+        # Set inference mode once here; infer_batch no longer calls
+        # model.eval() internally (needed for Monte Carlo Dropout wrappers).
+        if isinstance(self.model, torch.nn.Module):
+            self.model.eval()
         infer_batch = self._get_model_attr("infer_batch")
         for batch_data in tqdm_loop:
             batch_output = infer_batch(
