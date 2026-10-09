@@ -164,6 +164,37 @@ def test_segformer_forward_and_metadata() -> None:
     assert output.shape == (1, 2, 64, 64)
 
 
+def test_segformer_forward_matches_huggingface_module() -> None:
+    """Direct stage execution should match the Hugging Face segmentation head."""
+    model = Segformer(encoder_name="mit_b0", classes=2)
+    model.eval()
+    x = torch.randn(1, 3, 64, 64)
+
+    with torch.inference_mode():
+        output = model(x)
+        reference = model.activation(
+            model.upsampling(model.model(pixel_values=x).logits)
+        )
+
+    assert torch.allclose(output, reference, atol=1e-5)
+
+
+@pytest.mark.skipif(torch.cuda.device_count() < 2, reason="needs two CUDA devices")
+def test_segformer_dataparallel_forward() -> None:
+    """DataParallel inference should keep per-stage feature maps aligned."""
+    model = Segformer(encoder_name="mit_b0", classes=2)
+    model.eval()
+    wrapped = model.to("cuda")
+    batch = torch.randn(2, 3, 64, 64)
+
+    with torch.inference_mode():
+        single = model(batch.cuda())
+        parallel = wrapped(batch.cuda())
+
+    assert parallel.shape == (2, 2, 64, 64)
+    assert torch.allclose(parallel.cpu(), single.cpu(), atol=1e-4)
+
+
 def test_segformer_preproc_imagenet_normalization() -> None:
     """Preprocessing should apply ImageNet channel normalization."""
     image = np.ones((8, 8, 3), dtype=np.uint8) * 128

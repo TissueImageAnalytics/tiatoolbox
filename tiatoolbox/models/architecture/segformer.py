@@ -93,8 +93,20 @@ class Segformer(ModelABC):
         *args: tuple[Any, ...],  # noqa: ARG002
         **kwargs: dict,  # noqa: ARG002
     ) -> torch.Tensor:
-        """Run encoder-decoder and upsample logits to the input resolution."""
-        logits = self.model(pixel_values=x).logits
+        """Run encoder-decoder and upsample logits to the input resolution.
+
+        Stage outputs are collected by calling each encoder stage directly.
+        ``SegformerForSemanticSegmentation`` otherwise recovers them with
+        forward hooks, and those hooks are shared across ``DataParallel``
+        replicas, so multi-GPU inference feeds the same feature map into
+        every decoder projection.
+        """
+        hidden_states = x
+        encoder_hidden_states: list[torch.Tensor] = []
+        for stage in self.model.segformer.stages:
+            hidden_states = stage(hidden_states)
+            encoder_hidden_states.append(hidden_states)
+        logits = self.model.decode_head(encoder_hidden_states)
         return self.activation(self.upsampling(logits))
 
     def load_state_dict(
