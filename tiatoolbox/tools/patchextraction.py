@@ -13,6 +13,7 @@ from tiatoolbox.utils import misc
 from tiatoolbox.utils.exceptions import FileNotSupportedError, MethodNotSupportedError
 from tiatoolbox.utils.visualization import AnnotationRenderer
 from tiatoolbox.wsicore import wsireader
+from tiatoolbox.wsicore.wsireader import annotation_store
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable
@@ -244,7 +245,7 @@ class PatchExtractor(PatchExtractorABC):
             renderer = AnnotationRenderer(
                 max_scale=10000, edge_thickness=0, where=store_filter
             )
-            rendered_mask = wsireader.AnnotationStoreReader(
+            rendered_mask = annotation_store.AnnotationStoreReader(
                 input_mask,
                 renderer=renderer,
                 info=self.wsi.info,
