@@ -55,7 +55,7 @@ dependencies = [
   "tqdm>=4.64.1",
   "transformers>=5.15.0",
   "umap-learn>=0.5.3",
-  "wsidicom>=0.18.0",
+  "wsidicom>=0.18.0, <0.36.0",
   "zarr>=3.2.1",
 ]
 
@@ -81,7 +81,7 @@ dev = [
   "pytest-cov>=4.0.0",
   "pytest-runner>=6.0",
   "pytest-xdist[psutil]",
-  "ruff==0.16.6",
+  "ruff==0.16.10",
   "toml>=0.10.2",
   "twine>=4.0.1",
   "wheel>=0.37.1",
