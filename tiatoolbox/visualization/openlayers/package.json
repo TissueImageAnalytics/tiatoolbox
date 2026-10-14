@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "ol": "10.10.0",
+    "ol": "10.11.0",
     "ol-ext": "4.0.38"
   },
   "description": "OpenLayers frontend for TIAToolbox.",
