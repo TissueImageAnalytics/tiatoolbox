@@ -462,17 +462,7 @@ function Ce(e, t) {
 	for (let r = 0;; ++r) {
 		let i = n[r], a = t[r];
 		if (!i && !a) break;
-		if (i !== a) {
-			if (!i) {
-				e.appendChild(a);
-				continue;
-			}
-			if (!a) {
-				e.removeChild(i), --r;
-				continue;
-			}
-			e.insertBefore(a, i);
-		}
+		i !== a && (i ? a ? e.insertBefore(a, i) : (e.removeChild(i), --r) : e.appendChild(a));
 	}
 }
 function we() {
@@ -2119,11 +2109,7 @@ function ki(e, t, n, r, i, a, o) {
 		let n = Oi(e[t], i), d = Oi(e[t + 1], i);
 		if (t += r, n == l && d == u) continue;
 		let f = l - s, p = u - c, m = n - s, h = d - c;
-		if (f * h == p * m && (f < 0 && m < f || f == m || f > 0 && m > f) && (p < 0 && h < p || p == h || p > 0 && h > p)) {
-			l = n, u = d;
-			continue;
-		}
-		a[o++] = l, a[o++] = u, s = l, c = u, l = n, u = d;
+		f * h == p * m && (f < 0 && m < f || f == m || f > 0 && m > f) && (p < 0 && h < p || p == h || p > 0 && h > p) ? (l = n, u = d) : (a[o++] = l, a[o++] = u, s = l, c = u, l = n, u = d);
 	}
 	return a[o++] = l, a[o++] = u, o;
 }
@@ -3850,7 +3836,7 @@ var ro = class {
 	}
 	get(e, t) {
 		let n = this.entries_[e];
-		return R(n !== void 0, "Tried to get a value for a key that does not exist in the cache"), n === this.newest_ ? n.value_ : (n === this.oldest_ ? (this.oldest_ = this.oldest_.newer, this.oldest_.older = null) : (n.newer.older = n.older, n.older.newer = n.newer), n.newer = null, n.older = this.newest_, this.newest_.newer = n, this.newest_ = n, n.value_);
+		return R(n !== void 0, "Tried to get a value for a key that does not exist in the cache"), n === this.newest_ || (n === this.oldest_ ? (this.oldest_ = this.oldest_.newer, this.oldest_.older = null) : (n.newer.older = n.older, n.older.newer = n.newer), n.newer = null, n.older = this.newest_, this.newest_.newer = n, this.newest_ = n), n.value_;
 	}
 	remove(e) {
 		let t = this.entries_[e];
@@ -4981,18 +4967,14 @@ var ss = 0, cs = class extends A {
 	resolveConstraints(e, t, n) {
 		e = e === void 0 ? 200 : e;
 		let r = t || 0, i = this.constraints_.rotation(this.targetRotation_), a = this.getViewportSize_(i), o = this.constraints_.resolution(this.targetResolution_, r, a), s = this.constraints_.center(this.targetCenter_, o, a, !1, this.calculateCenterShift(this.targetCenter_, o, i, a));
-		if (e === 0 && !this.cancelAnchor_) {
-			this.targetResolution_ = o, this.targetRotation_ = i, this.targetCenter_ = s, this.applyTargetState_();
-			return;
-		}
-		n ||= e === 0 ? this.cancelAnchor_ : void 0, this.cancelAnchor_ = void 0, (this.getResolution() !== o || this.getRotation() !== i || !this.getCenterInternal() || !Vt(this.getCenterInternal(), s)) && (this.getAnimating() && this.cancelAnimations(), this.animateInternal({
+		e === 0 && !this.cancelAnchor_ ? (this.targetResolution_ = o, this.targetRotation_ = i, this.targetCenter_ = s, this.applyTargetState_()) : (n ||= e === 0 ? this.cancelAnchor_ : void 0, this.cancelAnchor_ = void 0, (this.getResolution() !== o || this.getRotation() !== i || !this.getCenterInternal() || !Vt(this.getCenterInternal(), s)) && (this.getAnimating() && this.cancelAnimations(), this.animateInternal({
 			rotation: i,
 			center: s,
 			resolution: o,
 			duration: e,
 			easing: Ae,
 			anchor: n
-		}));
+		})));
 	}
 	beginInteraction() {
 		this.resolveConstraints(0), this.setHint(Jo.INTERACTING, 1);
@@ -7587,9 +7569,7 @@ function rl(e, t, n, r, i) {
 	if (t.getType() == "GeometryCollection") {
 		let a = t.getGeometries();
 		for (let t = 0, o = a.length; t < o; ++t) rl(e, a[t], n, r, i);
-		return;
-	}
-	e.getBuilder(n.getZIndex(), "Default").drawCustom(t, r, n.getRenderer(), n.getHitDetectionRenderer(), i);
+	} else e.getBuilder(n.getZIndex(), "Default").drawCustom(t, r, n.getRenderer(), n.getHitDetectionRenderer(), i);
 }
 function il(e, t, n, r, i, a) {
 	let o = t.getGeometriesArray(), s, c;
@@ -10710,18 +10690,11 @@ var Sf = class extends bf {
 //#endregion
 //#region node_modules/ol/Map.js
 function Cf(e) {
-	if (e instanceof gs) {
-		e.setMapInternal(null);
-		return;
-	}
-	e instanceof yf && e.getLayers().forEach(Cf);
+	e instanceof gs ? e.setMapInternal(null) : e instanceof yf && e.getLayers().forEach(Cf);
 }
 function wf(e, t) {
-	if (e instanceof gs) {
-		e.setMapInternal(t);
-		return;
-	}
-	if (e instanceof yf) {
+	if (e instanceof gs) e.setMapInternal(t);
+	else if (e instanceof yf) {
 		let n = e.getLayers().getArray();
 		for (let e = 0, r = n.length; e < r; ++e) wf(n[e], t);
 	}
@@ -12015,9 +11988,7 @@ function op(e, t) {
 		}).catch(() => {
 			e.getImage().dispatchEvent(new Event("error"));
 		});
-		return;
-	}
-	e.getImage().src = t;
+	} else e.getImage().src = t;
 }
 //#endregion
 //#region node_modules/ol/source/Zoomify.js
@@ -14960,11 +14931,7 @@ var Ah = {
 		this.preRender(t, e);
 		let n = this.getLayer(), [r, i, a] = kh(e, n);
 		this.helper.prepareDraw(e), this.renderWorlds(e, !1, r, i, a), this.hasText_ && this.styleRenderer_.finalizeTextRender(e).then(() => {
-			if (this.skipNextTextRender_) {
-				this.skipNextTextRender_ = !1;
-				return;
-			}
-			this.skipNextTextRender_ = !0, this.layerRevision_++, n.changed();
+			this.skipNextTextRender_ ? this.skipNextTextRender_ = !1 : (this.skipNextTextRender_ = !0, this.layerRevision_++, n.changed());
 		}), this.helper.finalizeDraw(e, this.dispatchPreComposeEvent, this.dispatchPostComposeEvent);
 		let o = this.helper.getCanvas();
 		return this.hitDetectionEnabled_ && (this.renderWorlds(e, !0, r, i, a), this.hitRenderTarget_.clearCachedData()), this.postRender(t, e), o;
@@ -15046,22 +15013,14 @@ var Ah = {
 	}
 	setBlur(e) {
 		let t = this.get(Mh.BLUR);
-		if (this.set(Mh.BLUR, e), typeof e == "number" && typeof t == "number") {
-			this.changed();
-			return;
-		}
-		this.clearRenderer();
+		this.set(Mh.BLUR, e), typeof e == "number" && typeof t == "number" ? this.changed() : this.clearRenderer();
 	}
 	setGradient(e) {
 		this.set(Mh.GRADIENT, e);
 	}
 	setRadius(e) {
 		let t = this.get(Mh.RADIUS);
-		if (this.set(Mh.RADIUS, e), typeof e == "number" && typeof t == "number") {
-			this.changed();
-			return;
-		}
-		this.clearRenderer();
+		this.set(Mh.RADIUS, e), typeof e == "number" && typeof t == "number" ? this.changed() : this.clearRenderer();
 	}
 	setFilter(e) {
 		this.filter_ = e, this.changed(), this.clearRenderer();
@@ -15709,164 +15668,163 @@ var Bh = class extends De {
 			i ? (r = n._getLayerForLI(this.parentNode.parentNode), i.getLayers().remove(r), i.getLayers().getLength() == 0 && !i.get("noSwitcherDelete") && s.call(t.querySelectorAll(".layerTrash")[0], e)) : (t = this.parentNode.parentNode, n.getMap().removeLayer(n._getLayerForLI(t)));
 		}
 		function c(c) {
-			if (!this.displayInLayerSwitcher(c)) {
-				this._setLayerForLI(null, c);
-				return;
-			}
-			var u = $.create("LI", {
-				className: (c.getVisible() ? "ol-visible " : " ") + (c.get("baseLayer") ? "baselayer" : ""),
-				parent: e
-			});
-			this._setLayerForLI(u, c), this._selectedLayer === c && u.classList.add("ol-layer-select");
-			var d = $.create("DIV", {
-				className: "ol-layerswitcher-buttons",
-				parent: u
-			}), f = $.create("DIV", {
-				className: "li-content",
-				parent: u
-			}), p = $.create("INPUT", {
-				type: c.get("baseLayer") ? "radio" : "checkbox",
-				className: "ol-visibility",
-				checked: c.getVisible(),
-				click: function(e) {
-					i.bind(this)(e), setTimeout(function() {
-						e.target.checked = c.getVisible();
-					});
-				},
-				on: { keydown: function(r) {
-					switch (r.key) {
-						case "ArrowLeft":
-						case "ArrowRight":
-							r.preventDefault(), r.stopPropagation();
-							var i = r.key === "ArrowLeft" ? -.1 : .1, a = Math.min(1, Math.max(0, c.getOpacity() + i));
-							c.setOpacity(a);
-							break;
-						case "Enter":
-							n.get("selection") && (r.preventDefault(), r.stopPropagation(), n.selectLayer(c));
-							break;
-						case "-":
-						case "+": c.getLayers && (this._focus = c, c.set("openInLayerSwitcher", !c.get("openInLayerSwitcher")));
-						case "ArrowUp":
-						case "ArrowDown":
-							if (r.ctrlKey && this.reordering) {
-								r.preventDefault(), r.stopPropagation();
-								var o = t.getArray().indexOf(c);
-								o > -1 && (r.key === "ArrowDown" ? o > 0 && (t.remove(c), t.insertAt(o - 1, c), n._focus = c, n.dispatchEvent({
-									type: "reorder-end",
-									layer: c
-								})) : o < t.getLength() - 1 && (t.remove(c), t.insertAt(o + 1, c), n._focus = c, n.dispatchEvent({
-									type: "reorder-end",
-									layer: c
-								})));
-							}
-							break;
-						default:
-							var s = this._getLayerForLI(e.parentNode);
-							this.dispatchEvent({
-								type: "layer:keydown",
-								key: r.key,
-								group: s,
-								li: u,
-								layer: c,
-								originalEvent: r
-							});
-					}
-				}.bind(this) },
-				parent: f
-			});
-			c === n._focus && (p.focus(), n.overflow());
-			var m = $.create("LABEL", {
-				title: c.get("title") || c.get("name"),
-				click: i,
-				style: { userSelect: "none" },
-				parent: f
-			});
-			if (m.addEventListener("selectstart", function() {
-				return !1;
-			}), $.create("SPAN", {
-				html: c.get("title") || c.get("name"),
-				click: function(e) {
-					this.get("selection") && (e.stopPropagation(), this.selectLayer(c));
-				}.bind(this),
-				parent: m
-			}), this.reordering && (l < r.length - 1 && (c.get("allwaysOnTop") || !r[l + 1].get("allwaysOnTop")) || l > 0 && (!c.get("allwaysOnTop") || r[l - 1].get("allwaysOnTop"))) && $.create("DIV", {
-				className: "layerup ol-noscroll",
-				title: this.tip.up,
-				on: { "mousedown touchstart": function(e) {
-					n.dragOrdering_(e);
-				} },
-				parent: d
-			}), c.getLayers) {
-				var h = 0;
-				c.getLayers().forEach(function(e) {
-					n.displayInLayerSwitcher(e) && h++;
-				}), h && $.create("DIV", {
-					className: c.get("openInLayerSwitcher") ? "collapse-layers" : "expend-layers",
-					title: this.tip.plus,
-					click: function() {
-						var e = n._getLayerForLI(this.parentNode.parentNode);
-						e.set("openInLayerSwitcher", !e.get("openInLayerSwitcher"));
+			if (!this.displayInLayerSwitcher(c)) this._setLayerForLI(null, c);
+			else {
+				var u = $.create("LI", {
+					className: (c.getVisible() ? "ol-visible " : " ") + (c.get("baseLayer") ? "baselayer" : ""),
+					parent: e
+				});
+				this._setLayerForLI(u, c), this._selectedLayer === c && u.classList.add("ol-layer-select");
+				var d = $.create("DIV", {
+					className: "ol-layerswitcher-buttons",
+					parent: u
+				}), f = $.create("DIV", {
+					className: "li-content",
+					parent: u
+				}), p = $.create("INPUT", {
+					type: c.get("baseLayer") ? "radio" : "checkbox",
+					className: "ol-visibility",
+					checked: c.getVisible(),
+					click: function(e) {
+						i.bind(this)(e), setTimeout(function() {
+							e.target.checked = c.getVisible();
+						});
 					},
-					parent: d
-				});
-			}
-			if (this.oninfo && $.create("DIV", {
-				className: "layerInfo",
-				title: this.tip.info,
-				click: a,
-				parent: d
-			}), this.hastrash && !c.get("noSwitcherDelete") && $.create("DIV", {
-				className: "layerTrash",
-				title: this.tip.trash,
-				click: s,
-				parent: d
-			}), this.hasextent && r[l].getExtent()) {
-				var g = r[l].getExtent();
-				g.length == 4 && g[0] < g[2] && g[1] < g[3] && $.create("DIV", {
-					className: "layerExtent",
-					title: this.tip.extent,
-					click: o,
-					parent: d
-				});
-			}
-			if (this.show_progress && c instanceof bs) {
-				var _ = $.create("DIV", {
-					className: "layerswitcher-progress",
+					on: { keydown: function(r) {
+						switch (r.key) {
+							case "ArrowLeft":
+							case "ArrowRight":
+								r.preventDefault(), r.stopPropagation();
+								var i = r.key === "ArrowLeft" ? -.1 : .1, a = Math.min(1, Math.max(0, c.getOpacity() + i));
+								c.setOpacity(a);
+								break;
+							case "Enter":
+								n.get("selection") && (r.preventDefault(), r.stopPropagation(), n.selectLayer(c));
+								break;
+							case "-":
+							case "+": c.getLayers && (this._focus = c, c.set("openInLayerSwitcher", !c.get("openInLayerSwitcher")));
+							case "ArrowUp":
+							case "ArrowDown":
+								if (r.ctrlKey && this.reordering) {
+									r.preventDefault(), r.stopPropagation();
+									var o = t.getArray().indexOf(c);
+									o > -1 && (r.key === "ArrowDown" ? o > 0 && (t.remove(c), t.insertAt(o - 1, c), n._focus = c, n.dispatchEvent({
+										type: "reorder-end",
+										layer: c
+									})) : o < t.getLength() - 1 && (t.remove(c), t.insertAt(o + 1, c), n._focus = c, n.dispatchEvent({
+										type: "reorder-end",
+										layer: c
+									})));
+								}
+								break;
+							default:
+								var s = this._getLayerForLI(e.parentNode);
+								this.dispatchEvent({
+									type: "layer:keydown",
+									key: r.key,
+									group: s,
+									li: u,
+									layer: c,
+									originalEvent: r
+								});
+						}
+					}.bind(this) },
 					parent: f
 				});
-				this.setprogress_(c), c.layerswitcher_progress = $.create("DIV", { parent: _ });
+				c === n._focus && (p.focus(), n.overflow());
+				var m = $.create("LABEL", {
+					title: c.get("title") || c.get("name"),
+					click: i,
+					style: { userSelect: "none" },
+					parent: f
+				});
+				if (m.addEventListener("selectstart", function() {
+					return !1;
+				}), $.create("SPAN", {
+					html: c.get("title") || c.get("name"),
+					click: function(e) {
+						this.get("selection") && (e.stopPropagation(), this.selectLayer(c));
+					}.bind(this),
+					parent: m
+				}), this.reordering && (l < r.length - 1 && (c.get("allwaysOnTop") || !r[l + 1].get("allwaysOnTop")) || l > 0 && (!c.get("allwaysOnTop") || r[l - 1].get("allwaysOnTop"))) && $.create("DIV", {
+					className: "layerup ol-noscroll",
+					title: this.tip.up,
+					on: { "mousedown touchstart": function(e) {
+						n.dragOrdering_(e);
+					} },
+					parent: d
+				}), c.getLayers) {
+					var h = 0;
+					c.getLayers().forEach(function(e) {
+						n.displayInLayerSwitcher(e) && h++;
+					}), h && $.create("DIV", {
+						className: c.get("openInLayerSwitcher") ? "collapse-layers" : "expend-layers",
+						title: this.tip.plus,
+						click: function() {
+							var e = n._getLayerForLI(this.parentNode.parentNode);
+							e.set("openInLayerSwitcher", !e.get("openInLayerSwitcher"));
+						},
+						parent: d
+					});
+				}
+				if (this.oninfo && $.create("DIV", {
+					className: "layerInfo",
+					title: this.tip.info,
+					click: a,
+					parent: d
+				}), this.hastrash && !c.get("noSwitcherDelete") && $.create("DIV", {
+					className: "layerTrash",
+					title: this.tip.trash,
+					click: s,
+					parent: d
+				}), this.hasextent && r[l].getExtent()) {
+					var g = r[l].getExtent();
+					g.length == 4 && g[0] < g[2] && g[1] < g[3] && $.create("DIV", {
+						className: "layerExtent",
+						title: this.tip.extent,
+						click: o,
+						parent: d
+					});
+				}
+				if (this.show_progress && c instanceof bs) {
+					var _ = $.create("DIV", {
+						className: "layerswitcher-progress",
+						parent: f
+					});
+					this.setprogress_(c), c.layerswitcher_progress = $.create("DIV", { parent: _ });
+				}
+				var v = $.create("DIV", {
+					className: "layerswitcher-opacity",
+					click: function(e) {
+						if (e.target === this) {
+							e.stopPropagation(), e.preventDefault();
+							var t = Math.max(0, Math.min(1, e.offsetX / $.getStyle(this, "width")));
+							n._getLayerForLI(this.parentNode.parentNode).setOpacity(t), this.parentNode.querySelectorAll(".layerswitcher-opacity-label")[0].innerHTML = Math.round(t * 100);
+						}
+					},
+					parent: f
+				});
+				if ($.create("DIV", {
+					className: "layerswitcher-opacity-cursor ol-noscroll",
+					style: { left: c.getOpacity() * 100 + "%" },
+					on: { "mousedown touchstart": function(e) {
+						n.dragOpacity_(e);
+					} },
+					parent: v
+				}), $.create("DIV", {
+					className: "layerswitcher-opacity-label",
+					html: Math.round(c.getOpacity() * 100),
+					parent: f
+				}), c.getLayers && (u.classList.add("ol-layer-group"), c.get("openInLayerSwitcher") === !0)) {
+					var y = $.create("UL", { parent: u });
+					this.drawList(y, c.getLayers());
+				}
+				u.classList.add(this.getLayerClass(c)), this.dispatchEvent({
+					type: "drawlist",
+					layer: c,
+					li: u
+				});
 			}
-			var v = $.create("DIV", {
-				className: "layerswitcher-opacity",
-				click: function(e) {
-					if (e.target === this) {
-						e.stopPropagation(), e.preventDefault();
-						var t = Math.max(0, Math.min(1, e.offsetX / $.getStyle(this, "width")));
-						n._getLayerForLI(this.parentNode.parentNode).setOpacity(t), this.parentNode.querySelectorAll(".layerswitcher-opacity-label")[0].innerHTML = Math.round(t * 100);
-					}
-				},
-				parent: f
-			});
-			if ($.create("DIV", {
-				className: "layerswitcher-opacity-cursor ol-noscroll",
-				style: { left: c.getOpacity() * 100 + "%" },
-				on: { "mousedown touchstart": function(e) {
-					n.dragOpacity_(e);
-				} },
-				parent: v
-			}), $.create("DIV", {
-				className: "layerswitcher-opacity-label",
-				html: Math.round(c.getOpacity() * 100),
-				parent: f
-			}), c.getLayers && (u.classList.add("ol-layer-group"), c.get("openInLayerSwitcher") === !0)) {
-				var y = $.create("UL", { parent: u });
-				this.drawList(y, c.getLayers());
-			}
-			u.classList.add(this.getLayerClass(c)), this.dispatchEvent({
-				type: "drawlist",
-				layer: c,
-				li: u
-			});
 		}
 		for (var l = r.length - 1; l >= 0; l--) c.call(this, r[l]);
 		this.viewChange(), e === this.panel_ && (this.overflow(""), this._focus = null);
@@ -16216,11 +16174,7 @@ function vg({ map: e, viewerApp: t, getSlideSource: n, zoomVisibleInput: r, zoom
 	b.type = "number", b.className = "ol-zoom-level", b.step = "1", b.setAttribute("aria-label", "Zoom level"), b.title = "Zoom level", v.insertBefore(b, y);
 	function x() {
 		let t = e.getView().getZoom();
-		if (t === void 0) {
-			b.value = "";
-			return;
-		}
-		b.value = Number.isInteger(t) ? t.toString() : t.toFixed(1);
+		t === void 0 ? b.value = "" : b.value = Number.isInteger(t) ? t.toString() : t.toFixed(1);
 	}
 	function S() {
 		let t = Number.parseFloat(b.value);
@@ -16236,11 +16190,7 @@ function vg({ map: e, viewerApp: t, getSlideSource: n, zoomVisibleInput: r, zoom
 	}), b.addEventListener("blur", () => {
 		S();
 	}), b.addEventListener("keydown", (e) => {
-		if (e.key === "Enter") {
-			e.preventDefault(), b.blur();
-			return;
-		}
-		e.key === "Escape" && (e.preventDefault(), x(), b.blur());
+		e.key === "Enter" ? (e.preventDefault(), b.blur()) : e.key === "Escape" && (e.preventDefault(), x(), b.blur());
 	}), x();
 	function C() {
 		let t = n();
@@ -17288,9 +17238,7 @@ function qg(e) {
 		if (u = s.filter((t) => t.name.toLocaleLowerCase().includes(e)), o.replaceChildren(), u.length === 0) {
 			let e = document.createElement("div");
 			e.className = "viewer-file-select-empty", e.textContent = "No matches", o.append(e);
-			return;
-		}
-		u.forEach((e, t) => {
+		} else u.forEach((e, t) => {
 			let n = document.createElement("button");
 			n.type = "button", n.className = "viewer-file-select-option", n.textContent = e.name, n.title = e.path, n.setAttribute("role", "option"), n.setAttribute("aria-selected", (e.path === c).toString()), e.path === c && n.classList.add("selected"), t === d && n.classList.add("active"), n.addEventListener("mousedown", (e) => {
 				e.preventDefault();
@@ -17327,30 +17275,17 @@ function qg(e) {
 			n.disabled = e, t.classList.toggle("disabled", e), e && _();
 		}
 	}), n.addEventListener("click", () => {
-		if (t.classList.contains("open")) {
-			_();
-			return;
-		}
-		g();
+		t.classList.contains("open") ? _() : g();
 	}), n.addEventListener("keydown", (e) => {
 		e.key === "ArrowDown" && (e.preventDefault(), g());
 	}), a.addEventListener("input", () => {
 		d = -1, h();
 	}), a.addEventListener("keydown", (e) => {
-		if (e.key === "Escape") {
-			e.preventDefault(), _(), n.focus();
-			return;
-		}
-		if (u.length !== 0) {
-			if (e.key === "ArrowDown") {
-				e.preventDefault(), d = Math.min(d + 1, u.length - 1), h();
-				return;
-			}
-			if (e.key === "ArrowUp") {
-				e.preventDefault(), d = d <= 0 ? u.length - 1 : d - 1, h();
-				return;
-			}
-			if (e.key === "Enter") {
+		if (e.key === "Escape") e.preventDefault(), _(), n.focus();
+		else if (u.length !== 0) {
+			if (e.key === "ArrowDown") e.preventDefault(), d = Math.min(d + 1, u.length - 1), h();
+			else if (e.key === "ArrowUp") e.preventDefault(), d = d <= 0 ? u.length - 1 : d - 1, h();
+			else if (e.key === "Enter") {
 				e.preventDefault();
 				let t = u[d >= 0 ? d : 0];
 				t !== void 0 && m(t);
@@ -17412,11 +17347,7 @@ function Yg({ panel: e, toggle: t, container: n, configuredSlides: r, configured
 		v.disabled = !e, y.disabled = !e || !t, m.disabled = r.files.length === 0, h.disabled = !e || !i;
 	}
 	function E(e) {
-		if (!e) {
-			T();
-			return;
-		}
-		m.disabled = !0, h.disabled = !0, v.disabled = !0, y.disabled = !0;
+		e ? (m.disabled = !0, h.disabled = !0, v.disabled = !0, y.disabled = !0) : T();
 	}
 	return m.addEventListener("change", async (e) => {
 		let t = e.detail ?? m.value;
@@ -17507,9 +17438,7 @@ function Xg({ panel: e, toggle: t, list: n, getSlideLayer: r, getCurrentSlidePat
 		if (e.length === 0) {
 			let e = document.createElement("div");
 			e.className = "layer-editor-empty", e.textContent = "No layers loaded", n.appendChild(e);
-			return;
-		}
-		e.forEach(({ id: e, name: r, layer: i }) => {
+		} else e.forEach(({ id: e, name: r, layer: i }) => {
 			let a = document.createElement("div");
 			a.className = "layer-editor-item";
 			let s = document.createElement("div");
@@ -17612,9 +17541,7 @@ function Qg({ panel: e, toggle: t, list: n, selectAllButton: r, deselectAllButto
 		if (g.disabled = re.length === 0, r.disabled = !oe || t === "secondary", i.disabled = !oe || t === "secondary", a.disabled = !oe || t !== "type", s.disabled = !oe || t !== "type", e.length === 0) {
 			let e = document.createElement("div");
 			e.className = "annotations-panel-empty", e.textContent = "No annotations loaded", n.appendChild(e);
-			return;
-		}
-		for (let { layerName: r, annotationTypes: i } of e) {
+		} else for (let { layerName: r, annotationTypes: i } of e) {
 			let e = document.createElement("section");
 			e.className = "annotations-panel-group";
 			let a = document.createElement("div");
@@ -18176,15 +18103,14 @@ async function my(e, t, n, { refresh: r = !0 } = {}) {
 	}, await wy({ refresh: r });
 }
 async function hy({ refresh: e = !0 } = {}) {
-	if (Wv.size === 0) {
-		await fy(), ty = [], ny.clear(), Xv = "type", Zv = null, Qv = null, Ry.render();
-		return;
+	if (Wv.size === 0) await fy(), ty = [], ny.clear(), Xv = "type", Zv = null, Qv = null, Ry.render();
+	else {
+		if (ty = [], ny.clear(), Ry.render(), ty = await cy(), Xv === "property" && (Zv === null || !ty.includes(Zv) ? await dy({ refresh: e }) : await py(Zv, { refresh: e })), Xv === "secondary") {
+			let t = Qv, n = t === null ? void 0 : qv.get(t.layerName);
+			t === null || n === void 0 || !n.some((e) => Object.is(e, t.annotationType)) || Zv === null || !ty.includes(Zv) ? await dy({ refresh: e }) : await my(t.layerName, t.annotationType, Zv, { refresh: e });
+		}
+		Ry.render();
 	}
-	if (ty = [], ny.clear(), Ry.render(), ty = await cy(), Xv === "property" && (Zv === null || !ty.includes(Zv) ? await dy({ refresh: e }) : await py(Zv, { refresh: e })), Xv === "secondary") {
-		let t = Qv, n = t === null ? void 0 : qv.get(t.layerName);
-		t === null || n === void 0 || !n.some((e) => Object.is(e, t.annotationType)) || Zv === null || !ty.includes(Zv) ? await dy({ refresh: e }) : await my(t.layerName, t.annotationType, Zv, { refresh: e });
-	}
-	Ry.render();
 }
 async function gy(e, { refresh: t = !0 } = {}) {
 	let n = await Qh(iy(), ay(e)), r = [];
@@ -18492,25 +18418,18 @@ var Ny = await Uh("slide"), Py = await Uh("overlay"), Fy = Py.config?.color_dict
 		}
 		let t = Zv ?? ty[0];
 		if (t === void 0) throw Error("No annotation properties are available.");
-		if (e === "property") {
-			await py(t);
-			return;
-		}
-		if (e === "secondary") {
+		if (e === "property") await py(t);
+		else if (e === "secondary") {
 			let e = Qv ?? sy();
 			if (e === null) throw Error("No annotation classes are available.");
 			await my(e.layerName, e.annotationType, t);
-			return;
-		}
-		throw Error(`Unknown annotation display mode: ${e}`);
+		} else throw Error(`Unknown annotation display mode: ${e}`);
 	},
 	async onPropertyChange(e) {
 		if (Xv === "secondary") {
 			if (Qv === null) throw Error("No secondary annotation class is selected.");
 			await my(Qv.layerName, Qv.annotationType, e);
-			return;
-		}
-		await py(e);
+		} else await py(e);
 	},
 	async onSecondaryTypeChange(e, t) {
 		let n = Zv ?? ty[0];
