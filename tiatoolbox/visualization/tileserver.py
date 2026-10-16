@@ -819,7 +819,9 @@ class TileServer(Flask):
     def _create_session(self: TileServer) -> str:
         """Create and initialise a TileServer session."""
         session_id = "default" if self.default_session_id else secrets.token_urlsafe(16)
-
+        resp.set_cookie(
+            "session_id", session_id, httponly=True, secure=True
+        )  # skipcq: PTC-W6003
         self.renderers[session_id] = copy.deepcopy(self.renderer)
         self.overlaps[session_id] = 0
         self.layers[session_id] = {}
