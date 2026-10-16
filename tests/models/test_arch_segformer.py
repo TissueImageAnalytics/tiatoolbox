@@ -164,6 +164,37 @@ def test_segformer_forward_and_metadata() -> None:
     assert output.shape == (1, 2, 64, 64)
 
 
+def test_segformer_forward_matches_huggingface_module() -> None:
+    """Direct stage execution should match the Hugging Face segmentation head."""
+    model = Segformer(encoder_name="mit_b0", classes=2)
+    model.eval()
+    x = torch.randn(1, 3, 64, 64)
+
+    with torch.inference_mode():
+        output = model(x)
+        reference = model.activation(
+            model.upsampling(model.model(pixel_values=x).logits)
+        )
+
+    assert torch.allclose(output, reference, atol=1e-5)
+
+
+@pytest.mark.skipif(torch.cuda.device_count() < 2, reason="needs two CUDA devices")
+def test_segformer_dataparallel_forward() -> None:
+    """DataParallel inference should keep per-stage feature maps aligned."""
+    model = Segformer(encoder_name="mit_b0", classes=2)
+    model.eval()
+    wrapped = model.to("cuda")
+    batch = torch.randn(2, 3, 64, 64)
+
+    with torch.inference_mode():
+        single = model(batch.cuda())
+        parallel = wrapped(batch.cuda())
+
+    assert parallel.shape == (2, 2, 64, 64)
+    assert torch.allclose(parallel.cpu(), single.cpu(), atol=1e-4)
+
+
 def test_segformer_preproc_imagenet_normalization() -> None:
     """Preprocessing should apply ImageNet channel normalization."""
     image = np.ones((8, 8, 3), dtype=np.uint8) * 128
@@ -187,10 +218,14 @@ def test_segformer_postproc_with_numpy_and_dask() -> None:
     probs_da = da.from_array(probs_np, chunks=(16, 16, 2))
     mask_da = model.postproc(probs_da)
 
+    assert isinstance(mask_np, np.ndarray)
     assert mask_np.shape == (32, 32)
     assert mask_np.dtype == np.uint8
+
+    assert isinstance(mask_da, da.Array)
     assert mask_da.shape == (32, 32)
     assert mask_da.dtype == np.uint8
+    np.testing.assert_array_equal(mask_da.compute(), mask_np)
 
 
 def test_segformer_infer_batch_probability_output() -> None:
@@ -308,5 +343,22 @@ def test_native_hf_state_dict_still_loads() -> None:
         decoder_segmentation_channels=32,
     )
     incompatible = other.load_state_dict(state, strict=True)
+    assert incompatible.missing_keys == []
+    assert incompatible.unexpected_keys == []
+
+
+def test_wrapped_model_key_checkpoint_loads() -> None:
+    """Checkpoints nested under a ``model`` key should unwrap and load."""
+    model = Segformer(
+        encoder_name="mit_b0", classes=3, decoder_segmentation_channels=32
+    )
+    wrapped = {"model": model.state_dict(), "epoch": 10}
+
+    other = Segformer(
+        encoder_name="mit_b0",
+        classes=3,
+        decoder_segmentation_channels=32,
+    )
+    incompatible = other.load_state_dict(wrapped, strict=True)
     assert incompatible.missing_keys == []
     assert incompatible.unexpected_keys == []
