@@ -1193,6 +1193,12 @@ efficientunet-tissue_mask:
 
 segformerb5_distilled_PUMA_1:
     hf_repo_id: TIACentre/Virchow2_Distilled_Segmentation_Models
+    catalog:
+        description: >
+            Segment Tumour, Stroma, Necrosis, Blood Vessels, Epidermis in melanoma.
+        primary site: skin
+        supported_sites:
+            - skin
     architecture:
         class: segformer.Segformer
         kwargs:
@@ -1224,6 +1230,12 @@ segformerb5_distilled_PUMA_1:
 
 segformerb5_distilled_PUMA_2:
     hf_repo_id: TIACentre/Virchow2_Distilled_Segmentation_Models
+    catalog:
+        description: >
+            Segment Tumour, Stroma, Necrosis, Blood Vessels, Epidermis in melanoma.
+        primary site: skin
+        supported_sites:
+            - skin
     architecture:
         class: segformer.Segformer
         kwargs:
@@ -1255,6 +1267,12 @@ segformerb5_distilled_PUMA_2:
 
 segformerb5_distilled_PUMA_5:
     hf_repo_id: TIACentre/Virchow2_Distilled_Segmentation_Models
+    catalog:
+        description: >
+            Segment Tumour, Stroma, Necrosis, Blood Vessels, Epidermis in melanoma.
+        primary site: skin
+        supported_sites:
+            - skin
     architecture:
         class: segformer.Segformer
         kwargs:
@@ -1286,6 +1304,16 @@ segformerb5_distilled_PUMA_5:
 
 segformerb5_distilled_IGNITE_1:
     hf_repo_id: TIACentre/Virchow2_Distilled_Segmentation_Models
+    catalog:
+        description: >
+            Segment Tumour, Stroma, Necrosis, Macrophages, Rest in non-small cell lung cancer and its metastatic sites.
+        primary site: lung
+        supported_sites:
+            - lung
+            - liver
+            - brain
+            - adrenal gland
+            - kidney
     architecture:
         class: segformer.Segformer
         kwargs:
@@ -1318,6 +1346,12 @@ segformerb5_distilled_IGNITE_1:
 
 segformerb5_distilled_BEETLE_1:
     hf_repo_id: TIACentre/Virchow2_Distilled_Segmentation_Models
+    catalog:
+        description: >
+            Segment Invasive epithelium, Non-invasive epithelium, Necrosis in breast cancer images.
+        primary site: breast
+        supported_sites:
+            - breast
     architecture:
         class: segformer.Segformer
         kwargs:
