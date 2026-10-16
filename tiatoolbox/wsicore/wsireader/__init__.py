@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
+from .annotation_store import AnnotationStoreReader
+
 # Import base classes and utility functions
 from .base import (
-    AnnotationStoreReader,
     ArrayView,
     FsspecJsonWSIReader,
     OpenSlideWSIReader,

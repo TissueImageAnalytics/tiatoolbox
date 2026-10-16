@@ -20,8 +20,8 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from tiatoolbox.type_hints import WSIPostProc
 
+    from .annotation_store import AnnotationStoreReader
     from .base import (
-        AnnotationStoreReader,
         FsspecJsonWSIReader,
         OpenSlideWSIReader,
         TIFFWSIReader,
@@ -244,7 +244,7 @@ def try_annotation_store(
     kwargs: WSIReaderExtraParams,
 ) -> AnnotationStoreReader | None:
     """Try to create an AnnotationStoreReader if the file is a .db."""
-    from .base import AnnotationStoreReader  # noqa: PLC0415
+    from .annotation_store import AnnotationStoreReader  # noqa: PLC0415
 
     if last_suffix == ".db":
         reader_kwargs: WSIReaderParams = {**kwargs, "post_proc": post_proc}
