@@ -61,7 +61,7 @@ class DICOMWSIReader(WSIReader):
         mpp = (mm_per_pixel.width * 1e3, mm_per_pixel.height * 1e3)
 
         objective_power = None
-        ops_seq = getattr(dataset, "OpticalPathSequence", None)
+        ops_seq = getattr(dataset, "_optical_path_sequence", None)
         if ops_seq:
             ops = ops_seq[0]
             if hasattr(ops, "ObjectiveLensPower"):
@@ -73,6 +73,7 @@ class DICOMWSIReader(WSIReader):
             mpp=mpp,
         )
 
+        vendor = getattr(dataset.base_metadata.equipment, "manufacturer", "Unknown")
         return WSIMeta(
             slide_dimensions=level_dimensions[0],
             level_dimensions=level_dimensions,
@@ -81,7 +82,7 @@ class DICOMWSIReader(WSIReader):
             mpp=mpp,
             objective_power=objective_power,
             level_count=len(level_dimensions),
-            vendor=dataset.Manufacturer,
+            vendor=vendor,
             file_path=self.input_path,
         )
 
