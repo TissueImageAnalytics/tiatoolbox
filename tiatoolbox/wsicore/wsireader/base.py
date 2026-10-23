@@ -9,7 +9,7 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from numbers import Number
 from pathlib import Path
-from typing import TYPE_CHECKING, Unpack
+from typing import TYPE_CHECKING, Self, Unpack
 
 import cv2
 import matplotlib.colors as mcolors
@@ -296,6 +296,21 @@ class WSIReader:
 
         """
         self._m_info = meta
+
+    def close(self: WSIReader) -> None:
+        """Release native file handles; the reader is unusable afterwards.
+
+        Readers without open handles, such as in-memory readers, do nothing.
+        Readers also work as context managers that close on exit.
+        """
+
+    def __enter__(self: WSIReader) -> Self:
+        """Return this reader, to be closed when the context exits."""
+        return self
+
+    def __exit__(self: WSIReader, *args: object) -> None:
+        """Close the reader's native handles."""
+        self.close()
 
     def get_post_proc(self: WSIReader, post_proc: str | callable | None) -> callable:
         """Get the post-processing function.
@@ -1600,6 +1615,10 @@ class OpenSlideWSIReader(WSIReader):
         super().__init__(input_img=input_img, mpp=mpp, power=power, post_proc=post_proc)
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
+    def close(self: OpenSlideWSIReader) -> None:
+        """Close the OpenSlide handle."""
+        self.openslide_wsi.close()
+
     def read_rect(
         self: OpenSlideWSIReader,
         location: IntPair,
@@ -2832,6 +2851,15 @@ class TIFFWSIReader(WSIReader):
 
         self.tiff_reader_delegate = TIFFWSIReaderDelegate(self, self.level_arrays)
 
+    def close(self: TIFFWSIReader) -> None:
+        """Close the zarr stores and TIFF file opened for this slide."""
+        if (handle := getattr(self, "_zarr_cache", None)) is not None:
+            handle.close()
+        if (handle := getattr(self, "_zarr_store", None)) is not None:
+            handle.close()
+        if (handle := getattr(self, "tiff", None)) is not None:
+            handle.close()
+
     def _get_colors_from_meta(self: TIFFWSIReader) -> None:
         """Get colors from metadata if they exist."""
         if not isinstance(self.post_proc, postproc_defs.MultichannelToRGB):
@@ -3450,6 +3478,13 @@ class FsspecJsonWSIReader(WSIReader):
             )
         )
         self.tiff_reader_delegate = TIFFWSIReaderDelegate(self, self.level_arrays)
+
+    def close(self: FsspecJsonWSIReader) -> None:
+        """Close the zarr stores opened for this slide."""
+        if (handle := getattr(self, "_zarr_cache", None)) is not None:
+            handle.close()
+        if (handle := getattr(self, "_zarr_store", None)) is not None:
+            handle.close()
 
     def __set_axes(self) -> None:  # pragma: no cover
         """Loads axes from the JSON file.

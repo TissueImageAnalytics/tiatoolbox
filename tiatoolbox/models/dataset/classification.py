@@ -31,6 +31,18 @@ class _TorchPreprocCaller:
         tensor: torch.Tensor = self.func(img)
         return tensor.permute((1, 2, 0))
 
+    def __eq__(self: _TorchPreprocCaller, other: object) -> bool:
+        """Treat predefined preprocessing for the same dataset as equal."""
+        name = getattr(self, "dataset_name", None)
+        if name is None or not isinstance(other, _TorchPreprocCaller):
+            return NotImplemented
+        return name == getattr(other, "dataset_name", None)
+
+    def __hash__(self: _TorchPreprocCaller) -> int:
+        """Hash consistently with equality."""
+        name = getattr(self, "dataset_name", None)
+        return hash(name) if name is not None else id(self)
+
 
 def predefined_preproc_func(dataset_name: str) -> _TorchPreprocCaller:
     """Get the preprocessing information used for the pretrained model.
@@ -59,5 +71,7 @@ def predefined_preproc_func(dataset_name: str) -> _TorchPreprocCaller:
             msg,
         )
 
-    preprocs = preproc_dict[dataset_name]
-    return _TorchPreprocCaller(preprocs)
+    preproc = _TorchPreprocCaller(preproc_dict[dataset_name])
+    # Lets trained-model configs record and restore the same preprocessing.
+    preproc.dataset_name = dataset_name
+    return preproc
