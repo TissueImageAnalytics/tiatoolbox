@@ -13,6 +13,14 @@ updates:
 
   - package-ecosystem: "npm"
     directory: "/tiatoolbox/visualization/openlayers"
-    target-branch: "develop"
     schedule:
-      interval: "daily"
+      interval: "monthly"
+    groups:
+      openlayers-version-updates:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+      openlayers-security-updates:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
