@@ -107,6 +107,10 @@ Demonstrates the use of the TIAToolbox implementation of the [KongNet model](htt
 
 [![image](../docs/images/nucleus_detection_classification.png)](./12-nucleus-detection.ipynb)
 
+### 13. Nucleus Segmentation Post-processing with RankSEG ([13-rankseg-postprocessing](./13-rankseg-postprocessing.ipynb))
+
+Compare argmax and RankSEG decoding of the same MicroNet probability maps, without retraining. This notebook uses a CoNSeP-trained model on Kumar test images, retains TIAToolbox inference and instance postprocessing, and evaluates foreground Dice. It includes a visual comparison and an optional evaluation of all 14 test images.
+
 ## B) Examples of High-Level Analysis (Pipelines) Using TIAToolbox
 
 List of Jupyter notebooks demonstrating how to use TIAToolbox for high-level analysis in computational pathology.
