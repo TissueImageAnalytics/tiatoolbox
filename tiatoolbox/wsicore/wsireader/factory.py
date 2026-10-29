@@ -10,7 +10,6 @@ import numpy as np
 import openslide
 from upath import UPath
 
-from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
 from .detection import is_dicom, is_ngff, is_valid_zarr_fsspec
@@ -88,7 +87,7 @@ def verify_supported_wsi(input_path: Path, **kwargs: Unpack[WSIReaderParams]) ->
     ):
         return
 
-    _, _, suffixes = utils.misc.split_path_name_ext(input_path)
+    suffixes = input_path.suffixes
 
     if suffixes and suffixes[-1] not in [
         ".svs",
@@ -147,7 +146,7 @@ def _handle_special_cases(
     """
     from .base import _handle_virtual_wsi  # noqa: PLC0415
 
-    _, _, suffixes = utils.misc.split_path_name_ext(input_path)
+    suffixes = input_path.suffixes
     last_suffix = suffixes[-1] if suffixes else None
     post_proc = "auto" if post_proc is None else post_proc
 

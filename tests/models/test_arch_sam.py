@@ -79,6 +79,8 @@ def test_sam_forward_point_prompts_only(
 ) -> None:
     """Test SAM forward pass using point prompts only."""
     sam = SAM.__new__(SAM)
+    # Initialize PyTorch bookkeeping without loading pretrained SAM weights.
+    torch.nn.Module.__init__(sam)
 
     captured: dict[str, object] = {}
 
