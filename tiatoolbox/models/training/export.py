@@ -8,6 +8,7 @@ way as a pretrained one, and can be passed straight to an inference engine.
 
 from __future__ import annotations
 
+import inspect
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -17,6 +18,11 @@ import yaml
 
 from tiatoolbox import logger
 from tiatoolbox.models.architecture import _build_architecture, _build_ioconfig
+from tiatoolbox.models.architecture.vanilla import (
+    CNNModel,
+    TimmModel,
+    resolve_output_mode,
+)
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
 from tiatoolbox.models.models_abc import load_model_state_dict, unwrap_model
 from tiatoolbox.models.training.checkpoint import _atomic_output, load_checkpoint
@@ -44,6 +50,14 @@ def _plain(value: object) -> object:
     return value
 
 
+def _default_argument(cls: type, name: str) -> object:
+    """Return the default of a constructor argument, or ``None`` without one."""
+    parameter = inspect.signature(cls.__init__).parameters.get(name)
+    if parameter is None or parameter.default is inspect.Parameter.empty:
+        return None
+    return parameter.default
+
+
 def _class_path(cls: type, package: str) -> str:
     """Name a class relative to a TIAToolbox package, or in full outside it."""
     return f"{cls.__module__}.{cls.__qualname__}".removeprefix(f"{package}.")
@@ -62,7 +76,10 @@ class ModelExport:
 
     Args:
         model_kwargs (dict):
-            Keyword arguments that construct the trained architecture.
+            Keyword arguments that construct the trained architecture. For
+            ``CNNModel`` and ``TimmModel`` they must rebuild the same head:
+            ``num_classes`` and ``output_mode`` are checked against the
+            trained model.
         ioconfig (ModelIOConfigABC):
             Inference IO configuration, such as the training resolution and
             patch shape. Optional.
@@ -76,9 +93,40 @@ class ModelExport:
     ioconfig: ModelIOConfigABC | None = None
     class_dict: dict | None = None
 
+    def check_model(self, model: nn.Module) -> None:
+        """Raise when ``model_kwargs`` would rebuild a different classifier head.
+
+        ``CNNModel`` and ``TimmModel`` choose their inference activation from
+        ``num_classes`` and ``output_mode``, so the recorded arguments must
+        resolve to the trained model's values.
+        """
+        model = unwrap_model(model)
+        if not isinstance(model, (CNNModel, TimmModel)):
+            return
+        name = type(model).__name__
+        num_classes = self.model_kwargs.get(
+            "num_classes", _default_argument(type(model), "num_classes")
+        )
+        try:
+            output_mode = resolve_output_mode(
+                self.model_kwargs.get("output_mode", "auto"), num_classes
+            )
+        except ValueError as error:
+            msg = f"ModelExport.model_kwargs cannot rebuild {name}: {error}"
+            raise ValueError(msg) from error
+        if num_classes != model.num_classes or output_mode != model.output_mode:
+            msg = (
+                f"ModelExport.model_kwargs rebuild {name} with "
+                f"num_classes={num_classes} and output_mode='{output_mode}', but "
+                f"the trained model has num_classes={model.num_classes} and "
+                f"output_mode='{model.output_mode}'. Record the trained head."
+            )
+            raise ValueError(msg)
+
     def to_config(self, model: nn.Module, weights: str | Path) -> dict[str, Any]:
         """Return the registry-format entry for ``model`` and its weight file."""
         model = unwrap_model(model)
+        self.check_model(model)
         config: dict[str, Any] = {
             "architecture": {
                 "class": _class_path(type(model), "tiatoolbox.models.architecture"),

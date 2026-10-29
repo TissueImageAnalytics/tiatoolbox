@@ -171,6 +171,9 @@ tissue with ``input_masks`` and ``min_mask_ratio``.
 - ``jitter=N`` shifts each patch by up to ``N`` pixels in training passes, with
   a new seeded offset every epoch. Validation passes and direct indexing use
   the grid.
+- With a preset's ``scale_jitter``, a zoomed patch is read from a larger or
+  smaller window centred on it and resized to the patch size; its ``bounds``
+  give the window read.
 - ``compute_targets(builder)`` builds every patch's target from the
   annotations alone, without reading pixels. With ``PresenceTargetBuilder``, it
   labels patches for a stratified split or a ``ClassBalancedIndexSampler``.
@@ -209,26 +212,51 @@ Augmentation
    * - ``light``
      - Flips and quarter turns; brightness, contrast or gamma changes.
    * - ``medium`` (default)
-     - Adds small rotations, shifts and scaling; noise, blur or JPEG
-       compression; and stain augmentation.
+     - Adds noise, blur or JPEG compression, and stain augmentation.
    * - ``heavy``
      - The ``medium`` operations with larger ranges and higher probabilities.
+   * - ``strong``
+     - Flips and quarter turns, with ``StrongAugment`` in place of the other
+       appearance changes: each patch gets zero, two, three or four random
+       colour, intensity, filter, noise or JPEG operations, many of them far
+       from realistic staining.
 
 Stronger colour and stain augmentation helps a model cope with slides stained
-or scanned differently from its training data.
+or scanned differently from its training data. ``strong`` pushes this
+furthest, so that a model learns morphology rather than stain appearance. It
+uses :class:`~tiatoolbox.tools.strongaugment.StrongAugment`, TIAToolbox's port
+of `StrongAugment <https://github.com/jopo666/StrongAugment>`_ (Pohjonen et
+al., `arXiv:2206.15274 <https://arxiv.org/abs/2206.15274>`_), which can also be
+used on its own.
 
-Presets change geometry first, then appearance. Spatial targets follow the
-image's geometry, using the interpolation their target builder declares:
-nearest-neighbour for ``"mask"`` targets, continuous interpolation for
-``"image"`` targets such as heatmaps. Non-spatial labels are unchanged. Pass
+Presets change geometry first, then appearance. At every level, they flip
+patches and turn them by multiples of 90 degrees, which moves pixels exactly.
+Other geometry is opt-in, through arguments of all three functions:
+
+- ``scale_jitter=0.1`` zooms half the patches by a factor between 0.9 and 1.1.
+  The range is centred on one, so the scale seen in training stays unbiased;
+  a zoom that only magnifies trains at a finer scale than inference sees and
+  did worse than no zoom at all. Zooming out pads the patch.
+  ``crop_size=224`` trains on random crops of that size, which also give the
+  zoom room: a crop of 224 in a 256-pixel patch zooms by 10% without padding.
+  ``SlideAnnotationPatchDataset`` reads a larger or smaller window around each
+  patch instead, so it never pads.
+- ``rotation=20`` rotates half the patches by up to 20 degrees. It resamples
+  the targets, which can break one-pixel boundaries, and pads the corners.
+
+Padding is white in images, ``target_fill`` in masks and zero in heatmaps. To
+keep padded mask pixels out of the loss, pass ``target_fill=task.ignore_index``.
+The value must fit the mask's dtype, so uint8 masks need an ignore value such
+as 255, with the task's ``ignore_index`` set to match.
+
+``PatchAnnotationDataset`` and ``SlideAnnotationPatchDataset`` build their
+targets for the cropped or zoomed window, so masks, one-pixel boundaries and
+centroids are drawn at the training resolution rather than resampled. Other
+spatial targets follow the image, using the interpolation their target builder
+declares: nearest-neighbour for ``"mask"`` targets, bilinear for ``"image"``
+targets such as heatmaps. Non-spatial labels are unchanged. Pass
 ``target_builder=`` to ``get_annotation_augmentation`` so that it knows which
 targets are which.
-
-Rotation and scaling expose padding, which is white in images and zero in
-targets. To keep padded mask pixels out of the loss, pass
-``target_fill=task.ignore_index`` to the segmentation or annotation preset. The
-value must fit the mask's dtype, so uint8 masks need an ignore value such as
-255, with the task's ``ignore_index`` set to match.
 
 Stain augmentation applies to RGB images only: it estimates the stains of each
 patch separately and skips patches with almost no tissue. Preset randomness is
@@ -262,9 +290,17 @@ Outputs and targets
 ~~~~~~~~~~~~~~~~~~~
 
 Built-in tasks expect raw logits; regression heads take predictions directly.
-TIAToolbox's ``CNNModel`` and ``TimmModel`` return logits from ``forward`` and
-apply softmax only in ``infer_batch``, so apply ``torch.softmax`` yourself when
-calling them directly for probabilities.
+TIAToolbox's ``CNNModel`` and ``TimmModel`` return logits from ``forward``.
+Their ``infer_batch``, which engines call, turns logits into probabilities
+according to the model's ``output_mode``: softmax for ``single_label`` heads,
+whose ``postproc_func`` then takes the argmax, and sigmoid for ``binary`` and
+``multi_label`` heads, whose ``postproc_func`` labels each output above 0.5.
+``output_mode="auto"`` (the default) is ``binary`` for one output and
+``single_label`` otherwise, so a multi-label head must be built with
+``output_mode="multi_label"``. The trainer raises when a classifier's mode
+disagrees with its ``ClassificationTask``, and ``ModelExport`` checks that
+``model_kwargs`` rebuilds the same head. Apply the activation yourself when
+calling ``forward`` directly.
 
 Output and target sizes must match: tasks do not resize or crop. When a model
 returns several outputs, a task selects one with ``output_key`` for a
@@ -554,6 +590,10 @@ returns the model with its weights and the IO configuration, as
     model, ioconfig = load_trained_model("run")
     PatchPredictor(model=model).run(images=..., ioconfig=ioconfig, ...)
 
+- ``model_kwargs`` must rebuild the trained head: for ``CNNModel`` and
+  ``TimmModel``, ``num_classes`` and ``output_mode`` are checked against the
+  model when the trainer starts and when the configuration is written, so a
+  multi-label head needs ``"output_mode": "multi_label"`` in ``model_kwargs``.
 - Only classes from ``tiatoolbox.models.architecture`` are rebuilt from the
   file, so loading never imports other code. For any other model, pass
   ``model=`` an instance to load the weights into, or a class to build from the

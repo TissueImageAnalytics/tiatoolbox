@@ -887,6 +887,20 @@ class ClassificationTask(TrainingTaskABC):
             return self.target_mode
         return "single_label" if self.loss == "cross_entropy" else None
 
+    def required_output_mode(
+        self: ClassificationTask, num_classes: int
+    ) -> Literal["single_label", "binary", "multi_label"]:
+        """Return the ``output_mode`` a classifier with ``num_classes`` outputs needs.
+
+        TIAToolbox's ``CNNModel`` and ``TimmModel`` apply softmax or sigmoid
+        in ``infer_batch`` according to their ``output_mode``, which must
+        match the objective they were trained with.
+        """
+        declared = self._declared_target_mode()
+        if declared is not None:
+            return declared
+        return "binary" if num_classes == 1 else "multi_label"
+
     def _resolve_target_mode(
         self: ClassificationTask,
         logits: torch.Tensor,

@@ -32,6 +32,7 @@ from tiatoolbox.models.training._resources import (
     _ReaderSpec,
     _worker_spec,
 )
+from tiatoolbox.models.training.augmentations import _window_layout, _zoom_image
 from tiatoolbox.models.training.samplers import generate_slide_patch_coordinates
 from tiatoolbox.wsicore.wsireader import WSIReader
 
@@ -39,6 +40,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable
     from types import EllipsisType
 
+    from tiatoolbox.models.training.augmentations import _ScaleJitter
     from tiatoolbox.models.training.targets import TargetBuilderABC, TargetType
     from tiatoolbox.type_hints import Resolution, Units
     from tiatoolbox.wsicore.wsireader import VirtualWSIReader
@@ -164,6 +166,24 @@ def _ensure_tensor_target(  # noqa: PLR0911
             target = np.transpose(target, (2, 0, 1))
         return torch.from_numpy(np.ascontiguousarray(target))
     return torch.tensor(target)
+
+
+def _window_bounds(
+    bounds: tuple[float, float, float, float],
+    window: tuple[int, int, int, int],
+    shape: tuple[int, int],
+) -> tuple[float, float, float, float]:
+    """Map a pixel window of a ``shape`` patch with ``bounds`` to the same space."""
+    x_min, y_min, x_max, y_max = bounds
+    height, width = shape
+    scale_x, scale_y = (x_max - x_min) / width, (y_max - y_min) / height
+    left, top, right, bottom = window
+    return (
+        x_min + left * scale_x,
+        y_min + top * scale_y,
+        x_min + right * scale_x,
+        y_min + bottom * scale_y,
+    )
 
 
 def _discover_files(
@@ -304,11 +324,21 @@ class _TrainingDataset:
         self.target_transform = target_transform
         self.preproc = preproc
 
+    def _scale_jitter(self) -> _ScaleJitter | None:
+        """Return the preset zoom that annotation datasets apply while reading."""
+        return getattr(self.pair_transform, "scale_jitter", None)
+
     def _transform_sample(
-        self, image: object, target: object
+        self, image: object, target: object, *, zoomed: bool = False
     ) -> tuple[torch.Tensor, object]:
-        """Apply the transforms and ``preproc``; return a CHW image tensor."""
-        if self.pair_transform is not None:
+        """Apply the transforms and ``preproc``; return a CHW image tensor.
+
+        ``zoomed`` marks a sample to which the dataset applied the preset's
+        scale jitter itself.
+        """
+        if zoomed:
+            image, target = self.pair_transform(image, target, apply_scale_jitter=False)
+        elif self.pair_transform is not None:
             image, target = self.pair_transform(image, target)
         if self.image_transform is not None:
             image = self.image_transform(image)
@@ -467,6 +497,11 @@ def _open_cached_reader(
 class PatchFolderClassificationDataset(_TrainingDataset, DatasetFolder):
     """Classification dataset where each class is represented by one folder.
 
+    Targets are the folder's class index as an int64 tensor. A
+    ``target_transform`` may return anything :class:`ClassificationTask`
+    accepts, such as a float vector of class probabilities or a multi-hot
+    label vector; its dtype is kept.
+
     Example directory structure:
 
     .. code-block:: text
@@ -539,9 +574,9 @@ class PatchFolderClassificationDataset(_TrainingDataset, DatasetFolder):
         self._prepare_sample(index)
         path, target = self.samples[index]
         image, target = self._transform_sample(self.loader(path), target)
-        if not isinstance(target, torch.Tensor):
-            target = torch.tensor(target, dtype=torch.long)
-        return {"image": image, "target": target}
+        # Folder labels become int64 tensors; a ``target_transform`` keeps the
+        # dtype it returns, such as float soft labels or multi-hot vectors.
+        return {"image": image, "target": _ensure_tensor_target(target)}
 
 
 class _NpyArray:
@@ -661,6 +696,12 @@ class PatchAnnotationDataset(_TrainingDataset, Dataset):
     and optional ``patch_bounds`` are interpreted in the same slide/baseline
     coordinate space. The generated target arrays are in patch pixel
     coordinates matching the loaded image shape.
+
+    With an augmentation preset as ``pair_transform``, the dataset applies the
+    preset's crops and zooms itself: it resizes a window of the patch and
+    builds the target for that window, so thin targets stay exact. Where the
+    window extends past the patch, the image is padded white and the target
+    with the preset's ``target_fill``.
 
     Use the dataset as a context manager or call ``close()`` to release cached
     files promptly. Supplied stores are borrowed; an in-memory SQLite store is
@@ -835,14 +876,35 @@ class PatchAnnotationDataset(_TrainingDataset, Dataset):
             if self.patch_bounds is not None
             else (0.0, 0.0, float(width), float(height))
         )
+        # Crop or zoom a window of the patch and build the target for that
+        # window, so thin targets are drawn at the training resolution. Where
+        # the window extends past the patch, the image is padded white and the
+        # target is built for the part inside, then padded to match.
+        output_shape = target_shape = (height, width)
+        box = None
+        scale_jitter = self._scale_jitter()
+        if scale_jitter is not None:
+            window, output_shape = scale_jitter.sample_window((height, width))
+            layout = _window_layout(window, (height, width), output_shape)
+            if layout is None:
+                output_shape = (height, width)
+            elif (window, output_shape) != ((0, 0, width, height), (height, width)):
+                inner, box = layout
+                image = _zoom_image(image, window, output_shape)
+                bounds = _window_bounds(bounds, inner, (height, width))
+                target_shape = (box[3] - box[1], box[2] - box[0])
         store = self._get_store(index)
         target = self.target_builder.create_target(
             store=store,
             patch_bounds=bounds,
-            output_shape=(height, width),
+            output_shape=target_shape,
         )
+        if box is not None and box != (0, 0, output_shape[1], output_shape[0]):
+            target = scale_jitter.pad_target(target, box, output_shape)
 
-        image, target = self._transform_sample(image, target)
+        image, target = self._transform_sample(
+            image, target, zoomed=scale_jitter is not None
+        )
         return {"image": image, "target": _ensure_tensor_target(target)}
 
 
@@ -865,6 +927,12 @@ class SlideAnnotationPatchDataset(_TrainingDataset, Dataset):
     per sample and epoch, so the grid does not repeat exactly. Validation
     passes and direct indexing use the grid. ``within_bound`` keeps jittered
     patches inside the slide.
+
+    With an augmentation preset as ``pair_transform``, the dataset applies the
+    preset's crops and zooms itself: it reads a smaller or larger window
+    centred on the patch, resizes it to the training size and builds the target
+    for that window, so zooming out needs no padding and thin targets stay
+    exact. ``bounds`` then gives the window read.
     """
 
     def __init__(  # noqa: PLR0913
@@ -973,6 +1041,25 @@ class SlideAnnotationPatchDataset(_TrainingDataset, Dataset):
         offset_x, offset_y = int(offset_x), int(offset_y)
         return (x_min + offset_x, y_min + offset_y, x_max + offset_x, y_max + offset_y)
 
+    def _zoomed_bounds(
+        self: SlideAnnotationPatchDataset,
+        scale_jitter: _ScaleJitter,
+        bounds: tuple[int, int, int, int],
+        reader: WSIReader,
+    ) -> tuple[tuple[int, int, int, int], tuple[int, int]]:
+        """Return the window to read around a patch and the shape to resize it to."""
+        x_min, y_min, x_max, y_max = bounds
+        (left, top, right, bottom), output_shape = scale_jitter.sample_window(
+            (y_max - y_min, x_max - x_min), centred=True
+        )
+        x_start, y_start = x_min + left, y_min + top
+        if self.within_bound:
+            width, height = reader.slide_dimensions(self.resolution, self.units)
+            x_start = int(np.clip(x_start, 0, max(width - (right - left), 0)))
+            y_start = int(np.clip(y_start, 0, max(height - (bottom - top), 0)))
+        window = (x_start, y_start, x_start + right - left, y_start + bottom - top)
+        return window, output_shape
+
     def compute_targets(
         self: SlideAnnotationPatchDataset,
         target_builder: TargetBuilderABC | None = None,
@@ -1059,12 +1146,23 @@ class SlideAnnotationPatchDataset(_TrainingDataset, Dataset):
             tuple(int(value) for value in self.sample_bounds[index].tolist()),
             reader,
         )
+        # Zooming reads a larger or smaller window around the patch and resizes
+        # it to the training shape; targets are built for that window below.
+        scale_jitter = self._scale_jitter()
+        if scale_jitter is not None:
+            bounds_at_resolution, output_shape = self._zoomed_bounds(
+                scale_jitter, bounds_at_resolution, reader
+            )
         image = reader.read_bounds(
             bounds_at_resolution,
             resolution=self.resolution,
             units=self.units,
             coord_space="resolution",
         )
+        if scale_jitter is not None and image.shape[:2] != output_shape:
+            image = _zoom_image(
+                image, (0, 0, image.shape[1], image.shape[0]), output_shape
+            )
         height, width = image.shape[:2]
 
         # Annotation stores use baseline slide coordinates. Convert the patch
@@ -1085,7 +1183,9 @@ class SlideAnnotationPatchDataset(_TrainingDataset, Dataset):
             output_shape=(height, width),
         )
 
-        image, target = self._transform_sample(image, target)
+        image, target = self._transform_sample(
+            image, target, zoomed=scale_jitter is not None
+        )
         bounds_tensor = torch.as_tensor(bounds_at_resolution, dtype=torch.long)
         return {
             "image": image,

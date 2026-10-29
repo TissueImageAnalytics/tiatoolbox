@@ -1,4 +1,13 @@
-"""Preconfigured augmentation presets for TIAToolbox training datasets."""
+"""Preconfigured augmentation presets for TIAToolbox training datasets.
+
+Every level flips patches and turns them by multiples of 90 degrees, which
+moves pixels exactly. ``light``, ``medium`` and ``heavy`` add increasingly
+strong appearance changes: colour, noise, blur, JPEG and stain augmentation.
+``strong`` replaces the appearance changes with
+:class:`~tiatoolbox.tools.strongaugment.StrongAugment`, which helps models learn
+morphology independently of stain appearance. Zooms, crops and free rotation
+are opt-in.
+"""
 
 from __future__ import annotations
 
@@ -19,6 +28,7 @@ from tiatoolbox.models.training.targets import (
     TargetBuilderABC,
 )
 from tiatoolbox.tools.stainaugment import StainAugmentor
+from tiatoolbox.tools.strongaugment import StrongAugment
 from tiatoolbox.utils.misc import get_luminosity_tissue_mask
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -26,8 +36,10 @@ if TYPE_CHECKING:  # pragma: no cover
 
 _IMAGE_DIMS = 3
 _MIN_STAIN_PIXELS = 2
+_ZOOM_PROBABILITY = 0.5
 
-AugmentationLevel = Literal["light", "medium", "heavy"]
+AugmentationLevel = Literal["light", "medium", "heavy", "strong"]
+_LEVELS = ("light", "medium", "heavy", "strong")
 _TargetPath = tuple[str, ...]
 
 
@@ -49,14 +61,24 @@ class TrainingAugmentationPreset:
     its parts. Presets augment raw HWC images and preserve their dtype, so the
     model's ``preproc`` (a separate dataset argument) runs afterwards. The
     parts remain available for custom pipelines.
+
+    ``scale_jitter`` crops or zooms a sample before the other geometry,
+    padding where it zooms out. TIAToolbox's annotation datasets apply it
+    themselves when they read the sample, building targets for the window,
+    and then call the preset with ``apply_scale_jitter=False``.
     """
 
     pair_transform: Callable | None = None
     image_transform: Callable | None = None
     target_transform: Callable | None = None
+    scale_jitter: _ScaleJitter | None = None
 
-    def __call__(self, image: np.ndarray, target: object) -> tuple[object, object]:
-        """Apply paired geometry, image appearance, then target transforms."""
+    def __call__(
+        self, image: np.ndarray, target: object, *, apply_scale_jitter: bool = True
+    ) -> tuple[object, object]:
+        """Apply zoom and paired geometry, image appearance, then target transforms."""
+        if apply_scale_jitter and self.scale_jitter is not None:
+            image, target = self.scale_jitter(image, target)
         if self.pair_transform is not None:
             image, target = self.pair_transform(image, target)
         if self.image_transform is not None:
@@ -68,7 +90,12 @@ class TrainingAugmentationPreset:
     def set_random_seed(self, seed: int) -> None:
         """Derive independent seeds for each seeded part from one sample seed."""
         for offset, transform in enumerate(
-            (self.pair_transform, self.image_transform, self.target_transform)
+            (
+                self.pair_transform,
+                self.image_transform,
+                self.target_transform,
+                self.scale_jitter,
+            )
         ):
             if hasattr(transform, "set_random_seed"):
                 state = np.random.SeedSequence([seed, offset]).generate_state(1)
@@ -162,8 +189,27 @@ class _StainAugmentation(nn.Module):
         return _to_tv_tensor(augmentor(array))
 
 
+class _StrongAugmentation(nn.Module):
+    """Apply StrongAugment with a generator drawn from the sample's seeded stream."""
+
+    def __init__(self, augmentor: StrongAugment) -> None:
+        super().__init__()
+        self.augmentor = augmentor
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        """Augment RGB and greyscale images; return others, and no-ops, unchanged."""
+        if image.shape[0] not in {1, _IMAGE_DIMS}:
+            return image
+        rng = np.random.default_rng(int(torch.randint(0, 2**32, ()).item()))
+        operations = self.augmentor.sample_operations(rng)
+        if not operations:
+            return image
+        ndim = _IMAGE_DIMS if image.shape[0] == _IMAGE_DIMS else 2
+        return _to_tv_tensor(self.augmentor.apply(_to_numpy(image, ndim), operations))
+
+
 class _Uint8Transform(nn.Module):
-    """Adapt uint8-only JPEG and stain transforms to other image dtypes."""
+    """Adapt uint8-only JPEG, stain and StrongAugment transforms to other dtypes."""
 
     def __init__(self, transform: nn.Module) -> None:
         super().__init__()
@@ -197,6 +243,229 @@ class _RandomQuarterTurn(nn.Module):
             for value in inputs
         )
         return outputs[0] if len(outputs) == 1 else outputs
+
+
+def _sample_zoom_window(
+    rng: np.random.Generator,
+    input_shape: tuple[int, int],
+    output_shape: tuple[int, int],
+    scale: tuple[float, float],
+    p: float,
+    *,
+    centred: bool = False,
+) -> tuple[int, int, int, int]:
+    """Sample the ``(x_min, y_min, x_max, y_max)`` window to resize to ``output_shape``.
+
+    With probability ``p`` the window is zoomed by a factor drawn from
+    ``scale``, where factors above one zoom in; otherwise it is a crop of the
+    output size. The factor is never limited by the input size, so the zoom
+    is unbiased: a window larger than the input contains it whole and is
+    padded on resizing. By default the window lies at a random position; a
+    ``centred`` window is centred on the input, for callers that can read
+    beyond its edges.
+    """
+    in_height, in_width = input_shape
+    out_height, out_width = output_shape
+    if not centred and (out_height > in_height or out_width > in_width):
+        msg = f"Crops of {output_shape} do not fit inside inputs of {input_shape}."
+        raise ValueError(msg)
+    low, high = scale
+    factor = 1.0
+    if rng.random() < p and low <= high:
+        factor = rng.uniform(low, high)
+    height = max(1, round(out_height / factor))
+    width = max(1, round(out_width / factor))
+    if centred:
+        top, left = (in_height - height) // 2, (in_width - width) // 2
+    else:
+        # A window larger than the input contains it, at a random offset.
+        top = int(
+            rng.integers(min(0, in_height - height), max(0, in_height - height) + 1)
+        )
+        left = int(rng.integers(min(0, in_width - width), max(0, in_width - width) + 1))
+    return (left, top, left + width, top + height)
+
+
+def _window_layout(
+    window: tuple[int, int, int, int],
+    input_shape: tuple[int, int],
+    output_shape: tuple[int, int],
+) -> tuple[tuple[int, int, int, int], tuple[int, int, int, int]] | None:
+    """Clip a window to the input and locate the clipped part in the output.
+
+    Returns the clipped ``(x_min, y_min, x_max, y_max)`` input window and the
+    output box it is resized into, or ``None`` when they do not overlap. The
+    rest of the output is padding.
+    """
+    left, top, right, bottom = window
+    in_height, in_width = input_shape
+    height, width = output_shape
+    inner = (max(left, 0), max(top, 0), min(right, in_width), min(bottom, in_height))
+    scale_x, scale_y = width / (right - left), height / (bottom - top)
+    box = (
+        round((inner[0] - left) * scale_x),
+        round((inner[1] - top) * scale_y),
+        round((inner[2] - left) * scale_x),
+        round((inner[3] - top) * scale_y),
+    )
+    if (
+        inner[0] >= inner[2]
+        or inner[1] >= inner[3]
+        or box[0] >= box[2]
+        or box[1] >= box[3]
+    ):
+        return None
+    return inner, box
+
+
+def _resized_crop(
+    value: torch.Tensor,
+    window: tuple[int, int, int, int],
+    shape: tuple[int, int],
+    fill: float = 0,
+) -> torch.Tensor:
+    """Resize a window of a CHW input to ``shape``, padding with ``fill``.
+
+    Masks are resized by nearest neighbour, other inputs bilinearly. The part
+    of the window outside the input becomes ``fill``, without resampling.
+    """
+    input_shape = (int(value.shape[-2]), int(value.shape[-1]))
+    height, width = shape
+    layout = _window_layout(window, input_shape, shape)
+    if layout is None:
+        return tv_tensors.wrap(
+            torch.full((*value.shape[:-2], height, width), fill, dtype=value.dtype),
+            like=value,
+        )
+    (left, top, right, bottom), box = layout
+    box_height, box_width = box[3] - box[1], box[2] - box[0]
+    if (bottom - top, right - left) == (box_height, box_width):
+        # A window of the output size is a crop and needs no resampling.
+        if window == (0, 0, width, height) and input_shape == shape:
+            return value
+        result = value[..., top:bottom, left:right]
+    elif isinstance(value, tv_tensors.Mask):
+        # Index arithmetic keeps labels of any dtype exact.
+        rows = top + ((torch.arange(box_height) + 0.5) * (bottom - top) / box_height)
+        cols = left + ((torch.arange(box_width) + 0.5) * (right - left) / box_width)
+        result = value[..., rows.long()[:, None], cols.long()]
+    else:
+        working = value
+        if not (value.is_floating_point() or value.dtype == torch.uint8):
+            working = value.to(torch.float64)
+        result = functional.resized_crop(
+            working,
+            top,
+            left,
+            bottom - top,
+            right - left,
+            [box_height, box_width],
+            interpolation=InterpolationMode.BILINEAR,
+            antialias=True,
+        )
+        if result.dtype != value.dtype:
+            result = result.round().to(value.dtype)
+    if box == (0, 0, width, height):
+        return tv_tensors.wrap(result, like=value)
+    output = torch.full((*value.shape[:-2], height, width), fill, dtype=value.dtype)
+    output[..., box[1] : box[3], box[0] : box[2]] = result
+    return tv_tensors.wrap(output, like=value)
+
+
+def _white(tensor: torch.Tensor) -> float:
+    """Return the padding value of images: white in the tensor's dtype."""
+    return 1.0 if tensor.is_floating_point() else torch.iinfo(tensor.dtype).max
+
+
+def _zoom_image(
+    image: np.ndarray,
+    window: tuple[int, int, int, int],
+    shape: tuple[int, int],
+) -> np.ndarray:
+    """Resize a window of an HWC or HW image to ``shape``, padding with white."""
+    tensor = _to_tv_tensor(image)
+    dtype = tensor.dtype
+    if dtype != torch.uint8 and not tensor.is_floating_point():
+        tensor = functional.to_dtype(tensor, torch.float32, scale=True)
+    return _to_numpy(
+        _resized_crop(tensor, window, shape, _white(tensor)),
+        image.ndim,
+        image_dtype=dtype,
+    )
+
+
+class _RandomZoom(nn.Module):
+    """Crop or zoom all inputs to the same random window, resized to the output.
+
+    The window is resized to ``crop_size``, or to the input size by default.
+    Where it extends past the inputs, the first input (the image) is padded
+    white, masks with ``target_fill`` and other inputs with zero.
+    """
+
+    def __init__(
+        self,
+        scale: tuple[float, float],
+        p: float,
+        crop_size: tuple[int, int] | None = None,
+        *,
+        target_fill: int = 0,
+    ) -> None:
+        super().__init__()
+        self.scale = scale
+        self.p = p
+        self.crop_size = crop_size
+        self.target_fill = target_fill
+
+    def output_shape(self, input_shape: tuple[int, int]) -> tuple[int, int]:
+        """Return the training shape for inputs of ``input_shape``."""
+        return input_shape if self.crop_size is None else self.crop_size
+
+    def fill(self, value: torch.Tensor, *, image: bool) -> float:
+        """Return the padding value of one input."""
+        if image:
+            return _white(value)
+        return self.target_fill if isinstance(value, tv_tensors.Mask) else 0
+
+    def forward(self, *inputs: torch.Tensor) -> object:
+        """Resize one sampled window of every input."""
+        input_shape = (int(inputs[0].shape[-2]), int(inputs[0].shape[-1]))
+        output_shape = self.output_shape(input_shape)
+        rng = np.random.default_rng(int(torch.randint(0, 2**32, ()).item()))
+        window = _sample_zoom_window(rng, input_shape, output_shape, self.scale, self.p)
+        outputs = tuple(
+            _resized_crop(
+                value, window, output_shape, self.fill(value, image=not index)
+            )
+            for index, value in enumerate(inputs)
+        )
+        return outputs[0] if len(outputs) == 1 else outputs
+
+
+def _random_zoom(
+    scale_jitter: float,
+    crop_size: int | tuple[int, int] | None,
+    *,
+    target_fill: int = 0,
+) -> _RandomZoom | None:
+    """Build the opt-in zoom and crop, or return ``None`` when neither is set."""
+    if not 0 <= scale_jitter < 1:
+        msg = "`scale_jitter` must be at least 0 and less than 1."
+        raise ValueError(msg)
+    if crop_size is not None:
+        crop_size = (
+            (crop_size, crop_size) if isinstance(crop_size, int) else tuple(crop_size)
+        )
+        if len(crop_size) != 2 or min(crop_size) <= 0:  # noqa: PLR2004
+            msg = "`crop_size` must be a positive size or (height, width) pair."
+            raise ValueError(msg)
+    if not scale_jitter and crop_size is None:
+        return None
+    return _RandomZoom(
+        (1 - scale_jitter, 1 + scale_jitter),
+        _ZOOM_PROBABILITY,
+        crop_size,
+        target_fill=target_fill,
+    )
 
 
 class _RandomGamma(nn.Module):
@@ -339,6 +608,12 @@ def _replace_spatial_targets(
         channels = replacements[path]
         if None in channels:
             return channels[None]
+        shape = next(iter(channels.values())).shape
+        if shape != target.shape[:2] and len(channels) == target.shape[-1]:
+            # Crops change every channel's shape, so restack them.
+            return np.stack(
+                [channels[index] for index in range(target.shape[-1])], axis=-1
+            ).astype(target.dtype, copy=False)
         updated_target = np.array(target, copy=True)
         for channel_index, replacement in channels.items():
             if replacement.shape != updated_target.shape[:2]:
@@ -481,12 +756,72 @@ class _TorchvisionSpatialPairTransform(_SeededTransform):
         )
 
 
+class _ScaleJitter(_TorchvisionSpatialPairTransform):
+    """Crop or zoom a sample by a random factor, padding where it zooms out.
+
+    TIAToolbox's annotation datasets call :meth:`sample_window` instead and
+    build targets for that window, so thin targets such as one-pixel
+    boundaries are drawn at the training resolution rather than resampled.
+    Called on arrays, it resizes masks by nearest neighbour.
+    """
+
+    def __init__(self, zoom: _RandomZoom, target_spec: SpatialTargetSpec) -> None:
+        self.zoom = zoom
+        super().__init__([zoom], target_spec, target_fill=zoom.target_fill)
+
+    def pad_target(
+        self,
+        target: object,
+        box: tuple[int, int, int, int],
+        output_shape: tuple[int, int],
+    ) -> object:
+        """Place spatial leaves built for ``box`` in padded arrays of ``output_shape``.
+
+        The padding is ``target_fill`` in ``mask`` leaves and zero in ``image``
+        leaves, as under the image's white padding.
+        """
+        left, top, right, bottom = box
+        replacements: dict[_TargetPath, dict[int | None, np.ndarray]] = {}
+        for leaf in self.leaves:
+            array = _select_spatial_target(target, leaf)
+            self._check_mask_fill(leaf, array)
+            fill = self.target_fill if self.target_spec[leaf] == "mask" else 0
+            padded = np.full((*output_shape, *array.shape[2:]), fill, dtype=array.dtype)
+            padded[top:bottom, left:right] = array
+            replacements.setdefault(leaf.path, {})[leaf.channel_index] = padded
+        return _replace_spatial_targets(target, replacements)
+
+    def sample_window(
+        self, input_shape: tuple[int, int], *, centred: bool = False
+    ) -> tuple[tuple[int, int, int, int], tuple[int, int]]:
+        """Sample an input window and the shape to resize it to, from the sample seed.
+
+        The window may extend past the input; see :func:`_sample_zoom_window`
+        and :func:`_window_layout`.
+        """
+        seed = getattr(self, "_next_seed", None)
+        self._next_seed = None
+        if seed is None:
+            # DataLoader seeds this global stream independently in each worker.
+            seed = int(np.random.randint(0, 2**32, dtype=np.uint32))  # noqa: NPY002
+        output_shape = self.zoom.output_shape(input_shape)
+        window = _sample_zoom_window(
+            np.random.default_rng(seed),
+            input_shape,
+            output_shape,
+            self.zoom.scale,
+            self.zoom.p,
+            centred=centred,
+        )
+        return window, output_shape
+
+
 def _validate_level(level: AugmentationLevel) -> AugmentationLevel:
     """Validate supported preset names."""
-    if level not in {"light", "medium", "heavy"}:
+    if level not in _LEVELS:
         msg = (
             f"Unsupported augmentation preset `{level}`. "
-            "Choose from `light`, `medium`, or `heavy`."
+            "Choose from `light`, `medium`, `heavy` or `strong`."
         )
         raise ValueError(msg)
     return level
@@ -509,28 +844,20 @@ def _wrap_pair_ops(
     return _TorchvisionSpatialPairTransform(ops, target_spec, target_fill=target_fill)
 
 
-def _geometric_ops(
-    level: AugmentationLevel, *, target_fill: int = 0
-) -> list[nn.Module]:
-    """Build flips, quarter turns and optional affine geometry."""
+def _geometric_ops(*, target_fill: int = 0, rotation: float = 0.0) -> list[nn.Module]:
+    """Build exact flips and quarter turns, with optional free rotation."""
+    if rotation < 0:
+        msg = "`rotation` must be a non-negative angle in degrees."
+        raise ValueError(msg)
     ops = [
         v2.RandomHorizontalFlip(p=0.5),
         v2.RandomVerticalFlip(p=0.5),
         v2.RandomApply([_RandomQuarterTurn()], p=0.5),
     ]
-    if level != "light":
-        heavy = level == "heavy"
+    if rotation:
         ops.append(
             v2.RandomApply(
-                [
-                    _TrainingAffine(
-                        degrees=20 if heavy else 10,
-                        translate=(0.05, 0.05) if heavy else (0.02, 0.02),
-                        scale=(0.9, 1.1) if heavy else (0.95, 1.05),
-                        target_fill=target_fill,
-                    )
-                ],
-                p=0.5 if heavy else 0.3,
+                [_TrainingAffine(degrees=rotation, target_fill=target_fill)], p=0.5
             )
         )
     return ops
@@ -538,6 +865,9 @@ def _geometric_ops(
 
 def _image_ops(level: AugmentationLevel) -> list[nn.Module]:
     """Build appearance operations without transforming any target values."""
+    if level == "strong":
+        # StrongAugment replaces every appearance operation of the other levels.
+        return [_Uint8Transform(_StrongAugmentation(StrongAugment()))]
     heavy = level == "heavy"
     limit = 0.15 if heavy else 0.08
     ops = [
@@ -589,32 +919,61 @@ def _image_ops(level: AugmentationLevel) -> list[nn.Module]:
 
 def get_classification_augmentation(
     level: AugmentationLevel = "medium",
+    *,
+    scale_jitter: float = 0.0,
+    crop_size: int | tuple[int, int] | None = None,
+    rotation: float = 0.0,
 ) -> TrainingAugmentationPreset:
-    """Return a preset for patch classification datasets."""
+    """Return a preset for patch classification datasets.
+
+    Patches are flipped and turned by multiples of 90 degrees. Other geometry
+    is opt-in. ``scale_jitter=0.1`` zooms half the patches by a factor between
+    0.9 and 1.1, centred on one so that the training scale stays unbiased;
+    zooming out pads the patch with white. ``crop_size`` trains on random
+    crops of that size, which also give the zoom room, so a crop of 224 in a
+    256-pixel patch zooms by up to 10% without padding. ``rotation`` rotates
+    half the patches by up to that many degrees, exposing white padding in the
+    corners.
+    """
     normalized_level = _validate_level(level)
-    ops = [*_geometric_ops(normalized_level), *_image_ops(normalized_level)]
+    zoom = _random_zoom(scale_jitter, crop_size)
+    ops = [
+        *([] if zoom is None else [zoom]),
+        *_geometric_ops(rotation=rotation),
+        *_image_ops(normalized_level),
+    ]
     return TrainingAugmentationPreset(image_transform=_wrap_image_ops(ops))
 
 
 def get_segmentation_augmentation(
     level: AugmentationLevel = "medium",
     *,
+    scale_jitter: float = 0.0,
+    crop_size: int | tuple[int, int] | None = None,
+    rotation: float = 0.0,
     target_fill: int = 0,
 ) -> TrainingAugmentationPreset:
     """Return a preset for paired patch/mask segmentation datasets.
 
-    ``target_fill`` is written to mask pixels exposed by affine padding; pass
-    the task's ``ignore_index`` to exclude them from supervision. It must be
-    representable in the mask dtype (for example 255 for uint8 masks).
+    Patches and masks are flipped and turned by multiples of 90 degrees.
+    ``scale_jitter`` and ``crop_size`` opt in to zooms and crops as for
+    :func:`get_classification_augmentation`, resizing masks by nearest
+    neighbour. ``rotation`` rotates half the patches by up to that many
+    degrees. Mask pixels exposed by zoom or rotation padding get
+    ``target_fill``; pass the task's ``ignore_index`` to exclude them from
+    supervision. It must be representable in the mask dtype (for example 255
+    for uint8 masks).
     """
     normalized_level = _validate_level(level)
+    zoom = _random_zoom(scale_jitter, crop_size, target_fill=target_fill)
     return TrainingAugmentationPreset(
         pair_transform=_wrap_pair_ops(
-            _geometric_ops(normalized_level, target_fill=target_fill),
+            _geometric_ops(target_fill=target_fill, rotation=rotation),
             "mask",
             target_fill=target_fill,
         ),
         image_transform=_wrap_image_ops(_image_ops(normalized_level)),
+        scale_jitter=None if zoom is None else _ScaleJitter(zoom, "mask"),
     )
 
 
@@ -623,30 +982,56 @@ def get_annotation_augmentation(
     *,
     target_builder: TargetBuilderABC | None = None,
     spatial_target_spec: SpatialTargetSpec | None = None,
+    scale_jitter: float = 0.0,
+    crop_size: int | tuple[int, int] | None = None,
+    rotation: float = 0.0,
     target_fill: int = 0,
 ) -> TrainingAugmentationPreset:
     """Return a preset for annotation-backed training datasets.
 
     Spatial targets share geometric transforms with the image using the
     interpolation modes declared by the target builder. Non-spatial target
-    leaves, such as scalar or vector labels, are left untouched. Affine padding
-    writes ``target_fill`` to ``"mask"`` leaves and zero to ``"image"`` leaves.
+    leaves, such as scalar or vector labels, are left untouched, and presets
+    for them change only appearance.
+
+    ``scale_jitter`` and ``crop_size`` opt in to zooms and crops as for
+    :func:`get_classification_augmentation`.
+    :class:`~tiatoolbox.models.training.PatchAnnotationDataset` and
+    :class:`~tiatoolbox.models.training.SlideAnnotationPatchDataset` apply
+    them while reading and build targets for the window, so masks, boundaries
+    and centroids stay exact; slide datasets zoom out by reading a larger
+    window instead of padding. ``rotation`` rotates half the patches by up to
+    that many degrees and resamples the targets. Zoom and rotation padding
+    writes ``target_fill`` to ``"mask"`` leaves and zero to ``"image"``
+    leaves.
     """
     normalized_level = _validate_level(level)
     resolved_spatial_target_spec = spatial_target_spec
     if resolved_spatial_target_spec is None and target_builder is not None:
         resolved_spatial_target_spec = target_builder.spatial_target_spec
+    zoom = _random_zoom(scale_jitter, crop_size, target_fill=target_fill)
 
     if resolved_spatial_target_spec is not None:
         return TrainingAugmentationPreset(
             pair_transform=_wrap_pair_ops(
-                _geometric_ops(normalized_level, target_fill=target_fill),
+                _geometric_ops(target_fill=target_fill, rotation=rotation),
                 resolved_spatial_target_spec,
                 target_fill=target_fill,
             ),
             image_transform=_wrap_image_ops(_image_ops(normalized_level)),
+            scale_jitter=(
+                None
+                if zoom is None
+                else _ScaleJitter(zoom, resolved_spatial_target_spec)
+            ),
         )
 
+    if zoom is not None or rotation:
+        msg = (
+            "Zooms, crops and rotation need spatial targets: pass a target "
+            "builder with spatial targets or `spatial_target_spec`."
+        )
+        raise ValueError(msg)
     return TrainingAugmentationPreset(
         image_transform=_wrap_image_ops(_image_ops(normalized_level)),
     )

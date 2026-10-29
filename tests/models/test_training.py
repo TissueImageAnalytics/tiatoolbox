@@ -226,6 +226,28 @@ def test_patch_folder_classification_dataset(track_tmp_path: Path) -> None:
     assert sample["target"].dtype == torch.long
 
 
+def test_patch_folder_classification_dataset_keeps_transformed_target_dtype(
+    track_tmp_path: Path,
+) -> None:
+    """A ``target_transform`` returning float labels keeps them floating."""
+    dataset_root = _build_classification_dataset(track_tmp_path / "class_dataset")
+    soft_labels = {
+        0: np.array([0.8, 0.2], dtype=np.float32),
+        1: np.array([0.2, 0.8], dtype=np.float32),
+    }
+    dataset = PatchFolderClassificationDataset(
+        dataset_root, target_transform=lambda label: soft_labels[label]
+    )
+
+    target = dataset[0]["target"]
+    assert target.dtype == torch.float32
+    assert torch.equal(target, torch.tensor([0.8, 0.2]))
+    batch = next(iter(DataLoader(dataset, batch_size=4)))
+    assert batch["target"].shape == (4, 2)
+    loss = ClassificationTask().compute_loss(torch.zeros(4, 2), batch["target"])
+    assert torch.isfinite(loss)
+
+
 def test_patch_folder_classification_dataset_works_with_dataloader(
     track_tmp_path: Path,
 ) -> None:
@@ -409,7 +431,7 @@ def test_annotation_augmentation_preset_supports_structured_spatial_targets(
     monkeypatch.setattr(
         training_augmentations,
         "_geometric_ops",
-        lambda _level, **_kwargs: [v2.RandomHorizontalFlip(p=1.0)],
+        lambda **_kwargs: [v2.RandomHorizontalFlip(p=1.0)],
     )
 
     preset = get_annotation_augmentation(
@@ -482,9 +504,7 @@ def test_annotation_augmentation_preset_splits_mixed_stacked_targets(
     monkeypatch.setattr(
         training_augmentations,
         "_geometric_ops",
-        lambda _level, **_kwargs: [
-            training_augmentations._TrainingAffine(degrees=(15, 15))
-        ],
+        lambda **_kwargs: [training_augmentations._TrainingAffine(degrees=(15, 15))],
     )
 
     target_builder = CompositeTargetBuilder(
@@ -523,7 +543,7 @@ def test_annotation_augmentation_preset_splits_mixed_stacked_targets(
 
 def test_augmentation_presets_construct_for_all_levels() -> None:
     """All preset levels should construct without error."""
-    for level in ("light", "medium", "heavy"):
+    for level in ("light", "medium", "heavy", "strong"):
         assert get_classification_augmentation(level).image_transform is not None
         assert get_segmentation_augmentation(level).pair_transform is not None
         assert (
@@ -713,6 +733,100 @@ def test_trainer_export_rebuilds_a_registry_style_model(
     torch.testing.assert_close(
         last.classifier.weight, model.classifier.weight.detach().cpu()
     )
+
+
+def test_trainer_rejects_a_classifier_head_that_disagrees_with_the_task(
+    track_tmp_path: Path,
+) -> None:
+    """A BCE task needs a sigmoid head, and the export must rebuild that head."""
+    dataset_root = _build_classification_dataset(track_tmp_path / "class_dataset")
+    loader = DataLoader(PatchFolderClassificationDataset(dataset_root), batch_size=4)
+    config = TrainerConfig(
+        max_epochs=1, output_dir=track_tmp_path / "run", amp=False, log_every_n_steps=0
+    )
+
+    def build(
+        model: CNNModel,
+        task: ClassificationTask,
+        export: ModelExport | None = None,
+    ) -> Trainer:
+        return Trainer(
+            model=model,
+            task=task,
+            optimizer=torch.optim.SGD(model.parameters(), lr=1e-2),
+            train_loader=loader,
+            val_loader=loader,
+            config=config,
+            export=export,
+        )
+
+    softmax_head = CNNModel("resnet18", num_classes=2)
+    with pytest.raises(ValueError, match="Build the model with output_mode='multi"):
+        build(
+            softmax_head,
+            ClassificationTask(loss="bce_with_logits", target_mode="multi_label"),
+        )
+    one_output = CNNModel("resnet18", num_classes=1)
+    with pytest.raises(ValueError, match="Build the model with output_mode='single"):
+        build(one_output, ClassificationTask(loss="cross_entropy"))
+
+    multi_label = CNNModel("resnet18", num_classes=2, output_mode="multi_label")
+    task = ClassificationTask(loss="bce_with_logits")
+    build(multi_label, task)
+    kwargs = {"backbone": "resnet18", "num_classes": 2}
+    with pytest.raises(ValueError, match="Record the trained head"):
+        build(multi_label, task, ModelExport(model_kwargs=kwargs))
+    with pytest.raises(ValueError, match="cannot rebuild CNNModel"):
+        build(
+            multi_label,
+            task,
+            ModelExport(model_kwargs={**kwargs, "output_mode": "binary"}),
+        )
+    with pytest.raises(ValueError, match="Record the trained head"):
+        ModelExport(model_kwargs={**kwargs, "num_classes": 3}).check_model(multi_label)
+    build(
+        multi_label,
+        task,
+        ModelExport(model_kwargs={**kwargs, "output_mode": "multi_label"}),
+    )
+
+
+def test_binary_classifier_trains_exports_and_infers_probabilities(
+    track_tmp_path: Path,
+) -> None:
+    """A one-output head trained with BCE infers sigmoid probabilities when reloaded."""
+    dataset_root = _build_classification_dataset(track_tmp_path / "class_dataset")
+    model = CNNModel("resnet18", num_classes=1)
+    dataset = PatchFolderClassificationDataset(dataset_root, preproc=model.preproc_func)
+    output_dir = track_tmp_path / "binary_run"
+    Trainer(
+        model=model,
+        task=ClassificationTask(loss="bce_with_logits"),
+        optimizer=torch.optim.SGD(model.parameters(), lr=1e-2),
+        train_loader=DataLoader(dataset, batch_size=4),
+        val_loader=DataLoader(dataset, batch_size=4),
+        config=TrainerConfig(
+            max_epochs=1, output_dir=output_dir, amp=False, log_every_n_steps=0
+        ),
+        export=ModelExport(model_kwargs={"backbone": "resnet18", "num_classes": 1}),
+    ).fit()
+
+    loaded, _ = load_trained_model(output_dir)
+    assert loaded.output_mode == "binary"
+    batch = torch.stack([dataset[index]["image"] for index in (0, 6)])
+    inputs = batch.permute(0, 2, 3, 1)
+    probabilities = loaded.infer_batch(loaded, inputs, device="cpu")
+    with torch.inference_mode():
+        expected = torch.sigmoid(loaded(batch.float())).numpy()
+    assert probabilities.shape == (2, 1)
+    np.testing.assert_allclose(probabilities, expected, rtol=1e-5)
+    assert loaded.postproc_func(probabilities).shape == (2,)
+    # With a known logit, the activation is sigmoid, not a softmax over one output.
+    torch.nn.init.zeros_(loaded.classifier.weight)
+    torch.nn.init.constant_(loaded.classifier.bias, -2.0)
+    probabilities = loaded.infer_batch(loaded, inputs, device="cpu")
+    np.testing.assert_allclose(probabilities, 1 / (1 + np.exp(2.0)), rtol=1e-5)
+    assert loaded.postproc_func(probabilities).tolist() == [0, 0]
 
 
 def test_export_of_custom_models_needs_an_explicit_model(

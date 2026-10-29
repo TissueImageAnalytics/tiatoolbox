@@ -31,6 +31,7 @@ from tiatoolbox.models.training.config import (
     resolve_trainer_device,
 )
 from tiatoolbox.models.training.datasets import _TrainingDataset
+from tiatoolbox.models.training.tasks import ClassificationTask
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
@@ -195,6 +196,7 @@ class Trainer:
         self._configure_amp()
         self._validate_monitor_configuration()
         self._check_preprocessing()
+        self._check_classifier_head()
 
         self.history: list[dict[str, float]] = []
         self.best_monitor_value = self._initial_monitor_value()
@@ -254,6 +256,35 @@ class Trainer:
                 )
             elif hasattr(dataset, "set_epoch"):
                 dataset.set_epoch(epoch)
+
+    def _check_classifier_head(self: Trainer) -> None:
+        """Raise when a classifier's inference head disagrees with the task.
+
+        ``CNNModel`` and ``TimmModel`` turn logits into probabilities with
+        softmax or sigmoid according to their ``output_mode``, so a head
+        trained with BCE must say so, or engines return the wrong
+        probabilities. ``ModelExport`` must also rebuild the same head.
+        """
+        model = unwrap_model(self.model)
+        output_mode = getattr(model, "output_mode", None)
+        num_classes = getattr(model, "num_classes", None)
+        if (
+            output_mode is None
+            or num_classes is None
+            or not isinstance(self.task, ClassificationTask)
+        ):
+            return
+        expected = self.task.required_output_mode(num_classes)
+        if expected != output_mode:
+            msg = (
+                f"{type(model).__name__} has output_mode='{output_mode}', but the "
+                f"task trains a '{expected}' head, so inference engines would "
+                "apply the wrong activation to its logits. Build the model with "
+                f"output_mode='{expected}'."
+            )
+            raise ValueError(msg)
+        if self.export is not None:
+            self.export.check_model(model)
 
     def _check_preprocessing(self: Trainer) -> None:
         """Warn when datasets preprocess differently from inference engines.

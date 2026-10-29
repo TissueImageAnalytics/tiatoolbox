@@ -24,6 +24,7 @@ import pytest
 import tifffile
 import torch
 from PIL import Image
+from scipy import ndimage
 from shapely.geometry import LineString, MultiPolygon, Point, box
 from torch import nn
 from torch.nn import functional
@@ -41,6 +42,7 @@ from tiatoolbox.models.training import (
     BoundaryTargetBuilder,
     CheckpointConfig,
     ClassificationTask,
+    CompositeTargetBuilder,
     CoverageClassTargetBuilder,
     DenseHeadSpec,
     GroupedBlockSampler,
@@ -55,15 +57,20 @@ from tiatoolbox.models.training import (
     StructuredDenseTask,
     Trainer,
     TrainerConfig,
+    TrainingAugmentationPreset,
     get_classification_augmentation,
     get_segmentation_augmentation,
 )
 from tiatoolbox.models.training.augmentations import (
     _RandomQuarterTurn,
+    _RandomZoom,
+    _ScaleJitter,
     _StainAugmentation,
     _TorchvisionImageTransform,
     _TorchvisionSpatialPairTransform,
     _TrainingAffine,
+    _window_layout,
+    _zoom_image,
 )
 from tiatoolbox.models.training.checkpoint import (
     extract_model_state_dict,
@@ -1507,6 +1514,101 @@ def test_slide_jitter_shifts_training_patches_reproducibly() -> None:
         assert (x_max - x_min, y_max - y_min) == (16, 16)
     with pytest.raises(ValueError, match="jitter"):
         _slide_dataset(jitter=-1)
+
+
+def test_slide_patches_zoom_out_by_reading_a_larger_window() -> None:
+    """Zooming out reads a larger centred window, kept inside the slide."""
+    dataset = _slide_dataset()
+    store = dataset.annotation_store_specs[0]
+    preset = TrainingAugmentationPreset(
+        scale_jitter=_ScaleJitter(_RandomZoom((0.5, 0.5), 1.0), "mask")
+    )
+    zoomed = dataset.with_transforms(pair_transform=preset)
+    zoomed.set_epoch(0, 5)
+    slide = np.arange(48 * 48 * 3, dtype=np.uint32).reshape(48, 48, 3) % 251
+    for index in range(len(zoomed)):
+        sample = zoomed[index]
+        x_min, y_min, x_max, y_max = sample["bounds"].tolist()
+        assert (x_max - x_min, y_max - y_min) == (32, 32)
+        assert 0 <= x_min <= x_max <= 48
+        assert 0 <= y_min <= y_max <= 48
+        grid = dataset.sample_bounds[index].tolist()
+        if grid == [16, 16, 32, 32]:
+            assert (x_min, y_min) == (8, 8)  # Centred on the patch.
+        expected_image = _zoom_image(
+            slide[y_min:y_max, x_min:x_max].astype(np.uint8), (0, 0, 32, 32), (16, 16)
+        )
+        np.testing.assert_array_equal(
+            sample["image"].numpy(), np.moveaxis(expected_image, -1, 0)
+        )
+        expected_target = dataset.target_builder.create_target(
+            store=store,
+            patch_bounds=(x_min, y_min, x_max, y_max),
+            output_shape=(16, 16),
+        )
+        np.testing.assert_array_equal(sample["target"].numpy(), expected_target)
+    # The corner box fills a quarter of the first patch's zoomed-out view.
+    assert 0 < int(zoomed[0]["target"].sum()) < 16 * 16 / 2
+
+
+@pytest.mark.parametrize(
+    ("scale", "crop_size", "window_size"),
+    [((1.5, 1.5), None, 21), ((0.8, 0.8), (24, 24), 30), ((0.8, 0.8), None, 40)],
+)
+def test_annotation_patches_draw_targets_for_the_zoomed_window(
+    scale: tuple[float, float],
+    crop_size: tuple[int, int] | None,
+    window_size: int,
+) -> None:
+    """Zoomed patches get targets drawn for their window, so thin rings stay closed.
+
+    Crops smaller than the patch give a zoom-out room; without one, the window
+    extends past the patch and the image and target are padded.
+    """
+    store = DictionaryStore()
+    store.append(Annotation(Point(16, 16).buffer(4), {"class": "nucleus"}))
+    # A shared store may hold annotations beyond the patch; padding hides them.
+    store.append(Annotation(Point(-6, 16).buffer(4), {"class": "nucleus"}))
+    builder = CompositeTargetBuilder(
+        {"boundary": BoundaryTargetBuilder(line_width=1), "mask": MaskTargetBuilder()}
+    )
+    image = np.random.default_rng(0).integers(0, 250, (32, 32, 3), dtype=np.uint8)
+    zoom = _RandomZoom(scale, 1.0, crop_size, target_fill=9)
+    preset = TrainingAugmentationPreset(
+        scale_jitter=_ScaleJitter(zoom, builder.spatial_target_spec)
+    )
+    dataset = PatchAnnotationDataset([image], store, builder, pair_transform=preset)
+    dataset.set_epoch(0, 3)
+    sample = dataset[0]
+    preset.set_random_seed(dataset._sample_seed(0, 0))
+    window, output_shape = preset.scale_jitter.sample_window((32, 32))
+    assert output_shape == (crop_size or (32, 32))
+    assert window[2] - window[0] == window_size
+    inner, box = _window_layout(window, (32, 32), output_shape)
+    expected = builder.create_target(
+        store=store, patch_bounds=inner, output_shape=(box[3] - box[1], box[2] - box[0])
+    )
+    padding = np.ones(output_shape, bool)
+    padding[box[1] : box[3], box[0] : box[2]] = False
+    assert padding.any() == (window_size > 32)
+    for key, fill in (("boundary", 9), ("mask", 9)):
+        actual = sample["target"][key].numpy()
+        np.testing.assert_array_equal(
+            actual[~padding].reshape(expected[key].shape), expected[key]
+        )
+        assert np.all(actual[padding] == fill)
+    actual_image = sample["image"].numpy()
+    np.testing.assert_array_equal(
+        actual_image, np.moveaxis(_zoom_image(image, window, output_shape), -1, 0)
+    )
+    assert np.all(actual_image[:, padding] == 255)
+    _, pieces = ndimage.label(expected["boundary"] > 0, structure=np.ones((3, 3)))
+    assert pieces == 1
+    unzoomed = builder.create_target(
+        store=store, patch_bounds=(0, 0, 32, 32), output_shape=(32, 32)
+    )
+    ratio = expected["mask"].sum() / unzoomed["mask"].sum()
+    assert ratio == pytest.approx((output_shape[0] / window_size) ** 2, rel=0.25)
 
 
 def test_slide_targets_can_be_computed_without_reading_pixels() -> None:
