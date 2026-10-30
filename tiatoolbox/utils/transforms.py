@@ -140,7 +140,7 @@ def imresize(
     )
 
     if scale_factor_array is None:
-        scale_factor_array = img.shape[:2][::-1] / np.array(output_size_array)
+        scale_factor_array = np.array(output_size_array) / img.shape[:2][::-1]
 
     # Return original if scale factor is 1
     if np.all(scale_factor_array == 1.0):
