@@ -39,11 +39,11 @@ jobs:
       - uses: mamba-org/setup-micromamba@v3
         env:
             MAMBA_NO_CACHE: "true" # Forces libmamba to fetch completely fresh metadata
+            # Force macOS runner to use Intel index (osx-64) so it can find pyjpegls
+            CONDA_SUBDIR: ${{ matrix.os == 'macos-latest' && 'osx-64' || '' }}
         with:
             environment-name: tiatoolbox
             environment-file: requirements/requirements.conda.generated.yml
-            cache-environment: false       # Force a clean solve instead of reusing previous action caches
-            cache-downloads: false         # Do not reuse old downloaded tarballs
 
       # ✅ Validate environment
       - name: Test environment
