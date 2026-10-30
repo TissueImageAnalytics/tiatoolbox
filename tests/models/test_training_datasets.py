@@ -312,7 +312,7 @@ def test_slide_jitter_can_extend_past_slide(monkeypatch: pytest.MonkeyPatch) -> 
         jitter=6,
     ) as dataset:
         monkeypatch.setattr(dataset, "_sample_seed", Mock(return_value=0))
-        sample = dataset[len(dataset) - 1]
+        sample = dataset[-1]
         # Seed zero draws the offset (5, 2), which is not clipped to the slide.
         assert sample["bounds"].tolist() == [13, 10, 21, 18]
         assert sample["image"].shape == (3, 8, 8)
