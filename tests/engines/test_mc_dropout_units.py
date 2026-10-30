@@ -10,6 +10,7 @@ Run all:
 
 Run one file's tests only, e.g. just mc_dropout:
     pytest tests/test_mc_dropout_units.py -k mc_dropout -v -s
+
 """
 
 from __future__ import annotations
@@ -358,3 +359,19 @@ def test_bayesian_wrapper_infer_batch_populates_uncertainty_stats() -> None:
     for key in ("mean_probs", "aleatoric", "epistemic", "total", "mc_probs"):
         assert key in batch_stats
     assert batch_stats["mc_probs"].shape == (8, 4, 2)  # [T, B, C]
+
+
+def test_bayesian_wrapper_injects_dropout_successfully() -> None:
+    """Test successful dropout injection."""
+    model = DummyCNNModel(with_dropout=False)
+
+    wrapper = BayesianModelWrapper(
+        base_model=model,
+        inject_dropout=True,
+        dropout_p=0.2,
+    )
+
+    assert has_dropout_layers(wrapper.base_model)
+
+    assert wrapper.n_samples == 30
+    assert wrapper.class_dim == -1
