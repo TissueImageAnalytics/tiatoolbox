@@ -52,7 +52,7 @@ def test_callable_losses_preserve_accumulated_updates(
     images = torch.randn(5, 3, 2, 4) if dense else torch.randn(5, 3)
     model = nn.Conv2d(3, 2, 1) if dense else nn.Linear(3, 2)
     if kind in {"classification", "segmentation"}:
-        target_shape = (5, 2, 4) if dense else (5,)
+        target_shape = (images.shape[0], *images.shape[2:])
         targets = torch.randint(2, target_shape)
         criterion = nn.CrossEntropyLoss(
             weight=torch.tensor([0.3, 2.5]), label_smoothing=0.1, reduction="none"
@@ -63,7 +63,7 @@ def test_callable_losses_preserve_accumulated_updates(
             else ClassificationTask(loss=criterion, target_mode="single_label")
         )
     else:
-        target_shape = (5, 2, 2, 4) if dense else (5, 2)
+        target_shape = (images.shape[0], 2, *images.shape[2:])
         targets = torch.rand(target_shape)
         if kind == "regression":
             # Two independently normalized heads with ordinary callable losses.
@@ -141,6 +141,7 @@ def test_callable_weighted_mean_and_safe_targets() -> None:
     targets = torch.tensor([1, -7, 0])
 
     def focal(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        """Compute unreduced focal loss after checking target indices."""
         assert targets.min() >= 0
         ce = functional.cross_entropy(logits, targets, reduction="none")
         return (1 - torch.exp(-ce)).square() * ce
@@ -182,6 +183,7 @@ def test_all_ignored_callable_receives_safe_targets(*, dense: bool) -> None:
     seen = []
 
     def criterion(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        """Record the sanitized targets received by the criterion."""
         seen.append(targets)
         return functional.cross_entropy(logits, targets, reduction="none")
 
@@ -248,14 +250,17 @@ def test_split_keeps_transforms_independent(tmp_path: Path) -> None:
     calls = []
 
     def pair(image: np.ndarray, target: int) -> tuple[np.ndarray, int]:
+        """Record paired augmentation and increment the image."""
         calls.append("pair")
         return image + 1, target
 
     def image_transform(image: np.ndarray) -> np.ndarray:
+        """Record image augmentation and double its values."""
         calls.append("image")
         return image * 2
 
     def target_transform(target: int) -> int:
+        """Record target augmentation and increment the label."""
         calls.append("target")
         return target + 3
 
@@ -412,23 +417,30 @@ def test_trainer_warns_when_dataset_preproc_differs(
             self.linear = nn.Linear(3, 2)
 
         def forward(self, images: torch.Tensor) -> torch.Tensor:
+            """Classify the spatially averaged image channels."""
             return self.linear(images.mean((2, 3)))
 
         @staticmethod
         def preproc(image: np.ndarray) -> np.ndarray:
+            """Scale image intensities to the unit interval."""
             return image / 255
 
         @staticmethod
         def infer_batch(
-            model: nn.Module, batch_data: torch.Tensor, *, device: str
+            model: nn.Module,  # noqa: ARG004 - inference interface
+            batch_data: torch.Tensor,  # noqa: ARG004 - inference interface
+            *,
+            device: str,  # noqa: ARG004 - inference interface
         ) -> None:
-            del model, batch_data, device
+            """Leave inference unused in this training-only test model."""
+            return
 
     (tmp_path / "a").mkdir()
     Image.fromarray(np.zeros((4, 4, 3), np.uint8)).save(tmp_path / "a" / "x.png")
     model = Normalized()
 
     def build(preproc: object) -> Trainer:
+        """Build a trainer with the requested dataset preprocessing."""
         dataset = PatchFolderClassificationDataset(tmp_path, preproc=preproc)
         return Trainer(
             model,

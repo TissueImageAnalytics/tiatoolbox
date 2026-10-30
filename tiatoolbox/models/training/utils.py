@@ -57,7 +57,7 @@ def split_indices(
         splitter = GroupShuffleSplit(
             n_splits=1, test_size=val_fraction, random_state=seed
         )
-        train, val = next(splitter.split(indices, groups=groups))
+        ((train, val),) = splitter.split(indices, groups=groups)
     else:
         train, val = train_test_split(
             indices,

@@ -62,7 +62,7 @@ import numpy as np
 from PIL import Image, ImageOps
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Callable, Mapping, Sequence
 
 type Bounds = tuple[float, float] | tuple[bool, bool]
 type Operation = tuple[str, dict[str, float]]
@@ -293,12 +293,14 @@ def _blend(image: np.ndarray, other: np.ndarray, magnitude: float) -> np.ndarray
 
 
 def _scale_channel(image: np.ndarray, magnitude: float, channel: int) -> np.ndarray:
+    """Scale one colour channel in place."""
     plane = np.ascontiguousarray(image[..., channel])
     image[..., channel] = _blend(plane, np.zeros_like(plane), magnitude)
     return image
 
 
 def _shift_hue(image: np.ndarray, magnitude: float) -> np.ndarray:
+    """Shift hue with wraparound in OpenCV hue space."""
     hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
     # OpenCV stores 8-bit hue as 0-179.
     lut = np.mod(np.arange(256) + 180 * magnitude, 180).astype(np.uint8)
@@ -307,28 +309,34 @@ def _shift_hue(image: np.ndarray, magnitude: float) -> np.ndarray:
 
 
 def _grayscale(image: np.ndarray) -> np.ndarray:
+    """Convert RGB to greyscale while retaining three channels."""
     return cv2.cvtColor(cv2.cvtColor(image, cv2.COLOR_RGB2GRAY), cv2.COLOR_GRAY2RGB)
 
 
 def _adjust_saturation(image: np.ndarray, magnitude: float) -> np.ndarray:
+    """Blend with greyscale to adjust colour saturation."""
     return _blend(image, _grayscale(image), magnitude)
 
 
 def _adjust_brightness(image: np.ndarray, magnitude: float) -> np.ndarray:
+    """Scale image brightness by blending with black."""
     return _blend(image, np.zeros_like(image), magnitude)
 
 
 def _adjust_contrast(image: np.ndarray, magnitude: float) -> np.ndarray:
+    """Adjust contrast around the mean greyscale intensity."""
     mean = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY).mean()
     return _blend(image, np.full_like(image, mean), magnitude)
 
 
 def _adjust_gamma(image: np.ndarray, magnitude: float) -> np.ndarray:
+    """Apply gamma correction through an intensity lookup table."""
     lut = np.rint((np.arange(256) / 255) ** magnitude * 255).astype(np.uint8)
     return cv2.LUT(image, lut)
 
 
 def _solarize(image: np.ndarray, magnitude: int) -> np.ndarray:
+    """Invert intensities at or above the solarization threshold."""
     values = np.arange(256)
     lut = np.where(values < magnitude, values, 255 - values).astype(np.uint8)
     return cv2.LUT(image, lut)
@@ -336,19 +344,23 @@ def _solarize(image: np.ndarray, magnitude: int) -> np.ndarray:
 
 def _posterize(image: np.ndarray, magnitude: int) -> np.ndarray:
     # Keep the top `magnitude` bits of each value.
+    """Retain the requested number of high bits per channel."""
     return image & np.uint8(256 - 2 ** (8 - magnitude))
 
 
 def _autocontrast(image: np.ndarray) -> np.ndarray:
+    """Stretch each channel to its full intensity range."""
     return np.array(ImageOps.autocontrast(Image.fromarray(image)))
 
 
 def _equalize(image: np.ndarray) -> np.ndarray:
+    """Equalize each colour channel independently."""
     channels = [cv2.equalizeHist(np.ascontiguousarray(image[..., c])) for c in range(3)]
     return np.stack(channels, axis=-1)
 
 
 def _gaussian_blur(image: np.ndarray, magnitude: float) -> np.ndarray:
+    """Apply Gaussian blur with the requested standard deviation."""
     if magnitude <= 0:
         return image
     size = max(3, round(magnitude * 3.5) // 2 * 2 + 1)
@@ -356,11 +368,13 @@ def _gaussian_blur(image: np.ndarray, magnitude: float) -> np.ndarray:
 
 
 def _filter(image: np.ndarray, kernel: np.ndarray, magnitude: float) -> np.ndarray:
+    """Blend a filter kernel with the identity before convolution."""
     blended = (1 - magnitude) * _IDENTITY_KERNEL + magnitude * kernel
     return cv2.filter2D(image, -1, blended)
 
 
 def _jpeg(image: np.ndarray, magnitude: int) -> np.ndarray:
+    """Round-trip the image through JPEG at the requested quality."""
     bgr = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     _, encoded = cv2.imencode(".jpg", bgr, [cv2.IMWRITE_JPEG_QUALITY, magnitude])
     return cv2.cvtColor(cv2.imdecode(encoded, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
@@ -370,19 +384,21 @@ def _tone_curve(
     image: np.ndarray, magnitude_0: float, magnitude_1: float
 ) -> np.ndarray:
     # A cubic Bezier curve from (0, 0) to (1, 1) with two control values.
+    """Map intensities through a cubic Bezier tone curve."""
     t = np.linspace(0.0, 1.0, 256)
     curve = 3 * (1 - t) ** 2 * t * magnitude_0 + 3 * (1 - t) * t**2 * magnitude_1 + t**3
     return cv2.LUT(image, np.rint(curve * 255).astype(np.uint8))
 
 
 def _add_noise(image: np.ndarray, magnitude: float, seed: int) -> np.ndarray:
+    """Blend with seeded greyscale noise shared across channels."""
     noise = np.random.default_rng(seed).integers(
         0, 256, image.shape[:2], dtype=np.uint8
     )
     return _blend(image, np.stack([noise] * _RGB_CHANNELS, axis=-1), 1 - magnitude)
 
 
-_OPERATIONS = {
+_OPERATIONS: dict[str, Callable[..., np.ndarray]] = {
     "red": lambda image, magnitude: _scale_channel(image, magnitude, 0),
     "green": lambda image, magnitude: _scale_channel(image, magnitude, 1),
     "blue": lambda image, magnitude: _scale_channel(image, magnitude, 2),
@@ -416,10 +432,28 @@ _BOUND_LIMITS: dict[str, tuple[float, float | None]] = {
 
 
 def _unsupported_message(name: str) -> str:
+    """Describe an unsupported operation and list the valid choices."""
     return (
         f"Unsupported StrongAugment operation `{name}`. "
         f"Choose from {', '.join(_OPERATIONS)}."
     )
+
+
+def _check_magnitude_bounds(name: str, bounds: Bounds) -> None:
+    """Validate numeric magnitude types and operation-specific limits."""
+    number = Integral if name in _INTEGER_OPERATIONS else Real
+    if any(
+        isinstance(value, bool) or not isinstance(value, number) for value in bounds
+    ):
+        kind = "integers" if number is Integral else "numbers"
+        msg = f"Bounds for `{name}` must be {kind}."
+        raise TypeError(msg)
+    minimum, maximum = _BOUND_LIMITS.get(name, (0, None))
+    low, high = bounds
+    if not minimum <= low <= high or (maximum is not None and high > maximum):
+        upper = f" <= {maximum}" if maximum is not None else ""
+        msg = f"Bounds for `{name}` must satisfy {minimum} <= low <= high{upper}."
+        raise ValueError(msg)
 
 
 def _check_augment_space(space: dict[str, Bounds]) -> None:
@@ -435,16 +469,4 @@ def _check_augment_space(space: dict[str, Bounds]) -> None:
                 msg = f"`{name}` has no magnitude; give its bounds as `(True, True)`."
                 raise TypeError(msg)
             continue
-        number = Integral if name in _INTEGER_OPERATIONS else Real
-        if any(
-            isinstance(value, bool) or not isinstance(value, number) for value in bounds
-        ):
-            kind = "integers" if number is Integral else "numbers"
-            msg = f"Bounds for `{name}` must be {kind}."
-            raise TypeError(msg)
-        minimum, maximum = _BOUND_LIMITS.get(name, (0, None))
-        low, high = bounds
-        if not minimum <= low <= high or (maximum is not None and high > maximum):
-            upper = f" <= {maximum}" if maximum is not None else ""
-            msg = f"Bounds for `{name}` must satisfy {minimum} <= low <= high{upper}."
-            raise ValueError(msg)
+        _check_magnitude_bounds(name, bounds)

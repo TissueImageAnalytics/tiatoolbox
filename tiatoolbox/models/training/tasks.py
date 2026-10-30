@@ -204,23 +204,28 @@ class TrainingTaskABC(ABC):
         msg = f"Unsupported model output type: `{type(output).__name__}`."
         raise TypeError(msg)
 
-    def reset_epoch_state(
+    # This default hook is overridden by tasks that keep per-epoch state.
+    def reset_epoch_state(  # skipcq: PYL-R0201
         self: TrainingTaskABC,
         *,
-        training: bool,
+        training: bool,  # noqa: ARG002 - hook signature
     ) -> None:
-        """Reset any task-specific state tracked across an epoch."""
-        del training
+        """Do nothing by default; override to reset task-specific epoch state."""
+        return
 
-    def update_epoch_state(
+    # Keep the instance hook signature for stateful task implementations.
+    def update_epoch_state(  # skipcq: PYL-R0201
         self: TrainingTaskABC,
-        output: object,
-        targets: object,
+        output: object,  # noqa: ARG002 - hook signature
+        targets: object,  # noqa: ARG002 - hook signature
     ) -> None:
-        """Update task-specific epoch state from one detached batch."""
-        del output, targets
+        """Do nothing by default; override to accumulate detached batch state."""
+        return
 
-    def compute_epoch_metrics(self: TrainingTaskABC) -> dict[str, float]:
+    # Stateful tasks override this instance hook to reduce their statistics.
+    def compute_epoch_metrics(  # skipcq: PYL-R0201
+        self: TrainingTaskABC,
+    ) -> dict[str, float]:
         """Return any task-specific metrics accumulated across the epoch."""
         return {}
 
@@ -234,7 +239,12 @@ class TrainingTaskABC(ABC):
         ``<name>_loss`` next to the total ``loss``.
         """
 
-    def loss_normalizers(self, targets: object, batch_size: int) -> dict[str, int]:
+    # Subclasses use task-specific state to normalize their loss components.
+    def loss_normalizers(  # skipcq: PYL-R0201
+        self,
+        targets: object,  # noqa: ARG002 - hook signature
+        batch_size: int,
+    ) -> dict[str, int]:
         """Return each loss component's denominator, computed before the forward.
 
         The default suits a single ``"loss"`` component averaged over samples.
@@ -242,7 +252,6 @@ class TrainingTaskABC(ABC):
         override this with the same keys as ``loss_components``. This lets the
         trainer weight uneven microbatches without retaining graphs.
         """
-        del targets
         return {"loss": batch_size}
 
     def compute_loss(self, output: object, targets: object) -> torch.Tensor:
@@ -438,8 +447,8 @@ class StructuredDenseTask(TrainingTaskABC):
             prefix_head_metrics=prefix_head_metrics,
         )
 
+    @staticmethod
     def _select_nested_value(
-        self: StructuredDenseTask,
         value: object,
         key: NestedKey,
         *,
@@ -525,21 +534,22 @@ class StructuredDenseTask(TrainingTaskABC):
             return head.loss
         return _DENSE_TARGET_MODE_LOSSES.get(head.target_mode)
 
+    @classmethod
     def _resolve_head_loss(
-        self: StructuredDenseTask,
+        cls: type[StructuredDenseTask],
         head: DenseHeadSpec,
         logits: torch.Tensor,
     ) -> DenseLossMode:
         """Resolve the effective loss mode for one head."""
-        declared = self._declared_head_loss(head)
+        declared = cls._declared_head_loss(head)
         if declared is not None:
             return declared
         if logits.ndim == _DENSE_LOGIT_DIMS and logits.shape[1] == 1:
             return "bce_with_logits"
         return "cross_entropy"
 
+    @staticmethod
     def _resolve_head_metrics(
-        self: StructuredDenseTask,
         head: DenseHeadSpec,
         resolved_loss: DenseLossMode,
     ) -> tuple[DenseMetricName, ...]:
@@ -742,9 +752,8 @@ class StructuredDenseTask(TrainingTaskABC):
             )
         return _MetricState.regression(logits - targets, valid, names)
 
-    def reset_epoch_state(self, *, training: bool) -> None:
+    def reset_epoch_state(self, *, training: bool) -> None:  # noqa: ARG002
         """Reset bounded-size per-head statistics."""
-        del training
         self._epoch_states = {}
 
     def update_epoch_state(self, output: object, targets: object) -> None:
@@ -771,9 +780,12 @@ class StructuredDenseTask(TrainingTaskABC):
             for name, value in self._epoch_states[head.name].compute().items()
         }
 
-    def loss_normalizers(self, targets: object, batch_size: int) -> dict[str, int]:
+    def loss_normalizers(
+        self,
+        targets: object,
+        batch_size: int,  # noqa: ARG002 - hook signature
+    ) -> dict[str, int]:
         """Count supervised elements per head, validating class indices on CPU."""
-        del batch_size
         counts = {}
         for head in self.heads:
             target = self._select_head_target(targets, head)
@@ -1070,9 +1082,12 @@ class ClassificationTask(TrainingTaskABC):
             )
         return {"loss": _call_loss(self.loss_fn, logits, targets, valid_mask)}
 
-    def loss_normalizers(self, targets: object, batch_size: int) -> dict[str, int]:
+    def loss_normalizers(
+        self,
+        targets: object,
+        batch_size: int,  # noqa: ARG002 - hook signature
+    ) -> dict[str, int]:
         """Count supervised samples or labels, validating class indices on CPU."""
-        del batch_size
         if not isinstance(targets, torch.Tensor):
             msg = "Classification tasks require tensor targets."
             raise ValueError(msg)  # noqa: TRY004 - preserve validation API
@@ -1110,9 +1125,8 @@ class ClassificationTask(TrainingTaskABC):
             logits > 0, targets > _BINARY_THRESHOLD, valid, ("accuracy", "f1")
         )
 
-    def reset_epoch_state(self, *, training: bool) -> None:
+    def reset_epoch_state(self, *, training: bool) -> None:  # noqa: ARG002
         """Reset classification counts."""
-        del training
         self._epoch_state = None
 
     def update_epoch_state(self, output: object, targets: object) -> None:
@@ -1286,15 +1300,21 @@ class _MetricState:
                 for name, index in (("mae", 0), ("mse", 1))
                 if name in self.names
             }
-        tp, pred, truth, valid = values
-        denominator = pred + truth
         result = {}
         if "accuracy" in self.names:
             if self.subset is not None:
                 correct, count = self.subset.double()
             else:
-                correct, count = tp.sum(), valid[0]
+                correct, count = values[0].sum(), values[3, 0]
             result["accuracy"] = float(correct / count.clamp_min(1))
+        result.update(self._compute_overlap_metrics(values))
+        return result
+
+    def _compute_overlap_metrics(self, values: torch.Tensor) -> dict[str, float]:
+        """Reduce Dice, IoU and F1 with the configured empty-class rules."""
+        tp, pred, truth, valid = values
+        denominator = pred + truth
+        result = {}
         for name in self.names:
             if name not in {"dice", "iou", "f1"}:
                 continue

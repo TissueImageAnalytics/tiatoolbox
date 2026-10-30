@@ -494,6 +494,7 @@ def _compile_where(where: str | bytes) -> Callable[[Properties], bool]:
     code = compile(where, "<where>", "eval")
 
     def evaluate(properties: Properties) -> bool:
+        """Evaluate the compiled annotation predicate against its properties."""
         return bool(
             eval(  # skipcq: PYL-W0123,  # noqa: S307
                 code,
@@ -828,7 +829,8 @@ class MaskTargetBuilder(TargetBuilderABC):
             _rasterize_geometry(
                 mask,
                 geometry,
-                next(instance_ids) if self.instance_ids else label,
+                # itertools.count is infinite, so this cannot raise StopIteration.
+                next(instance_ids) if self.instance_ids else label,  # skipcq: PTC-W0063
                 line_width=self.line_width,
                 point_radius=self.point_radius,
             )

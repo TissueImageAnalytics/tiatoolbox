@@ -94,7 +94,7 @@ def _first_tensor(value: object) -> torch.Tensor | None:
 
 def _effective_preproc(preproc: Callable | None) -> Callable | None:
     """Treat the base model's identity preprocessing as no preprocessing."""
-    return None if preproc is None or preproc == ModelABC.preproc else preproc
+    return None if preproc is None or preproc is ModelABC.preproc else preproc
 
 
 def _callable_name(function: Callable | None) -> str:
@@ -371,8 +371,8 @@ class Trainer:
         """Return initial sentinel based on monitor mode."""
         return float("inf") if self.config.monitor_mode == "min" else -float("inf")
 
+    @staticmethod
     def _extract_batch(
-        self: Trainer,
         batch: dict | list | tuple,
     ) -> tuple[torch.Tensor, object]:
         """Extract image tensor and target object from a dataloader batch."""
@@ -526,6 +526,81 @@ class Trainer:
                 scaled_loss.backward()
         return output, targets, components
 
+    def _log_batch_loss(
+        self,
+        components: dict[str, torch.Tensor],
+        step_index: int,
+        *,
+        training: bool,
+    ) -> None:
+        """Log the detached batch loss at the configured step interval."""
+        if (
+            self.config.log_every_n_steps > 0
+            and step_index % self.config.log_every_n_steps == 0
+        ):
+            logger.info(
+                "%s step %d: loss=%.6f",
+                "train" if training else "val",
+                step_index,
+                float(sum(components.values()).detach()),
+            )
+
+    def _run_window(
+        self,
+        window: list[dict | list | tuple],
+        loss_totals: dict[str, torch.Tensor],
+        loss_counts: dict[str, int],
+        step_index: int,
+        *,
+        training: bool,
+    ) -> tuple[int, int]:
+        """Accumulate one window and return its sample count and final step index."""
+        total_samples = 0
+        # Keep only input batches, never a window of autograd graphs. Counts
+        # are available on the CPU before any forward/backward passes.
+        prepared = [self._extract_batch(batch) for batch in window]
+        batch_sizes = [int(_first_tensor(images).shape[0]) for images, _ in prepared]
+        normalizers = [
+            self.task.loss_normalizers(targets, batch_size)
+            for (_, targets), batch_size in zip(prepared, batch_sizes, strict=True)
+        ]
+        window_counts = {
+            key: sum(counts[key] for counts in normalizers) for key in normalizers[0]
+        }
+        supervised = any(window_counts.values())
+        for (batch_images, batch_targets), counts, batch_size in zip(
+            prepared, normalizers, batch_sizes, strict=True
+        ):
+            step_index += 1
+            total_samples += batch_size
+            loss_scales = None
+            if training and supervised:
+                loss_scales = {
+                    key: count / window_counts[key]
+                    for key, count in counts.items()
+                    if window_counts[key]
+                }
+            output, targets, components = self._forward(
+                batch_images, batch_targets, loss_scales, training=training
+            )
+            if components.keys() != counts.keys():
+                msg = "Loss components and normalizers must have matching keys."
+                raise ValueError(msg)
+            self.task.update_epoch_state(
+                _map_tensors(output, torch.Tensor.detach),
+                _map_tensors(targets, torch.Tensor.detach),
+            )
+            for key, value in components.items():
+                loss_totals[key] = (
+                    loss_totals.get(key, 0.0) + value.detach().double() * counts[key]
+                )
+                loss_counts[key] = loss_counts.get(key, 0) + counts[key]
+
+            self._log_batch_loss(components, step_index, training=training)
+        if training and supervised:
+            self._optimizer_step()
+        return total_samples, step_index
+
     def _run_epoch(
         self: Trainer,
         loader: DataLoader,
@@ -535,8 +610,8 @@ class Trainer:
         """Run an epoch, reducing losses by supervision and metrics by counts."""
         self.model.train(mode=training)
         mode_name = "train" if training else "val"
-        loss_totals = {}
-        loss_counts = {}
+        loss_totals: dict[str, torch.Tensor] = {}
+        loss_counts: dict[str, int] = {}
         total_samples = 0
         step_index = 0
         if training:
@@ -553,62 +628,10 @@ class Trainer:
         )
         window_size = self.config.grad_accum_steps if training else 1
         while window := list(islice(batches, window_size)):
-            # Keep only input batches, never a window of autograd graphs. Counts
-            # are available on the CPU before any forward/backward passes.
-            prepared = [self._extract_batch(batch) for batch in window]
-            batch_sizes = [
-                int(_first_tensor(images).shape[0]) for images, _ in prepared
-            ]
-            normalizers = [
-                self.task.loss_normalizers(targets, batch_size)
-                for (_, targets), batch_size in zip(prepared, batch_sizes, strict=True)
-            ]
-            window_counts = {
-                key: sum(counts[key] for counts in normalizers)
-                for key in normalizers[0]
-            }
-            supervised = any(window_counts.values())
-            for (batch_images, batch_targets), counts, batch_size in zip(
-                prepared, normalizers, batch_sizes, strict=True
-            ):
-                step_index += 1
-                total_samples += batch_size
-                loss_scales = None
-                if training and supervised:
-                    loss_scales = {
-                        key: count / window_counts[key]
-                        for key, count in counts.items()
-                        if window_counts[key]
-                    }
-                output, targets, components = self._forward(
-                    batch_images, batch_targets, loss_scales, training=training
-                )
-                if components.keys() != counts.keys():
-                    msg = "Loss components and normalizers must have matching keys."
-                    raise ValueError(msg)
-                self.task.update_epoch_state(
-                    _map_tensors(output, torch.Tensor.detach),
-                    _map_tensors(targets, torch.Tensor.detach),
-                )
-                for key, value in components.items():
-                    loss_totals[key] = (
-                        loss_totals.get(key, 0.0)
-                        + value.detach().double() * counts[key]
-                    )
-                    loss_counts[key] = loss_counts.get(key, 0) + counts[key]
-
-                if (
-                    self.config.log_every_n_steps > 0
-                    and step_index % self.config.log_every_n_steps == 0
-                ):
-                    logger.info(
-                        "%s step %d: loss=%.6f",
-                        mode_name,
-                        step_index,
-                        float(sum(components.values()).detach()),
-                    )
-            if training and supervised:
-                self._optimizer_step()
+            window_samples, step_index = self._run_window(
+                window, loss_totals, loss_counts, step_index, training=training
+            )
+            total_samples += window_samples
 
         if total_samples == 0:
             msg = f"`{mode_name}` dataloader yielded zero samples."
@@ -745,8 +768,34 @@ class Trainer:
         self._set_loader_epoch(loader, len(self.history), training=False)
         return self._run_epoch(loader, training=False)
 
+    def _update_best_checkpoint(self, epoch: int, monitor_value: float | None) -> None:
+        """Update early-stopping state and save weights when the monitor improves."""
+        if monitor_value is None:
+            return
+        if self._is_improved(monitor_value):
+            self.best_monitor_value = monitor_value
+            self.best_epoch = epoch
+            self.patience_counter = 0
+            if self.checkpoint_config.save_best:
+                best_path = (
+                    self.output_dir / self.checkpoint_config.best_weights_filename
+                )
+                save_model_weights(self.model, best_path)
+        else:
+            self.patience_counter += 1
+
+    def _save_last_checkpoint(self, epoch: int, *, final: bool) -> None:
+        """Save on configured intervals and always at the final epoch."""
+        if self.checkpoint_config.save_last and (
+            final or epoch % self.checkpoint_config.save_last_every == 0
+        ):
+            save_checkpoint(
+                self._build_checkpoint_state(epoch),
+                self.output_dir / self.checkpoint_config.last_filename,
+            )
+
     # Keep validation, best-weight tracking, checkpointing, and stopping in epoch order.
-    def fit(  # noqa: PLR0912
+    def fit(
         self: Trainer,
         resume_from: str | Path | None = None,
     ) -> list[dict[str, float]]:
@@ -796,19 +845,7 @@ class Trainer:
             epoch_metrics["epoch_time"] = time.perf_counter() - epoch_start
 
             monitor_value = self._resolve_monitor_value(epoch_metrics)
-            if monitor_value is not None:
-                if self._is_improved(monitor_value):
-                    self.best_monitor_value = monitor_value
-                    self.best_epoch = epoch_idx + 1
-                    self.patience_counter = 0
-                    if self.checkpoint_config.save_best:
-                        best_path = (
-                            self.output_dir
-                            / self.checkpoint_config.best_weights_filename
-                        )
-                        save_model_weights(self.model, best_path)
-                else:
-                    self.patience_counter += 1
+            self._update_best_checkpoint(epoch_idx + 1, monitor_value)
 
             if self.config.scheduler_interval == "epoch":
                 self._step_scheduler(monitor_value)
@@ -817,13 +854,7 @@ class Trainer:
             final = epoch_idx + 1 == self.config.max_epochs or (
                 patience is not None and self.patience_counter >= patience
             )
-            if self.checkpoint_config.save_last and (
-                final or (epoch_idx + 1) % self.checkpoint_config.save_last_every == 0
-            ):
-                save_checkpoint(
-                    self._build_checkpoint_state(epoch_idx + 1),
-                    self.output_dir / self.checkpoint_config.last_filename,
-                )
+            self._save_last_checkpoint(epoch_idx + 1, final=final)
 
             if monitor_value is None:
                 logger.info(

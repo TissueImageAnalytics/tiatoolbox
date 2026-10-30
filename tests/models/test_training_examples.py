@@ -25,18 +25,29 @@ from tiatoolbox.utils.misc import process_contours
 
 def _cell_source(number: int, marker: str) -> str:
     """Select a recipe by its source text rather than a mutable cell index."""
-    path = next((Path(__file__).parents[2] / "examples").glob(f"{number}-*.ipynb"))
-    notebook = json.loads(path.read_text(encoding="utf-8"))
-    return next(
-        "".join(cell["source"])
-        for cell in notebook["cells"]
-        if cell["cell_type"] == "code" and marker in "".join(cell["source"])
+    path = next(
+        (Path(__file__).parents[2] / "examples").glob(f"{number}-*.ipynb"), None
     )
+    assert path is not None, f"Missing training notebook {number}"
+    notebook = json.loads(path.read_text(encoding="utf-8"))
+    source = next(
+        (
+            "".join(cell["source"])
+            for cell in notebook["cells"]
+            if cell["cell_type"] == "code" and marker in "".join(cell["source"])
+        ),
+        None,
+    )
+    assert source is not None, f"Missing recipe {marker!r} in {path.name}"
+    return source
 
 
 def _run_recipe(source: str, namespace: dict) -> None:
     """Execute only selected, trusted repository cells with synthetic inputs."""
-    exec(compile(source, "<training example>", "exec"), namespace)  # noqa: S102
+    # Execute trusted repository cells to test the actual notebook recipes.
+    exec(  # skipcq: PYL-W0122  # noqa: S102
+        compile(source, "<training example>", "exec"), namespace
+    )
 
 
 def test_classification_example_keeps_validation_unaugmented(tmp_path: Path) -> None:

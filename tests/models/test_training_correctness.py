@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
-    from pathlib import Path
     from typing import BinaryIO
 
 import copy
@@ -221,7 +220,11 @@ def test_epoch_metrics_do_not_depend_on_batching(tmp_path: Path, kind: str) -> N
             )
 
     class Lookup(nn.Module):
-        def forward(self, indices: torch.Tensor) -> torch.Tensor:
+        """Return fixed logits selected by sample index."""
+
+        @staticmethod
+        def forward(indices: torch.Tensor) -> torch.Tensor:
+            """Look up the logits for each sample index."""
             return logits[indices[:, 0].long()]
 
     model = Lookup()
@@ -285,6 +288,7 @@ def test_trainer_does_not_recompute_dense_losses(
     calls = []
 
     def compute(*args: object) -> tuple[torch.Tensor, str]:
+        """Record each loss evaluation before delegating to the original."""
         calls.append(None)
         return original(*args)
 
@@ -422,6 +426,7 @@ def test_disabled_dense_metrics_skip_statistics(
     original = task._head_metric_state
 
     def checked(head: DenseHeadSpec, *args: object) -> object:
+        """Verify that only the enabled head reaches metric computation."""
         assert head.name == "enabled"
         return original(head, *args)
 
@@ -572,7 +577,7 @@ def test_dataset_cache_is_bounded_and_closes_owned_stores(tmp_path: Path) -> Non
         [np.zeros((4, 4, 3), np.uint8)] * 20, paths, PresenceTargetBuilder()
     ) as dataset:
         for index in range(20):
-            dataset[index]
+            _ = dataset[index]
         assert len(dataset._store_cache) <= 16
         owned = list(dataset._store_cache.values())
     assert all(not store.cons for store in owned)
@@ -670,6 +675,7 @@ def test_resume_matches_uninterrupted_training(
         np.save(root / f"{index}.npy", rng.integers(0, 256, (8, 8, 3), dtype=np.uint8))
 
     def build(output_dir: Path, epochs: int) -> Trainer:
+        """Build a reproducibly seeded trainer with stochastic augmentation."""
         torch.manual_seed(9)
         model = nn.Sequential(
             nn.Flatten(), nn.Linear(192, 8), nn.ReLU(), nn.Dropout(0.5), nn.Linear(8, 2)
@@ -731,6 +737,7 @@ def test_resume_retains_patience_and_previous_best_weights(tmp_path: Path) -> No
     )
 
     def build(directory: Path, epochs: int) -> Trainer:
+        """Build a trainer with fixed validation metrics for early stopping."""
         model = nn.Linear(1, 2)
         trainer = make_trainer(
             directory,
@@ -850,8 +857,8 @@ def test_failed_checkpoint_write_preserves_previous_file(
     path = tmp_path / "last.ckpt"
     save_checkpoint({"epoch": 1}, path)
 
-    def fail(state: dict, stream: BinaryIO) -> None:
-        del state
+    def fail(_state: dict, stream: BinaryIO) -> None:
+        """Simulate an interrupted checkpoint write."""
         stream.write(b"incomplete")
         msg = "simulated write failure"
         raise OSError(msg)
@@ -889,7 +896,6 @@ class _ForbidDeviceSync(TorchFunctionMode):
         kwargs: dict | None = None,
     ) -> object:
         """Dispatch the call unless it would read device-side values."""
-        del types
         name = getattr(func, "__name__", "")
         if name in self._reads:
             pytest.fail(f"`{name}` synchronises with the device")
@@ -1092,9 +1098,15 @@ def test_early_stopping_counts_consecutive_non_improving_epochs(
     )
     losses = iter([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
 
-    def fake_run_epoch(loader: DataLoader, *, training: bool) -> dict[str, float]:
-        del loader, training
-        return {"loss": next(losses)}
+    def fake_run_epoch(
+        loader: DataLoader,  # noqa: ARG001 - patched epoch interface
+        *,
+        training: bool,  # noqa: ARG001 - patched epoch interface
+    ) -> dict[str, float]:
+        """Return the next predefined epoch loss."""
+        loss = next(losses, None)
+        assert loss is not None, "Unexpected extra epoch pass"
+        return {"loss": loss}
 
     trainer._run_epoch = fake_run_epoch  # type: ignore[method-assign]
     history = trainer.fit()
@@ -1121,6 +1133,7 @@ def test_numpy_metric_values_keep_checkpoints_resumable(tmp_path: Path) -> None:
     )
 
     def run(max_epochs: int, resume_from: Path | None = None) -> list[dict]:
+        """Train with NumPy metrics, optionally resuming a checkpoint."""
         model = nn.Linear(2, 2)
         trainer = Trainer(
             model,
@@ -1381,11 +1394,14 @@ def test_channels_last_and_structured_inputs(tmp_path: Path) -> None:
     """Channels-last training works, and multi-input models receive dicts."""
 
     class TwoInputs(nn.Module):
+        """Combine image features with a separate scale input."""
+
         def __init__(self) -> None:
             super().__init__()
             self.conv = nn.Conv2d(3, 2, 1)
 
         def forward(self, inputs: dict[str, torch.Tensor]) -> torch.Tensor:
+            """Add the per-sample scale to pooled image features."""
             features = self.conv(inputs["rgb"]).mean((2, 3))
             return features + inputs["scale"].float()[:, None]
 
@@ -1413,13 +1429,18 @@ def test_channels_last_and_structured_inputs(tmp_path: Path) -> None:
             self.conv = nn.Conv2d(3, 2, 3)
 
         def forward(self, images: torch.Tensor) -> torch.Tensor:
+            """Return spatially pooled image features."""
             return self.conv(images).mean((2, 3))
 
         @staticmethod
         def infer_batch(
-            model: nn.Module, batch_data: torch.Tensor, *, device: str
+            model: nn.Module,  # noqa: ARG004 - inference interface
+            batch_data: torch.Tensor,  # noqa: ARG004 - inference interface
+            *,
+            device: str,  # noqa: ARG004 - inference interface
         ) -> None:
-            del model, batch_data, device
+            """Leave inference unused in this training-only test model."""
+            return
 
     for conv_model in (
         nn.Sequential(nn.Conv2d(3, 2, 3), nn.AdaptiveAvgPool2d(1), nn.Flatten()),
@@ -1435,7 +1456,8 @@ def test_channels_last_and_structured_inputs(tmp_path: Path) -> None:
             ),
             channels_last=True,
         )
-        weight = next(conv_trainer.model.parameters())
+        weight = next(conv_trainer.model.parameters(), None)
+        assert weight is not None
         assert weight.is_contiguous(memory_format=torch.channels_last)
         conv_trainer.fit()
 
@@ -1450,6 +1472,7 @@ def test_last_checkpoint_frequency_still_saves_the_final_epoch(
     saved_epochs = []
 
     def record(trainer: Trainer, _metrics: dict[str, float]) -> None:
+        """Record the last saved checkpoint epoch after each training epoch."""
         path = trainer.output_dir / "last.ckpt"
         saved_epochs.append(load_checkpoint(path)["epoch"] if path.exists() else None)
 
@@ -1500,6 +1523,7 @@ def test_slide_jitter_shifts_training_patches_reproducibly() -> None:
     grid = [tuple(dataset[index]["bounds"].tolist()) for index in range(len(dataset))]
 
     def bounds(epoch: int, *, training: bool) -> list[tuple[int, ...]]:
+        """Collect patch bounds for the requested augmentation epoch."""
         dataset.set_epoch(epoch, 5, training=training)
         return [tuple(dataset[i]["bounds"].tolist()) for i in range(len(dataset))]
 
@@ -1526,8 +1550,7 @@ def test_slide_patches_zoom_out_by_reading_a_larger_window() -> None:
     zoomed = dataset.with_transforms(pair_transform=preset)
     zoomed.set_epoch(0, 5)
     slide = np.arange(48 * 48 * 3, dtype=np.uint32).reshape(48, 48, 3) % 251
-    for index in range(len(zoomed)):
-        sample = zoomed[index]
+    for index, sample in enumerate(zoomed):
         x_min, y_min, x_max, y_max = sample["bounds"].tolist()
         assert (x_max - x_min, y_max - y_min) == (32, 32)
         assert 0 <= x_min <= x_max <= 48
@@ -1634,8 +1657,7 @@ def test_reader_cache_size_is_configurable() -> None:
         with SlideAnnotationPatchDataset(
             paths, store, MaskTargetBuilder(), patch_size=16, cache_size=1
         ) as dataset:
-            for index in range(len(dataset)):
-                dataset[index]
+            for _sample in dataset:
                 assert len(dataset._reader_cache) <= 1
 
 

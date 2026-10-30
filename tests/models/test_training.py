@@ -105,7 +105,8 @@ def _build_dummy_loader() -> DataLoader:
 class LightweightKongNet(KongNet):
     """Tiny network exercising KongNet's actual state-dictionary contract."""
 
-    def __init__(self) -> None:
+    # This test double intentionally omits KongNet's expensive encoder setup.
+    def __init__(self) -> None:  # skipcq: PYL-W0231
         """Initialize only a tiny classifier, avoiding the full KongNet encoder."""
         nn.Module.__init__(self)
         self.flatten = nn.Flatten()
@@ -148,10 +149,9 @@ class MinimalModelABC(ModelABC):
         model: nn.Module,
         batch_data: np.ndarray | torch.Tensor,
         *,
-        device: str,
+        device: str,  # noqa: ARG004 - inference interface
     ) -> np.ndarray:
         """Run a minimal inference batch for abstract interface completeness."""
-        del device
         with torch.no_grad():
             if isinstance(batch_data, np.ndarray):
                 batch_data = torch.from_numpy(batch_data)
@@ -750,6 +750,7 @@ def test_trainer_rejects_a_classifier_head_that_disagrees_with_the_task(
         task: ClassificationTask,
         export: ModelExport | None = None,
     ) -> Trainer:
+        """Build a trainer with the shared data and optional model export."""
         return Trainer(
             model=model,
             task=task,
@@ -1337,12 +1338,14 @@ def test_trainer_val_monitor_updates_only_on_validation_epochs(
     )
 
     def fake_run_epoch(
-        loader: DataLoader,
+        loader: DataLoader,  # noqa: ARG001 - patched epoch interface
         *,
-        training: bool,
+        training: bool,  # noqa: ARG001 - patched epoch interface
     ) -> dict[str, float]:
-        del loader, training
-        return next(epoch_metrics)
+        """Return the next predefined training or validation metrics."""
+        metrics = next(epoch_metrics, None)
+        assert metrics is not None, "Unexpected extra epoch pass"
+        return metrics
 
     trainer._run_epoch = fake_run_epoch  # type: ignore[method-assign]
     history = trainer.fit()
@@ -1406,12 +1409,14 @@ def test_reduce_on_plateau_steps_only_when_monitor_is_available(
     )
 
     def fake_run_epoch(
-        loader: DataLoader,
+        loader: DataLoader,  # noqa: ARG001 - patched epoch interface
         *,
-        training: bool,
+        training: bool,  # noqa: ARG001 - patched epoch interface
     ) -> dict[str, float]:
-        del loader, training
-        return next(epoch_metrics)
+        """Return the next predefined training or validation metrics."""
+        metrics = next(epoch_metrics, None)
+        assert metrics is not None, "Unexpected extra epoch pass"
+        return metrics
 
     trainer._run_epoch = fake_run_epoch  # type: ignore[method-assign]
     _ = trainer.fit()
@@ -1580,11 +1585,14 @@ def test_wrapper_detection_uses_parallel_module_types() -> None:
     """Only DataParallel/DDP are unwrapped, not models owning a `module` attribute."""
 
     class OwnsModule(nn.Module):
+        """Expose a child named module without acting as a parallel wrapper."""
+
         def __init__(self) -> None:
             super().__init__()
             self.module = nn.Linear(2, 2)
 
         def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+            """Forward inputs through the child module."""
             return self.module(inputs)
 
     owner = OwnsModule()

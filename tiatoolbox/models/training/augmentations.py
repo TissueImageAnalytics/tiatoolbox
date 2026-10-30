@@ -105,10 +105,14 @@ class TrainingAugmentationPreset:
 class _SeededTransform:
     """Run v2 with a sample seed without advancing the model's torch RNG."""
 
+    _next_seed: int | None = None
+
     def set_random_seed(self, seed: int) -> None:
+        """Set the seed for the next pipeline call."""
         self._next_seed = seed
 
     def _run_pipeline(self, *inputs: torch.Tensor) -> object:
+        """Apply the pipeline while preserving the caller's CPU RNG state."""
         seed = getattr(self, "_next_seed", None)
         if seed is None:
             # DataLoader seeds this global stream independently in each worker.
@@ -227,7 +231,8 @@ class _Uint8Transform(nn.Module):
 class _RandomQuarterTurn(nn.Module):
     """Rotate all spatial inputs by the same exact multiple of 90 degrees."""
 
-    def forward(self, *inputs: torch.Tensor) -> object:
+    @staticmethod
+    def forward(*inputs: torch.Tensor) -> object:
         """Permute pixels without resampling, keeping each input's shape.
 
         Square inputs turn by any multiple of 90 degrees. Rectangular inputs

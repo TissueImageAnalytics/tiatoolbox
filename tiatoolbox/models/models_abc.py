@@ -11,6 +11,7 @@ import torch
 import torch._dynamo
 import torch.distributed as dist
 from torch import nn
+from torch._dynamo.eval_frame import OptimizedModule
 from torch.nn.parallel import DistributedDataParallel
 
 from tiatoolbox.models.architecture.utils import is_torch_compile_compatible
@@ -35,8 +36,9 @@ def unwrap_model(model: nn.Module) -> nn.Module:
     while True:
         if isinstance(model, (nn.DataParallel, DistributedDataParallel)):
             model = model.module
-        elif isinstance(model, torch._dynamo.eval_frame.OptimizedModule):  # noqa: SLF001
-            model = model._orig_mod  # noqa: SLF001
+        elif isinstance(model, OptimizedModule):
+            # PyTorch exposes the original compiled module through this attribute.
+            model = model._orig_mod  # skipcq: PYL-W0212  # noqa: SLF001
         else:
             return model
 

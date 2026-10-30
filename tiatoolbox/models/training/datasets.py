@@ -311,6 +311,13 @@ def _collect_strict_relative_stem_pairs(
 class _TrainingDataset:
     """Manage transforms, augmentation epochs and owned dataset resources."""
 
+    pair_transform: Callable | None
+    image_transform: Callable | None
+    target_transform: Callable | None
+    preproc: Callable | None
+    _resource_pid: int
+    _augmentation_epoch: torch.Tensor
+
     def _set_transforms(
         self,
         pair_transform: Callable | None,
@@ -365,7 +372,8 @@ class _TrainingDataset:
         the same split indices without scanning files or slides again.
         """
         dataset = copy.copy(self)
-        dataset._init_training_state()  # noqa: SLF001 - same class
+        # Reset this class's state on the copy, keeping the original independent.
+        dataset._init_training_state()  # skipcq: PYL-W0212  # noqa: SLF001
         for name in ("_store_cache", "_reader_cache"):
             if hasattr(self, name):
                 setattr(dataset, name, OrderedDict())

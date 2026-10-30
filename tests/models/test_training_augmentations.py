@@ -74,6 +74,7 @@ def test_stain_replay_is_independent_of_patch_history() -> None:
     original = image.copy()
 
     def build() -> _TorchvisionImageTransform:
+        """Build a fresh stain augmentation pipeline."""
         return _TorchvisionImageTransform(
             v2.Compose([_StainAugmentation(sigma1=0.4, sigma2=0.2, p=1)])
         )
@@ -176,6 +177,7 @@ def test_failed_transform_restores_torch_rng(monkeypatch: pytest.MonkeyPatch) ->
     pipeline = get_classification_augmentation("heavy").image_transform
 
     def fail(*_inputs: object) -> None:
+        """Advance the RNG before simulating a transform failure."""
         torch.rand(10)
         msg = "transform failed"
         raise RuntimeError(msg)
@@ -208,7 +210,7 @@ def test_affine_preserves_large_integer_labels(
 def test_uint16_image_round_trip_preserves_white() -> None:
     """Restoring image dtype must not wrap full-intensity uint16 pixels to zero."""
     pipeline = _TorchvisionImageTransform(v2.Compose([v2.ColorJitter()]))
-    image = np.array([0, 1, 300, 32768, 65534, 65535], np.uint16).reshape(2, 3, 1)
+    image = np.array([0, 1, 300, 32768, 65534, 65535], np.uint16).reshape((2, 3, 1))
     pipeline.set_random_seed(7)
     np.testing.assert_array_equal(pipeline(image), image)
 

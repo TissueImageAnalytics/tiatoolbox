@@ -2307,6 +2307,7 @@ def test_store_reader_closes_only_what_it_opens(
     opened = []
 
     def open_store(path: Path) -> SQLiteStore:
+        """Open a store and track it for cleanup."""
         opened.append(SQLiteStore(path))
         return opened[-1]
 

@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
-    from pathlib import Path
 
 import pickle
 from pathlib import Path
@@ -47,6 +46,7 @@ def store_factory() -> Iterator[Callable[..., SQLiteStore]]:
     stores = []
 
     def create(*args: object, **kwargs: object) -> SQLiteStore:
+        """Track stores so the fixture can close them after the test."""
         store = SQLiteStore(*args, **kwargs)
         stores.append(store)
         return store
@@ -293,6 +293,7 @@ def test_stacked_target_builder_shared_parent_where_queries_once(
     original_query = store.query
 
     def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
+        """Record query options before delegating to the store."""
         query_calls.append(dict(kwargs))
         return original_query(*args, **kwargs)
 
@@ -336,6 +337,7 @@ def test_stacked_target_builder_delegates_child_specific_filters(
     original_query = store.query
 
     def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
+        """Record query options before delegating to the store."""
         query_calls.append(dict(kwargs))
         return original_query(*args, **kwargs)
 
@@ -410,12 +412,14 @@ def test_stacked_target_builder_applies_child_where_to_shared_query(
     original_query = store.query
 
     def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
+        """Record query options before delegating to the store."""
         query_calls.append(dict(kwargs))
         return original_query(*args, **kwargs)
 
     monkeypatch.setattr(store, "query", counting_query)
 
     def is_stroma(properties: dict[str, object]) -> bool:
+        """Select annotations whose class is stroma."""
         return properties.get("class") == "stroma"
 
     builder = StackedTargetBuilder(
@@ -469,6 +473,7 @@ def test_stacked_target_builder_forwards_parent_query_options(
     original_query = store.query
 
     def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
+        """Record query options before delegating to the store."""
         query_calls.append(dict(kwargs))
         return original_query(*args, **kwargs)
 
@@ -506,6 +511,7 @@ def test_stacked_target_builder_forwards_parent_query_options(
         *args: object,
         **kwargs: object,
     ) -> dict[str, Annotation]:
+        """Record distance query options before delegating to the store."""
         distance_query_calls.append(dict(kwargs))
         return original_distance_query(*args, **kwargs)
 
@@ -746,6 +752,7 @@ def test_composite_target_builder_shared_query_matches_per_child_queries(
     original_query = store.query
 
     def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
+        """Record query options before delegating to the store."""
         query_calls.append(dict(kwargs))
         return original_query(*args, **kwargs)
 
@@ -801,6 +808,7 @@ def test_composite_target_builder_forwards_parent_query_options(
     original_query = store.query
 
     def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
+        """Record query options before delegating to the store."""
         query_calls.append(dict(kwargs))
         return original_query(*args, **kwargs)
 

@@ -1731,7 +1731,8 @@ class KongNetSegmentor(KongNet):
             for head_spec in getattr(model, "module", model).training_output_spec
         )
 
-    def postproc(
+    # MultiTaskSegmentor requires full-head maps, unlike KongNet's peak-map API.
+    def postproc(  # skipcq: PYL-W0221
         self: KongNetSegmentor,
         raw_maps: list[np.ndarray],
         offset: tuple[int, int] = (0, 0),
