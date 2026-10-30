@@ -37,6 +37,8 @@ jobs:
 
       # ✅ Install via micromamba
       - uses: mamba-org/setup-micromamba@v3
+        env:
+            MAMBA_NO_CACHE: "true" # Forces libmamba to fetch completely fresh metadata
         with:
           environment-name: tiatoolbox
           environment-file: requirements/requirements.conda.generated.yml
