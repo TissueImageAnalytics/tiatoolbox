@@ -560,8 +560,8 @@ class StructuredDenseTask(TrainingTaskABC):
             return ("mae", "mse")
         return ("dice", "iou")
 
+    @staticmethod
     def _validate_dense_batch_and_spatial_shapes(
-        self: StructuredDenseTask,
         logits: torch.Tensor,
         targets: torch.Tensor,
         *,
