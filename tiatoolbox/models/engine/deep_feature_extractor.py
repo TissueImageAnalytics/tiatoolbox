@@ -48,6 +48,7 @@ import zarr
 from dask import compute
 from tqdm.auto import tqdm
 
+from tiatoolbox.models.architecture.utils import eval_model_if_nn_module
 from tiatoolbox.utils.misc import update_tqdm_desc
 
 from .patch_predictor import PatchPredictor, PredictorRunParams
@@ -225,6 +226,10 @@ class DeepFeatureExtractor(PatchPredictor):
         probabilities_zarr, coordinates_zarr = None, None
 
         probabilities_used_percent = 0
+
+        # Set inference mode once here; infer_batch no longer calls
+        # model.eval() internally (needed for Monte Carlo Dropout wrappers).
+        self.model = eval_model_if_nn_module(model=self.model)
         infer_batch = self._get_model_attr("infer_batch")
         for batch_data in tqdm_loop:
             batch_output = infer_batch(
