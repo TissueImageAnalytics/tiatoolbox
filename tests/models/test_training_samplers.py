@@ -19,7 +19,7 @@ from tiatoolbox.models.training import (
 )
 from tiatoolbox.wsicore.wsireader import VirtualWSIReader
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
 

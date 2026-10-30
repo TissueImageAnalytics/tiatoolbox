@@ -21,7 +21,7 @@ from tiatoolbox.models.training import ModelExport, load_trained_model
 from tiatoolbox.models.training.checkpoint import save_checkpoint, save_model_weights
 from tiatoolbox.models.training.export import _default_argument
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
 

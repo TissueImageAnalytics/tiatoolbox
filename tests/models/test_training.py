@@ -58,7 +58,7 @@ from tiatoolbox.models.training.config import (
 )
 from tiatoolbox.models.training.tasks import TrainingTaskABC
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
 

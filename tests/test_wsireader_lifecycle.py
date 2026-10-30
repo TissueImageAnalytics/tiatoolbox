@@ -20,7 +20,7 @@ from tiatoolbox.wsicore.wsireader import (
     WSIReader,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
 

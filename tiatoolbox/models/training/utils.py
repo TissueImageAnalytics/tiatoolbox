@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from sklearn.model_selection import GroupShuffleSplit, train_test_split
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Sequence
 
 

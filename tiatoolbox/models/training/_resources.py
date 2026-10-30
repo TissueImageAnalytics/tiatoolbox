@@ -17,7 +17,7 @@ from tiatoolbox.wsicore.wsireader import (
     WSIReader,
 )
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from collections import OrderedDict
     from collections.abc import Callable
 

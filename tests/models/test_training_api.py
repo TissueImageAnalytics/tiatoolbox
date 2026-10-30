@@ -36,7 +36,7 @@ from tiatoolbox.models.training import (
 )
 from tiatoolbox.models.training.checkpoint import save_model_weights
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
 

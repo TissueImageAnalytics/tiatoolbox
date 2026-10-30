@@ -33,7 +33,7 @@ from tiatoolbox.models.training.config import (
 from tiatoolbox.models.training.datasets import _TrainingDataset
 from tiatoolbox.models.training.tasks import ClassificationTask
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable, Iterator, Sequence
 
     from torch.optim import Optimizer

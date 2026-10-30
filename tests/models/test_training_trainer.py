@@ -26,7 +26,7 @@ from tiatoolbox.models.training import (
 from tiatoolbox.models.training.checkpoint import save_checkpoint
 from tiatoolbox.models.training.trainer import _configure_cudnn, set_seed
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
 
