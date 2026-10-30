@@ -72,6 +72,7 @@ class PromptSegmentor:
 
         """
         paths = []
+
         # Set inference mode once here; infer_batch no longer calls
         # model.eval() internally (needed for Monte Carlo Dropout wrappers).
         self.model = eval_model_if_nn_module(model=self.model)

@@ -64,7 +64,6 @@ class BayesianModelWrapper(torch.nn.Module):
         >>> outputs = predictor.run(images=["sample_img.png"], patch_mode=True)
         >>>
         >>> # After predict() finishes, concatenate the per-batch stats:
-        >>> import numpy as np
         >>> epistemic = np.concatenate(
         ...     [s["epistemic"] for s in bayesian_model.uncertainty_stats], axis=0
         ... )  # one value per patch, aligned with outputs["coordinates"]
@@ -77,6 +76,7 @@ class BayesianModelWrapper(torch.nn.Module):
         ``infer_batch(model, images, device)`` returns per-sample class
         probabilities of shape ``[B, C]`` (e.g. :class:`CNNModel`,
         :class:`TimmModel`).
+
     """
 
     def __init__(

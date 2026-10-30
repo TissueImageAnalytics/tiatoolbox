@@ -37,7 +37,7 @@ from tiatoolbox.models.engine.uncertainty import decompose_uncertainty
 
 
 class DummyCNNModel(nn.Module):
-    """Minimal stand-in for tiatoolbox's CNNModel: feat_extract -> classifier."""
+    """Minimal stand-in for TIAToolbox's CNNModel: feat_extract -> classifier."""
 
     def __init__(self, *, with_dropout: bool = False) -> None:
         """Initialize :class:`DummyCNNModel`.
@@ -78,7 +78,8 @@ class DummyCNNModel(nn.Module):
     ) -> torch.Tensor:
         """Run a forward pass and return softmax probabilities.
 
-        Mimics tiatoolbox's CNNModel.infer_batch(model, images, device) interface.
+        Mimics TIAToolbox's CNNModel.infer_batch(model, images, device) interface.
+
         """
         with torch.no_grad():
             logits = model(batch_data.to(device))
@@ -139,7 +140,7 @@ def test_mc_dropout_mode_restores_previous_training_state() -> None:
     with mc_dropout_mode(model):
         pass
 
-    assert model.training is True  # restored, not forced to eval afterwards
+    assert model.training is True  # restored, not forced to eval afterward
     assert model.bn.training is True
 
 

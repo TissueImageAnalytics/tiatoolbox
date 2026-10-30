@@ -597,8 +597,7 @@ class MultiTaskSegmentor(SemanticSegmentor):
 
         # Set inference mode once here; infer_batch no longer calls
         # model.eval() internally (needed for Monte Carlo Dropout wrappers).
-        if isinstance(self.model, torch.nn.Module):
-            self.model.eval()
+        self.model = eval_model_if_nn_module(model=self.model)
         # Expected number of outputs from the model
         infer_batch = self._get_model_attr("infer_batch")
         batch_output = infer_batch(

@@ -226,6 +226,7 @@ class DeepFeatureExtractor(PatchPredictor):
         probabilities_zarr, coordinates_zarr = None, None
 
         probabilities_used_percent = 0
+
         # Set inference mode once here; infer_batch no longer calls
         # model.eval() internally (needed for Monte Carlo Dropout wrappers).
         self.model = eval_model_if_nn_module(model=self.model)
