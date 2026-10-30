@@ -346,10 +346,14 @@ def test_sam_forward_point_prompts_only(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test SAM forward pass using point prompts only."""
+    sam = SAM.__new__(SAM)
+
+    # Initialize PyTorch bookkeeping without loading pretrained SAM weights.
+    torch.nn.Module.__init__(sam)
+
     captured: dict[str, object] = {}
 
     def _fake_encode_image(
-        _: object,
         image: list,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Return fake embeddings and size metadata."""
@@ -362,7 +366,6 @@ def test_sam_forward_point_prompts_only(
         )
 
     def _fake_process_prompts(
-        _: object,
         image: list,
         embeddings: torch.Tensor,
         orig_sizes: torch.Tensor,
@@ -389,18 +392,16 @@ def test_sam_forward_point_prompts_only(
         )
 
     monkeypatch.setattr(
-        SAM,
+        sam,
         "_encode_image",
         _fake_encode_image,
     )
 
     monkeypatch.setattr(
-        SAM,
+        sam,
         "_process_prompts",
         _fake_process_prompts,
     )
-
-    sam = SAM.__new__(SAM)
 
     image = np.zeros(
         (8, 8, 3),
@@ -467,7 +468,6 @@ def test_functional_sam(remote_sample: Callable) -> None:
     patch = model.preproc(patch)
 
     # test inference
-
     mask_output, score_output = model.infer_batch(
         model, patch, points, device=select_device(on_gpu=ON_GPU)
     )
@@ -489,3 +489,218 @@ def test_functional_sam(remote_sample: Callable) -> None:
         match=r"At least one of point_coords or box_coords must be provided.",
     ):
         _ = model.infer_batch(model, patch, device=select_device(on_gpu=ON_GPU))
+
+
+def test_sam_forward_box_prompts_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test forward pass using box prompts only."""
+    sam = SAM.__new__(SAM)
+    torch.nn.Module.__init__(sam)
+
+    sam.device = "cpu"
+
+    captured: dict[str, object] = {}
+
+    def _fake_encode_image(
+        image: list,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        _ = image
+
+        return (
+            torch.zeros((1, 1)),
+            torch.tensor([[8, 8]]),
+            torch.tensor([[8, 8]]),
+        )
+
+    def _fake_process_prompts(
+        image: list,
+        embeddings: torch.Tensor,
+        orig_sizes: torch.Tensor,
+        reshaped_sizes: torch.Tensor,
+        points: list | None,
+        boxes: list | None,
+        point_labels: list | None,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        _ = (
+            image,
+            embeddings,
+            orig_sizes,
+            reshaped_sizes,
+        )
+
+        captured["points"] = points
+        captured["boxes"] = boxes
+        captured["point_labels"] = point_labels
+
+        return (
+            np.ones((1, 8, 8), dtype=np.uint8),
+            np.array([[0.95]], dtype=np.float32),
+        )
+
+    monkeypatch.setattr(
+        sam,
+        "_encode_image",
+        _fake_encode_image,
+    )
+
+    monkeypatch.setattr(
+        sam,
+        "_process_prompts",
+        _fake_process_prompts,
+    )
+
+    image = np.zeros((8, 8, 3), dtype=np.uint8)
+
+    box_coords = [
+        np.array(
+            [[1, 2, 6, 7]],
+            dtype=np.int32,
+        ),
+    ]
+
+    masks, scores = sam.forward(
+        imgs=[image],
+        point_coords=None,
+        box_coords=box_coords,
+    )
+
+    assert captured["boxes"] is not None
+    assert captured["points"] is None
+    assert captured["point_labels"] is None
+
+    assert isinstance(masks, np.ndarray)
+    assert isinstance(scores, np.ndarray)
+
+
+def test_sam_infer_batch_with_box_prompts() -> None:
+    """Test infer_batch with box prompts."""
+
+    class FakeModel(torch.nn.Module):
+        """Minimal SAM model."""
+
+        def forward(
+            self,
+            batch_data: list,
+            point_coords: np.ndarray | None,
+            box_coords: np.ndarray | None,
+        ) -> tuple[np.ndarray, np.ndarray]:
+            _ = batch_data, point_coords
+
+            assert box_coords is not None
+
+            return (
+                np.ones((1, 8, 8), dtype=np.uint8),
+                np.array([[0.9]], dtype=np.float32),
+            )
+
+    model = FakeModel()
+
+    batch_data = [
+        np.zeros((8, 8, 3), dtype=np.uint8),
+    ]
+
+    box_coords = np.array(
+        [[[1, 2, 6, 7]]],
+        dtype=np.int32,
+    )
+
+    masks, scores = SAM.infer_batch(
+        model=model,
+        batch_data=batch_data,
+        box_coords=box_coords,
+        point_coords=None,
+        device="cpu",
+    )
+
+    assert masks.shape == (1, 8, 8)
+    assert scores.shape == (1, 1)
+
+
+def test_sam_process_prompts_points_box_none() -> None:
+    """Test prompt processing pipeline."""
+    sam = SAM.__new__(SAM)
+    sam.device = "cpu"
+
+    class FakeInputs(dict):
+        """Fake processor output."""
+
+        def to(self, device: str) -> "FakeInputs":
+            assert device == "cpu"
+            return self
+
+    class FakeOutputs:
+        """Fake SAM outputs."""
+
+        def __init__(self) -> None:
+            self.pred_masks = torch.ones((1, 1, 4, 4))
+            self.iou_scores = torch.tensor([[0.9]])
+
+    class FakeImageProcessor:
+        """Fake image processor."""
+
+        @staticmethod
+        def post_process_masks(
+            pred_masks: torch.Tensor,
+            original_sizes: torch.Tensor,
+            reshaped_input_sizes: torch.Tensor,
+        ) -> np.ndarray:
+            _ = (
+                pred_masks,
+                original_sizes,
+                reshaped_input_sizes,
+            )
+            return np.array([[1]])
+
+    class FakeProcessor:
+        """Fake processor."""
+
+        image_processor = FakeImageProcessor()
+
+        def __call__(
+            self,
+            image: object,
+            input_points: list | None = None,
+            input_labels: list | None = None,
+            input_boxes: list | None = None,
+            return_tensors: str = "pt",
+        ) -> FakeInputs:
+            _ = (
+                image,
+                input_points,
+                input_labels,
+                input_boxes,
+            )
+
+            assert return_tensors == "pt"
+
+            return FakeInputs(
+                {
+                    "pixel_values": torch.ones((1, 3, 4, 4)),
+                },
+            )
+
+    class FakeModel:
+        """Fake model."""
+
+        def __call__(
+            self,
+            **kwargs: object,
+        ) -> FakeOutputs:
+            assert "pixel_values" not in kwargs
+            assert "image_embeddings" in kwargs
+            return FakeOutputs()
+
+    sam.processor = FakeProcessor()
+    sam.model = FakeModel()
+
+    masks, scores = sam._process_prompts(
+        image=[np.zeros((4, 4, 3), dtype=np.uint8)],
+        embeddings=torch.tensor([[1]]),
+        orig_sizes=torch.tensor([[4, 4]]),
+        reshaped_sizes=torch.tensor([[4, 4]]),
+        boxes=[[[[1, 2, 3, 4]]]],
+    )
+
+    assert np.array_equal(masks, np.array([[1]]))
+    assert torch.equal(scores, torch.tensor([[0.9]]))
