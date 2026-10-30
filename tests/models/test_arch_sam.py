@@ -85,6 +85,7 @@ def test_sam_forward_point_prompts_only(
     captured: dict[str, object] = {}
 
     def _fake_encode_image(
+        _: object,
         image: list,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Return fake embeddings and size metadata."""
@@ -97,6 +98,7 @@ def test_sam_forward_point_prompts_only(
         )
 
     def _fake_process_prompts(
+        _: object,
         image: list,
         embeddings: torch.Tensor,
         orig_sizes: torch.Tensor,
@@ -123,16 +125,18 @@ def test_sam_forward_point_prompts_only(
         )
 
     monkeypatch.setattr(
-        sam,
+        SAM,
         "_encode_image",
         _fake_encode_image,
     )
 
     monkeypatch.setattr(
-        sam,
+        SAM,
         "_process_prompts",
         _fake_process_prompts,
     )
+
+    sam = SAM.__new__(SAM)
 
     image = np.zeros(
         (8, 8, 3),

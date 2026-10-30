@@ -62,6 +62,7 @@ from tiatoolbox.wsicore.wsireader import (
     is_zarr,
     jp2,
     ngff,
+    transformed,
 )
 from tiatoolbox.wsicore.wsireader.detection import is_valid_zarr_fsspec
 from tiatoolbox.wsicore.wsireader.factory import (
@@ -3367,7 +3368,7 @@ def test_read_rect_transformedreader_svs_baseline(
     sample_svs: Path, remote_sample: Callable, track_tmp_path: Path
 ) -> None:
     """Test TransformedWSIReader.read_rect with an SVS file at baseline."""
-    wsi = wsireader.TransformedWSIReader(
+    wsi = transformed.TransformedWSIReader(
         sample_svs, target_img=sample_svs, transform=np.eye(3)
     )
     location = SVS_TEST_TISSUE_LOCATION
@@ -3379,7 +3380,7 @@ def test_read_rect_transformedreader_svs_baseline(
     assert im_region.shape == (*size[::-1], 3)
 
     fixed_info = wsi.info
-    wsi2 = wsireader.TransformedWSIReader(
+    wsi2 = transformed.TransformedWSIReader(
         sample_svs, target_img=sample_svs, transform=np.eye(3), fixed_info=fixed_info
     )
     im_region_2 = wsi2.read_rect(location, size, resolution=0, units="level")
@@ -3390,12 +3391,12 @@ def test_read_rect_transformedreader_svs_baseline(
         ValueError,
         match=r"Transform cannot be None. Please provide a valid transformation",
     ):
-        _ = wsireader.TransformedWSIReader(
+        _ = transformed.TransformedWSIReader(
             sample_svs, target_img=sample_svs, transform=None
         )
 
     # Now test MHA displacement field
-    wsi3 = wsireader.TransformedWSIReader(
+    wsi3 = transformed.TransformedWSIReader(
         sample_svs,
         target_img=sample_svs,
         transform=remote_sample("reg_disp_mha_example"),
@@ -3406,7 +3407,7 @@ def test_read_rect_transformedreader_svs_baseline(
     assert im_region.shape == im_region_3.shape
 
     # Now test NPY affine transformation
-    wsi4 = wsireader.TransformedWSIReader(
+    wsi4 = transformed.TransformedWSIReader(
         sample_svs,
         target_img=sample_svs,
         transform=remote_sample("reg_affine_npy_example"),
@@ -3427,7 +3428,7 @@ def test_read_rect_transformedreader_svs_baseline(
     transform_path = track_tmp_path / "new_disp.mha"
     sitk.WriteImage(disp_image, str(transform_path))
 
-    wsi5 = wsireader.TransformedWSIReader(
+    wsi5 = transformed.TransformedWSIReader(
         sample_svs,
         target_img=sample_svs,
         transform=transform_path,
@@ -3439,7 +3440,7 @@ def test_read_rect_transformedreader_svs_baseline(
 
     # Test wrong file type
     with pytest.raises(ValueError, match="Unsupported transformation file format"):
-        wsireader.TransformedWSIReader(
+        transformed.TransformedWSIReader(
             sample_svs,
             target_img=sample_svs,
             transform=sample_svs,
@@ -3454,7 +3455,7 @@ def test_read_bounds_transformedreader_baseline(
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.TransformedWSIReader(
+    wsi = transformed.TransformedWSIReader(
         sample_svs, target_img=sample_svs, transform=np.eye(3)
     )
 
@@ -3467,7 +3468,7 @@ def test_read_bounds_transformedreader_baseline(
     assert im_region.shape == (*size[::-1], 3)
 
     # Now test MHA displacement field
-    wsi3 = wsireader.TransformedWSIReader(
+    wsi3 = transformed.TransformedWSIReader(
         sample_svs,
         target_img=sample_svs,
         transform=remote_sample("reg_disp_mha_example"),
@@ -3478,7 +3479,7 @@ def test_read_bounds_transformedreader_baseline(
     assert im_region.shape == im_region_3.shape
 
     # Now test NPY affine transformation
-    wsi4 = wsireader.TransformedWSIReader(
+    wsi4 = transformed.TransformedWSIReader(
         sample_svs,
         target_img=sample_svs,
         transform=remote_sample("reg_affine_npy_example"),
