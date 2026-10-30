@@ -1364,7 +1364,13 @@ def test_float16_autocast_covers_training_passes_only(tmp_path: Path) -> None:
     def forward_dtype(*, training: bool) -> torch.dtype:
         """Return the model output dtype of one trainer forward pass."""
         trainer.model.train(mode=training)
-        output, _, _ = trainer._forward(images, targets, None, training=training)
+        output, _, _ = trainer._forward(
+            images,
+            targets,
+            None,
+            training=training,
+            normalizers=trainer.task.loss_normalizers(targets, len(images)),
+        )
         return output.dtype
 
     assert forward_dtype(training=True) == torch.float16

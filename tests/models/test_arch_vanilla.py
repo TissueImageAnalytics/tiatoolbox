@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 import torch
 
-from tiatoolbox.models.architecture.vanilla import CNNModel, TimmModel
+from tiatoolbox.models.architecture.vanilla import CNNModel, TimmModel, _infer_batch
 from tiatoolbox.models.models_abc import model_to
 
 ON_GPU = False
@@ -168,3 +168,11 @@ def test_classifier_output_modes_must_fit_the_outputs() -> None:
         )
     one_label = CNNModel("resnet18", num_classes=1, output_mode="multi_label")
     assert one_label.output_mode == "multi_label"
+
+
+def test_inference_can_return_unactivated_outputs() -> None:
+    """The shared inference adapter can retain logits for custom callers."""
+    model = torch.nn.Sequential(torch.nn.AdaptiveAvgPool2d(1), torch.nn.Flatten())
+    batch = torch.full((2, 8, 8, 3), -2.0)
+    actual = _infer_batch(model, batch, device="cpu", activation=None)
+    np.testing.assert_array_equal(actual, np.full((2, 3), -2.0))

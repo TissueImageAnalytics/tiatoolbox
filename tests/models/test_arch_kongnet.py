@@ -760,3 +760,115 @@ def test_kongnet_wsi_inference(remote_sample: Callable, track_tmp_path: Path) ->
     assert Path(annotation_store_path).exists()
     store = SQLiteStore.open(annotation_store_path)
     assert len(store) == 0
+
+
+@pytest.mark.parametrize("component", ["mask", "boundary", "centroid"])
+def test_invalid_component_map_shapes(component: str) -> None:
+    """Component maps require matching HWC arrays."""
+    maps = {name: np.zeros((4, 4, 1)) for name in ("mask", "boundary", "centroid")}
+    maps[component] = np.zeros((4, 4))
+    with pytest.raises(ValueError, match=r"3D arrays|same shape"):
+        KongNetComponentMaps(**maps)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"class_ids": [1]}, "one positive class id per"),
+        ({"class_ids": [1, 1]}, "unique positive integers"),
+        ({"class_ids": [0, 2]}, "unique positive integers"),
+        ({"mask_threshold": 0}, "mask_threshold"),
+        ({"mask_threshold": 1.1}, "mask_threshold"),
+        ({"min_distance": 0}, "min_distance"),
+        ({"min_instance_size": -1}, "min_instance_size"),
+    ],
+)
+def test_invalid_instance_postproc_options(kwargs: dict, message: str) -> None:
+    """Instance postprocessing validates class IDs and numerical settings."""
+    empty = np.zeros((8, 8, 2), np.float32)
+    with pytest.raises(ValueError, match=message):
+        kongnet_instance_postproc(
+            KongNetComponentMaps(empty, empty, empty),
+            **({"min_distance": 2, "threshold_abs": 0.5} | kwargs),
+        )
+
+
+def test_no_centroid_seeds_returns_empty_instances() -> None:
+    """Foreground without centroid seeds must not create arbitrary instances."""
+    maps = KongNetComponentMaps(
+        np.ones((8, 8, 2)), np.zeros((8, 8, 2)), np.zeros((8, 8, 2))
+    )
+    result = kongnet_instance_postproc(maps, min_distance=2, threshold_abs=0.5)
+    assert maps.shape == (8, 8, 2)
+    assert result.instance_classes == {}
+    assert result.foreground_mask.all()
+    np.testing.assert_array_equal(result.conic_map, np.zeros((8, 8, 2)))
+    np.testing.assert_array_equal(result.marker_map, np.zeros((8, 8)))
+
+
+def test_component_maps_accept_grad_enabled_tensors() -> None:
+    """Component extraction detaches CHW tensors and activates each named channel."""
+    model = KongNet(
+        min_distance=2,
+        threshold_abs=0.5,
+        num_heads=1,
+        num_channels_per_head=[3],
+        target_channels=[2],
+    )
+    output = torch.zeros(3, 8, 8, requires_grad=True)
+    components = model.extract_component_maps(output)
+    for value in (components.mask, components.boundary, components.centroid):
+        np.testing.assert_array_equal(value, np.full((8, 8, 1), 0.5))
+    with pytest.raises(ValueError, match="single patch output"):
+        model.extract_component_maps(output[None])
+
+
+def test_component_maps_require_all_three_components() -> None:
+    """A detection-only head cannot supply instance-segmentation components."""
+    model = KongNet(
+        min_distance=2,
+        threshold_abs=0.5,
+        num_heads=1,
+        num_channels_per_head=[2],
+        target_channels=[1],
+    )
+    with pytest.raises(ValueError, match="at least three channels"):
+        model.extract_component_maps(np.zeros((8, 8, 2)))
+
+
+def test_duplicate_target_channels_are_rejected() -> None:
+    """Duplicate inference channels must not create ambiguous output metadata."""
+    with pytest.raises(ValueError, match="duplicate indices"):
+        KongNet._build_training_output_spec(
+            num_channels_per_head=[3], target_channels=[2, 2], class_dict=None
+        )
+
+
+@pytest.mark.parametrize(
+    ("class_dict", "names"),
+    [
+        ({1: "Cell", 2: "Cell"}, ["cell", "cell_1"]),
+        ({1: "Unmatched"}, ["head_0", "head_1"]),
+    ],
+)
+def test_head_names_are_unique_and_fall_back(
+    class_dict: dict, names: list[str]
+) -> None:
+    """Duplicate labels are disambiguated and incompatible mappings use head names."""
+    specs = KongNet._build_training_output_spec(
+        num_channels_per_head=[3, 3], target_channels=[2, 5], class_dict=class_dict
+    )
+    assert [head.name for head in specs] == names
+
+
+def test_segmentor_requires_one_map_per_head() -> None:
+    """Missing raw maps fail before instance postprocessing."""
+    model = KongNetSegmentor(
+        min_distance=2,
+        threshold_abs=0.5,
+        num_heads=1,
+        num_channels_per_head=[3],
+        target_channels=[2],
+    )
+    with pytest.raises(ValueError, match="one raw map per KongNet head"):
+        model.postproc([])

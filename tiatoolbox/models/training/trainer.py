@@ -497,6 +497,7 @@ class Trainer:
         loss_scales: dict[str, float] | None,
         *,
         training: bool,
+        normalizers: dict[str, int],
     ) -> tuple[object, object, dict[str, torch.Tensor]]:
         """Run one batch; with ``loss_scales``, backpropagate its window share."""
         images = self._prepare_images(batch_images)
@@ -515,6 +516,9 @@ class Trainer:
             ):
                 output = self.model(images)
                 components = self.task.loss_components(output, targets)
+            if components.keys() != normalizers.keys():
+                msg = "Loss components and normalizers must have matching keys."
+                raise ValueError(msg)
             if loss_scales is not None:
                 scaled_loss = sum(
                     value * loss_scales[key]
@@ -581,11 +585,12 @@ class Trainer:
                     if window_counts[key]
                 }
             output, targets, components = self._forward(
-                batch_images, batch_targets, loss_scales, training=training
+                batch_images,
+                batch_targets,
+                loss_scales,
+                training=training,
+                normalizers=counts,
             )
-            if components.keys() != counts.keys():
-                msg = "Loss components and normalizers must have matching keys."
-                raise ValueError(msg)
             self.task.update_epoch_state(
                 _map_tensors(output, torch.Tensor.detach),
                 _map_tensors(targets, torch.Tensor.detach),
@@ -734,12 +739,7 @@ class Trainer:
         )
         self.best_epoch = int(checkpoint.get("best_epoch", -1))
         self.history = list(checkpoint.get("history", []))
-        self.patience_counter = int(checkpoint.get("patience_counter", 0))
-        if "patience_counter" not in checkpoint:
-            self.patience_counter = sum(
-                row.get("epoch", 0) > self.best_epoch and self.config.monitor in row
-                for row in self.history
-            )
+        self.patience_counter = int(checkpoint["patience_counter"])
         self._data_seed = int(checkpoint.get("data_seed", self._data_seed))
         self._carry_over_best_weights(Path(checkpoint_path).parent)
 

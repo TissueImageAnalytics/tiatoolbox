@@ -477,8 +477,6 @@ def kongnet_instance_postproc(
     instance_regions = ndimage.find_objects(watershed_labels, max_label=marker_count)
     next_instance_id = 1
     for marker_id, region in enumerate(instance_regions, start=1):
-        if region is None:
-            continue
         instance_mask = watershed_labels[region] == marker_id
         if (
             min_instance_size
@@ -560,17 +558,12 @@ def _kongnet_instance_result_to_info_dict(
             cv2.RETR_EXTERNAL,
             cv2.CHAIN_APPROX_SIMPLE,
         )
-        if not contour_list:
-            continue
         contour = max(contour_list, key=cv2.contourArea)[:, 0, :].astype(np.int32)
         min_contour_points = 3
         if contour.shape[0] < min_contour_points:
             continue
 
         moments = cv2.moments(cropped_mask)
-        if moments["m00"] == 0:  # pragma: no cover
-            continue
-
         class_id = int(result.instance_classes.get(int(instance_id), 0))
         # With mean-mask class assignment the seed's peak can lie in another
         # class channel, so take the strongest peak across all channels.

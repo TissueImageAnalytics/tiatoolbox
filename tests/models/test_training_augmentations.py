@@ -7,6 +7,7 @@ import random
 import numpy as np
 import pytest
 import torch
+from torchvision import tv_tensors
 from torchvision.transforms import v2
 
 from tiatoolbox.models.training import (
@@ -16,7 +17,9 @@ from tiatoolbox.models.training import (
     get_segmentation_augmentation,
 )
 from tiatoolbox.models.training.augmentations import (
+    TrainingAugmentationPreset,
     _RandomZoom,
+    _resized_crop,
     _sample_zoom_window,
     _ScaleJitter,
     _StainAugmentation,
@@ -26,6 +29,7 @@ from tiatoolbox.models.training.augmentations import (
     _TrainingAffine,
     _Uint8Transform,
     _window_layout,
+    _wrap_pair_ops,
     _zoom_image,
 )
 from tiatoolbox.tools.strongaugment import StrongAugment
@@ -508,3 +512,112 @@ def test_zooms_and_crops_are_opt_in() -> None:
         get_segmentation_augmentation(crop_size=0)
     with pytest.raises(ValueError, match="spatial targets"):
         get_annotation_augmentation(scale_jitter=0.1)
+
+
+@pytest.mark.parametrize(
+    ("spec", "message"),
+    [
+        ("continuous", "Unsupported spatial target kind"),
+        ({0: "mask"}, "keys must be strings"),
+        ({}, "at least one leaf"),
+    ],
+)
+def test_invalid_spatial_specs(spec: object, message: str) -> None:
+    """Reject malformed target interpolation specifications at construction."""
+    with pytest.raises(ValueError, match=message):
+        _TorchvisionSpatialPairTransform([v2.RandomHorizontalFlip()], spec)
+
+
+@pytest.mark.parametrize(
+    ("spec", "target", "message"),
+    [
+        (
+            {"nested": {"mask": "mask"}},
+            {"nested": {}},
+            "missing spatial key `nested.mask`",
+        ),
+        ("mask", torch.zeros(4, 4), "must be a NumPy array"),
+        (
+            StackedSpatialTargetSpec((("mask", "mask"),)),
+            np.zeros((4, 4)),
+            "must have shape HxWxC",
+        ),
+        (
+            StackedSpatialTargetSpec((("a", "mask"), ("b", "mask"))),
+            np.zeros((4, 4, 1)),
+            "requested channel index",
+        ),
+    ],
+)
+def test_malformed_spatial_targets(spec: object, target: object, message: str) -> None:
+    """Paired transforms report missing, non-array, and incomplete stacked targets."""
+    transform = _TorchvisionSpatialPairTransform([v2.RandomHorizontalFlip()], spec)
+    with pytest.raises(ValueError, match=message):
+        transform(np.zeros((4, 4, 3), np.uint8), target)
+
+
+def test_preset_target_transform_runs_last() -> None:
+    """Target transforms see the result of paired geometry."""
+    preset = TrainingAugmentationPreset(
+        pair_transform=lambda image, target: (image + 1, target + 2),
+        image_transform=lambda image: image * 3,
+        target_transform=lambda target: target * 4,
+    )
+    image, target = preset(np.zeros((2, 2, 3)), np.ones((2, 2)))
+    np.testing.assert_array_equal(image, np.full((2, 2, 3), 3))
+    np.testing.assert_array_equal(target, np.full((2, 2), 12))
+
+
+def test_stain_augmentation_skips_tiny_tissue(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Too few tissue pixels leave the original image untouched."""
+    tissue = np.zeros((8, 8), dtype=bool)
+    tissue[0, 0] = True
+    monkeypatch.setattr(
+        "tiatoolbox.models.training.augmentations.get_luminosity_tissue_mask",
+        lambda *_args, **_kwargs: tissue,
+    )
+    image = torch.full((3, 8, 8), 128, dtype=torch.uint8)
+    assert _StainAugmentation(0.1, 0.1, 1.0)(image) is image
+
+
+def test_resized_crop_identity_and_empty_window() -> None:
+    """Full windows preserve identity; disjoint windows contain only padding."""
+    image = tv_tensors.Image(torch.arange(16).reshape(1, 4, 4))
+    assert _resized_crop(image, (0, 0, 4, 4), (4, 4), 9) is image
+    result = _resized_crop(image, (10, 10, 14, 14), (4, 4), 9)
+    assert isinstance(result, tv_tensors.Image)
+    torch.testing.assert_close(result, torch.full((1, 4, 4), 9, dtype=torch.int64))
+
+
+def test_integer_continuous_target_resize() -> None:
+    """Integer continuous targets interpolate and round without changing dtype."""
+    value = tv_tensors.Image(torch.tensor([[[0, 2], [4, 6]]], dtype=torch.int64))
+    result = _resized_crop(value, (0, 0, 2, 2), (3, 3), 0)
+    torch.testing.assert_close(
+        result, torch.tensor([[[0, 1, 2], [2, 3, 4], [4, 5, 6]]])
+    )
+
+
+def test_unseeded_scale_jitter_draws_from_numpy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The worker's NumPy stream supplies a reproducible fallback zoom seed."""
+    monkeypatch.setattr(np.random, "randint", lambda *_args, **_kwargs: 19)
+    jitter = _ScaleJitter(_RandomZoom((0.8, 1.2), 1), "mask")
+    sampled = jitter.sample_window((16, 16))
+    jitter.set_random_seed(19)
+    assert jitter.sample_window((16, 16)) == sampled
+
+
+@pytest.mark.parametrize(
+    "factory", [get_classification_augmentation, get_segmentation_augmentation]
+)
+def test_invalid_augmentation_level(factory: object) -> None:
+    """Unknown preset levels fail with supported names in the error."""
+    with pytest.raises(ValueError, match="Unsupported augmentation preset"):
+        factory("invalid")
+
+
+def test_empty_pair_pipeline() -> None:
+    """An empty geometry pipeline does not install a pair transform."""
+    assert _wrap_pair_ops([], "mask") is None
