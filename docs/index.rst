@@ -14,6 +14,7 @@ Index
     Installation <installation.rst>
     Pre-trained Models <pretrained.rst>
     Usage Examples <usage_examples.rst>
+    Training <training.rst>
     Algorithms <algorithms.rst>
     Visualization <visualization.rst>
     API Reference <_autosummary/tiatoolbox>

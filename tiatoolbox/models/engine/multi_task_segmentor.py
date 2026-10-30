@@ -2755,6 +2755,7 @@ def _calculate_probabilities(
         save_path=save_path,
         memory_threshold=memory_threshold,
         output_shape=output_shape,
+        verbose=verbose,
     )
 
 

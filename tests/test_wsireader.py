@@ -2264,7 +2264,7 @@ def test_ngff_s3() -> None:
 
 def test_store_reader_no_info(track_tmp_path: Path) -> None:
     """Test AnnotationStoreReader with no info."""
-    SQLiteStore(track_tmp_path / "store.db")
+    SQLiteStore(track_tmp_path / "store.db").close()
     with pytest.raises(ValueError, match="No metadata found"):
         AnnotationStoreReader(track_tmp_path / "store.db")
 
@@ -2273,10 +2273,10 @@ def test_store_reader_explicit_info(
     remote_sample: Callable, track_tmp_path: Path
 ) -> None:
     """Test AnnotationStoreReader with explicit info."""
-    SQLiteStore(track_tmp_path / "store.db")
+    SQLiteStore(track_tmp_path / "store.db").close()
     wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
-    reader = AnnotationStoreReader(track_tmp_path / "store.db", wsi_reader.info)
-    assert reader._info().as_dict() == wsi_reader.info.as_dict()
+    with AnnotationStoreReader(track_tmp_path / "store.db", wsi_reader.info) as reader:
+        assert reader._info().as_dict() == wsi_reader.info.as_dict()
 
 
 def test_store_reader_from_store(remote_sample: Callable) -> None:
@@ -2284,6 +2284,38 @@ def test_store_reader_from_store(remote_sample: Callable) -> None:
     store = SQLiteStore(remote_sample("annotation_store_svs_1"))
     reader = AnnotationStoreReader(store)
     assert isinstance(reader.store, SQLiteStore)
+
+
+def test_store_reader_closes_only_what_it_opens(
+    track_tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The reader closes a store it opened from a path, never a caller's store."""
+    info = WSIMeta(slide_dimensions=(64, 64), axes="YXS")
+    store_path = track_tmp_path / "store.db"
+    SQLiteStore(store_path).close()
+
+    with AnnotationStoreReader(store_path, info) as reader:
+        assert reader.store.cons
+    assert not reader.store.cons
+
+    store = SQLiteStore(store_path)
+    with AnnotationStoreReader(store, info):
+        pass
+    assert store.cons
+    store.close()
+
+    # A store opened before a failed construction is closed too.
+    opened = []
+
+    def open_store(path: Path) -> SQLiteStore:
+        """Open a store and track it for cleanup."""
+        opened.append(SQLiteStore(path))
+        return opened[-1]
+
+    monkeypatch.setattr(wsireader.annotation_store, "SQLiteStore", open_store)
+    with pytest.raises(ValueError, match="No metadata found"):
+        AnnotationStoreReader(store_path)
+    assert not opened[0].cons
 
 
 def test_store_reader_base_wsi_str(remote_sample: Callable) -> None:
@@ -2321,11 +2353,11 @@ def test_store_reader_alpha(remote_sample: Callable) -> None:
 
 def test_store_reader_no_types(track_tmp_path: Path, remote_sample: Callable) -> None:
     """Test AnnotationStoreReader with no types."""
-    SQLiteStore(track_tmp_path / "store.db")
+    SQLiteStore(track_tmp_path / "store.db").close()
     wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
-    reader = AnnotationStoreReader(track_tmp_path / "store.db", wsi_reader.info)
-    # shouldn't try to color by type if not present
-    assert reader.renderer.score_prop is None
+    with AnnotationStoreReader(track_tmp_path / "store.db", wsi_reader.info) as reader:
+        # shouldn't try to color by type if not present
+        assert reader.renderer.score_prop is None
 
 
 def test_store_reader_info_from_base(
@@ -2337,13 +2369,13 @@ def test_store_reader_info_from_base(
     from a provided base_wsi if the store has no wsi metadata.
 
     """
-    SQLiteStore(track_tmp_path / "store.db")
+    SQLiteStore(track_tmp_path / "store.db").close()
     wsi_reader = WSIReader.open(remote_sample("svs-1-small"))
-    store_reader = AnnotationStoreReader(
+    with AnnotationStoreReader(
         track_tmp_path / "store.db", base_wsi=wsi_reader
-    )
-    # the store reader should have the same metadata as the base wsi
-    assert store_reader.info.mpp[0] == wsi_reader.info.mpp[0]
+    ) as store_reader:
+        # the store reader should have the same metadata as the base wsi
+        assert store_reader.info.mpp[0] == wsi_reader.info.mpp[0]
 
 
 def test_ngff_zattrs_non_micrometer_scale_mpp(

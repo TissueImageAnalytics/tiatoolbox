@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import timm
 import torch
 
 from tiatoolbox import rcParam
@@ -13,9 +14,14 @@ from tiatoolbox.models.architecture.kongnet import (
     CenterBlock,
     DecoderBlock,
     KongNet,
+    KongNetComponentMaps,
     KongNetDecoder,
+    KongNetInstancePostProcResult,
+    KongNetSegmentor,
     SubPixelUpsample,
     TimmEncoderFixed,
+    _kongnet_instance_result_to_info_dict,
+    kongnet_instance_postproc,
 )
 from tiatoolbox.models.engine.io_config import IOSegmentorConfig
 from tiatoolbox.models.engine.nucleus_detector import NucleusDetector
@@ -236,6 +242,42 @@ def test_kongnet_head_mismatch_error() -> None:
         )
 
 
+def test_kongnet_target_channel_validation() -> None:
+    """KongNet should reject target channels outside the concatenated output."""
+    with pytest.raises(ValueError, match="target_channels"):
+        KongNet(
+            num_heads=2,
+            num_channels_per_head=[2, 2],
+            target_channels=[4],
+            min_distance=5,
+            threshold_abs=0.5,
+        )
+
+
+def test_kongnet_training_output_spec_uses_named_targeted_heads() -> None:
+    """KongNet should expose stable named output metadata for training."""
+    model = KongNet(
+        num_heads=3,
+        num_channels_per_head=[3, 3, 3],
+        target_channels=[5, 8],
+        min_distance=5,
+        threshold_abs=0.5,
+        class_dict={0: "Tumour Cell", 1: "Lymphocyte"},
+    )
+
+    specs = model.training_output_spec
+
+    assert [spec.name for spec in specs] == ["head_0", "tumour_cell", "lymphocyte"]
+    assert specs[0].channel_slice == slice(0, 3)
+    assert specs[0].target_channels == ()
+    assert specs[1].channel_slice == slice(3, 6)
+    assert specs[1].target_channels == (5,)
+    assert specs[1].target_channel_offsets == (2,)
+    assert specs[2].channel_slice == slice(6, 9)
+    assert specs[2].target_channels == (8,)
+    assert specs[2].target_channel_offsets == (2,)
+
+
 def test_kongnet_preproc() -> None:
     """Test KongNet preproc static method."""
     # Create a random uint8 image
@@ -282,6 +324,275 @@ def test_kongnet_postproc() -> None:
 
     # Output should contain detected peaks
     assert output.max() > 0
+
+
+def _disk_mask(
+    shape: tuple[int, int],
+    center: tuple[int, int],
+    radius: int,
+) -> np.ndarray:
+    """Create a filled disk mask for synthetic KongNet tests."""
+    rows, cols = np.ogrid[: shape[0], : shape[1]]
+    return ((rows - center[0]) ** 2 + (cols - center[1]) ** 2) <= radius**2
+
+
+def test_kongnet_extract_component_maps_requires_full_head_output() -> None:
+    """KongNet instance post-processing should reject centroid-only outputs."""
+    model = KongNet(
+        num_heads=2,
+        num_channels_per_head=[3, 3],
+        target_channels=[2, 5],
+        min_distance=5,
+        threshold_abs=0.35,
+    )
+
+    centroid_only_output = np.zeros((32, 32, 2), dtype=np.float32)
+    with pytest.raises(ValueError, match="full-head channels"):
+        model.extract_component_maps(centroid_only_output, from_logits=False)
+
+
+def test_kongnet_postproc_instance_class_maps() -> None:
+    """KongNet should build deterministic CoNIC-style maps from full-head output."""
+    model = KongNet(
+        num_heads=2,
+        num_channels_per_head=[3, 3],
+        target_channels=[2, 5],
+        min_distance=4,
+        threshold_abs=0.35,
+        class_dict={1: "Tumour", 2: "Lymphocyte"},
+    )
+
+    logits = np.full((6, 64, 64), -8.0, dtype=np.float32)
+    left_nucleus = _disk_mask((64, 64), (20, 18), 7)
+    left_boundary = left_nucleus & ~_disk_mask((64, 64), (20, 18), 5)
+    right_nucleus = _disk_mask((64, 64), (20, 46), 7)
+    right_boundary = right_nucleus & ~_disk_mask((64, 64), (20, 46), 5)
+
+    logits[0][left_nucleus] = 8.0
+    logits[1][left_boundary] = 8.0
+    logits[2, 20, 18] = 10.0
+
+    logits[3][right_nucleus] = 8.0
+    logits[4][right_boundary] = 8.0
+    logits[5, 20, 46] = 10.0
+
+    result = model.postproc_instance_class_maps(
+        logits,
+        from_logits=True,
+        mask_threshold=0.5,
+        boundary_weight=1.0,
+        min_instance_size=10,
+    )
+
+    assert isinstance(result, KongNetInstancePostProcResult)
+    assert result.instance_map.shape == (64, 64)
+    assert result.class_map.shape == (64, 64)
+    assert result.conic_map.shape == (64, 64, 2)
+    assert set(np.unique(result.instance_map)) == {0, 1, 2}
+    assert result.class_map[20, 18] == 1
+    assert result.class_map[20, 46] == 2
+    assert result.instance_map[20, 18] != 0
+    assert result.instance_map[20, 46] != 0
+    assert result.marker_map[20, 18] != 0
+    assert result.marker_map[20, 46] != 0
+    assert np.count_nonzero(result.peak_map) == 2
+    assert result.instance_classes == {1: 1, 2: 2}
+
+
+@pytest.mark.parametrize("class_assignment", ["mean_mask", "seed"])
+def test_kongnet_instance_outputs_match_full_tile_reference(
+    class_assignment: str,
+) -> None:
+    """Per-instance crops reproduce full-tile computations at tile borders too."""
+    rng = np.random.default_rng(3)
+    shape = (48, 64)
+    component = np.zeros((*shape, 2), dtype=np.float32)
+    mask, boundary, centroid = component.copy(), component.copy(), component.copy()
+    # Touching and border-clipped nuclei exercise watershed splits and crops.
+    for row, col, channel in [(10, 10, 0), (10, 19, 1), (40, 60, 0), (0, 30, 1)]:
+        disk = _disk_mask(shape, (row, col), 5)
+        mask[..., channel][disk] = rng.uniform(0.6, 1.0)
+        boundary[..., channel][disk & ~_disk_mask(shape, (row, col), 3)] = 0.8
+        centroid[row, col, channel] = rng.uniform(0.5, 1.0)
+    result = kongnet_instance_postproc(
+        KongNetComponentMaps(mask=mask, boundary=boundary, centroid=centroid),
+        min_distance=3,
+        threshold_abs=0.3,
+        class_assignment=class_assignment,
+        min_instance_size=4,
+    )
+    info = _kongnet_instance_result_to_info_dict(result, offset=(5, 7))
+    assert len(info["type"]) == len(result.instance_classes) == 4
+    for position, (instance_id, class_id) in enumerate(result.instance_classes.items()):
+        pixels = result.instance_map == instance_id
+        assert np.all(result.class_map[pixels] == class_id)
+        assert np.all(pixels[result.marker_map == instance_id])
+        if class_assignment == "mean_mask":
+            assert class_id == 1 + int(np.argmax(mask[pixels].mean(axis=0)))
+        rows, cols = np.nonzero(pixels)
+        expected_box = [cols.min() + 5, rows.min() + 7, cols.max() + 6, rows.max() + 8]
+        np.testing.assert_array_equal(info["box"][position], expected_box)
+        np.testing.assert_allclose(
+            info["centroid"][position], [cols.mean() + 5, rows.mean() + 7], atol=1e-4
+        )
+        assert info["prob"][position] == np.max(result.peak_map[pixels])
+
+
+def test_kongnet_segmentor_postproc_returns_engine_task_dict() -> None:
+    """KongNetSegmentor should emit MultiTaskSegmentor-compatible output."""
+    model = KongNetSegmentor(
+        num_heads=2,
+        num_channels_per_head=[3, 3],
+        target_channels=[2, 5],
+        min_distance=4,
+        threshold_abs=0.35,
+        class_dict={1: "Tumour", 2: "Lymphocyte"},
+    )
+
+    raw = np.zeros((64, 64, 6), dtype=np.float32)
+    left_nucleus = _disk_mask((64, 64), (20, 18), 7)
+    right_nucleus = _disk_mask((64, 64), (20, 46), 7)
+    raw[..., 0][left_nucleus] = 0.95
+    raw[..., 2][20, 18] = 0.99
+    raw[..., 3][right_nucleus] = 0.95
+    raw[..., 5][20, 46] = 0.99
+
+    output = model.postproc(
+        [raw[..., 0:3], raw[..., 3:6]],
+        offset=(10, 20),
+        mask_threshold=0.5,
+        min_instance_size=10,
+    )
+
+    assert len(output) == 1
+    task_output = output[0]
+    assert task_output["task_type"] == "nuclei_segmentation"
+    assert task_output["seg_type"] == "instance"
+    assert task_output["predictions"].shape == (64, 64)
+
+    info_dict = task_output["info_dict"]
+    assert set(info_dict) == {"box", "centroid", "contours", "prob", "type"}
+    assert len(info_dict["contours"]) == 2
+    assert set(info_dict["type"].tolist()) == {1, 2}
+    assert np.all(info_dict["box"][:, 0] >= 10)
+    assert np.all(info_dict["box"][:, 1] >= 20)
+
+
+def test_kongnet_segmentor_postproc_handles_empty_tile() -> None:
+    """KongNetSegmentor should tolerate zero-width WSI boundary tiles."""
+    model = KongNetSegmentor(
+        num_heads=2,
+        num_channels_per_head=[3, 3],
+        target_channels=[2, 5],
+        min_distance=4,
+        threshold_abs=0.35,
+        class_dict={1: "Tumour", 2: "Lymphocyte"},
+    )
+
+    output = model.postproc(
+        [
+            np.zeros((64, 0, 3), dtype=np.float32),
+            np.zeros((64, 0, 3), dtype=np.float32),
+        ],
+    )
+
+    assert len(output) == 1
+    assert output[0]["predictions"].shape == (64, 0)
+    assert output[0]["info_dict"]["box"].shape == (0, 4)
+    assert output[0]["info_dict"]["contours"].shape == (0,)
+
+
+def test_kongnet_segmentor_postproc_uses_model_settings() -> None:
+    """Engine calls without arguments use the model's post-processing attributes."""
+    model = KongNetSegmentor(
+        num_heads=2,
+        num_channels_per_head=[3, 3],
+        target_channels=[2, 5],
+        min_distance=4,
+        threshold_abs=0.35,
+        mask_threshold=0.3,
+    )
+    raw = np.zeros((64, 64, 6), dtype=np.float32)
+    # Mask support of 0.4 clears 0.3 but not the 0.5 default.
+    raw[..., 0][_disk_mask((64, 64), (20, 18), 7)] = 0.4
+    raw[..., 2][20, 18] = 0.9
+    raw_maps = [raw[..., 0:3], raw[..., 3:6]]
+
+    def saved(**kwargs: float) -> int:
+        """Count the instances the engine would save."""
+        return len(model.postproc(raw_maps, **kwargs)[0]["info_dict"]["contours"])
+
+    assert saved() == 1
+    # A seed without mask support is too small for a polygon and is left out.
+    assert saved(mask_threshold=0.5) == 0
+    model.min_instance_size = 1000
+    assert saved() == 0
+
+
+def test_kongnet_info_dict_prob_follows_seed_across_classes() -> None:
+    """``prob`` keeps the seed's peak when mean-mask support picks another class."""
+    shape = (32, 32, 2)
+    mask = np.zeros(shape, dtype=np.float32)
+    nucleus = _disk_mask(shape[:2], (16, 16), 6)
+    mask[..., 0][nucleus] = 0.6
+    mask[..., 1][nucleus] = 0.9
+    centroid = np.zeros(shape, dtype=np.float32)
+    centroid[16, 16, 0] = 0.8
+    result = kongnet_instance_postproc(
+        KongNetComponentMaps(
+            mask=mask, boundary=np.zeros(shape, dtype=np.float32), centroid=centroid
+        ),
+        min_distance=3,
+        threshold_abs=0.3,
+    )
+    info = _kongnet_instance_result_to_info_dict(result)
+    assert info["type"].tolist() == [2]
+    assert info["prob"].tolist() == pytest.approx([0.8])
+
+
+def test_kongnet_pretrained_encoder_requests_imagenet_weights(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``pretrained_encoder`` asks timm for the encoder's ImageNet weights."""
+    requested = []
+    create_model = timm.create_model
+
+    def record(name: str, **kwargs: object) -> torch.nn.Module:
+        """Record the flag, then build without downloading weights."""
+        requested.append(kwargs["pretrained"])
+        return create_model(name, **{**kwargs, "pretrained": False})
+
+    monkeypatch.setattr(timm, "create_model", record)
+    for pretrained_encoder in (True, False):
+        KongNet(
+            num_heads=1,
+            num_channels_per_head=[3],
+            target_channels=[2],
+            min_distance=3,
+            threshold_abs=0.5,
+            pretrained_encoder=pretrained_encoder,
+        )
+    assert requested == [True, False]
+
+
+def test_kongnet_segmentor_infer_batch_accepts_data_parallel(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Read head metadata through the wrapper without bypassing its forward pass."""
+    model = KongNetSegmentor.__new__(KongNetSegmentor)
+    torch.nn.Module.__init__(model)
+    model._training_output_spec = KongNet._build_training_output_spec(
+        num_channels_per_head=[3, 3], target_channels=[2, 5], class_dict=None
+    )
+    monkeypatch.setattr(model, "forward", lambda x: torch.cat((x, x + 1), dim=1))
+    batch = torch.arange(2 * 8 * 8 * 3, dtype=torch.float32).reshape(2, 8, 8, 3) / 100
+    # Exercise the wrapper contract on CPU, including on CUDA-enabled test hosts.
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+    wrapped = torch.nn.DataParallel(model)
+    actual = KongNetSegmentor.infer_batch(wrapped, batch, device="cpu")
+    assert len(actual) == 2
+    for index, head in enumerate(actual):
+        np.testing.assert_allclose(head, torch.sigmoid(batch + index).numpy())
 
 
 def test_kongnet_load_state_dict() -> None:
@@ -352,6 +663,24 @@ def test_kongnet_modeling() -> None:
         batch_tensor = torch.randn(1, 128, 128, 3).to(device)
         output = KongNet.infer_batch(model, batch_tensor, device=device)
         assert output.shape == (1, 128, 128, 3)
+
+    segmentor = KongNetSegmentor(
+        num_heads=3,
+        num_channels_per_head=[2, 2, 2],
+        target_channels=[1, 3, 5],
+        min_distance=5,
+        threshold_abs=0.5,
+        wide_decoder=False,
+        class_dict=None,
+        tile_shape=(512, 512),
+    ).to(device)
+    segmentor.eval()
+
+    with torch.no_grad():
+        batch_tensor = torch.randn(1, 128, 128, 3).to(device)
+        output = KongNetSegmentor.infer_batch(segmentor, batch_tensor, device=device)
+        assert len(output) == 3
+        assert all(head.shape == (1, 128, 128, 2) for head in output)
 
 
 def test_pretrained_model_creation() -> None:
@@ -431,3 +760,115 @@ def test_kongnet_wsi_inference(remote_sample: Callable, track_tmp_path: Path) ->
     assert Path(annotation_store_path).exists()
     store = SQLiteStore.open(annotation_store_path)
     assert len(store) == 0
+
+
+@pytest.mark.parametrize("component", ["mask", "boundary", "centroid"])
+def test_invalid_component_map_shapes(component: str) -> None:
+    """Component maps require matching HWC arrays."""
+    maps = {name: np.zeros((4, 4, 1)) for name in ("mask", "boundary", "centroid")}
+    maps[component] = np.zeros((4, 4))
+    with pytest.raises(ValueError, match=r"3D arrays|same shape"):
+        KongNetComponentMaps(**maps)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"class_ids": [1]}, "one positive class id per"),
+        ({"class_ids": [1, 1]}, "unique positive integers"),
+        ({"class_ids": [0, 2]}, "unique positive integers"),
+        ({"mask_threshold": 0}, "mask_threshold"),
+        ({"mask_threshold": 1.1}, "mask_threshold"),
+        ({"min_distance": 0}, "min_distance"),
+        ({"min_instance_size": -1}, "min_instance_size"),
+    ],
+)
+def test_invalid_instance_postproc_options(kwargs: dict, message: str) -> None:
+    """Instance postprocessing validates class IDs and numerical settings."""
+    empty = np.zeros((8, 8, 2), np.float32)
+    with pytest.raises(ValueError, match=message):
+        kongnet_instance_postproc(
+            KongNetComponentMaps(empty, empty, empty),
+            **({"min_distance": 2, "threshold_abs": 0.5} | kwargs),
+        )
+
+
+def test_no_centroid_seeds_returns_empty_instances() -> None:
+    """Foreground without centroid seeds must not create arbitrary instances."""
+    maps = KongNetComponentMaps(
+        np.ones((8, 8, 2)), np.zeros((8, 8, 2)), np.zeros((8, 8, 2))
+    )
+    result = kongnet_instance_postproc(maps, min_distance=2, threshold_abs=0.5)
+    assert maps.shape == (8, 8, 2)
+    assert result.instance_classes == {}
+    assert result.foreground_mask.all()
+    np.testing.assert_array_equal(result.conic_map, np.zeros((8, 8, 2)))
+    np.testing.assert_array_equal(result.marker_map, np.zeros((8, 8)))
+
+
+def test_component_maps_accept_grad_enabled_tensors() -> None:
+    """Component extraction detaches CHW tensors and activates each named channel."""
+    model = KongNet(
+        min_distance=2,
+        threshold_abs=0.5,
+        num_heads=1,
+        num_channels_per_head=[3],
+        target_channels=[2],
+    )
+    output = torch.zeros(3, 8, 8, requires_grad=True)
+    components = model.extract_component_maps(output)
+    for value in (components.mask, components.boundary, components.centroid):
+        np.testing.assert_array_equal(value, np.full((8, 8, 1), 0.5))
+    with pytest.raises(ValueError, match="single patch output"):
+        model.extract_component_maps(output[None])
+
+
+def test_component_maps_require_all_three_components() -> None:
+    """A detection-only head cannot supply instance-segmentation components."""
+    model = KongNet(
+        min_distance=2,
+        threshold_abs=0.5,
+        num_heads=1,
+        num_channels_per_head=[2],
+        target_channels=[1],
+    )
+    with pytest.raises(ValueError, match="at least three channels"):
+        model.extract_component_maps(np.zeros((8, 8, 2)))
+
+
+def test_duplicate_target_channels_are_rejected() -> None:
+    """Duplicate inference channels must not create ambiguous output metadata."""
+    with pytest.raises(ValueError, match="duplicate indices"):
+        KongNet._build_training_output_spec(
+            num_channels_per_head=[3], target_channels=[2, 2], class_dict=None
+        )
+
+
+@pytest.mark.parametrize(
+    ("class_dict", "names"),
+    [
+        ({1: "Cell", 2: "Cell"}, ["cell", "cell_1"]),
+        ({1: "Unmatched"}, ["head_0", "head_1"]),
+    ],
+)
+def test_head_names_are_unique_and_fall_back(
+    class_dict: dict, names: list[str]
+) -> None:
+    """Duplicate labels are disambiguated and incompatible mappings use head names."""
+    specs = KongNet._build_training_output_spec(
+        num_channels_per_head=[3, 3], target_channels=[2, 5], class_dict=class_dict
+    )
+    assert [head.name for head in specs] == names
+
+
+def test_segmentor_requires_one_map_per_head() -> None:
+    """Missing raw maps fail before instance postprocessing."""
+    model = KongNetSegmentor(
+        min_distance=2,
+        threshold_abs=0.5,
+        num_heads=1,
+        num_channels_per_head=[3],
+        target_channels=[2],
+    )
+    with pytest.raises(ValueError, match="one raw map per KongNet head"):
+        model.postproc([])

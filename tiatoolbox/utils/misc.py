@@ -31,7 +31,7 @@ from skimage import exposure
 from tqdm.auto import tqdm, trange
 from tqdm.dask import TqdmCallback
 
-from tiatoolbox import logger
+from tiatoolbox import DuplicateFilter, logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
@@ -1397,31 +1397,22 @@ def process_contours(
                 ]
             )
 
-    for idx, outer in outer_contours.items():
-        holes: list[np.ndarray] = holes_dict.get(idx, [])
-        if len(holes) != 0:
-            feature_geom = feature2geometry(
-                {
-                    "type": "Polygon",
-                    "coordinates": [outer, *holes],
-                },
-            )
-        else:
-            feature_geom = feature2geometry(
-                {
-                    "type": "Polygon",
-                    "coordinates": [outer],
-                },
-            )
-        feature_geom = make_valid_poly(feature_geom)
-        annotations_list.extend(
-            [
-                Annotation(
-                    geometry=feature_geom,
-                    properties=base_props,
+    # Report repeated invalid-geometry fixes once, not once per contour.
+    duplicate_filter = DuplicateFilter()
+    logger.addFilter(duplicate_filter)
+    try:
+        for idx, outer in outer_contours.items():
+            holes: list[np.ndarray] = holes_dict.get(idx, [])
+            feature_geom = make_valid_poly(
+                feature2geometry(
+                    {"type": "Polygon", "coordinates": [outer, *holes]},
                 )
-            ]
-        )
+            )
+            annotations_list.append(
+                Annotation(geometry=feature_geom, properties=base_props)
+            )
+    finally:
+        logger.removeFilter(duplicate_filter)
 
     return annotations_list
 

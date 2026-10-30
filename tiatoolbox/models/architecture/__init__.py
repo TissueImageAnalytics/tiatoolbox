@@ -141,17 +141,7 @@ def get_pretrained_model(
         raise ValueError(msg)
 
     info = PRETRAINED_INFO[pretrained_model]
-
-    arch_info = info["architecture"]
-    model_class_info = arch_info["class"]
-    model_module_name = str(".".join(model_class_info.split(".")[:-1]))
-    model_name = str(model_class_info.split(".")[-1])
-
-    # Import module containing required model class
-    arch_module = locate(f"tiatoolbox.models.architecture.{model_module_name}")
-    # Get model class form module
-    model_class = getattr(arch_module, model_name)
-    model = model_class(**arch_info["kwargs"])
+    model = _build_architecture(info["architecture"])
 
     if "dataset" in info:
         # ! this is a hack currently, need another PR to clean up
@@ -165,14 +155,37 @@ def get_pretrained_model(
         )
 
     model = load_torch_model(model=model, weights=pretrained_weights)
+    return model, _build_ioconfig(info["ioconfig"])
 
-    io_info = info["ioconfig"]
-    io_class_info = io_info["class"]
-    io_module_name = str(".".join(io_class_info.split(".")[:-1]))
-    io_class_name = str(io_class_info.split(".")[-1])
 
-    engine_module = locate(f"tiatoolbox.models.engine.{io_module_name}")
-    engine_class = getattr(engine_module, io_class_name)
+def _locate_class(class_path: str, package: str) -> type | None:
+    """Find a class by its path relative to one TIAToolbox package.
 
-    ioconfig = engine_class(**io_info["kwargs"])
-    return model, ioconfig
+    Only modules inside ``package`` are imported, so configuration files cannot
+    name arbitrary code.
+    """
+    module_name, _, class_name = str(class_path).rpartition(".")
+    found = getattr(locate(f"{package}.{module_name}"), class_name, None)
+    return found if isinstance(found, type) else None
+
+
+def _build_architecture(arch_info: dict) -> torch.nn.Module:
+    """Construct a model from a registry ``architecture`` entry.
+
+    ``arch_info["class"]`` is relative to ``tiatoolbox.models.architecture``, for
+    example ``vanilla.CNNModel``, and ``arch_info["kwargs"]`` holds its arguments.
+    """
+    model_class = _locate_class(arch_info["class"], "tiatoolbox.models.architecture")
+    if model_class is None:
+        msg = f"`{arch_info['class']}` is not a TIAToolbox architecture class."
+        raise ValueError(msg)
+    return model_class(**arch_info.get("kwargs", {}))
+
+
+def _build_ioconfig(io_info: dict) -> ModelIOConfigABC:
+    """Construct an engine IO config from a registry ``ioconfig`` entry."""
+    config_class = _locate_class(io_info["class"], "tiatoolbox.models.engine")
+    if config_class is None:
+        msg = f"`{io_info['class']}` is not a TIAToolbox engine IO config class."
+        raise ValueError(msg)
+    return config_class(**io_info.get("kwargs", {}))
