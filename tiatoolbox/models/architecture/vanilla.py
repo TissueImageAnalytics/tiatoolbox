@@ -308,6 +308,7 @@ def _infer_batch(
     # allows Monte Carlo Dropout to keep Dropout layers active during
     # inference without eval() silently reverting them inside this function.
     # Do not compute the gradient (not training)
+
     with torch.inference_mode():
         output = model(img_patches_device)
         if activation == "softmax":
