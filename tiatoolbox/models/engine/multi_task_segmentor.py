@@ -139,6 +139,7 @@ from tqdm.auto import tqdm
 from tiatoolbox import logger
 from tiatoolbox.annotation import SQLiteStore
 from tiatoolbox.annotation.storage import Annotation
+from tiatoolbox.models.architecture.utils import eval_model_if_nn_module
 from tiatoolbox.tools.patchextraction import PatchExtractor
 from tiatoolbox.utils.misc import (
     create_smart_array,
@@ -150,7 +151,6 @@ from tiatoolbox.utils.misc import (
 )
 from tiatoolbox.wsicore.wsireader import is_zarr
 
-from .engine_abc import eval_model_if_nn_module
 from .semantic_segmentor import (
     SemanticSegmentor,
     SemanticSegmentorRunParams,

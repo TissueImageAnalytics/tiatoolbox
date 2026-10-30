@@ -48,9 +48,9 @@ import zarr
 from dask import compute
 from tqdm.auto import tqdm
 
+from tiatoolbox.models.architecture.utils import eval_model_if_nn_module
 from tiatoolbox.utils.misc import update_tqdm_desc
 
-from .engine_abc import eval_model_if_nn_module
 from .patch_predictor import PatchPredictor, PredictorRunParams
 
 if TYPE_CHECKING:  # pragma: no cover

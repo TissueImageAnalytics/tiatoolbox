@@ -13,7 +13,6 @@ from tiatoolbox import rcParam
 from tiatoolbox.models.dataset.classification import predefined_preproc_func
 from tiatoolbox.models.models_abc import load_torch_model
 
-from . import bayesian_wrapper
 from .vanilla import CNNBackbone, TimmBackbone, timm_arch_dict, torch_cnn_backbone_dict
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -21,7 +20,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from tiatoolbox.models.engine.io_config import ModelIOConfigABC
 
-__all__ = ["bayesian_wrapper", "fetch_pretrained_weights", "get_pretrained_model"]
+__all__ = ["fetch_pretrained_weights", "get_pretrained_model"]
 PRETRAINED_INFO = rcParam["pretrained_model_info"]
 
 

@@ -64,6 +64,7 @@ import zarr
 from tqdm.auto import tqdm
 
 from tiatoolbox import logger
+from tiatoolbox.models.architecture.utils import eval_model_if_nn_module
 from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
 from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
@@ -71,7 +72,6 @@ from tiatoolbox.utils.misc import (
 )
 from tiatoolbox.wsicore.wsireader import WSIReader, is_zarr
 
-from .engine_abc import eval_model_if_nn_module
 from .patch_predictor import PatchPredictor, PredictorRunParams
 
 if TYPE_CHECKING:  # pragma: no cover

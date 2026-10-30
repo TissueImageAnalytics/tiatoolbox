@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from tiatoolbox.models.architecture.sam import SAM
-from tiatoolbox.models.engine.engine_abc import eval_model_if_nn_module
+from tiatoolbox.models.architecture.utils import eval_model_if_nn_module
 from tiatoolbox.utils.misc import dict_to_store_semantic_segmentor
 
 if TYPE_CHECKING:  # pragma: no cover

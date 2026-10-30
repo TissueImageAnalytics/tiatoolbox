@@ -52,7 +52,7 @@ from tqdm.auto import tqdm
 
 from tiatoolbox import DuplicateFilter, logger, rcParam
 from tiatoolbox.models.architecture import get_pretrained_model
-from tiatoolbox.models.architecture.utils import compile_model
+from tiatoolbox.models.architecture.utils import compile_model, eval_model_if_nn_module
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.utils.misc import (
@@ -1882,13 +1882,3 @@ def prepare_engines_save_dir(
     save_dir.mkdir(parents=True)
 
     return save_dir
-
-
-def eval_model_if_nn_module(
-    model: ModelABC | nn.Module,
-) -> ModelABC | nn.Module:
-    """Run model.eval() if the model is a torch module."""
-    if isinstance(model, torch.nn.Module):
-        return model.eval()
-
-    return model
