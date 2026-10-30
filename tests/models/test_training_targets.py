@@ -16,7 +16,7 @@ import pytest
 import torch
 from shapely.affinity import scale as shapely_scale
 from shapely.affinity import translate as shapely_translate
-from shapely.geometry import MultiPoint, MultiPolygon, Point, Polygon, box
+from shapely.geometry import LinearRing, MultiPoint, MultiPolygon, Point, Polygon, box
 
 from tiatoolbox.annotation import Annotation, DictionaryStore, SQLiteStore
 from tiatoolbox.models.training import (
@@ -1958,6 +1958,15 @@ def test_centroid_on_upper_patch_edge_is_excluded(builder: object) -> None:
     annotations = {"outside": Annotation(box(3, 1, 5, 3))}
     target = builder.build_target(annotations, (0, 0, 4, 4), (4, 4))
     np.testing.assert_array_equal(target, np.zeros((4, 4)))
+
+
+def test_rasterization_ignores_unsupported_geometry() -> None:
+    """Unsupported standalone rings leave existing mask labels untouched."""
+    mask = np.arange(25, dtype=np.uint8).reshape(5, 5)
+    expected = mask.copy()
+    ring = LinearRing([(1, 1), (3, 1), (3, 3), (1, 1)])
+    _rasterize_geometry(mask, ring, 100, line_width=1, point_radius=1)
+    np.testing.assert_array_equal(mask, expected)
 
 
 def test_multipoint_mask_rasterization() -> None:
