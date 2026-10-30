@@ -44,13 +44,13 @@ from typing import TYPE_CHECKING, Unpack
 
 import dask.array as da
 import psutil
-import torch
 import zarr
 from dask import compute
 from tqdm.auto import tqdm
 
 from tiatoolbox.utils.misc import update_tqdm_desc
 
+from .engine_abc import eval_model_if_nn_module
 from .patch_predictor import PatchPredictor, PredictorRunParams
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -228,8 +228,7 @@ class DeepFeatureExtractor(PatchPredictor):
         probabilities_used_percent = 0
         # Set inference mode once here; infer_batch no longer calls
         # model.eval() internally (needed for Monte Carlo Dropout wrappers).
-        if isinstance(self.model, torch.nn.Module):
-            self.model.eval()
+        self.model = eval_model_if_nn_module(model=self.model)
         infer_batch = self._get_model_attr("infer_batch")
         for batch_data in tqdm_loop:
             batch_output = infer_batch(

@@ -71,6 +71,7 @@ from tiatoolbox.utils.misc import (
 )
 from tiatoolbox.wsicore.wsireader import WSIReader, is_zarr
 
+from .engine_abc import eval_model_if_nn_module
 from .patch_predictor import PatchPredictor, PredictorRunParams
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -504,8 +505,7 @@ class SemanticSegmentor(PatchPredictor):
 
         # Set inference mode once here; infer_batch no longer calls
         # model.eval() internally (needed for Monte Carlo Dropout wrappers).
-        if isinstance(self.model, torch.nn.Module):
-            self.model.eval()
+        self.model = eval_model_if_nn_module(model=self.model)
         infer_batch = self._get_model_attr("infer_batch")
         for batch_idx, batch_data in enumerate(tqdm_loop):
             batch_output = infer_batch(

@@ -277,7 +277,7 @@ class EngineABC(ABC):  # noqa: B024
 
     def __init__(
         self: EngineABC,
-        model: str | ModelABC,
+        model: str | ModelABC | nn.Module,
         batch_size: int = 8,
         num_workers: int = 0,
         weights: str | Path | None = None,
@@ -553,8 +553,8 @@ class EngineABC(ABC):  # noqa: B024
 
         # Set inference mode once here; infer_batch no longer calls
         # model.eval() internally (needed for Monte Carlo Dropout wrappers).
-        if isinstance(self.model, torch.nn.Module):
-            self.model.eval()
+        self.model = eval_model_if_nn_module(model=self.model)
+
         infer_batch = self._get_model_attr("infer_batch")
         for batch_data in tqdm_loop:
             batch_output = infer_batch(
@@ -1882,3 +1882,13 @@ def prepare_engines_save_dir(
     save_dir.mkdir(parents=True)
 
     return save_dir
+
+
+def eval_model_if_nn_module(
+    model: ModelABC | nn.Module,
+) -> ModelABC | nn.Module:
+    """Run model.eval() if the model is a torch module."""
+    if isinstance(model, torch.nn.Module):
+        return model.eval()
+
+    return model

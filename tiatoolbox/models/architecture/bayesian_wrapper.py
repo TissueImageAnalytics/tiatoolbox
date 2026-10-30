@@ -8,6 +8,7 @@ statistics are accumulated on `wrapper.uncertainty_stats` (a list, in
 inference order) so that downstream code — after `predictor.run()` finishes —
 can concatenate them along axis 0 to obtain one entry per patch, aligned
 with the `coordinates` / `probabilities` arrays written by the engine.
+
 """
 
 from __future__ import annotations
