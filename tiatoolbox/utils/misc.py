@@ -1542,32 +1542,31 @@ def _semantic_segmentations_as_qupath_json(
         # binary mask for this class
         layer = da.where(preds == type_class, 1, 0).astype("uint8").compute()
 
-        contours, _ = cv2.findContours(layer, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
-
+        contours, hierarchy = cv2.findContours(
+            layer,
+            cv2.RETR_CCOMP,
+            cv2.CHAIN_APPROX_NONE,
+        )
         contours = cast("list[np.ndarray]", contours)
+        if hierarchy is None:
+            continue
 
-        # Convert contours to polygons
-        for cnt in contours:
-            if cnt.shape[0] < 3:  # noqa: PLR2004
+        # Reuse hole-aware contour grouping used by AnnotationStore export.
+        annotations_list_ = process_contours(
+            contours=contours,
+            hierarchy=hierarchy,
+            scale_factor=scale_factor,
+            properties={"type": class_label, "class": class_id},
+        )
+
+        for annotation in annotations_list_:
+            geom = annotation.geometry
+            if geom.is_empty or geom.geom_type not in {"Polygon", "MultiPolygon"}:
                 continue
-
-            # scale coordinates
-            cnt_scaled: np.ndarray = cnt.squeeze(1).astype(float)
-
-            geom = make_valid_poly(
-                feature2geometry(
-                    {
-                        "type": "Polygon",
-                        "coordinates": scale_factor * np.array([cnt_scaled]),
-                    }
-                ),
-                (0, 0),
-            )
-            poly_geo = mapping(geom)
 
             feature = {
                 "type": "Feature",
-                "geometry": poly_geo,
+                "geometry": mapping(geom),
                 "id": f"class_{class_id}_{len(features)}",
                 "properties": {
                     "classification": {
@@ -1579,7 +1578,6 @@ def _semantic_segmentations_as_qupath_json(
                 "name": class_label,
                 "class_value": class_id,
             }
-
             features.append(feature)
 
     qupath_json = {"type": "FeatureCollection", "features": features}
