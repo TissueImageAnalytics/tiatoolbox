@@ -340,6 +340,35 @@ def test_safe_padded_read_pad_constant_values() -> None:
         assert np.sum(region == 10) == (4 * side_len) + 4
 
 
+def test_process_contours_with_offset() -> None:
+    """Test contour coordinates are shifted when offset is provided."""
+    contours = [
+        np.array(
+            [[[10, 20]]],
+            dtype=np.int32,
+        ),
+    ]
+
+    hierarchy = np.array(
+        [[[-1, -1, -1, -1]]],
+        dtype=np.int32,
+    )
+
+    annotations = utils.misc.process_contours(
+        contours=contours,
+        hierarchy=hierarchy,
+        scale_factor=(1.0, 1.0),
+        offset=np.array([5, 7]),
+    )
+
+    assert len(annotations) == 1
+
+    point = annotations[0].geometry
+
+    assert point.x == 15
+    assert point.y == 27
+
+
 def test_fuzz_safe_padded_read_edge_padding() -> None:
     """Fuzz test for padding at edges of an image.
 
