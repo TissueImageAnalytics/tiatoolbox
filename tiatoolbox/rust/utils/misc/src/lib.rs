@@ -73,6 +73,7 @@ fn contrast_enhancer<'py>(
     rust_contrast_enhancer(data, low_p, high_p).into_pyarray(py)
 }
 
+/// Contrast enhancer implemented in Rust.
 #[pymodule]
 fn misc(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(contrast_enhancer, m)?)?;
