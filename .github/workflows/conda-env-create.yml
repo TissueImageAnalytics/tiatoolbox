@@ -20,7 +20,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          -   os: ubuntu-latest
+              conda-subdir: linux-64
+          -   os: windows-latest
+              conda-subdir: win-64
+          -   os: macos-latest
+              conda-subdir: osx-64 # Forces Rosetta emulation index on Apple Silicon
         python-version: ["3.12", "3.13", "3.14"]
 
     runs-on: ${{ matrix.os }}
@@ -40,7 +46,7 @@ jobs:
         env:
             MAMBA_NO_CACHE: "true" # Forces libmamba to fetch completely fresh metadata
             # Force macOS runner to use Intel index (osx-64) so it can find pyjpegls
-            CONDA_SUBDIR: ${{ matrix.os == 'macos-latest' && 'osx-64' || null }}
+            CONDA_SUBDIR: ${{ matrix.conda-subdir }} # Native for Win/Linux, Rosetta for Mac
         with:
             environment-name: tiatoolbox
             environment-file: requirements/requirements.conda.generated.yml
