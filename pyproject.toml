@@ -28,7 +28,6 @@ dependencies = [
   "huggingface_hub>=0.33.3",
   "imagecodecs>=2022.9.26",
   "ipywidgets>=8.1.7",
-  "ipython<9.18.0",
   "joblib>=1.1.1",
   "jupyterlab>=3.5.2",
   "matplotlib>=3.10.0",
