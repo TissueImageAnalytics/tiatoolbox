@@ -8,7 +8,7 @@ Installation
 Prerequisites
 =============
 
-The prerequisites for TIAToolbox installation are OpenSlide binaries and OpenJPEG version 2.3.0 or above. Please follow the instructions below to install the prerequisite software according to your platform.
+The prerequisites for TIAToolbox installation are OpenSlide binaries, OpenJPEG version 2.3.0 or above, and the `Rust <https://rust-lang.org/tools/install/>`_ compiler. Please follow the instructions below to install the prerequisite software according to your platform.
 
 Linux (Ubuntu)
 --------------
@@ -18,6 +18,7 @@ On Linux, the prerequisite software can be installed using the following command
 .. code-block:: console
 
     $ apt-get -y install libopenjp2-7-dev libopenjp2-tools sqlite3 libsqlite3-0
+    $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 The same command is used when working on the Colab or Kaggle platforms. When working on Google Colab, the following packages should be removed **before** installing TIAToolbox, as they conflict and may produce an error message:
 
@@ -33,6 +34,11 @@ On Windows, ``OpenJPEG`` and ``SQLite`` can be installed using the following ``c
 .. code-block:: console
 
     C:\> conda install -c conda-forge openjpeg sqlite
+
+Rust compiler
+^^^^^^^^^^^^^
+
+Follow the instructions on the `Rust install <https://rust-lang.org/tools/install/>`_ page to download and install the Rust compiler.
 
 macOS
 -----
@@ -55,6 +61,11 @@ MacPorts
 .. code-block:: console
 
     $ port install openjpeg sqlite
+
+Rust compiler
+^^^^^^^^^^^^^
+
+    $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 Installing Stable Release
 =========================
