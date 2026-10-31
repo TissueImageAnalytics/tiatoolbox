@@ -50,6 +50,9 @@ import {
     createGridController,
 } from "./controls/grid.js";
 import {
+    createLoadingIndicatorController,
+} from "./controls/loading-indicator.js";
+import {
     createScaleBarController,
 } from "./controls/scale-bar.js";
 import {
@@ -96,6 +99,11 @@ function createSlideSource(sessionId, slideInfo, version) {
 
 const mapElement = document.getElementById("map");
 const viewerApp = document.querySelector(".viewer-app");
+
+const viewerLoadingIndicator =
+    document.getElementById(
+        "viewer-loading-indicator",
+    );
 
 const viewerPanel = document.getElementById("viewer-panel");
 const viewerPanelToggle = document.getElementById(
@@ -378,6 +386,7 @@ if (mapElement === null || viewerApp === null) {
 }
 
 if (
+    viewerLoadingIndicator === null ||
     viewerPanel === null ||
     viewerPanelToggle === null ||
     layerEditor === null ||
@@ -677,6 +686,7 @@ let overlayVersion = Date.now();
 let currentSlideInfo = null;
 let currentSlidePath = null;
 const overlayLayers = {};
+const overlayPaths = new Map();
 const annotationLayerNames = new Set();
 const annotationColours = new Map();
 const annotationColoursByLayer = new Map();
@@ -3014,6 +3024,12 @@ const map = new OlMap({
     }),
 });
 
+const loadingIndicatorController =
+    createLoadingIndicatorController({
+        map,
+        element: viewerLoadingIndicator,
+    });
+
 const annotationHighlightStyle =
     new Style({
         fill: new Fill({
@@ -3316,6 +3332,8 @@ function clearOverlayLayers() {
         delete overlayLayers[layerName];
     }
 
+    overlayPaths.clear();
+
     annotationLayerNames.clear();
     annotationTypesByLayer.clear();
 
@@ -3474,7 +3492,7 @@ async function removeSlide() {
 }
 
 // Replace the current slide and rebuild its source, projection and view.
-async function switchSlide(slidePath) {
+async function switchSlideImpl(slidePath) {
     if (sessionId === null) {
         throw new Error("Dynamic slide switching requires a TileServer session.");
     }
@@ -3558,9 +3576,19 @@ async function switchSlide(slidePath) {
     mapControlsController.updateZoomLevel();
 }
 
+async function switchSlide(slidePath) {
+    loadingIndicatorController.begin();
+
+    try {
+        return await switchSlideImpl(slidePath);
+    } finally {
+        loadingIndicatorController.end();
+    }
+}
+
 layersPanelController.render();
 
-async function loadOverlay(overlayPath) {
+async function loadOverlayImpl(overlayPath) {
     if (sessionId === null || currentSlideInfo === null) {
         throw new Error(
             "Dynamic overlay loading requires a loaded slide.",
@@ -3730,6 +3758,8 @@ async function loadOverlay(overlayPath) {
         overlayVersion += 1;
     }
 
+    overlayPaths.set(layerName, overlayPath);
+
     const source = new Zoomify({
         url:
             `/tileserver/layer/${encodeURIComponent(layerName)}/` +
@@ -3777,6 +3807,16 @@ async function loadOverlay(overlayPath) {
     return result;
 }
 
+async function loadOverlay(overlayPath) {
+    loadingIndicatorController.begin();
+
+    try {
+        return await loadOverlayImpl(overlayPath);
+    } finally {
+        loadingIndicatorController.end();
+    }
+}
+
 async function removeOverlay(layerName) {
     const overlayLayer = overlayLayers[layerName];
     const wasAnnotation =
@@ -3817,6 +3857,7 @@ async function removeOverlay(layerName) {
     );
 
     delete overlayLayers[layerName];
+    overlayPaths.delete(layerName);
 
     if (wasAnnotation) {
         invalidateAnnotationInspectionRequests();

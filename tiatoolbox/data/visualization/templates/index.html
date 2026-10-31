@@ -23,6 +23,16 @@
             data-layers="{{ layers }}"
         ></div>
 
+        <div
+            id="viewer-loading-indicator"
+            class="viewer-loading-indicator ol-unselectable ol-control"
+            role="status"
+            aria-live="polite"
+        >
+            <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+            <span>Loading…</span>
+        </div>
+
         <div class="reset-view-control ol-unselectable ol-control">
             <button
                 id="reset-view-button"
@@ -54,6 +64,18 @@
                     aria-label="Layers"
                 >
                     <i class="fas fa-sliders-h"></i>
+                </button>
+            </div>
+
+            <div class="snapshot-control ol-control">
+                <button
+                    id="snapshot-button"
+                    type="button"
+                    title="Save snapshot"
+                    aria-label="Save snapshot"
+                    hidden
+                >
+                    <i class="fas fa-camera"></i>
                 </button>
             </div>
         </div>
