@@ -384,6 +384,14 @@
                 <button
                     class="settings-tab"
                     type="button"
+                    data-settings-tab="snapshot"
+                >
+                    Snapshot
+                </button>
+
+                <button
+                    class="settings-tab"
+                    type="button"
                     data-settings-tab="grid-coordinates"
                 >
                     Grid & Coordinates
@@ -919,6 +927,53 @@
                                 Imperial
                             </option>
                         </select>
+                    </div>
+                </section>
+
+                <section
+                    class="settings-tab-panel hidden"
+                    data-settings-panel="snapshot"
+                >
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Show snapshot button
+                            </div>
+                            <div class="settings-option-description">
+                                Display the snapshot button on the viewer.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-snapshot-visible"
+                                type="checkbox"
+                                aria-label="Show snapshot button"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Include scale bar
+                            </div>
+                            <div class="settings-option-description">
+                                Include the visible scale bar in saved snapshots.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-snapshot-scale-bar"
+                                type="checkbox"
+                                aria-label="Include scale bar in snapshots"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
                     </div>
                 </section>
 

@@ -115,6 +115,21 @@ const snapshotButton =
         "snapshot-button",
     );
 
+const snapshotControl =
+    document.querySelector(
+        ".snapshot-control",
+    );
+
+const snapshotVisibleInput =
+    document.getElementById(
+        "settings-snapshot-visible",
+    );
+
+const snapshotScaleBarInput =
+    document.getElementById(
+        "settings-snapshot-scale-bar",
+    );
+
 const viewerPanel = document.getElementById("viewer-panel");
 const viewerPanelToggle = document.getElementById(
     "viewer-panel-toggle",
@@ -398,6 +413,9 @@ if (mapElement === null || viewerApp === null) {
 if (
     viewerLoadingIndicator === null ||
     snapshotButton === null ||
+    snapshotControl === null ||
+    snapshotVisibleInput === null ||
+    snapshotScaleBarInput === null ||
     viewerPanel === null ||
     viewerPanelToggle === null ||
     layerEditor === null ||
@@ -622,6 +640,8 @@ const settingsPanelController =
         scaleBarOpacityInput,
         scaleBarSizeSelect,
         scaleBarUnitsSelect,
+        snapshotVisibleInput,
+        snapshotScaleBarInput,
 
         onAnnotationInspectionChange() {
             if (
@@ -3049,10 +3069,15 @@ const snapshotController =
                 return;
             }
 
+            const scaleBarElement =
+                snapshotScaleBarInput.checked
+                    ? scaleLineControl?.element ?? null
+                    : null;
+
             const blob =
                 await captureMapSnapshot(
                     map,
-                    scaleLineControl?.element ?? null,
+                    scaleBarElement,
                 );
 
             const filename =
@@ -3237,6 +3262,11 @@ function updateControlVisibility() {
     mapControlsController.updateVisibility();
     gridController.updateVisibility();
     overviewMapController.updateVisibility();
+
+    snapshotControl.classList.toggle(
+        "viewer-control-hidden",
+        !snapshotVisibleInput.checked,
+    );
 }
 
 function resetSettingsToDefaults() {

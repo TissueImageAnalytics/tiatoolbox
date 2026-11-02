@@ -49,6 +49,8 @@ function createSettingsPanelController({
     scaleBarOpacityInput,
     scaleBarSizeSelect,
     scaleBarUnitsSelect,
+    snapshotVisibleInput,
+    snapshotScaleBarInput,
     onAnnotationInspectionChange,
     onMultipleAnnotationSelectionChange,
     onThemeChange,
@@ -311,6 +313,12 @@ function createSettingsPanelController({
                 size: scaleBarSizeSelect.value,
                 units:
                     scaleBarUnitsSelect.value,
+            },
+            snapshot: {
+                visible:
+                    snapshotVisibleInput.checked,
+                scaleBar:
+                    snapshotScaleBarInput.checked,
             },
         };
 
@@ -647,6 +655,30 @@ function createSettingsPanelController({
                     scaleBar.units;
             }
         }
+
+        const snapshot =
+            savedSettings.snapshot;
+
+        if (
+            snapshot !== null &&
+            typeof snapshot === "object"
+        ) {
+            if (
+                typeof snapshot.visible ===
+                "boolean"
+            ) {
+                snapshotVisibleInput.checked =
+                    snapshot.visible;
+            }
+
+            if (
+                typeof snapshot.scaleBar ===
+                "boolean"
+            ) {
+                snapshotScaleBarInput.checked =
+                    snapshot.scaleBar;
+            }
+        }
     }
 
     function resetValues() {
@@ -698,6 +730,9 @@ function createSettingsPanelController({
 
         scaleBarUnitsSelect.value =
             "metric";
+
+        snapshotVisibleInput.checked = true;
+        snapshotScaleBarInput.checked = true;
     }
 
     function clearSavedSettings() {
@@ -807,6 +842,7 @@ function createSettingsPanelController({
             fullscreenVisibleInput,
             mousePositionVisibleInput,
             overviewMapVisibleInput,
+            snapshotVisibleInput,
         ]) {
             input.addEventListener(
                 "change",
@@ -827,6 +863,8 @@ function createSettingsPanelController({
             scaleBarEnabledInput,
             scaleBarSizeSelect,
             scaleBarUnitsSelect,
+            snapshotVisibleInput,
+            snapshotScaleBarInput,
         ]) {
             input.addEventListener(
                 "change",
