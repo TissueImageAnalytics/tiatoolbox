@@ -53,6 +53,11 @@ import {
     createLoadingIndicatorController,
 } from "./controls/loading-indicator.js";
 import {
+    captureMapSnapshot,
+    createSnapshotController,
+    downloadSnapshot,
+} from "./controls/snapshot.js";
+import {
     createScaleBarController,
 } from "./controls/scale-bar.js";
 import {
@@ -103,6 +108,11 @@ const viewerApp = document.querySelector(".viewer-app");
 const viewerLoadingIndicator =
     document.getElementById(
         "viewer-loading-indicator",
+    );
+
+const snapshotButton =
+    document.getElementById(
+        "snapshot-button",
     );
 
 const viewerPanel = document.getElementById("viewer-panel");
@@ -387,6 +397,7 @@ if (mapElement === null || viewerApp === null) {
 
 if (
     viewerLoadingIndicator === null ||
+    snapshotButton === null ||
     viewerPanel === null ||
     viewerPanelToggle === null ||
     layerEditor === null ||
@@ -3024,10 +3035,46 @@ const map = new OlMap({
     }),
 });
 
+let scaleLineControl = null;
+
+const snapshotController =
+    createSnapshotController({
+        button: snapshotButton,
+
+        hasSlide: () =>
+            currentSlideInfo !== null,
+
+        async onSnapshot() {
+            if (currentSlidePath === null) {
+                return;
+            }
+
+            const blob =
+                await captureMapSnapshot(
+                    map,
+                    scaleLineControl?.element ?? null,
+                );
+
+            const filename =
+                `${getFileStem(currentSlidePath)}_snapshot.png`;
+
+            downloadSnapshot(
+                blob,
+                filename,
+            );
+        },
+    });
+
 const loadingIndicatorController =
     createLoadingIndicatorController({
         map,
         element: viewerLoadingIndicator,
+
+        onChange(loading) {
+            snapshotController.setLoading(
+                loading,
+            );
+        },
     });
 
 const annotationHighlightStyle =
@@ -3098,8 +3145,6 @@ const {
 } = mapControlsController;
 
 // Scale bar
-let scaleLineControl = null;
-
 const scaleBarController =
     createScaleBarController({
         map,
@@ -3489,6 +3534,7 @@ async function removeSlide() {
     setViewerEnabled(false);
     mapControlsController.updateZoomLevel();
     filesPanelController.updateActionState();
+    snapshotController.updateButton();
 }
 
 // Replace the current slide and rebuild its source, projection and view.
