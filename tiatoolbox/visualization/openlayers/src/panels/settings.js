@@ -51,6 +51,7 @@ function createSettingsPanelController({
     scaleBarUnitsSelect,
     snapshotVisibleInput,
     snapshotScaleBarInput,
+    snapshotMetadataInput,
     onAnnotationInspectionChange,
     onMultipleAnnotationSelectionChange,
     onThemeChange,
@@ -319,6 +320,8 @@ function createSettingsPanelController({
                     snapshotVisibleInput.checked,
                 scaleBar:
                     snapshotScaleBarInput.checked,
+                metadata:
+                    snapshotMetadataInput.checked,
             },
         };
 
@@ -672,11 +675,11 @@ function createSettingsPanelController({
             }
 
             if (
-                typeof snapshot.scaleBar ===
+                typeof snapshot.metadata ===
                 "boolean"
             ) {
-                snapshotScaleBarInput.checked =
-                    snapshot.scaleBar;
+                snapshotMetadataInput.checked =
+                    snapshot.metadata;
             }
         }
     }
@@ -733,6 +736,7 @@ function createSettingsPanelController({
 
         snapshotVisibleInput.checked = true;
         snapshotScaleBarInput.checked = true;
+        snapshotMetadataInput.checked = true;
     }
 
     function clearSavedSettings() {
@@ -865,6 +869,7 @@ function createSettingsPanelController({
             scaleBarUnitsSelect,
             snapshotVisibleInput,
             snapshotScaleBarInput,
+            snapshotMetadataInput,
         ]) {
             input.addEventListener(
                 "change",

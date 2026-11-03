@@ -131,6 +131,11 @@ const snapshotScaleBarInput =
         "settings-snapshot-scale-bar",
     );
 
+const snapshotMetadataInput =
+    document.getElementById(
+        "settings-snapshot-metadata",
+    );
+
 const viewerPanel = document.getElementById("viewer-panel");
 const viewerPanelToggle = document.getElementById(
     "viewer-panel-toggle",
@@ -417,6 +422,7 @@ if (
     snapshotControl === null ||
     snapshotVisibleInput === null ||
     snapshotScaleBarInput === null ||
+    snapshotMetadataInput === null ||
     viewerPanel === null ||
     viewerPanelToggle === null ||
     layerEditor === null ||
@@ -643,6 +649,7 @@ const settingsPanelController =
         scaleBarUnitsSelect,
         snapshotVisibleInput,
         snapshotScaleBarInput,
+        snapshotMetadataInput,
 
         onAnnotationInspectionChange() {
             if (
@@ -3157,10 +3164,12 @@ const snapshotController =
                 `${basename}.png`,
             );
 
-            downloadSnapshotMetadata(
-                createSnapshotMetadata(),
-                `${basename}.json`,
-            );
+            if (snapshotMetadataInput.checked) {
+                downloadSnapshotMetadata(
+                    createSnapshotMetadata(),
+                    `${basename}.json`,
+                );
+            }
         },
     });
 
