@@ -675,6 +675,14 @@ function createSettingsPanelController({
             }
 
             if (
+                typeof snapshot.scaleBar ===
+                "boolean"
+            ) {
+                snapshotScaleBarInput.checked =
+                    snapshot.scaleBar;
+            }
+
+            if (
                 typeof snapshot.metadata ===
                 "boolean"
             ) {

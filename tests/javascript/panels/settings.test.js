@@ -1056,6 +1056,12 @@ describe("loading settings", () => {
                     size: "large",
                     units: "imperial",
                 },
+
+                snapshot: {
+                    visible: false,
+                    scaleBar: false,
+                    metadata: false,
+                },
             }),
         );
 
@@ -1160,6 +1166,18 @@ describe("loading settings", () => {
         expect(
             harness.scaleBarUnitsSelect.value,
         ).toBe("imperial");
+
+        expect(
+            harness.snapshotVisibleInput.checked,
+        ).toBe(false);
+
+        expect(
+            harness.snapshotScaleBarInput.checked,
+        ).toBe(false);
+
+        expect(
+            harness.snapshotMetadataInput.checked,
+        ).toBe(false);
     });
 
     it("ignores invalid saved setting values", () => {
@@ -1412,6 +1430,15 @@ describe("resetting settings", () => {
         harness.scaleBarUnitsSelect.value =
             "imperial";
 
+        harness.snapshotVisibleInput.checked =
+            false;
+
+        harness.snapshotScaleBarInput.checked =
+            false;
+
+        harness.snapshotMetadataInput.checked =
+            false;
+
         harness.controller.resetValues();
 
         expect(
@@ -1490,6 +1517,18 @@ describe("resetting settings", () => {
         expect(
             harness.scaleBarUnitsSelect.value,
         ).toBe("metric");
+
+        expect(
+            harness.snapshotVisibleInput.checked,
+        ).toBe(true);
+
+        expect(
+            harness.snapshotScaleBarInput.checked,
+        ).toBe(true);
+
+        expect(
+            harness.snapshotMetadataInput.checked,
+        ).toBe(true);
     });
 
     it("clears saved settings", () => {
