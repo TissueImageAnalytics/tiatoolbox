@@ -265,6 +265,15 @@ function createHarness() {
             "metric",
         );
 
+    const snapshotVisibleInput =
+        createCheckbox();
+
+    const snapshotScaleBarInput =
+        createCheckbox();
+
+    const snapshotMetadataInput =
+        createCheckbox();
+
     const onAnnotationInspectionChange =
         vi.fn();
 
@@ -328,6 +337,9 @@ function createHarness() {
             scaleBarOpacityInput,
             scaleBarSizeSelect,
             scaleBarUnitsSelect,
+            snapshotVisibleInput,
+            snapshotScaleBarInput,
+            snapshotMetadataInput,
             onAnnotationInspectionChange,
             onMultipleAnnotationSelectionChange,
             onThemeChange,
@@ -369,6 +381,9 @@ function createHarness() {
         scaleBarOpacityInput,
         scaleBarSizeSelect,
         scaleBarUnitsSelect,
+        snapshotVisibleInput,
+        snapshotScaleBarInput,
+        snapshotMetadataInput,
         onAnnotationInspectionChange,
         onMultipleAnnotationSelectionChange,
         onThemeChange,
@@ -801,6 +816,12 @@ describe("saving settings", () => {
                 opacity: "35",
                 size: "large",
                 units: "imperial",
+            },
+
+            snapshot: {
+                visible: true,
+                scaleBar: true,
+                metadata: true,
             },
         });
     });
