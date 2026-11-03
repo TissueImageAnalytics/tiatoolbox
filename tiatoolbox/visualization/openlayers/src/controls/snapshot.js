@@ -254,6 +254,30 @@ function downloadSnapshot(blob, filename) {
     URL.revokeObjectURL(url);
 }
 
+// Download snapshot metadata as formatted JSON.
+function downloadSnapshotMetadata(
+    metadata,
+    filename,
+) {
+    const json = `${JSON.stringify(
+        metadata,
+        null,
+        4,
+    )}\n`;
+
+    const blob = new Blob(
+        [json],
+        {
+            type: "application/json",
+        },
+    );
+
+    downloadSnapshot(
+        blob,
+        filename,
+    );
+}
+
 // Manage snapshot availability and capture.
 function createSnapshotController({
     button,
@@ -330,4 +354,5 @@ export {
     captureMapSnapshot,
     createSnapshotController,
     downloadSnapshot,
+    downloadSnapshotMetadata,
 };

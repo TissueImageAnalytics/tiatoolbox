@@ -56,6 +56,7 @@ import {
     captureMapSnapshot,
     createSnapshotController,
     downloadSnapshot,
+    downloadSnapshotMetadata,
 } from "./controls/snapshot.js";
 import {
     createScaleBarController,
@@ -3057,6 +3058,74 @@ const map = new OlMap({
 
 let scaleLineControl = null;
 
+function createSnapshotMetadata() {
+    const view = map.getView();
+    const centre = view.getCenter();
+    const mapLayers =
+        map.getLayers().getArray();
+
+    const overlays =
+        Object.entries(overlayLayers)
+            .map(([layerName, layer]) => ({
+                name: layerName,
+                path:
+                    overlayPaths.get(
+                        layerName,
+                    ) ?? null,
+                visible:
+                    layer.getVisible(),
+                opacity:
+                    layer.getOpacity(),
+                zIndex:
+                    layer.getZIndex() ?? null,
+                order:
+                    mapLayers.indexOf(layer),
+            }))
+            .sort(
+                (first, second) =>
+                    first.order - second.order,
+            );
+
+    return {
+        url: window.location.href,
+
+        slide: {
+            path: currentSlidePath,
+        },
+
+        viewport: {
+            centre:
+                centre === undefined
+                    ? null
+                    : [...centre],
+            zoom:
+                view.getZoom() ?? null,
+            rotation:
+                view.getRotation(),
+        },
+
+        overlays,
+
+        scaleBar: {
+            enabled:
+                scaleBarEnabledInput.checked,
+            included:
+                scaleBarEnabledInput.checked &&
+                snapshotScaleBarInput.checked,
+            colour:
+                scaleBarColourInput.value,
+            opacity:
+                Number(
+                    scaleBarOpacityInput.value,
+                ),
+            size:
+                scaleBarSizeSelect.value,
+            units:
+                scaleBarUnitsSelect.value,
+        },
+    };
+}
+
 const snapshotController =
     createSnapshotController({
         button: snapshotButton,
@@ -3080,12 +3149,17 @@ const snapshotController =
                     scaleBarElement,
                 );
 
-            const filename =
-                `${getFileStem(currentSlidePath)}_snapshot.png`;
+            const basename =
+                `${getFileStem(currentSlidePath)}_snapshot`;
 
             downloadSnapshot(
                 blob,
-                filename,
+                `${basename}.png`,
+            );
+
+            downloadSnapshotMetadata(
+                createSnapshotMetadata(),
+                `${basename}.json`,
             );
         },
     });
