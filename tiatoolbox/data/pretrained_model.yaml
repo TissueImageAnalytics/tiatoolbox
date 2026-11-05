@@ -1195,7 +1195,7 @@ segformerb5_distilled_PUMA_1:
     hf_repo_id: TIACentre/Virchow2_Distilled_Segmentation_Models
     catalog:
         description: >
-            Segments an H&E image into Tumour, Stroma, Necrosis, Blood Vessels, Epidermis in Melanoma.  
+            Segments an H&E image into Tumour, Stroma, Necrosis, Blood Vessels, Epidermis in Melanoma.
         primary site: skin
         supported_sites:
             - skin
