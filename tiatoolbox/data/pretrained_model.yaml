@@ -3,7 +3,7 @@ alexnet-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -22,7 +22,7 @@ resnet18-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -52,7 +52,7 @@ resnet34-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -82,7 +82,7 @@ resnet50-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -112,7 +112,7 @@ resnet101-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -142,7 +142,7 @@ resnext50_32x4d-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -172,7 +172,7 @@ resnext101_32x8d-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -202,7 +202,7 @@ wide_resnet50_2-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -232,7 +232,7 @@ wide_resnet101_2-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -262,7 +262,7 @@ densenet121-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -292,7 +292,7 @@ densenet161-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -322,7 +322,7 @@ densenet169-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -352,7 +352,7 @@ densenet201-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -382,7 +382,7 @@ mobilenet_v2-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -412,7 +412,7 @@ mobilenet_v3_large-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -442,7 +442,7 @@ mobilenet_v3_small-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -472,7 +472,7 @@ googlenet-kather100k:
     catalog:
         description: >
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: vanilla.CNNModel
@@ -503,7 +503,7 @@ alexnet-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -526,7 +526,7 @@ resnet18-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -549,7 +549,7 @@ resnet34-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -572,7 +572,7 @@ resnet50-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -595,7 +595,7 @@ resnet101-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -618,7 +618,7 @@ resnext50_32x4d-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -641,7 +641,7 @@ resnext101_32x8d-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -664,7 +664,7 @@ wide_resnet50_2-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -687,7 +687,7 @@ wide_resnet101_2-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -710,7 +710,7 @@ densenet121-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -733,7 +733,7 @@ densenet161-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -756,7 +756,7 @@ densenet169-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -779,7 +779,7 @@ densenet201-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -802,7 +802,7 @@ mobilenet_v2-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -825,7 +825,7 @@ mobilenet_v3_large-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -848,7 +848,7 @@ mobilenet_v3_small-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -871,7 +871,7 @@ googlenet-pcam:
     catalog:
         description: >
             Predict breast cancer metastases in lymph node tissue images at a patch level.
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: vanilla.CNNModel
@@ -1008,7 +1008,7 @@ fcn-tissue_mask:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
         description: Segmentation of tissue regions across different cancer types
-        tissue_type: 
+        tissue_type:
             - agnostic
     architecture:
         class: unet.UNetModel
@@ -1034,7 +1034,7 @@ fcn_resnet50_unet-bcss:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
         description: Segments tumor, stroma, necrosi, and inflamatory regions in breast cancer images
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: unet.UNetModel
@@ -1062,7 +1062,7 @@ unet_tissue_mask_tsef:
             These weights can be used to segment a grayscale image to
             create a tissue mask excluding the fatty region. TSEF stands for tissue
             segmentation excluding fat.
-        tissue_type: 
+        tissue_type:
             - agnostic
     architecture:
         class: unet.UNetModel
@@ -1089,7 +1089,7 @@ hovernet_fast-pannuke:
     catalog:
         description: >
             Instance Segmentation and detection of Neoplastic, Inflammatory, Connective, Dead, and Non-Neoplastic Epithelial nuclei across different cancer types.
-        tissue_type: 
+        tissue_type:
             - agnostic
             - liver
             - prostate
@@ -1136,7 +1136,7 @@ hovernet_fast-monusac:
     catalog:
         description: >
             Instance Segmentation and detection of Epithelial, Lymphocyte, Macrophage, and Neutrophil nuclei across different cancer types.
-        tissue_type: 
+        tissue_type:
             - agnostic
             - breast
             - kidney
@@ -1176,7 +1176,7 @@ hovernet_original-consep:
     catalog:
         description: >
             Instance Segmentation and detection of Epithelial, Inflammatory, and Spindle-Shaped nuclei in colon images.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: hovernet.HoVerNet
@@ -1210,7 +1210,7 @@ hovernet_original-kumar:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
         description: Instance Segmentation and detection of Epithelial, Inflammatory, and Spindle-Shaped nuclei across different cancer types.
-        tissue_type: 
+        tissue_type:
             - agnostic
             - liver
             - prostate
@@ -1281,7 +1281,7 @@ micronet-consep:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
         description:
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: micronet.MicroNet
@@ -1335,7 +1335,7 @@ mapde-conic:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
         description:
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: mapde.MapDe
@@ -1393,7 +1393,7 @@ sccnn-conic:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
         description:
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: sccnn.SCCNN
@@ -1423,7 +1423,7 @@ nuclick_original-pannuke:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
         description:
-        tissue_type: 
+        tissue_type:
             - agnostic
             - liver
             - prostate
@@ -1456,7 +1456,7 @@ nuclick_light-pannuke:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
         description:
-        tissue_type: 
+        tissue_type:
             - agnostic
             - liver
             - prostate
@@ -1494,7 +1494,7 @@ grandqc_tissue_detection:
     catalog:
         description: >
             Segmentation model for masking background from tissue regions
-        tissue_type: 
+        tissue_type:
             - agnostic
     architecture:
         class: grandqc.GrandQCModel
@@ -1522,7 +1522,7 @@ KongNet_CoNIC_1:
     catalog:
         description: >
             Nuclei detection model for neutrophils, epithelial, lymphocytes, plasma, eosinophil, and connective nuclei in colorectal cancer.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: kongnet.KongNet
@@ -1559,7 +1559,7 @@ KongNet_PanNuke_1:
     catalog:
         description: >
             Nucleus detection model for connective, neoplastic, epithelial, dead, and inflamatory nuclei across multiple cancers.
-        tissue_type: 
+        tissue_type:
             - agnostic
             - liver
             - prostate
@@ -1605,7 +1605,7 @@ KongNet_MONKEY_1:
     catalog:
         description: >
             Model for detecting lymphocytes, monocytes, and inflamatory nuclei in Kidney Biopsy images.
-        tissue_type: 
+        tissue_type:
             - kidney
     architecture:
         class: kongnet.KongNet
@@ -1639,7 +1639,7 @@ KongNet_PUMA_T1_3:
     catalog:
         description:  >
             Nuclei detection model for detecting Tumor and Lymphocyte nuclei in melanoma and metastatic melanoma.
-        tissue_type: 
+        tissue_type:
             - skin
             - bone
             - lung
@@ -1680,7 +1680,7 @@ KongNet_PUMA_T2_3:
     catalog:
         description: >
              Nuclei Detection model for detecting tumor, lymphocytes, plasma, histiocyte, melanophage, neutrophil, stroma, epithelium, endothelium, and apoptotic nuclei in melanoma and metastatic melanoma
-        tissue_type: 
+        tissue_type:
             - skin
             - bone
             - lung
@@ -1728,7 +1728,7 @@ KongNet_Det_MIDOG_1:
     catalog:
         description: >
             Nuclei detection model for mitotic figure detection across different cancer types.
-        tissue_type: 
+        tissue_type:
             - agnostic
             - breast
             - lung
@@ -1765,7 +1765,7 @@ efficientunet-tissue_mask:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
         description: Segmentation model for tissue regions in images across cancer types.
-        tissue_type: 
+        tissue_type:
             - agnostic
     architecture:
         class: efficientunet_tissue_mask_model.EfficientUNetTissueMaskModel
