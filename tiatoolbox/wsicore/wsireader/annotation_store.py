@@ -66,12 +66,16 @@ class AnnotationStoreReader(WSIReader):
     ) -> None:
         """Initialize :class:`AnnotationStoreReader`."""
         super().__init__(store, **kwargs)
-        self.store = (
-            SQLiteStore(Path(store)) if isinstance(store, (str, Path)) else store
-        )
+        # Resources opened here from paths are released by ``close``.
+        self._opened: list[AnnotationStore | WSIReader] = []
+        if isinstance(store, (str, Path)):
+            store = SQLiteStore(Path(store))
+            self._opened.append(store)
+        self.store = store
         self.base_wsi = base_wsi
         if isinstance(base_wsi, (str, Path)):
             self.base_wsi = WSIReader.open(base_wsi)
+            self._opened.append(self.base_wsi)
         if info is None:
             # try to get metadata from store
             try:
@@ -87,6 +91,7 @@ class AnnotationStoreReader(WSIReader):
                         "No metadata found in store. "
                         "Please provide either info or base slide."
                     )
+                    self.close()
                     raise ValueError(
                         msg,
                     ) from exc
@@ -106,6 +111,15 @@ class AnnotationStoreReader(WSIReader):
     def _info(self: AnnotationStoreReader) -> WSIMeta:
         """Get the metadata of the slide."""
         return self.info
+
+    def close(self: AnnotationStoreReader) -> None:
+        """Close the store and base slide if this reader opened them from paths.
+
+        Stores and readers passed in as objects stay open for their owner.
+
+        """
+        while self._opened:
+            self._opened.pop().close()
 
     def read_rect(
         self: AnnotationStoreReader,

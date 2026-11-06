@@ -23,6 +23,10 @@ class DICOMWSIReader(WSIReader):
 
     wsidicom = None
 
+    def close(self: DICOMWSIReader) -> None:
+        """Close the DICOM files opened for this slide."""
+        self.wsi.close()
+
     def __init__(
         self: DICOMWSIReader,
         input_img: str | Path | np.ndarray,

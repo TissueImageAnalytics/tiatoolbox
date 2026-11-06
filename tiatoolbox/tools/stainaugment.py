@@ -133,9 +133,12 @@ class StainAugmentor:
         self.n_stains = self.source_concentrations.shape[1]
 
         if not self.augment_background:
-            self.tissue_mask = get_luminosity_tissue_mask(
-                img, threshold=threshold
-            ).ravel()
+            try:
+                self.tissue_mask = get_luminosity_tissue_mask(
+                    img, threshold=threshold
+                ).ravel()
+            except ValueError:
+                self.tissue_mask = np.zeros(img.shape[0] * img.shape[1], dtype=bool)
 
         self.img_shape = img.shape
 
@@ -173,6 +176,6 @@ class StainAugmentor:
 
     def _sample_params(self) -> None:
         """Generate random alpha/beta parameters."""
-        rng = np.random.default_rng()
+        rng = self.rng
         self.alpha = rng.uniform(1 - self.sigma1, 1 + self.sigma1)
         self.beta = rng.uniform(-self.sigma2, self.sigma2)

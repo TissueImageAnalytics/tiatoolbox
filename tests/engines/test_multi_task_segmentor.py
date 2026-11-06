@@ -1947,12 +1947,14 @@ def test_calculate_probabilities_with_zarr_cache(
         save_path: Path,
         memory_threshold: int,
         output_shape: tuple[int, int],
+        verbose: bool,
     ) -> list:
         """Capture arguments and return synthetic output."""
         _ = output_locs_y_, save_path, memory_threshold, output_shape
         merge_kwargs["canvas"] = canvas
         merge_kwargs["count"] = count
         merge_kwargs["zarr_group"] = zarr_group
+        merge_kwargs["verbose"] = verbose
 
         return ["probabilities"]
 
@@ -1999,6 +2001,8 @@ def test_calculate_probabilities_with_zarr_cache(
     assert merge_kwargs["canvas"] == ["fake_dask_array"]
     assert merge_kwargs["count"] == ["fake_dask_array"]
     assert merge_kwargs["zarr_group"] == "fake_zarr_group"
+    # Progress bars follow the engine's verbosity.
+    assert merge_kwargs["verbose"] is False
 
 
 def test_check_and_update_for_memory_overload(

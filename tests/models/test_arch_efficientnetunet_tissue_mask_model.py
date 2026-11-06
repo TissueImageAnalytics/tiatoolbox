@@ -319,6 +319,23 @@ def test_efficientnetunet_postproc_with_dask() -> None:
     assert mask.dtype == np.uint8
 
 
+def test_efficientnetunet_postproc_multiclass_argmax() -> None:
+    """Multi-class postprocessing should return a semantic class map."""
+    model = EfficientUNetTissueMaskModel(num_classes=3)
+    probs = np.zeros((2, 2, 3), dtype=np.float32)
+    probs[..., 0] = 0.1
+    probs[0, 0, 1] = 0.9
+    probs[0, 1, 2] = 0.8
+    probs[1, 0, 0] = 0.7
+    probs[1, 1, 1] = 0.6
+
+    mask = model.postproc(probs)
+
+    assert mask.shape == (2, 2)
+    assert mask.dtype == np.int64
+    assert mask.tolist() == [[1, 2], [0, 1]]
+
+
 def test_efficientnetunet_infer_batch() -> None:
     """Test EfficientNetUnet batch inference."""
     model = EfficientUNetTissueMaskModel(num_classes=1)
@@ -333,6 +350,18 @@ def test_efficientnetunet_infer_batch() -> None:
     # Check that probabilities are in valid range [0, 1]
     assert np.all(probs >= 0)
     assert np.all(probs <= 1)
+
+
+def test_efficientnetunet_multiclass_infer_batch() -> None:
+    """Multi-class inference should return same-shape softmax probabilities."""
+    model = EfficientUNetTissueMaskModel(num_classes=3)
+    batch = torch.randn(2, 64, 64, 3)
+
+    probs = model.infer_batch(model, batch, device="cpu")
+
+    assert probs.shape == (2, 64, 64, 3)
+    assert isinstance(probs, np.ndarray)
+    assert np.allclose(probs.sum(axis=-1), 1.0, atol=1e-5)
 
 
 def test_efficientnet_encoder_block_args() -> None:

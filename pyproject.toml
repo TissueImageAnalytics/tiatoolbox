@@ -51,7 +51,7 @@ dependencies = [
   "tifffile>=2026.6.1",
   "timm>=1.0.3",
   "torch>=2.5.0",
-  "torchvision>=0.15.0",
+  "torchvision>=0.20.0",
   "tqdm>=4.64.1",
   "transformers>=5.15.0",
   "umap-learn>=0.5.3",
@@ -248,9 +248,6 @@ exclude = [
     "venv",
 ]
 
-# Ignore `F401` (import violations) in all `__init__.py` files.
-lint.per-file-ignores = {"__init__.py" = ["F401"], "tests/*" = ["T201", "PGH001", "SLF001", "S101", "PLR2004"], "benchmarks/*" = ["T201", "INP001"], "pre-commit/*" = ["T201", "INP001"], "tiatoolbox/cli/*" = ["PLR0913"]}
-
 # Same as Black.
 line-length = 88
 
@@ -263,6 +260,15 @@ target-version = "py312"
 [tool.ruff.lint.mccabe]
 # Unlike Flake8, default to a complexity level of 10.
 max-complexity = 14
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*" = ["T201", "PGH001", "SLF001", "S101", "PLR2004"]
+"benchmarks/*" = ["T201", "INP001"]
+"pre-commit/*" = ["T201", "INP001"]
+"tiatoolbox/cli/*" = ["PLR0913"]
+# Training tutorials intentionally print results; their CLI scripts are not packages.
+"examples/1[345]-training-*.ipynb" = ["T201"]
 
 # need to enable for docstrings check.
 [tool.ruff.lint.pydocstyle]
