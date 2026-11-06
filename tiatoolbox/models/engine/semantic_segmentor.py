@@ -64,6 +64,7 @@ import zarr
 from tqdm.auto import tqdm
 
 from tiatoolbox import logger
+from tiatoolbox.models.architecture.utils import eval_model_if_nn_module
 from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
 from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
@@ -389,7 +390,7 @@ class SemanticSegmentor(PatchPredictor):
             wsireader_kwargs=wsireader_kwargs,
         )
 
-    def infer_wsi(
+    def infer_wsi(  # noqa: PLR0915  (eval-mode setup nudged statement count)
         self: SemanticSegmentor,
         dataloader: DataLoader,
         save_path: Path,
@@ -502,6 +503,9 @@ class SemanticSegmentor(PatchPredictor):
         min_x, min_y, _, _ = self.mask_padding
         _, canvas_width = masked_output_shape
 
+        # Set inference mode once here; infer_batch no longer calls
+        # model.eval() internally (needed for Monte Carlo Dropout wrappers).
+        self.model = eval_model_if_nn_module(model=self.model)
         infer_batch = self._get_model_attr("infer_batch")
         for batch_idx, batch_data in enumerate(tqdm_loop):
             batch_output = infer_batch(

@@ -24,8 +24,11 @@ class _TorchPreprocCaller:
 
     """
 
-    def __init__(self: _TorchPreprocCaller, preprocs: list) -> None:
+    def __init__(
+        self: _TorchPreprocCaller, preprocs: list, *, dataset_name: str | None = None
+    ) -> None:
         self.func = transforms.Compose(preprocs)
+        self.dataset_name = dataset_name
 
     def __call__(self: _TorchPreprocCaller, img: np.ndarray | Image) -> torch.Tensor:
         tensor: torch.Tensor = self.func(img)
@@ -71,7 +74,5 @@ def predefined_preproc_func(dataset_name: str) -> _TorchPreprocCaller:
             msg,
         )
 
-    preproc = _TorchPreprocCaller(preproc_dict[dataset_name])
     # Lets trained-model configs record and restore the same preprocessing.
-    preproc.dataset_name = dataset_name
-    return preproc
+    return _TorchPreprocCaller(preproc_dict[dataset_name], dataset_name=dataset_name)

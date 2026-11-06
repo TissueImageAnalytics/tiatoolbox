@@ -494,6 +494,7 @@ def _compile_where(where: str | bytes) -> Callable[[Properties], bool]:
     code = compile(where, "<where>", "eval")
 
     def evaluate(properties: Properties) -> bool:
+        """Evaluate the compiled annotation predicate against its properties."""
         return bool(
             eval(  # skipcq: PYL-W0123,  # noqa: S307
                 code,
@@ -828,7 +829,8 @@ class MaskTargetBuilder(TargetBuilderABC):
             _rasterize_geometry(
                 mask,
                 geometry,
-                next(instance_ids) if self.instance_ids else label,
+                # itertools.count is infinite, so this cannot raise StopIteration.
+                next(instance_ids) if self.instance_ids else label,  # skipcq: PTC-W0063
                 line_width=self.line_width,
                 point_radius=self.point_radius,
             )
@@ -1166,9 +1168,6 @@ class GaussianHeatmapTargetBuilder(TargetBuilderABC):
             y_min = max(center_y - radius, 0)
             y_max = min(center_y + radius + 1, height)
 
-            if x_min >= x_max or y_min >= y_max:
-                continue
-
             # Broadcast 1D pixel coordinates rather than building a dense
             # ``np.mgrid`` per centroid; the per-pixel arithmetic is unchanged.
             x_coords = np.arange(x_min, x_max, dtype=np.int64)[np.newaxis, :]
@@ -1269,5 +1268,4 @@ def _per_class_coverage(
     return {
         class_label: float(unary_union(overlaps).area / patch_area)
         for class_label, overlaps in per_class_geometries.items()
-        if overlaps
     }

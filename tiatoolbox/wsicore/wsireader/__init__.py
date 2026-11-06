@@ -13,7 +13,6 @@ from .base import (
     OpenSlideWSIReader,
     TIFFWSIReader,
     TIFFWSIReaderDelegate,
-    TransformedWSIReader,
     VirtualWSIReader,
     WSIReader,
     _handle_tiff_wsi,
@@ -25,6 +24,7 @@ from .detection import is_dicom, is_ngff, is_tiled_tiff, is_url, is_zarr
 from .dicom import DICOMWSIReader
 from .jp2 import JP2WSIReader
 from .ngff import NGFFWSIReader
+from .transformed import TransformedWSIReader
 
 __all__ = [
     "AnnotationStoreReader",

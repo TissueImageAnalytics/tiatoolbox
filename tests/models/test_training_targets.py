@@ -4,19 +4,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable, Iterator
-    from pathlib import Path
 
 import pickle
 from pathlib import Path
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
 import torch
 from shapely.affinity import scale as shapely_scale
 from shapely.affinity import translate as shapely_translate
-from shapely.geometry import MultiPolygon, Point, Polygon, box
+from shapely.geometry import LinearRing, MultiPoint, MultiPolygon, Point, Polygon, box
 
 from tiatoolbox.annotation import Annotation, DictionaryStore, SQLiteStore
 from tiatoolbox.models.training import (
@@ -37,6 +37,8 @@ from tiatoolbox.models.training import (
 )
 from tiatoolbox.models.training.targets import (
     _clip_and_rescale_geometry,
+    _coverage_fraction,
+    _per_class_coverage,
     _rasterize_geometry,
 )
 
@@ -47,6 +49,7 @@ def store_factory() -> Iterator[Callable[..., SQLiteStore]]:
     stores = []
 
     def create(*args: object, **kwargs: object) -> SQLiteStore:
+        """Track stores so the fixture can close them after the test."""
         store = SQLiteStore(*args, **kwargs)
         stores.append(store)
         return store
@@ -293,6 +296,7 @@ def test_stacked_target_builder_shared_parent_where_queries_once(
     original_query = store.query
 
     def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
+        """Record query options before delegating to the store."""
         query_calls.append(dict(kwargs))
         return original_query(*args, **kwargs)
 
@@ -336,6 +340,7 @@ def test_stacked_target_builder_delegates_child_specific_filters(
     original_query = store.query
 
     def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
+        """Record query options before delegating to the store."""
         query_calls.append(dict(kwargs))
         return original_query(*args, **kwargs)
 
@@ -410,12 +415,14 @@ def test_stacked_target_builder_applies_child_where_to_shared_query(
     original_query = store.query
 
     def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
+        """Record query options before delegating to the store."""
         query_calls.append(dict(kwargs))
         return original_query(*args, **kwargs)
 
     monkeypatch.setattr(store, "query", counting_query)
 
     def is_stroma(properties: dict[str, object]) -> bool:
+        """Select annotations whose class is stroma."""
         return properties.get("class") == "stroma"
 
     builder = StackedTargetBuilder(
@@ -469,6 +476,7 @@ def test_stacked_target_builder_forwards_parent_query_options(
     original_query = store.query
 
     def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
+        """Record query options before delegating to the store."""
         query_calls.append(dict(kwargs))
         return original_query(*args, **kwargs)
 
@@ -506,6 +514,7 @@ def test_stacked_target_builder_forwards_parent_query_options(
         *args: object,
         **kwargs: object,
     ) -> dict[str, Annotation]:
+        """Record distance query options before delegating to the store."""
         distance_query_calls.append(dict(kwargs))
         return original_distance_query(*args, **kwargs)
 
@@ -746,6 +755,7 @@ def test_composite_target_builder_shared_query_matches_per_child_queries(
     original_query = store.query
 
     def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
+        """Record query options before delegating to the store."""
         query_calls.append(dict(kwargs))
         return original_query(*args, **kwargs)
 
@@ -801,6 +811,7 @@ def test_composite_target_builder_forwards_parent_query_options(
     original_query = store.query
 
     def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
+        """Record query options before delegating to the store."""
         query_calls.append(dict(kwargs))
         return original_query(*args, **kwargs)
 
@@ -1867,3 +1878,145 @@ def test_builders_forward_query_options_to_the_store() -> None:
         assert len(found) == 1, type(builder).__name__
     with pytest.raises(TypeError):
         MaskTargetBuilder(unknown_option=1)
+
+
+@pytest.mark.parametrize(
+    ("channels", "message"),
+    [
+        ((), "at least one channel"),
+        ((("x", "mask"), ("x", "image")), "unique"),
+        (((1, "mask"),), "names must be strings"),
+        ((("x", "invalid"),), "Unsupported stacked spatial target kind"),
+    ],
+)
+def test_invalid_stacked_target_spec(channels: tuple, message: str) -> None:
+    """Stacked channels require unique names and known interpolation kinds."""
+    with pytest.raises(ValueError, match=message):
+        StackedSpatialTargetSpec(channels)
+
+
+@pytest.mark.parametrize(
+    ("argument", "value"),
+    [
+        ("patch_bounds", (0, 0, 4)),
+        ("patch_bounds", (0, 0, 0, 4)),
+        ("patch_bounds", (0, 4, 4, 0)),
+        ("output_shape", (4,)),
+        ("output_shape", (4, 0)),
+    ],
+)
+def test_invalid_target_region(argument: str, value: tuple) -> None:
+    """Target construction validates bounds and output shape before querying."""
+    kwargs = {"patch_bounds": (0, 0, 4, 4), "output_shape": (4, 4), argument: value}
+    with pytest.raises(ValueError, match=argument):
+        MaskTargetBuilder().create_target(store=DictionaryStore(), **kwargs)
+
+
+def test_nonspatial_composition_has_no_spatial_spec() -> None:
+    """A composite of scalar labels needs no paired spatial augmentation."""
+    builder = CompositeTargetBuilder({"presence": PresenceTargetBuilder()})
+    assert builder.spatial_target_spec is None
+    with pytest.raises(ValueError, match="leaf spatial specs"):
+        _ = StackedTargetBuilder({"presence": builder}).spatial_target_spec
+
+
+@pytest.mark.parametrize("target", [1, np.zeros((4, 4, 1)), np.zeros((3, 4))])
+def test_stacked_builder_validates_child_outputs(target: object) -> None:
+    """A custom child's result must be a 2D array of the requested size."""
+    child = Mock(
+        spec=MaskTargetBuilder,
+        where=None,
+        min_area=None,
+        distance=0.0,
+        geometry_predicate="intersects",
+    )
+    child.create_target.return_value = target
+    builder = StackedTargetBuilder({"custom": child})
+    with pytest.raises(ValueError, match=r"2D NumPy array|returned shape"):
+        builder.create_target(
+            store=DictionaryStore(), patch_bounds=(0, 0, 4, 4), output_shape=(4, 4)
+        )
+
+
+def test_empty_multilabel_mapping() -> None:
+    """Multilabel outputs require at least one mapped class."""
+    with pytest.raises(ValueError, match="at least one class entry"):
+        MultiLabelTargetBuilder(class_mapping={})
+
+
+def test_invalid_gaussian_truncation() -> None:
+    """The Gaussian support radius must be positive."""
+    with pytest.raises(ValueError, match="`truncate` must be positive"):
+        GaussianHeatmapTargetBuilder(truncate=0)
+
+
+@pytest.mark.parametrize(
+    "builder", [BinaryDiskTargetBuilder(), GaussianHeatmapTargetBuilder()]
+)
+def test_centroid_on_upper_patch_edge_is_excluded(builder: object) -> None:
+    """Intersecting annotations with centroids outside half-open bounds add no peak."""
+    annotations = {"outside": Annotation(box(3, 1, 5, 3))}
+    target = builder.build_target(annotations, (0, 0, 4, 4), (4, 4))
+    np.testing.assert_array_equal(target, np.zeros((4, 4)))
+
+
+def test_rasterization_ignores_unsupported_geometry() -> None:
+    """Unsupported standalone rings leave existing mask labels untouched."""
+    mask = np.arange(25, dtype=np.uint8).reshape(5, 5)
+    expected = mask.copy()
+    ring = LinearRing([(1, 1), (3, 1), (3, 3), (1, 1)])
+    _rasterize_geometry(mask, ring, 100, line_width=1, point_radius=1)
+    np.testing.assert_array_equal(mask, expected)
+
+
+def test_multipoint_mask_rasterization() -> None:
+    """Each point of a multipoint annotation becomes a label pixel."""
+    target = MaskTargetBuilder(point_radius=1).build_target(
+        {"points": Annotation(MultiPoint([(1, 1), (3, 2)]))}, (0, 0, 4, 4), (4, 4)
+    )
+    expected = np.zeros((4, 4), dtype=np.int64)
+    expected[0, 1] = expected[1, 0:3] = expected[2, 1] = 1
+    expected[1, 3] = expected[2, 2:4] = expected[3, 3] = 1
+    np.testing.assert_array_equal(target, expected)
+
+
+def test_zero_area_multipolygon_is_discarded() -> None:
+    """Degenerate polygon parts cannot create foreground during clipping."""
+    geometry = MultiPolygon([Polygon([(1, 1), (2, 2), (3, 3), (1, 1)])])
+    assert _clip_and_rescale_geometry(geometry, (0, 0, 4, 4), (4, 4)) is None
+
+
+@pytest.mark.parametrize("method", ["exact", "rasterized"])
+def test_multilabel_coverage_ignores_unknown_and_small_classes(method: str) -> None:
+    """Unknown classes and coverage below the threshold do not set class labels."""
+    builder = MultiLabelTargetBuilder(
+        class_mapping={"tumour": 0}, min_fraction=0.8, overlap_method=method
+    )
+    annotations = {
+        "known": Annotation(box(0, 0, 1, 1), {"class": "tumour"}),
+        "unknown": Annotation(box(0, 0, 4, 4), {"class": "other"}),
+    }
+    np.testing.assert_array_equal(
+        builder.build_target(annotations, (0, 0, 4, 4), (4, 4)), [0]
+    )
+    np.testing.assert_array_equal(builder.build_target({}, (0, 0, 4, 4), (4, 4)), [0])
+
+
+def test_exact_coverage_outside_or_empty_patch() -> None:
+    """Coverage helpers return zero for disjoint annotations or zero-area regions."""
+    annotations = {"tumour": Annotation(box(0, 0, 2, 2), {"class": "tumour"})}
+    for bounds in ((4, 4, 8, 8), (0, 0, 0, 2)):
+        assert (
+            _coverage_fraction(annotations, bounds, (4, 4), overlap_method="exact") == 0
+        )
+        assert (
+            _per_class_coverage(
+                annotations,
+                bounds,
+                (4, 4),
+                class_property="class",
+                class_mapping={"tumour": 0},
+                overlap_method="exact",
+            )
+            == {}
+        )
