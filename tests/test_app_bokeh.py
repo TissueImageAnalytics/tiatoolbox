@@ -25,7 +25,7 @@ import requests
 from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
 from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
-from bokeh.models import ColorBar
+from bokeh.models import ColorBar, ColorPicker, Column, Slider, Toggle
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from flask_cors import CORS
@@ -2413,3 +2413,267 @@ def test_sam_segment_with_point_prompt(
     main.sam_segment()
 
     assert annotation_calls == [["sam_mask"]]
+
+
+def test_initialise_overlay_removes_stale_widgets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test stale type and color widgets are removed."""
+    type_keep = Toggle(label="Tumour", active=True)
+    type_remove = Toggle(label="OldType", active=True)
+
+    colour_keep = ColorPicker(name="Tumour")
+    colour_slider = Slider(name="nodes_slider")
+    colour_remove = ColorPicker(name="OldType")
+
+    fake_vstate = SimpleNamespace(
+        types={"Tumour"},
+        layer_dict={},
+        mapper={"Tumour": (1.0, 0.0, 0.0, 1.0)},
+        colors=[],
+    )
+
+    #
+    # Build the backing store used by UIWrapper.
+    #
+    main.win_dicts.clear()
+
+    main.win_dicts.append(
+        {
+            "vstate": fake_vstate,
+            "type_column": Column(
+                children=[
+                    type_keep,
+                    type_remove,
+                ],
+            ),
+            "color_column": Column(
+                children=[
+                    colour_keep,
+                    colour_slider,
+                    colour_remove,
+                ],
+            ),
+        },
+    )
+
+    main.UI.active = 0
+
+    monkeypatch.setattr(
+        main,
+        "build_predicate",
+        lambda: None,
+    )
+
+    main.initialise_overlay()
+
+    assert type_keep in main.UI["type_column"].children
+    assert type_remove not in main.UI["type_column"].children
+
+    assert colour_keep in main.UI["color_column"].children
+    assert colour_slider in main.UI["color_column"].children
+    assert colour_remove not in main.UI["color_column"].children
+
+
+def test_update_ui_on_new_annotations_resets_cprop() -> None:
+    """Test cprop is reset to 'type' when no valid property is selected."""
+
+    class FakeResponse:
+        """Minimal response object."""
+
+        text = '["probability", "area"]'
+
+    main.win_dicts.clear()
+
+    fake_vstate = SimpleNamespace(
+        types=[],
+        props=[],
+        props_old=["old_prop"],
+    )
+
+    def _fake_get(
+        url: str,
+    ) -> FakeResponse:
+        """Return fake response."""
+        _ = url
+
+        return FakeResponse()
+
+    main.win_dicts.append(
+        {
+            "vstate": fake_vstate,
+            "s": SimpleNamespace(
+                get=_fake_get,
+            ),
+            "type_cmap_select": SimpleNamespace(
+                options=[],
+            ),
+            "node_source": SimpleNamespace(
+                data={"x_": []},
+            ),
+            "cprop_input": SimpleNamespace(
+                value=[],
+                options=[],
+            ),
+        },
+    )
+
+    main.UI.active = 0
+
+    called: dict[str, object] = {}
+
+    def _fake_get_mapper_for_prop(prop: str) -> dict[str, str]:
+        """Capture selected property."""
+        called["prop"] = prop
+        return {"fake": "mapper"}
+
+    def _fake_update_renderer(
+        renderer_type: str,
+        mapper: object,
+    ) -> None:
+        """Capture renderer updates."""
+        called["renderer_type"] = renderer_type
+        called["mapper"] = mapper
+
+    def _fake_initialise_overlay() -> None:
+        """Do nothing."""
+
+    def _fake_change_tiles(layer: str) -> None:
+        """Do nothing."""
+        _ = layer
+
+    original_get_mapper = main.get_mapper_for_prop
+    original_update_renderer = main.update_renderer
+    original_initialise_overlay = main.initialise_overlay
+    original_change_tiles = main.change_tiles
+
+    try:
+        main.get_mapper_for_prop = _fake_get_mapper_for_prop
+        main.update_renderer = _fake_update_renderer
+        main.initialise_overlay = _fake_initialise_overlay
+        main.change_tiles = _fake_change_tiles
+
+        main.update_ui_on_new_annotations(["Tumour"])
+
+    finally:
+        main.get_mapper_for_prop = original_get_mapper
+        main.update_renderer = original_update_renderer
+        main.initialise_overlay = original_initialise_overlay
+        main.change_tiles = original_change_tiles
+
+    assert main.UI["cprop_input"].value == ["type"]
+
+    assert called["prop"] == "type"
+    assert called["renderer_type"] == "mapper"
+
+
+def test_model_drop_cb() -> None:
+    """Test model selection callback."""
+    main.win_dicts.clear()
+
+    vstate = SimpleNamespace(
+        current_model="old_model",
+    )
+
+    main.win_dicts.append(
+        {
+            "vstate": vstate,
+        },
+    )
+
+    main.UI.active = 0
+
+    main.model_drop_cb(
+        attr="value",
+        old="old_model",
+        new="SAM",
+    )
+
+    assert main.UI["vstate"].current_model == "SAM"
+
+
+def test_to_model_cb_hovernet(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test HoverNet callback dispatch."""
+    called = False
+
+    def _fake_segment_on_box() -> None:
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(
+        main,
+        "segment_on_box",
+        _fake_segment_on_box,
+    )
+
+    main.win_dicts.clear()
+
+    main.win_dicts.append(
+        {
+            "vstate": SimpleNamespace(
+                current_model="hovernet",
+            ),
+        },
+    )
+
+    main.UI.active = 0
+
+    main.to_model_cb(attr=None)
+
+    assert called is True
+
+
+def test_to_model_cb_sam(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test SAM callback dispatch."""
+    called = False
+
+    def _fake_sam_segment() -> None:
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(
+        main,
+        "sam_segment",
+        _fake_sam_segment,
+    )
+
+    main.win_dicts.clear()
+
+    main.win_dicts.append(
+        {
+            "vstate": SimpleNamespace(
+                current_model="SAM",
+            ),
+        },
+    )
+
+    main.UI.active = 0
+
+    main.to_model_cb(attr=None)
+
+    assert called is True
+
+
+def test_to_model_cb_unknown_model(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test unknown model warning."""
+    main.win_dicts.clear()
+
+    main.win_dicts.append(
+        {
+            "vstate": SimpleNamespace(
+                current_model="unknown",
+            ),
+        },
+    )
+
+    main.UI.active = 0
+
+    main.to_model_cb(attr=None)
+
+    assert "unknown model" in caplog.text
