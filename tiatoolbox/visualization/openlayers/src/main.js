@@ -50,6 +50,15 @@ import {
     createGridController,
 } from "./controls/grid.js";
 import {
+    createLoadingIndicatorController,
+} from "./controls/loading-indicator.js";
+import {
+    captureMapSnapshot,
+    createSnapshotController,
+    downloadSnapshot,
+    downloadSnapshotMetadata,
+} from "./controls/snapshot.js";
+import {
     createScaleBarController,
 } from "./controls/scale-bar.js";
 import {
@@ -96,6 +105,36 @@ function createSlideSource(sessionId, slideInfo, version) {
 
 const mapElement = document.getElementById("map");
 const viewerApp = document.querySelector(".viewer-app");
+
+const viewerLoadingIndicator =
+    document.getElementById(
+        "viewer-loading-indicator",
+    );
+
+const snapshotButton =
+    document.getElementById(
+        "snapshot-button",
+    );
+
+const snapshotControl =
+    document.querySelector(
+        ".snapshot-control",
+    );
+
+const snapshotVisibleInput =
+    document.getElementById(
+        "settings-snapshot-visible",
+    );
+
+const snapshotScaleBarInput =
+    document.getElementById(
+        "settings-snapshot-scale-bar",
+    );
+
+const snapshotMetadataInput =
+    document.getElementById(
+        "settings-snapshot-metadata",
+    );
 
 const viewerPanel = document.getElementById("viewer-panel");
 const viewerPanelToggle = document.getElementById(
@@ -378,6 +417,12 @@ if (mapElement === null || viewerApp === null) {
 }
 
 if (
+    viewerLoadingIndicator === null ||
+    snapshotButton === null ||
+    snapshotControl === null ||
+    snapshotVisibleInput === null ||
+    snapshotScaleBarInput === null ||
+    snapshotMetadataInput === null ||
     viewerPanel === null ||
     viewerPanelToggle === null ||
     layerEditor === null ||
@@ -602,6 +647,9 @@ const settingsPanelController =
         scaleBarOpacityInput,
         scaleBarSizeSelect,
         scaleBarUnitsSelect,
+        snapshotVisibleInput,
+        snapshotScaleBarInput,
+        snapshotMetadataInput,
 
         onAnnotationInspectionChange() {
             if (
@@ -677,6 +725,7 @@ let overlayVersion = Date.now();
 let currentSlideInfo = null;
 let currentSlidePath = null;
 const overlayLayers = {};
+const overlayPaths = new Map();
 const annotationLayerNames = new Set();
 const annotationColours = new Map();
 const annotationColoursByLayer = new Map();
@@ -3014,6 +3063,128 @@ const map = new OlMap({
     }),
 });
 
+let scaleLineControl = null;
+
+function createSnapshotMetadata() {
+    const view = map.getView();
+    const centre = view.getCenter();
+    const mapLayers =
+        map.getLayers().getArray();
+
+    const overlays =
+        Object.entries(overlayLayers)
+            .map(([layerName, layer]) => ({
+                name: layerName,
+                path:
+                    overlayPaths.get(
+                        layerName,
+                    ) ?? null,
+                visible:
+                    layer.getVisible(),
+                opacity:
+                    layer.getOpacity(),
+                zIndex:
+                    layer.getZIndex() ?? null,
+                order:
+                    mapLayers.indexOf(layer),
+            }))
+            .sort(
+                (first, second) =>
+                    first.order - second.order,
+            );
+
+    return {
+        url: window.location.href,
+
+        slide: {
+            path: currentSlidePath,
+        },
+
+        viewport: {
+            centre:
+                centre === undefined
+                    ? null
+                    : [...centre],
+            zoom:
+                view.getZoom() ?? null,
+            rotation:
+                view.getRotation(),
+        },
+
+        overlays,
+
+        scaleBar: {
+            enabled:
+                scaleBarEnabledInput.checked,
+            included:
+                scaleBarEnabledInput.checked &&
+                snapshotScaleBarInput.checked,
+            colour:
+                scaleBarColourInput.value,
+            opacity:
+                Number(
+                    scaleBarOpacityInput.value,
+                ),
+            size:
+                scaleBarSizeSelect.value,
+            units:
+                scaleBarUnitsSelect.value,
+        },
+    };
+}
+
+const snapshotController =
+    createSnapshotController({
+        button: snapshotButton,
+
+        hasSlide: () =>
+            currentSlideInfo !== null,
+
+        async onSnapshot() {
+            if (currentSlidePath === null) {
+                return;
+            }
+
+            const scaleBarElement =
+                snapshotScaleBarInput.checked
+                    ? scaleLineControl?.element ?? null
+                    : null;
+
+            const blob =
+                await captureMapSnapshot(
+                    map,
+                    scaleBarElement,
+                );
+
+            const basename =
+                `${getFileStem(currentSlidePath)}_snapshot`;
+
+            downloadSnapshot(
+                blob,
+                `${basename}.png`,
+            );
+
+            if (snapshotMetadataInput.checked) {
+                downloadSnapshotMetadata(
+                    createSnapshotMetadata(),
+                    `${basename}.json`,
+                );
+            }
+        },
+    });
+
+const loadingIndicatorController =
+    createLoadingIndicatorController({
+        map,
+        element: viewerLoadingIndicator,
+
+        onChange(loading) {
+            snapshotController.setLoading(
+                loading,
+            );
+        },
+    });
+
 const annotationHighlightStyle =
     new Style({
         fill: new Fill({
@@ -3082,8 +3253,6 @@ const {
 } = mapControlsController;
 
 // Scale bar
-let scaleLineControl = null;
-
 const scaleBarController =
     createScaleBarController({
         map,
@@ -3176,6 +3345,11 @@ function updateControlVisibility() {
     mapControlsController.updateVisibility();
     gridController.updateVisibility();
     overviewMapController.updateVisibility();
+
+    snapshotControl.classList.toggle(
+        "viewer-control-hidden",
+        !snapshotVisibleInput.checked,
+    );
 }
 
 function resetSettingsToDefaults() {
@@ -3315,6 +3489,8 @@ function clearOverlayLayers() {
     for (const layerName of Object.keys(overlayLayers)) {
         delete overlayLayers[layerName];
     }
+
+    overlayPaths.clear();
 
     annotationLayerNames.clear();
     annotationTypesByLayer.clear();
@@ -3471,10 +3647,11 @@ async function removeSlide() {
     setViewerEnabled(false);
     mapControlsController.updateZoomLevel();
     filesPanelController.updateActionState();
+    snapshotController.updateButton();
 }
 
 // Replace the current slide and rebuild its source, projection and view.
-async function switchSlide(slidePath) {
+async function switchSlideImpl(slidePath) {
     if (sessionId === null) {
         throw new Error("Dynamic slide switching requires a TileServer session.");
     }
@@ -3558,9 +3735,19 @@ async function switchSlide(slidePath) {
     mapControlsController.updateZoomLevel();
 }
 
+async function switchSlide(slidePath) {
+    loadingIndicatorController.begin();
+
+    try {
+        return await switchSlideImpl(slidePath);
+    } finally {
+        loadingIndicatorController.end();
+    }
+}
+
 layersPanelController.render();
 
-async function loadOverlay(overlayPath) {
+async function loadOverlayImpl(overlayPath) {
     if (sessionId === null || currentSlideInfo === null) {
         throw new Error(
             "Dynamic overlay loading requires a loaded slide.",
@@ -3730,6 +3917,8 @@ async function loadOverlay(overlayPath) {
         overlayVersion += 1;
     }
 
+    overlayPaths.set(layerName, overlayPath);
+
     const source = new Zoomify({
         url:
             `/tileserver/layer/${encodeURIComponent(layerName)}/` +
@@ -3777,6 +3966,16 @@ async function loadOverlay(overlayPath) {
     return result;
 }
 
+async function loadOverlay(overlayPath) {
+    loadingIndicatorController.begin();
+
+    try {
+        return await loadOverlayImpl(overlayPath);
+    } finally {
+        loadingIndicatorController.end();
+    }
+}
+
 async function removeOverlay(layerName) {
     const overlayLayer = overlayLayers[layerName];
     const wasAnnotation =
@@ -3817,6 +4016,7 @@ async function removeOverlay(layerName) {
     );
 
     delete overlayLayers[layerName];
+    overlayPaths.delete(layerName);
 
     if (wasAnnotation) {
         invalidateAnnotationInspectionRequests();
