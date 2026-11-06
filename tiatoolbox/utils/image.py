@@ -442,7 +442,7 @@ def safe_padded_read(
     )
 
 
-def sub_pixel_read(  # skipcq: PY-R1000  # noqa: C901, PLR0912, PLR0913, PLR0915, PLR0917, E501
+def sub_pixel_read(  # skipcq: PY-R1000  # noqa: C901, PLR0912, PLR0913, PLR0915, PLR0917
     image: np.ndarray,
     bounds: IntBounds,
     output_size: tuple[int, int] | np.ndarray,
