@@ -19,7 +19,7 @@ from pathlib import Path
 PYPROJECT_FILE = "pyproject.toml"
 OUT_FILE = "requirements/requirements.conda.generated.yml"
 
-PYTHON_VERSION = os.environ.get("PYTHON_VERSION", "3.14")
+PYTHON_VERSION = os.environ.get("PYTHON_VERSION", "3.15")
 
 # pip → conda mapping
 PIP_TO_CONDA = {
