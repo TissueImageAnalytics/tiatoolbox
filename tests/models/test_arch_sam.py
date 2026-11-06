@@ -505,6 +505,7 @@ def test_sam_forward_box_prompts_only(
     def _fake_encode_image(
         image: list,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Fake encode image."""
         _ = image
 
         return (
@@ -522,6 +523,7 @@ def test_sam_forward_box_prompts_only(
         boxes: list | None,
         point_labels: list | None,
     ) -> tuple[np.ndarray, np.ndarray]:
+        """Fake process prompts."""
         _ = (
             image,
             embeddings,
@@ -585,6 +587,7 @@ def test_sam_infer_batch_with_box_prompts() -> None:
             point_coords: np.ndarray | None,
             box_coords: np.ndarray | None,
         ) -> tuple[np.ndarray, np.ndarray]:
+            """Fake forward pass."""
             _ = batch_data, point_coords
 
             assert box_coords is not None
@@ -626,6 +629,7 @@ def test_sam_process_prompts_points_box_none() -> None:
         """Fake processor output."""
 
         def to(self, device: str) -> "FakeInputs":
+            """Fake processor output."""
             assert device == "cpu"
             return self
 
@@ -633,6 +637,7 @@ def test_sam_process_prompts_points_box_none() -> None:
         """Fake SAM outputs."""
 
         def __init__(self) -> None:
+            """Fake __init__."""
             self.pred_masks = torch.ones((1, 1, 4, 4))
             self.iou_scores = torch.tensor([[0.9]])
 
