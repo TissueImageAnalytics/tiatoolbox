@@ -2134,7 +2134,7 @@ def test_segment_on_box(
             **kwargs: object,
         ) -> dict[Path, list[str]]:
             """Return fake annotation path."""
-            _ = kwargs
+            _ = self, kwargs
 
             return {
                 slide_path: [
@@ -2147,7 +2147,7 @@ def test_segment_on_box(
 
         def save(self, path: Path) -> None:
             """Do nothing."""
-            _ = path
+            _ = self, path
 
     def _fake_fromarray(
         array: np.ndarray,
@@ -2315,6 +2315,7 @@ def test_sam_segment_with_point_prompt(
         ) -> list[Path]:
             """Return fake annotation path."""
             _ = (
+                self,
                 images,
                 point_coords,
                 box_coords,
@@ -2599,6 +2600,7 @@ def test_to_model_cb_hovernet(
     called = False
 
     def _fake_segment_on_box() -> None:
+        """Fake segment on box."""
         nonlocal called
         called = True
 
@@ -2632,6 +2634,7 @@ def test_to_model_cb_sam(
     called = False
 
     def _fake_sam_segment() -> None:
+        """Fake sam segment."""
         nonlocal called
         called = True
 
