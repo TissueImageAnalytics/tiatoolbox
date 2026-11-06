@@ -9,6 +9,7 @@ import json
 import re
 import shutil
 import sys
+import tempfile
 import threading
 import time
 import types
@@ -2072,3 +2073,343 @@ def test_populate_slide_list_dicom_container(
     # Internal files should not appear
     assert ("case1/000001.dcm", "case1/000001.dcm") not in mock_select.options
     assert ("case1/000002.dcm", "case1/000002.dcm") not in mock_select.options
+
+
+def test_segment_on_box(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test segment_on_box callback."""
+    slide_path = track_tmp_path / "slide.svs"
+    slide_path.touch()
+
+    annotation_calls: list[list[str]] = []
+    removed_dirs: list[Path] = []
+
+    class FakeWSI:
+        """Minimal WSI."""
+
+        @staticmethod
+        def slide_thumbnail() -> np.ndarray:
+            """Return thumbnail."""
+            return np.zeros(
+                (100, 200, 3),
+                dtype=np.uint8,
+            )
+
+    class FakeSession:
+        """Fake requests session."""
+
+        @staticmethod
+        def put(
+            url: str,
+            data: dict[str, str],
+        ) -> object:
+            """Return fake response."""
+            _ = url, data
+
+            return SimpleNamespace(
+                text=json.dumps(["tumour"]),
+            )
+
+    class FakeSegmentor:
+        """Fake nucleus instance segmentor."""
+
+        def __init__(
+            self,
+            model: str,
+            batch_size: int,
+        ) -> None:
+            assert model == "hovernet_fast-pannuke"
+            assert batch_size == 24
+
+            self.ioconfig = SimpleNamespace(
+                save_resolution={
+                    "resolution": 0.25,
+                },
+            )
+
+        def run(
+            self,
+            **kwargs: object,
+        ) -> dict[Path, list[str]]:
+            """Return fake annotation path."""
+            _ = kwargs
+
+            return {
+                slide_path: [
+                    str(track_tmp_path / "hover_out.db"),
+                ],
+            }
+
+    class FakeImage:
+        """Fake image."""
+
+        def save(self, path: Path) -> None:
+            """Do nothing."""
+            _ = path
+
+    def _fake_fromarray(
+        array: np.ndarray,
+    ) -> FakeImage:
+        """Return fake image."""
+        _ = array
+
+        return FakeImage()
+
+    def _fake_make_safe_name(path: str) -> str:
+        """Return path unchanged."""
+        return path
+
+    def _fake_update_ui_on_new_annotations(
+        ann_types: list[str],
+    ) -> None:
+        """Capture annotation types."""
+        annotation_calls.append(ann_types)
+
+    def _fake_rmtree(path: Path) -> None:
+        """Capture removed paths."""
+        removed_dirs.append(path)
+
+    monkeypatch.setattr(
+        main,
+        "NucleusInstanceSegmentor",
+        FakeSegmentor,
+    )
+
+    monkeypatch.setattr(
+        main.Image,
+        "fromarray",
+        _fake_fromarray,
+    )
+
+    monkeypatch.setattr(
+        main,
+        "make_safe_name",
+        _fake_make_safe_name,
+    )
+
+    monkeypatch.setattr(
+        main,
+        "update_ui_on_new_annotations",
+        _fake_update_ui_on_new_annotations,
+    )
+
+    monkeypatch.setattr(
+        main,
+        "rmtree",
+        _fake_rmtree,
+    )
+
+    monkeypatch.setattr(
+        tempfile,
+        "mkdtemp",
+        lambda: str(track_tmp_path / "tmp"),
+    )
+
+    def _fake_select_device(
+        *,
+        on_gpu: bool,
+    ) -> str:
+        """Return CPU device for testing."""
+        _ = on_gpu
+
+        return "cpu"
+
+    monkeypatch.setattr(
+        main,
+        "select_device",
+        _fake_select_device,
+    )
+
+    main.UI = {
+        "box_source": SimpleNamespace(
+            data={
+                "x": [50],
+                "y": [-50],
+                "width": [20],
+                "height": [20],
+            },
+        ),
+        "vstate": SimpleNamespace(
+            wsi=FakeWSI(),
+            dims=(200, 100),
+            slide_path=slide_path,
+            model_mpp=None,
+        ),
+        "s": FakeSession(),
+    }
+
+    main.segment_on_box()
+
+    assert annotation_calls == [["tumour"]]
+    assert removed_dirs
+    assert main.UI["vstate"].model_mpp == 0.25
+
+
+def test_sam_segment_with_point_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test SAM segmentation callback using point prompts."""
+    annotation_calls: list[list[str]] = []
+
+    roi = np.zeros(
+        (100, 100, 3),
+        dtype=np.uint8,
+    )
+
+    class FakeWSI:
+        """Minimal WSI."""
+
+        @staticmethod
+        def read_bounds(
+            bounds: tuple[int, int, int, int],
+            resolution: float,
+            units: str,
+        ) -> np.ndarray:
+            """Return fake region of interest."""
+            _ = bounds, resolution, units
+
+            return roi
+
+    class FakeSession:
+        """Fake requests session."""
+
+        @staticmethod
+        def put(
+            url: str,
+            data: dict[str, str],
+        ) -> object:
+            """Return fake response."""
+            _ = url, data
+
+            return SimpleNamespace(
+                text=json.dumps(["sam_mask"]),
+            )
+
+    class FakePromptSegmentor:
+        """Fake prompt segmentor."""
+
+        def __init__(self) -> None:
+            self.offset = None
+
+        @staticmethod
+        def calc_mpp(
+            area_dims: tuple[int, int],
+            base_mpp: float,
+            fixed_size: int,
+        ) -> tuple[float, float]:
+            """Return deterministic scaling."""
+            _ = area_dims, base_mpp, fixed_size
+
+            return 0.5, 1.0
+
+        def run(
+            self,
+            images: list[np.ndarray],
+            point_coords: np.ndarray | None = None,
+            box_coords: np.ndarray | None = None,
+            save_dir: Path | None = None,
+            device: str = "cpu",
+        ) -> list[Path]:
+            """Return fake annotation path."""
+            _ = (
+                images,
+                point_coords,
+                box_coords,
+                save_dir,
+                device,
+            )
+
+            return [
+                track_tmp_path / "sam_output.db",
+            ]
+
+    def _fake_make_safe_name(path: str) -> str:
+        """Return file path unchanged."""
+        return path
+
+    def _fake_update_ui_on_new_annotations(
+        ann_types: list[str],
+    ) -> None:
+        """Capture annotation types."""
+        annotation_calls.append(ann_types)
+
+    def _fake_mkdtemp(
+        suffix: str = "",
+    ) -> str:
+        """Return fake temp directory."""
+        _ = suffix
+
+        return str(track_tmp_path)
+
+    monkeypatch.setattr(
+        main,
+        "PromptSegmentor",
+        FakePromptSegmentor,
+    )
+
+    monkeypatch.setattr(
+        main,
+        "make_safe_name",
+        _fake_make_safe_name,
+    )
+
+    monkeypatch.setattr(
+        main,
+        "update_ui_on_new_annotations",
+        _fake_update_ui_on_new_annotations,
+    )
+
+    monkeypatch.setattr(
+        main.tempfile,
+        "mkdtemp",
+        _fake_mkdtemp,
+    )
+
+    def _fake_select_device(
+        *,
+        on_gpu: bool,
+    ) -> str:
+        """Return CPU device for testing."""
+        _ = on_gpu
+
+        return "cpu"
+
+    monkeypatch.setattr(
+        main,
+        "select_device",
+        _fake_select_device,
+    )
+
+    main.UI = {
+        "p": SimpleNamespace(
+            x_range=SimpleNamespace(start=0, end=100),
+            y_range=SimpleNamespace(start=-100, end=0),
+        ),
+        "pt_source": SimpleNamespace(
+            data={
+                "x": [50],
+                "y": [-50],
+            },
+        ),
+        "box_source": SimpleNamespace(
+            data={
+                "x": [],
+                "y": [],
+                "width": [],
+                "height": [],
+            },
+        ),
+        "vstate": SimpleNamespace(
+            dims=(1000, 1000),
+            mpp=(0.25, 0.25),
+            wsi=FakeWSI(),
+        ),
+        "s": FakeSession(),
+    }
+
+    main.sam_segment()
+
+    assert annotation_calls == [["sam_mask"]]

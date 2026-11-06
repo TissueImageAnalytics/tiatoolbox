@@ -588,7 +588,7 @@ def test_sam_infer_batch_with_box_prompts() -> None:
             box_coords: np.ndarray | None,
         ) -> tuple[np.ndarray, np.ndarray]:
             """Fake forward pass."""
-            _ = batch_data, point_coords
+            _ = self, batch_data, point_coords
 
             assert box_coords is not None
 
@@ -650,6 +650,7 @@ def test_sam_process_prompts_points_box_none() -> None:
             original_sizes: torch.Tensor,
             reshaped_input_sizes: torch.Tensor,
         ) -> np.ndarray:
+            """Fake post process masks."""
             _ = (
                 pred_masks,
                 original_sizes,
