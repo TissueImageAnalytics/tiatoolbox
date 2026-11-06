@@ -1002,9 +1002,9 @@ resnet34-idars-hm:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
         description: >
-             Patch level prediction of Hypermutated status in colon histology. 
+             Patch level prediction of Hypermutated status in colon histology.
         tissue_type:
-            - colon 
+            - colon
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -1023,7 +1023,7 @@ fcn-tissue_mask:
     catalog:
         description: >
             Segmentation of tissue regions across different cancer types
-        tissue_type: 
+        tissue_type:
             - agnostic
     architecture:
         class: unet.UNetModel
@@ -1050,7 +1050,7 @@ fcn_resnet50_unet-bcss:
     catalog:
         description: >
             Segments tumor, stroma, necrosi, and inflamatory regions in breast cancer images
-        tissue_type: 
+        tissue_type:
             - breast
     architecture:
         class: unet.UNetModel
@@ -1213,7 +1213,7 @@ hovernet_original-kumar:
     catalog:
         description: >
             Instance Segmentation and detection of Epithelial, Inflammatory, and Spindle-Shaped nuclei across different cancer types.
-        tissue_type: 
+        tissue_type:
             - agnostic
     architecture:
         class: hovernet.HoVerNet
@@ -1278,7 +1278,7 @@ micronet-consep:
     catalog:
         description: >
             Multi-resolution instance segmentation and phenotype classification of Epithelial, Inflammatory, Spindle-Shaped, and Miscellaneous nuclei in colon histology.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: micronet.MicroNet
@@ -1335,7 +1335,7 @@ mapde-conic:
     catalog:
         description: >
             Nucleus detection model for Epithelial, Lymphocyte, Plasma, Eosinophil, Neutrophil, and Connective tissue nuclei in colon histology.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: mapde.MapDe
@@ -1396,7 +1396,7 @@ sccnn-conic:
     catalog:
         description: >
             Nucleus detection model for colon histology.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: sccnn.SCCNN
@@ -1505,7 +1505,7 @@ KongNet_CoNIC_1:
     catalog:
         description: >
             Nuclei detection model for neutrophils, epithelial, lymphocytes, plasma, eosinophil, and connective nuclei in colon histology.
-        tissue_type: 
+        tissue_type:
             - colon
     architecture:
         class: kongnet.KongNet
@@ -1733,7 +1733,7 @@ efficientunet-tissue_mask:
     catalog:
         description: >
             Segmentation model for tissue regions in images across cancer types.
-        tissue_type: 
+        tissue_type:
             - agnostic
     architecture:
         class: efficientunet_tissue_mask_model.EfficientUNetTissueMaskModel
