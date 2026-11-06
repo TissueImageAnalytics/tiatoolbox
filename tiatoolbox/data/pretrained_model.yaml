@@ -1059,6 +1059,13 @@ fcn_resnet50_unet-bcss:
             num_output_channels: 5
             encoder: "resnet50"
             decoder_block: [3, 3]
+            class_dict: {
+                0: "Tumour", 
+                1: "Stroma", 
+                2: "Inflamatory", 
+                3: "Necrosis", 
+                4: "Others"
+            }
     ioconfig:
         class: io_config.IOSegmentorConfig
         kwargs:
@@ -1740,6 +1747,10 @@ efficientunet-tissue_mask:
         kwargs:
             num_classes: 1
             threshold: 0.95
+            class_dict: {
+                0: "Background",
+                1: "Tissue",
+            }
     ioconfig:
         class: io_config.IOSegmentorConfig
         kwargs:
@@ -1751,3 +1762,4 @@ efficientunet-tissue_mask:
             patch_output_shape: [512, 512]
             stride_shape: [480, 480]
             save_resolution: {'units': 'mpp', 'resolution': 8.0}
+            ignore_index: 0
