@@ -254,28 +254,16 @@ def test_kongnet_target_channel_validation() -> None:
         )
 
 
-def test_kongnet_training_output_spec_uses_named_targeted_heads() -> None:
-    """KongNet should expose stable named output metadata for training."""
+def test_kongnet_head_slices_locate_each_head_in_the_output() -> None:
+    """``head_slices`` follows the number of channels of each head."""
     model = KongNet(
         num_heads=3,
-        num_channels_per_head=[3, 3, 3],
-        target_channels=[5, 8],
+        num_channels_per_head=[3, 1, 2],
+        target_channels=[2, 3, 5],
         min_distance=5,
         threshold_abs=0.5,
-        class_dict={0: "Tumour Cell", 1: "Lymphocyte"},
     )
-
-    specs = model.training_output_spec
-
-    assert [spec.name for spec in specs] == ["head_0", "tumour_cell", "lymphocyte"]
-    assert specs[0].channel_slice == slice(0, 3)
-    assert specs[0].target_channels == ()
-    assert specs[1].channel_slice == slice(3, 6)
-    assert specs[1].target_channels == (5,)
-    assert specs[1].target_channel_offsets == (2,)
-    assert specs[2].channel_slice == slice(6, 9)
-    assert specs[2].target_channels == (8,)
-    assert specs[2].target_channel_offsets == (2,)
+    assert model.head_slices == (slice(0, 3), slice(3, 4), slice(4, 6))
 
 
 def test_kongnet_preproc() -> None:
@@ -581,9 +569,7 @@ def test_kongnet_segmentor_infer_batch_accepts_data_parallel(
     """Read head metadata through the wrapper without bypassing its forward pass."""
     model = KongNetSegmentor.__new__(KongNetSegmentor)
     torch.nn.Module.__init__(model)
-    model._training_output_spec = KongNet._build_training_output_spec(
-        num_channels_per_head=[3, 3], target_channels=[2, 5], class_dict=None
-    )
+    model.num_channels_per_head = [3, 3]
     monkeypatch.setattr(model, "forward", lambda x: torch.cat((x, x + 1), dim=1))
     batch = torch.arange(2 * 8 * 8 * 3, dtype=torch.float32).reshape(2, 8, 8, 3) / 100
     # Exercise the wrapper contract on CPU, including on CUDA-enabled test hosts.

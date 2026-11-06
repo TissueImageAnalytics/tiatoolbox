@@ -269,8 +269,6 @@ max-complexity = 14
 "tiatoolbox/cli/*" = ["PLR0913"]
 # Training tutorials intentionally print results; their CLI scripts are not packages.
 "examples/1[345]-training-*.ipynb" = ["T201"]
-"examples/prepare_conic_training_data.py" = ["INP001"]
-"examples/kongnet_conic_instance_postproc_qc.py" = ["INP001", "T201"]
 
 # need to enable for docstrings check.
 [tool.ruff.lint.pydocstyle]

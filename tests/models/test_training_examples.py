@@ -116,6 +116,33 @@ def test_kongnet_example_splits_every_pair(
     assert sorted([*train, *val]) == list(range(num_samples))
 
 
+def test_kongnet_example_heads_read_the_builder_targets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Each dense head is named after a target and takes its head's channels."""
+    monkeypatch.setattr(
+        training.PatchAnnotationDataset,
+        "from_dirs",
+        lambda **_kwargs: range(20),
+    )
+    namespace = vars(training) | {
+        "images_dir": Path("images"),
+        "stores_dir": Path("stores"),
+        "KongNet": KongNet,
+    }
+    _run_recipe(_cell_source(15, "split_indices(len(dataset)"), namespace)
+    # Use the real slices without building the network or loading encoder weights.
+    namespace["KongNet"] = lambda **kwargs: SimpleNamespace(
+        head_slices=KongNet.head_slices.fget(SimpleNamespace(**kwargs))
+    )
+    _run_recipe(_cell_source(15, "StructuredDenseTask("), namespace)
+    heads = namespace["task"].heads
+    assert [head.name for head in heads] == list(namespace["target_builder"].builders)
+    assert [head.channel_slice for head in heads] == [
+        slice(start, start + 3) for start in range(0, 18, 3)
+    ]
+
+
 def test_kongnet_example_augmentation_replays_seeds_in_workers() -> None:
     """The example's preset pair transform replays seeds after worker pickling."""
     preset = training.get_annotation_augmentation("heavy", spatial_target_spec="mask")

@@ -80,9 +80,9 @@ References:
 
 from __future__ import annotations
 
-import re
 from collections.abc import Mapping
 from dataclasses import dataclass
+from itertools import accumulate
 from typing import TYPE_CHECKING, Any, Literal
 
 import cv2
@@ -108,24 +108,6 @@ if TYPE_CHECKING:  # pragma: no cover
     from torch.nn.modules.module import _IncompatibleKeys
 
     from tiatoolbox.type_hints import IntPair
-
-
-@dataclass(frozen=True)
-class KongNetOutputHeadSpec:
-    """Describe one logical output head inside KongNet's concatenated tensor."""
-
-    index: int
-    name: str
-    display_name: str
-    channel_slice: slice
-    num_channels: int
-    target_channels: tuple[int, ...]
-    target_channel_offsets: tuple[int, ...]
-
-    @property
-    def has_target_channels(self) -> bool:
-        """Return whether this head contributes inference target channels."""
-        return bool(self.target_channels)
 
 
 _COMPONENT_MAP_DIMS = 3
@@ -326,8 +308,8 @@ def extract_kongnet_component_maps(
     mask_maps = []
     boundary_maps = []
     centroid_maps = []
-    for head_spec in model.training_output_spec:
-        head_output = output_hwc[..., head_spec.channel_slice]
+    for head_slice in model.head_slices:
+        head_output = output_hwc[..., head_slice]
         mask_maps.append(head_output[..., 0])
         boundary_maps.append(head_output[..., 1])
         centroid_maps.append(head_output[..., 2])
@@ -610,12 +592,6 @@ def _kongnet_instance_result_to_info_dict(
         "prob": np.asarray(probabilities, dtype=np.float32),
         "type": np.asarray(types, dtype=np.int32),
     }
-
-
-def _normalize_kongnet_head_name(name: str, fallback: str) -> str:
-    """Normalize a head name into a stable snake-case key."""
-    normalized = re.sub(r"[^0-9a-zA-Z]+", "_", name).strip("_").lower()
-    return normalized or fallback
 
 
 class TimmEncoderFixed(nn.Module):
@@ -1232,87 +1208,6 @@ class KongNet(ModelABC):
             msg = "`target_channels` must not contain duplicate indices."
             raise ValueError(msg)
 
-    @classmethod
-    def _build_training_output_spec(
-        cls,
-        *,
-        num_channels_per_head: list[int],
-        target_channels: list[int],
-        class_dict: dict | None,
-    ) -> tuple[KongNetOutputHeadSpec, ...]:
-        """Build per-head metadata for training and downstream tooling."""
-        cls._validate_target_channels(num_channels_per_head, target_channels)
-
-        output_head_specs: list[KongNetOutputHeadSpec] = []
-        for head_index, head_num_channels in enumerate(num_channels_per_head):
-            channel_start = sum(num_channels_per_head[:head_index])
-            channel_end = channel_start + int(head_num_channels)
-            head_target_channels = tuple(
-                channel
-                for channel in target_channels
-                if channel_start <= int(channel) < channel_end
-            )
-            output_head_specs.append(
-                KongNetOutputHeadSpec(
-                    index=head_index,
-                    name=f"head_{head_index}",
-                    display_name=f"Head {head_index}",
-                    channel_slice=slice(channel_start, channel_end),
-                    num_channels=int(head_num_channels),
-                    target_channels=head_target_channels,
-                    target_channel_offsets=tuple(
-                        int(channel) - channel_start for channel in head_target_channels
-                    ),
-                ),
-            )
-
-        if class_dict:
-            ordered_class_names = [
-                str(class_dict[index]) for index in sorted(class_dict)
-            ]
-            targeted_head_indices = [
-                head.index for head in output_head_specs if head.has_target_channels
-            ]
-
-            labels_by_head_index: dict[int, str] = {}
-            if len(ordered_class_names) == len(output_head_specs):
-                labels_by_head_index = {
-                    head_index: ordered_class_names[head_index]
-                    for head_index in range(len(output_head_specs))
-                }
-            elif len(ordered_class_names) == len(targeted_head_indices):
-                labels_by_head_index = {
-                    head_index: ordered_class_names[position]
-                    for position, head_index in enumerate(targeted_head_indices)
-                }
-
-            used_names: set[str] = set()
-            resolved_head_specs: list[KongNetOutputHeadSpec] = []
-            for head in output_head_specs:
-                display_name = labels_by_head_index.get(head.index, head.display_name)
-                fallback_name = f"head_{head.index}"
-                normalized_name = _normalize_kongnet_head_name(
-                    display_name,
-                    fallback_name,
-                )
-                if normalized_name in used_names:
-                    normalized_name = f"{normalized_name}_{head.index}"
-                used_names.add(normalized_name)
-                resolved_head_specs.append(
-                    KongNetOutputHeadSpec(
-                        index=head.index,
-                        name=normalized_name,
-                        display_name=display_name,
-                        channel_slice=head.channel_slice,
-                        num_channels=head.num_channels,
-                        target_channels=head.target_channels,
-                        target_channel_offsets=head.target_channel_offsets,
-                    ),
-                )
-            output_head_specs = resolved_head_specs
-
-        return tuple(output_head_specs)
-
     def __init__(  # noqa: PLR0913
         self: KongNet,
         num_heads: int,
@@ -1436,11 +1331,6 @@ class KongNet(ModelABC):
         self.target_channels = [int(channel) for channel in target_channels]
         self.class_dict = class_dict
         self.tile_shape = tile_shape
-        self._training_output_spec = self._build_training_output_spec(
-            num_channels_per_head=self.num_channels_per_head,
-            target_channels=self.target_channels,
-            class_dict=self.class_dict,
-        )
 
     @staticmethod
     def preproc(image: np.ndarray) -> np.ndarray:
@@ -1499,9 +1389,13 @@ class KongNet(ModelABC):
         return torch.cat(segmentation_head_outputs, 1)
 
     @property
-    def training_output_spec(self) -> tuple[KongNetOutputHeadSpec, ...]:
-        """Return named metadata for KongNet's concatenated output heads."""
-        return self._training_output_spec
+    def head_slices(self) -> tuple[slice, ...]:
+        """Return the channels of the concatenated output that each head produces."""
+        ends = accumulate(self.num_channels_per_head)
+        return tuple(
+            slice(end - channels, end)
+            for end, channels in zip(ends, self.num_channels_per_head, strict=True)
+        )
 
     def resolve_instance_class_ids(
         self: KongNet,
@@ -1510,7 +1404,7 @@ class KongNet(ModelABC):
     ) -> tuple[int, ...]:
         """Resolve dense positive class ids for CoNIC-style output maps."""
         return _resolve_kongnet_class_ids(
-            num_heads=len(self.training_output_spec),
+            num_heads=self.num_heads,
             class_dict=self.class_dict,
             class_ids=class_ids,
         )
@@ -1727,8 +1621,8 @@ class KongNetSegmentor(KongNet):
 
         probs_np = probs.cpu().numpy()
         return tuple(
-            probs_np[..., head_spec.channel_slice]
-            for head_spec in getattr(model, "module", model).training_output_spec
+            probs_np[..., head_slice]
+            for head_slice in getattr(model, "module", model).head_slices
         )
 
     def postproc(
@@ -1777,11 +1671,11 @@ class KongNetSegmentor(KongNet):
             peak probability of its seed.
 
         """
-        if len(raw_maps) != len(self.training_output_spec):
+        if len(raw_maps) != self.num_heads:
             msg = (
                 "KongNetSegmentor post-processing expects one raw map per "
                 f"KongNet head; got {len(raw_maps)} maps for "
-                f"{len(self.training_output_spec)} heads."
+                f"{self.num_heads} heads."
             )
             raise ValueError(msg)
 

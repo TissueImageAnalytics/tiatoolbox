@@ -6,14 +6,14 @@ import copy
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal, Protocol
+from typing import TYPE_CHECKING, Literal
 
 import torch
 from torch import nn
 from torch.nn import functional
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Mapping, Sequence
 
 _CLASSIFICATION_DIMS = 2
 _DENSE_LABEL_DIMS = 3
@@ -297,23 +297,6 @@ class DenseHeadSpec:
     metric_classes: tuple[int, ...] | None = None
 
 
-class OutputHead(Protocol):
-    """A named group of output channels, as listed in a model's output spec.
-
-    Multi-head models describe their concatenated output with a sequence of
-    such entries (for example ``KongNet.training_output_spec``), which
-    :meth:`StructuredDenseTask.from_output_spec` turns into dense heads.
-    """
-
-    @property
-    def name(self) -> str:
-        """Head name, also the default target key."""
-
-    @property
-    def channel_slice(self) -> int | slice | tuple[int, ...] | list[int] | None:
-        """Channels of the model output that belong to this head."""
-
-
 class StructuredDenseTask(TrainingTaskABC):
     """Train dense heads using independent valid-element loss normalization.
 
@@ -387,57 +370,6 @@ class StructuredDenseTask(TrainingTaskABC):
         # Class counts seen in forward passes enable CPU-side range checks.
         self._head_num_classes: dict[str, int] = {}
 
-    @classmethod
-    def from_output_spec(
-        cls: type[StructuredDenseTask],
-        output_spec: Iterable[OutputHead],
-        *,
-        loss: DenseLossMode | LossFunction = "auto",
-        target_mode: DenseTargetMode = "auto",
-        metrics: tuple[DenseMetricName, ...] | None = None,
-        loss_weights: Mapping[str, float] | None = None,
-        target_keys: Mapping[str, NestedKey] | None = None,
-        ignore_index: int = -100,
-        prefix_head_metrics: bool = True,
-    ) -> StructuredDenseTask:
-        """Build one dense head per entry of a model's output specification.
-
-        Each entry's ``name`` and ``channel_slice`` select the head's output
-        channels, for example ``KongNet.training_output_spec``. All heads share
-        ``loss``, ``target_mode`` and ``metrics``. ``loss_weights`` and
-        ``target_keys`` override individual heads by name; by default a head
-        reads the target dictionary entry named after it. For other per-head
-        differences, pass ``dataclasses.replace`` copies of the returned task's
-        ``heads`` to a new :class:`StructuredDenseTask`.
-        """
-        loss_weights = dict(loss_weights or {})
-        target_keys = dict(target_keys or {})
-        heads = [
-            DenseHeadSpec(
-                name=head.name,
-                loss=loss,
-                target_mode=target_mode,
-                target_key=target_keys.get(head.name),
-                channel_slice=head.channel_slice,
-                loss_weight=float(loss_weights.get(head.name, 1.0)),
-                metrics=metrics,
-            )
-            for head in output_spec
-        ]
-        names = {head.name for head in heads}
-        for argument, overrides in (
-            ("loss_weights", loss_weights),
-            ("target_keys", target_keys),
-        ):
-            if unknown := sorted(set(overrides) - names):
-                msg = f"`{argument}` names unknown output heads: {unknown}."
-                raise ValueError(msg)
-        return cls(
-            heads,
-            ignore_index=ignore_index,
-            prefix_head_metrics=prefix_head_metrics,
-        )
-
     def _select_nested_value(
         self: StructuredDenseTask,
         value: object,
@@ -508,7 +440,14 @@ class StructuredDenseTask(TrainingTaskABC):
             head_target = self._select_nested_value(
                 targets, head.target_key, kind="Target"
             )
-        elif isinstance(targets, dict) and head.name in targets:
+        elif isinstance(targets, dict):
+            if head.name not in targets:
+                msg = (
+                    f"Dense head `{head.name}` reads the target named after it, but "
+                    f"the targets are named {list(targets)}. Rename the head or "
+                    "set its `target_key`."
+                )
+                raise ValueError(msg)
             head_target = targets[head.name]
         else:
             head_target = targets

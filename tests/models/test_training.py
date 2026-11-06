@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections import namedtuple
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -1115,27 +1114,32 @@ def test_structured_dense_task_reports_common_shape_mismatches() -> None:
         task.compute_loss(logits, torch.full((1, 4, 4), 2, dtype=torch.long))
 
 
-def test_output_spec_builds_one_head_per_model_output() -> None:
-    """Named output groups become dense heads with per-name overrides."""
+def test_concatenated_heads_read_their_channels_and_named_targets() -> None:
+    """``head_slices`` gives dense heads their channels of a concatenated output."""
     model = KongNet(
         num_heads=2,
         num_channels_per_head=[3, 3],
         target_channels=[2, 5],
         min_distance=5,
         threshold_abs=0.5,
-        class_dict={0: "Tumour Cell", 1: "Lymphocyte"},
     )
-    task = StructuredDenseTask.from_output_spec(
-        model.training_output_spec,
-        loss="bce_with_logits",
-        target_keys={"tumour_cell": "tumour"},
-        loss_weights={"lymphocyte": 2.0},
+    tumour_channels, lymphocyte_channels = model.head_slices
+    task = StructuredDenseTask(
+        [
+            DenseHeadSpec(
+                "tumour_cell",
+                loss="bce_with_logits",
+                target_key="tumour",
+                channel_slice=tumour_channels,
+            ),
+            DenseHeadSpec(
+                "lymphocyte",
+                loss="bce_with_logits",
+                channel_slice=lymphocyte_channels,
+                loss_weight=2.0,
+            ),
+        ]
     )
-
-    assert [head.name for head in task.heads] == ["tumour_cell", "lymphocyte"]
-    assert [head.channel_slice for head in task.heads] == [slice(0, 3), slice(3, 6)]
-    assert [head.target_key for head in task.heads] == ["tumour", None]
-    assert [head.loss_weight for head in task.heads] == [1.0, 2.0]
 
     output = torch.full((1, 6, 2, 2), -6.0)
     output[:, 0:3, :, 0] = 6.0
@@ -1150,17 +1154,12 @@ def test_output_spec_builds_one_head_per_model_output() -> None:
     assert torch.isfinite(task.compute_loss(output, targets))
 
 
-def test_output_spec_accepts_any_named_channel_groups() -> None:
-    """Any objects with ``name`` and ``channel_slice`` describe output heads."""
-    head = namedtuple("Head", ["name", "channel_slice"])  # noqa: PYI024
-    task = StructuredDenseTask.from_output_spec(
-        [head("mask", slice(0, 2)), head("distance", 2)],
-        loss="mse",
-        prefix_head_metrics=False,
-    )
-    assert [spec.channel_slice for spec in task.heads] == [slice(0, 2), 2]
-    with pytest.raises(ValueError, match=r"`loss_weights` names unknown output heads"):
-        StructuredDenseTask.from_output_spec([head("mask", 0)], loss_weights={"x": 2})
+def test_structured_dense_task_names_the_targets_a_head_cannot_find() -> None:
+    """A head without a target says which names the targets have."""
+    task = StructuredDenseTask([DenseHeadSpec("tumour_cell", loss="bce_with_logits")])
+    targets = {"tumour cell": torch.zeros((1, 1, 2, 2))}
+    with pytest.raises(ValueError, match=r"`tumour_cell`.*\['tumour cell'\]"):
+        task.compute_loss(torch.zeros((1, 1, 2, 2)), targets)
 
 
 def test_trainer_supports_structured_targets_and_epoch_hooks(

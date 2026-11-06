@@ -282,9 +282,18 @@ A task turns model outputs and targets into a loss and metrics:
      - Several dense heads, such as masks, boundaries, heatmaps or regression
        maps, each with its own loss, weight and metrics (``DenseHeadSpec``).
 
-Models that describe their concatenated output channels as named groups, such
-as ``KongNet.training_output_spec``, can build one head per group with
-``StructuredDenseTask.from_output_spec``.
+When a model concatenates its heads into one tensor, ``channel_slice`` gives
+each dense head its channels. A head reads the target stored under its name, so
+name the heads after the keys of a ``CompositeTargetBuilder``, or set
+``target_key``. ``KongNet.head_slices`` lists the channels of each KongNet head:
+
+.. code-block:: python
+
+    head_names = ["epithelial", "lymphocyte"]
+    task = StructuredDenseTask([
+        DenseHeadSpec(name, loss="bce_with_logits", channel_slice=channels)
+        for name, channels in zip(head_names, model.head_slices, strict=True)
+    ])
 
 Outputs and targets
 ~~~~~~~~~~~~~~~~~~~
