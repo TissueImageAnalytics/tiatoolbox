@@ -1,5 +1,7 @@
 """Engines to run models implemented in tiatoolbox."""
 
+from __future__ import annotations
+
 from . import (
     deep_feature_extractor,
     engine_abc,

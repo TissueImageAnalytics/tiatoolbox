@@ -3,6 +3,7 @@
 Gal & Ghahramani (2015), used by Policastro (2020) WSI analysis project.
 The main entry point is :class:`BayesianModelWrapper
 <tiatoolbox.models.architecture.bayesian_wrapper.BayesianModelWrapper>`.
+
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ def decompose_uncertainty(
         >>> stats["mean_probs"].shape  # [B, C] predictive probabilities
         >>> stats["epistemic"].shape  # [B] model (reducible) uncertainty
         >>> stats["aleatoric"].shape  # [B] data (irreducible) uncertainty
+
     """
     mean_probs = mc_probs.mean(dim=0)  # [..., C]
     var_probs = mc_probs.var(dim=0)  # [..., C]

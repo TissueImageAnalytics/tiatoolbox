@@ -30,6 +30,8 @@ from tiatoolbox.models.engine.engine_abc import (
 from tiatoolbox.models.engine.io_config import ModelIOConfigABC
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from tiatoolbox.wsicore import WSIReaderParams
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -747,3 +749,52 @@ def test_save_predictions_as_zarr_existing_task_group(
 
     # Existing task-group key should be filtered out.
     assert received_keys == ["probabilities"]
+
+
+def test_infer_patches_non_torch_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test infer_patches when model is not a torch.nn.Module."""
+    predictor = TestEngineABC(model="alexnet-kather100k")
+
+    class FakeModel:
+        """Model which is not derived from torch.nn.Module."""
+
+    predictor.model = FakeModel()
+
+    probabilities = np.array(
+        [[0.1, 0.9]],
+        dtype=np.float32,
+    )
+
+    def _fake_infer_batch(
+        model: object,
+        batch_data: np.ndarray,
+        *,
+        device: str,
+    ) -> np.ndarray:
+        _ = model, batch_data, device
+        return probabilities
+
+    def _fake_get_model_attr(attr_name: str) -> Callable:
+        _ = attr_name
+        return _fake_infer_batch
+
+    monkeypatch.setattr(
+        predictor,
+        "_get_model_attr",
+        _fake_get_model_attr,
+    )
+
+    dataloader = [
+        {
+            "image": np.zeros((1, 4, 4, 3), dtype=np.float32),
+        },
+    ]
+
+    output = predictor.infer_patches(
+        dataloader=dataloader,  # type: ignore[arg-type]
+        return_coordinates=False,
+    )
+
+    assert "probabilities" in output
