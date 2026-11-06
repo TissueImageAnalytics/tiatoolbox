@@ -69,11 +69,7 @@ class AnnotationStoreReader(WSIReader):
         self.store = (
             SQLiteStore(Path(store)) if isinstance(store, (str, Path)) else store
         )
-        if isinstance(base_wsi, (str, Path)):
-            resolved_base_wsi = WSIReader.open(base_wsi)
-        else:
-            resolved_base_wsi = base_wsi
-        self.base_wsi = resolved_base_wsi
+        self.base_wsi = WSIReader.open(base_wsi) if base_wsi is not None else None
         if info is None:
             # try to get metadata from store
             try:
