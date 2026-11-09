@@ -52,7 +52,7 @@ from tqdm.auto import tqdm
 
 from tiatoolbox import DuplicateFilter, logger, rcParam
 from tiatoolbox.models.architecture import get_pretrained_model
-from tiatoolbox.models.architecture.utils import compile_model
+from tiatoolbox.models.architecture.utils import compile_model, eval_model_if_nn_module
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset, WSIPatchDataset
 from tiatoolbox.models.models_abc import load_torch_model
 from tiatoolbox.utils.misc import (
@@ -277,7 +277,7 @@ class EngineABC(ABC):  # noqa: B024
 
     def __init__(
         self: EngineABC,
-        model: str | ModelABC,
+        model: str | ModelABC | nn.Module,
         batch_size: int = 8,
         num_workers: int = 0,
         weights: str | Path | None = None,
@@ -550,6 +550,10 @@ class EngineABC(ABC):  # noqa: B024
             desc="Inferring patches",
             disable=not self.verbose,
         )
+
+        # Set inference mode once here; infer_batch no longer calls
+        # model.eval() internally (needed for Monte Carlo Dropout wrappers).
+        self.model = eval_model_if_nn_module(model=self.model)
 
         infer_batch = self._get_model_attr("infer_batch")
         for batch_data in tqdm_loop:

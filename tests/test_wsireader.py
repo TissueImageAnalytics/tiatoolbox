@@ -62,6 +62,7 @@ from tiatoolbox.wsicore.wsireader import (
     is_zarr,
     jp2,
     ngff,
+    transformed,
 )
 from tiatoolbox.wsicore.wsireader.detection import is_valid_zarr_fsspec
 from tiatoolbox.wsicore.wsireader.factory import (
@@ -78,7 +79,7 @@ from tiatoolbox.wsicore.wsireader.factory import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Callable, Iterable
+    from collections.abc import Callable, Iterable, Iterator
 
     import requests
     from openslide import OpenSlide
@@ -3322,8 +3323,12 @@ def test_read_dicom_with_metadata(remote_sample: Callable) -> None:
     assert wsi.info.objective_power == 40.0
 
     wsi = DICOMWSIReader(wsi_path)
+
+    # Trigger _optical_path_sequence access
+    _ = hasattr(wsi.wsi.levels.base_level.datasets[0], "_optical_path_sequence")
+
     # Force delete attribute for objective power.
-    delattr(wsi.wsi.levels.base_level.datasets[0], "OpticalPathSequence")
+    delattr(wsi.wsi.levels.base_level.datasets[0], "_optical_path_sequence")
     wsi._info()
 
     # Assert objective power inferred from mpp.
@@ -3335,7 +3340,7 @@ def test_read_rect_transformedreader_svs_baseline(
     sample_svs: Path, remote_sample: Callable, track_tmp_path: Path
 ) -> None:
     """Test TransformedWSIReader.read_rect with an SVS file at baseline."""
-    wsi = wsireader.TransformedWSIReader(
+    wsi = transformed.TransformedWSIReader(
         sample_svs, target_img=sample_svs, transform=np.eye(3)
     )
     location = SVS_TEST_TISSUE_LOCATION
@@ -3347,7 +3352,7 @@ def test_read_rect_transformedreader_svs_baseline(
     assert im_region.shape == (*size[::-1], 3)
 
     fixed_info = wsi.info
-    wsi2 = wsireader.TransformedWSIReader(
+    wsi2 = transformed.TransformedWSIReader(
         sample_svs, target_img=sample_svs, transform=np.eye(3), fixed_info=fixed_info
     )
     im_region_2 = wsi2.read_rect(location, size, resolution=0, units="level")
@@ -3358,12 +3363,12 @@ def test_read_rect_transformedreader_svs_baseline(
         ValueError,
         match=r"Transform cannot be None. Please provide a valid transformation",
     ):
-        _ = wsireader.TransformedWSIReader(
+        _ = transformed.TransformedWSIReader(
             sample_svs, target_img=sample_svs, transform=None
         )
 
     # Now test MHA displacement field
-    wsi3 = wsireader.TransformedWSIReader(
+    wsi3 = transformed.TransformedWSIReader(
         sample_svs,
         target_img=sample_svs,
         transform=remote_sample("reg_disp_mha_example"),
@@ -3374,7 +3379,7 @@ def test_read_rect_transformedreader_svs_baseline(
     assert im_region.shape == im_region_3.shape
 
     # Now test NPY affine transformation
-    wsi4 = wsireader.TransformedWSIReader(
+    wsi4 = transformed.TransformedWSIReader(
         sample_svs,
         target_img=sample_svs,
         transform=remote_sample("reg_affine_npy_example"),
@@ -3395,7 +3400,7 @@ def test_read_rect_transformedreader_svs_baseline(
     transform_path = track_tmp_path / "new_disp.mha"
     sitk.WriteImage(disp_image, str(transform_path))
 
-    wsi5 = wsireader.TransformedWSIReader(
+    wsi5 = transformed.TransformedWSIReader(
         sample_svs,
         target_img=sample_svs,
         transform=transform_path,
@@ -3407,7 +3412,7 @@ def test_read_rect_transformedreader_svs_baseline(
 
     # Test wrong file type
     with pytest.raises(ValueError, match="Unsupported transformation file format"):
-        wsireader.TransformedWSIReader(
+        transformed.TransformedWSIReader(
             sample_svs,
             target_img=sample_svs,
             transform=sample_svs,
@@ -3422,7 +3427,7 @@ def test_read_bounds_transformedreader_baseline(
     Location coordinate is in baseline (level 0) reference frame.
 
     """
-    wsi = wsireader.TransformedWSIReader(
+    wsi = transformed.TransformedWSIReader(
         sample_svs, target_img=sample_svs, transform=np.eye(3)
     )
 
@@ -3435,7 +3440,7 @@ def test_read_bounds_transformedreader_baseline(
     assert im_region.shape == (*size[::-1], 3)
 
     # Now test MHA displacement field
-    wsi3 = wsireader.TransformedWSIReader(
+    wsi3 = transformed.TransformedWSIReader(
         sample_svs,
         target_img=sample_svs,
         transform=remote_sample("reg_disp_mha_example"),
@@ -3446,7 +3451,7 @@ def test_read_bounds_transformedreader_baseline(
     assert im_region.shape == im_region_3.shape
 
     # Now test NPY affine transformation
-    wsi4 = wsireader.TransformedWSIReader(
+    wsi4 = transformed.TransformedWSIReader(
         sample_svs,
         target_img=sample_svs,
         transform=remote_sample("reg_affine_npy_example"),
@@ -4416,3 +4421,94 @@ def test_is_ngff_keyerror_returns_false(
 def test_is_valid_zarr_not_str_path() -> None:
     """Tests is_valid_zarr_fsspec if not str or path."""
     assert not is_valid_zarr_fsspec(np.zeros(0))
+
+
+class FakeLevels:
+    """Minimal iterable levels object."""
+
+    def __init__(
+        self,
+        levels: list[object],
+        base_level: object,
+    ) -> None:
+        """Initialize container with fake levels."""
+        self._levels = levels
+        self.base_level = base_level
+
+    def __iter__(self) -> Iterator[object]:
+        """Iterate over levels."""
+        return iter(self._levels)
+
+    def __getitem__(self, idx: int) -> object:
+        """Get level by index."""
+        return self._levels[idx]
+
+    def __len__(self) -> int:
+        """Return number of levels."""
+        return len(self._levels)
+
+
+def test_dicom_info_without_optical_path_sequence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test metadata extraction when optical path sequence is absent."""
+    reader = DICOMWSIReader.__new__(DICOMWSIReader)
+
+    dataset = SimpleNamespace(
+        pixel_spacing=SimpleNamespace(
+            width=0.0005,
+            height=0.0005,
+        ),
+        _optical_path_sequence=[],
+        base_metadata=SimpleNamespace(
+            equipment=SimpleNamespace(
+                manufacturer="TestVendor",
+            ),
+        ),
+    )
+
+    level0 = SimpleNamespace(
+        size=SimpleNamespace(
+            width=1000,
+            height=500,
+        ),
+        datasets=[dataset],
+        level=0,
+    )
+
+    level1 = SimpleNamespace(
+        size=SimpleNamespace(
+            width=500,
+            height=250,
+        ),
+        level=1,
+    )
+
+    reader.wsi = SimpleNamespace(
+        levels=FakeLevels(
+            levels=[level0, level1],
+            base_level=level0,
+        ),
+    )
+
+    reader.input_path = "dummy.dcm"
+
+    def _fake_estimate_mpp_objective_power(
+        objective_power: float | None,
+        mpp: tuple[float, float],
+    ) -> tuple[float, tuple[float, float]]:
+        """Return deterministic objective power."""
+        assert objective_power is None
+        return 20.0, mpp
+
+    monkeypatch.setattr(
+        reader,
+        "_estimate_mpp_objective_power",
+        _fake_estimate_mpp_objective_power,
+    )
+
+    info = reader._info()
+
+    assert info.objective_power == 20.0
+    assert info.vendor == "TestVendor"
+    assert info.slide_dimensions == (1000, 500)

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from tiatoolbox.models.architecture.sam import SAM
+from tiatoolbox.models.architecture.utils import eval_model_if_nn_module
 from tiatoolbox.utils.misc import dict_to_store_semantic_segmentor
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -71,6 +72,10 @@ class PromptSegmentor:
 
         """
         paths = []
+
+        # Set inference mode once here; infer_batch no longer calls
+        # model.eval() internally (needed for Monte Carlo Dropout wrappers).
+        self.model = eval_model_if_nn_module(model=self.model)
         masks, _ = self.model.infer_batch(
             self.model,
             images,

@@ -754,3 +754,13 @@ def patch_first_conv(
 
         new_weight = new_weight * (default_in_channels / new_in_channels)
         conv_module.weight = nn.parameter.Parameter(new_weight)
+
+
+def eval_model_if_nn_module(
+    model: ModelABC | nn.Module,
+) -> ModelABC | nn.Module:
+    """Run model.eval() if the model is a torch module."""
+    if isinstance(model, torch.nn.Module):
+        return model.eval()
+
+    return model
