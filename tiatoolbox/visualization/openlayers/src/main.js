@@ -57,7 +57,9 @@ import {
     createSnapshotController,
     downloadSnapshot,
     downloadSnapshotMetadata,
+    getSnapshotOverlayLayer,
     parseSnapshotMetadata,
+    validateSnapshotAnnotationRestore,
 } from "./controls/snapshot.js";
 import {
     createScaleBarController,
@@ -3081,63 +3083,13 @@ let scaleLineControl = null;
 async function restoreAnnotationSnapshotMetadata(
     metadata,
 ) {
-    const savedLayerNames =
-        new Set(
-            metadata.layers.map(
-                (layer) => layer.name,
-            ),
-        );
-
-    if (
-        savedLayerNames.size !==
-            annotationLayerNames.size ||
-        [...annotationLayerNames].some(
-            (layerName) =>
-                !savedLayerNames.has(layerName),
-        )
-    ) {
-        throw new Error(
-            "Snapshot annotation state does not match the loaded annotation layers.",
-        );
-    }
+    validateSnapshotAnnotationRestore(
+        metadata,
+        annotationLayerNames,
+        annotationTypesByLayer,
+    );
 
     for (const layer of metadata.layers) {
-        const annotationTypes =
-            annotationTypesByLayer.get(
-                layer.name,
-            );
-
-        if (annotationTypes === undefined) {
-            throw new Error(
-                `Annotation layer is not available: ${layer.name}`,
-            );
-        }
-
-        const savedTypes =
-            layer.types.map(
-                (annotation) =>
-                    annotation.annotationType,
-            );
-
-        if (
-            annotationTypes.length !==
-                savedTypes.length ||
-            annotationTypes.some(
-                (annotationType) =>
-                    !savedTypes.some(
-                        (savedType) =>
-                            Object.is(
-                                savedType,
-                                annotationType,
-                            ),
-                    ),
-            )
-        ) {
-            throw new Error(
-                `Snapshot annotation types do not match layer: ${layer.name}`,
-            );
-        }
-
         const colours =
             new Map(
                 layer.types.map(
@@ -3241,13 +3193,10 @@ async function restoreSnapshotMetadata(metadata) {
         );
 
         const layer =
-            overlayLayers[overlay.name];
-
-        if (layer === undefined) {
-            throw new Error(
-                `Loaded overlay could not be found: ${overlay.name}`,
+            getSnapshotOverlayLayer(
+                overlayLayers,
+                overlay.name,
             );
-        }
 
         layer.setVisible(
             overlay.visible,

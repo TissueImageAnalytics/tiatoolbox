@@ -12,7 +12,9 @@ import {
     createSnapshotController,
     downloadSnapshot,
     downloadSnapshotMetadata,
+    getSnapshotOverlayLayer,
     parseSnapshotMetadata,
+    validateSnapshotAnnotationRestore,
 } from "../../../tiatoolbox/visualization/openlayers/src/controls/snapshot.js";
 
 function createMapHarness({
@@ -582,6 +584,80 @@ describe("snapshot metadata parsing", () => {
         );
     });
 
+    it("rejects invalid property annotation settings", () => {
+        expect(
+            () =>
+                parseSnapshotMetadata(
+                    JSON.stringify({
+                        version: 1,
+                        slide: {
+                            path: "slides/example.svs",
+                        },
+                        viewport: {
+                            centre: [120, -80],
+                            zoom: 4,
+                            rotation: 0,
+                        },
+                        overlays: [],
+                        annotations: {
+                            displayMode: "property",
+                            property: null,
+                            secondarySelection: null,
+                            colourMap: "viridis",
+                            layers: [],
+                        },
+                        scaleBar: {
+                            enabled: true,
+                            included: true,
+                            colour: "#ffffff",
+                            opacity: 80,
+                            size: "default",
+                            units: "metric",
+                        },
+                    }),
+                ),
+        ).toThrow(
+            "Snapshot metadata does not contain valid annotation settings.",
+        );
+    });
+
+    it("rejects invalid secondary annotation settings", () => {
+        expect(
+            () =>
+                parseSnapshotMetadata(
+                    JSON.stringify({
+                        version: 1,
+                        slide: {
+                            path: "slides/example.svs",
+                        },
+                        viewport: {
+                            centre: [120, -80],
+                            zoom: 4,
+                            rotation: 0,
+                        },
+                        overlays: [],
+                        annotations: {
+                            displayMode: "secondary",
+                            property: "prob",
+                            secondarySelection: null,
+                            colourMap: "viridis",
+                            layers: [],
+                        },
+                        scaleBar: {
+                            enabled: true,
+                            included: true,
+                            colour: "#ffffff",
+                            opacity: 80,
+                            size: "default",
+                            units: "metric",
+                        },
+                    }),
+                ),
+        ).toThrow(
+            "Snapshot metadata does not contain valid annotation settings.",
+        );
+    });
+
     it("rejects invalid annotation layer state", () => {
         expect(
             () =>
@@ -914,6 +990,112 @@ describe("snapshot metadata parsing", () => {
                 ),
         ).toThrow(
             "Unsupported snapshot metadata version.",
+        );
+    });
+});
+
+describe("snapshot metadata restore validation", () => {
+    const metadata = {
+        layers: [
+            {
+                name: "example_overlay",
+                types: [
+                    {
+                        annotationType: "Example",
+                    },
+                ],
+            },
+        ],
+    };
+
+    it("returns a loaded snapshot overlay layer", () => {
+        const layer = {};
+
+        expect(
+            getSnapshotOverlayLayer(
+                {
+                    example_overlay: layer,
+                },
+                "example_overlay",
+            ),
+        ).toBe(layer);
+    });
+
+    it("rejects a missing snapshot overlay layer", () => {
+        expect(
+            () =>
+                getSnapshotOverlayLayer(
+                    {},
+                    "example_overlay",
+                ),
+        ).toThrow(
+            "Loaded overlay could not be found: example_overlay",
+        );
+    });
+
+    it("accepts matching annotation restore state", () => {
+        expect(
+            () =>
+                validateSnapshotAnnotationRestore(
+                    metadata,
+                    new Set([
+                        "example_overlay",
+                    ]),
+                    new Map([
+                        [
+                            "example_overlay",
+                            ["Example"],
+                        ],
+                    ]),
+                ),
+        ).not.toThrow();
+    });
+
+    it("rejects mismatched annotation layers", () => {
+        expect(
+            () =>
+                validateSnapshotAnnotationRestore(
+                    metadata,
+                    new Set(),
+                    new Map(),
+                ),
+        ).toThrow(
+            "Snapshot annotation state does not match the loaded annotation layers.",
+        );
+    });
+
+    it("rejects an unavailable annotation layer", () => {
+        expect(
+            () =>
+                validateSnapshotAnnotationRestore(
+                    metadata,
+                    new Set([
+                        "example_overlay",
+                    ]),
+                    new Map(),
+                ),
+        ).toThrow(
+            "Annotation layer is not available: example_overlay",
+        );
+    });
+
+    it("rejects mismatched annotation types", () => {
+        expect(
+            () =>
+                validateSnapshotAnnotationRestore(
+                    metadata,
+                    new Set([
+                        "example_overlay",
+                    ]),
+                    new Map([
+                        [
+                            "example_overlay",
+                            ["Other"],
+                        ],
+                    ]),
+                ),
+        ).toThrow(
+            "Snapshot annotation types do not match layer: example_overlay",
         );
     });
 });
