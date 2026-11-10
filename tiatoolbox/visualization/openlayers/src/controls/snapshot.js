@@ -278,6 +278,287 @@ function downloadSnapshotMetadata(
     );
 }
 
+const snapshotAnnotationDisplayModes =
+    new Set([
+        "type",
+        "property",
+        "secondary",
+    ]);
+
+const snapshotAnnotationColourMaps =
+    new Set([
+        "viridis",
+        "plasma",
+        "inferno",
+        "magma",
+        "cividis",
+        "turbo",
+    ]);
+
+function isSnapshotAnnotationType(value) {
+    return (
+        value === null ||
+        typeof value === "string" ||
+        typeof value === "boolean" ||
+        Number.isFinite(value)
+    );
+}
+
+function isSnapshotAnnotationColour(colour) {
+    return (
+        Array.isArray(colour) &&
+        colour.length === 4 &&
+        colour.every(
+            (channel) =>
+                Number.isFinite(channel) &&
+                channel >= 0 &&
+                channel <= 1,
+        )
+    );
+}
+
+// Parse and validate snapshot metadata.
+function parseSnapshotMetadata(json) {
+    let metadata;
+
+    try {
+        metadata = JSON.parse(json);
+    } catch {
+        throw new Error(
+            "Snapshot metadata is not valid JSON.",
+        );
+    }
+
+    if (
+        metadata === null ||
+        typeof metadata !== "object" ||
+        Array.isArray(metadata)
+    ) {
+        throw new Error(
+            "Snapshot metadata must be a JSON object.",
+        );
+    }
+
+    if (metadata.version !== 1) {
+        throw new Error(
+            "Unsupported snapshot metadata version.",
+        );
+    }
+
+    if (
+        metadata.slide === null ||
+        typeof metadata.slide !== "object" ||
+        typeof metadata.slide.path !== "string" ||
+        metadata.slide.path.length === 0
+    ) {
+        throw new Error(
+            "Snapshot metadata does not contain a valid slide path.",
+        );
+    }
+
+    const viewport = metadata.viewport;
+
+    if (
+        viewport === null ||
+        typeof viewport !== "object" ||
+        !Array.isArray(viewport.centre) ||
+        viewport.centre.length !== 2 ||
+        !viewport.centre.every(Number.isFinite) ||
+        !Number.isFinite(viewport.zoom) ||
+        !Number.isFinite(viewport.rotation)
+    ) {
+        throw new Error(
+            "Snapshot metadata does not contain a valid viewport.",
+        );
+    }
+
+    if (
+        !Array.isArray(metadata.overlays) ||
+        !metadata.overlays.every((overlay) =>
+            overlay !== null &&
+            typeof overlay === "object" &&
+            typeof overlay.name === "string" &&
+            overlay.name.length > 0 &&
+            typeof overlay.path === "string" &&
+            overlay.path.length > 0 &&
+            typeof overlay.visible === "boolean" &&
+            Number.isFinite(overlay.opacity) &&
+            overlay.opacity >= 0 &&
+            overlay.opacity <= 1 &&
+            (
+                overlay.zIndex === null ||
+                Number.isFinite(overlay.zIndex)
+            ) &&
+            Number.isInteger(overlay.order) &&
+            overlay.order >= 0
+        )
+    ) {
+        throw new Error(
+            "Snapshot metadata contains an invalid overlay.",
+        );
+    }
+
+    const scaleBar = metadata.scaleBar;
+
+    if (
+        scaleBar === null ||
+        typeof scaleBar !== "object" ||
+        typeof scaleBar.enabled !== "boolean" ||
+        typeof scaleBar.included !== "boolean" ||
+        typeof scaleBar.colour !== "string" ||
+        !/^#[0-9a-fA-F]{6}$/.test(
+            scaleBar.colour,
+        ) ||
+        !Number.isFinite(scaleBar.opacity) ||
+        scaleBar.opacity < 0 ||
+        scaleBar.opacity > 100 ||
+        !["small", "default", "large"].includes(
+            scaleBar.size,
+        ) ||
+        !["metric", "imperial"].includes(
+            scaleBar.units,
+        )
+    ) {
+        throw new Error(
+            "Snapshot metadata does not contain valid scale bar settings.",
+        );
+    }
+
+    const annotations =
+        metadata.annotations;
+
+    if (
+        annotations === null ||
+        typeof annotations !== "object" ||
+        Array.isArray(annotations) ||
+        !snapshotAnnotationDisplayModes.has(
+            annotations.displayMode,
+        ) ||
+        !snapshotAnnotationColourMaps.has(
+            annotations.colourMap,
+        ) ||
+        !Array.isArray(annotations.layers)
+    ) {
+        throw new Error(
+            "Snapshot metadata does not contain valid annotation settings.",
+        );
+    }
+
+    if (
+        (
+            annotations.displayMode === "type" &&
+            (
+                annotations.property !== null ||
+                annotations.secondarySelection !== null
+            )
+        ) ||
+        (
+            annotations.displayMode === "property" &&
+            (
+                typeof annotations.property !== "string" ||
+                annotations.property.length === 0 ||
+                annotations.secondarySelection !== null
+            )
+        )
+    ) {
+        throw new Error(
+            "Snapshot metadata does not contain valid annotation settings.",
+        );
+    }
+
+    const secondarySelection =
+        annotations.secondarySelection;
+
+    if (
+        annotations.displayMode === "secondary" &&
+        (
+            typeof annotations.property !== "string" ||
+            annotations.property.length === 0 ||
+            secondarySelection === null ||
+            typeof secondarySelection !== "object" ||
+            Array.isArray(secondarySelection) ||
+            typeof secondarySelection.layerName !==
+                "string" ||
+            secondarySelection.layerName.length === 0 ||
+            !isSnapshotAnnotationType(
+                secondarySelection.annotationType,
+            )
+        )
+    ) {
+        throw new Error(
+            "Snapshot metadata does not contain valid annotation settings.",
+        );
+    }
+
+    const overlayNames =
+        new Set(
+            metadata.overlays.map(
+                (overlay) => overlay.name,
+            ),
+        );
+
+    if (
+        !annotations.layers.every(
+            (layer) =>
+                layer !== null &&
+                typeof layer === "object" &&
+                !Array.isArray(layer) &&
+                typeof layer.name === "string" &&
+                layer.name.length > 0 &&
+                overlayNames.has(layer.name) &&
+                Array.isArray(layer.types) &&
+                layer.types.every(
+                    (annotation) =>
+                        annotation !== null &&
+                        typeof annotation ===
+                            "object" &&
+                        !Array.isArray(
+                            annotation,
+                        ) &&
+                        isSnapshotAnnotationType(
+                            annotation.annotationType,
+                        ) &&
+                        isSnapshotAnnotationColour(
+                            annotation.colour,
+                        ) &&
+                        typeof annotation.visible ===
+                            "boolean" &&
+                        Number.isFinite(
+                            annotation.opacity,
+                        ) &&
+                        annotation.opacity >= 0 &&
+                        annotation.opacity <= 1,
+                ),
+        )
+    ) {
+        throw new Error(
+            "Snapshot metadata contains invalid annotation layer state.",
+        );
+    }
+
+    if (
+        annotations.displayMode === "secondary" &&
+        !annotations.layers.some(
+            (layer) =>
+                layer.name ===
+                    secondarySelection.layerName &&
+                layer.types.some(
+                    (annotation) =>
+                        Object.is(
+                            annotation.annotationType,
+                            secondarySelection.annotationType,
+                        ),
+                ),
+        )
+    ) {
+        throw new Error(
+            "Snapshot metadata contains an invalid secondary annotation selection.",
+        );
+    }
+
+    return metadata;
+}
+
 // Manage snapshot availability and capture.
 function createSnapshotController({
     button,
@@ -355,4 +636,5 @@ export {
     createSnapshotController,
     downloadSnapshot,
     downloadSnapshotMetadata,
+    parseSnapshotMetadata,
 };

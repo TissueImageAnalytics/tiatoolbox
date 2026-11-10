@@ -12,6 +12,7 @@ import {
     createSnapshotController,
     downloadSnapshot,
     downloadSnapshotMetadata,
+    parseSnapshotMetadata,
 } from "../../../tiatoolbox/visualization/openlayers/src/controls/snapshot.js";
 
 function createMapHarness({
@@ -412,6 +413,508 @@ describe("snapshot capture", () => {
                 scaleBar,
             ),
         ).resolves.toBeInstanceOf(Blob);
+    });
+});
+
+describe("snapshot metadata parsing", () => {
+    it("parses supported snapshot metadata", () => {
+        const expected = {
+            version: 1,
+            slide: {
+                path: "slides/example.svs",
+            },
+            viewport: {
+                centre: [120, -80],
+                zoom: 4,
+                rotation: 0.5,
+            },
+            overlays: [
+                {
+                    name: "example_overlay",
+                    path: "overlays/example_overlay.db",
+                    visible: true,
+                    opacity: 0.75,
+                    zIndex: 1,
+                    order: 1,
+                },
+            ],
+            annotations: {
+                displayMode: "type",
+                property: null,
+                secondarySelection: null,
+                colourMap: "viridis",
+                layers: [
+                    {
+                        name: "example_overlay",
+                        types: [
+                            {
+                                annotationType: "Example",
+                                colour: [
+                                    0.2,
+                                    0.4,
+                                    0.6,
+                                    1,
+                                ],
+                                visible: true,
+                                opacity: 1,
+                            },
+                        ],
+                    },
+                ],
+            },
+            scaleBar: {
+                enabled: true,
+                included: true,
+                colour: "#ffffff",
+                opacity: 80,
+                size: "default",
+                units: "metric",
+            },
+        };
+
+        const metadata =
+            parseSnapshotMetadata(
+                JSON.stringify(expected),
+            );
+
+        expect(metadata).toEqual(expected);
+    });
+
+    it("parses supported secondary annotation metadata", () => {
+        const metadata = {
+            version: 1,
+            slide: {
+                path: "slides/example.svs",
+            },
+            viewport: {
+                centre: [120, -80],
+                zoom: 4,
+                rotation: 0.5,
+            },
+            overlays: [
+                {
+                    name: "example_overlay",
+                    path: "overlays/example_overlay.db",
+                    visible: true,
+                    opacity: 0.75,
+                    zIndex: 1,
+                    order: 1,
+                },
+            ],
+            annotations: {
+                displayMode: "secondary",
+                property: "prob",
+                secondarySelection: {
+                    layerName: "example_overlay",
+                    annotationType: "Example",
+                },
+                colourMap: "magma",
+                layers: [
+                    {
+                        name: "example_overlay",
+                        types: [
+                            {
+                                annotationType: "Example",
+                                colour: [
+                                    0.2,
+                                    0.4,
+                                    0.6,
+                                    1,
+                                ],
+                                visible: true,
+                                opacity: 0.8,
+                            },
+                        ],
+                    },
+                ],
+            },
+            scaleBar: {
+                enabled: true,
+                included: true,
+                colour: "#ffffff",
+                opacity: 80,
+                size: "default",
+                units: "metric",
+            },
+        };
+
+        expect(
+            parseSnapshotMetadata(
+                JSON.stringify(metadata),
+            ),
+        ).toEqual(metadata);
+    });
+
+    it("rejects an invalid annotation display mode", () => {
+        expect(
+            () =>
+                parseSnapshotMetadata(
+                    JSON.stringify({
+                        version: 1,
+                        slide: {
+                            path: "slides/example.svs",
+                        },
+                        viewport: {
+                            centre: [120, -80],
+                            zoom: 4,
+                            rotation: 0,
+                        },
+                        overlays: [],
+                        annotations: {
+                            displayMode: "invalid",
+                            property: null,
+                            secondarySelection: null,
+                            colourMap: "viridis",
+                            layers: [],
+                        },
+                        scaleBar: {
+                            enabled: true,
+                            included: true,
+                            colour: "#ffffff",
+                            opacity: 80,
+                            size: "default",
+                            units: "metric",
+                        },
+                    }),
+                ),
+        ).toThrow(
+            "Snapshot metadata does not contain valid annotation settings.",
+        );
+    });
+
+    it("rejects invalid annotation layer state", () => {
+        expect(
+            () =>
+                parseSnapshotMetadata(
+                    JSON.stringify({
+                        version: 1,
+                        slide: {
+                            path: "slides/example.svs",
+                        },
+                        viewport: {
+                            centre: [120, -80],
+                            zoom: 4,
+                            rotation: 0,
+                        },
+                        overlays: [
+                            {
+                                name: "example_overlay",
+                                path: "overlays/example_overlay.db",
+                                visible: true,
+                                opacity: 0.75,
+                                zIndex: 1,
+                                order: 1,
+                            },
+                        ],
+                        annotations: {
+                            displayMode: "type",
+                            property: null,
+                            secondarySelection: null,
+                            colourMap: "viridis",
+                            layers: [
+                                {
+                                    name: "example_overlay",
+                                    types: [
+                                        {
+                                            annotationType: "Example",
+                                            colour: [
+                                                0.2,
+                                                0.4,
+                                                0.6,
+                                                2,
+                                            ],
+                                            visible: true,
+                                            opacity: 1,
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                        scaleBar: {
+                            enabled: true,
+                            included: true,
+                            colour: "#ffffff",
+                            opacity: 80,
+                            size: "default",
+                            units: "metric",
+                        },
+                    }),
+                ),
+        ).toThrow(
+            "Snapshot metadata contains invalid annotation layer state.",
+        );
+    });
+
+    it("rejects an invalid secondary annotation selection", () => {
+        expect(
+            () =>
+                parseSnapshotMetadata(
+                    JSON.stringify({
+                        version: 1,
+                        slide: {
+                            path: "slides/example.svs",
+                        },
+                        viewport: {
+                            centre: [120, -80],
+                            zoom: 4,
+                            rotation: 0,
+                        },
+                        overlays: [
+                            {
+                                name: "example_overlay",
+                                path: "overlays/example_overlay.db",
+                                visible: true,
+                                opacity: 0.75,
+                                zIndex: 1,
+                                order: 1,
+                            },
+                        ],
+                        annotations: {
+                            displayMode: "secondary",
+                            property: "prob",
+                            secondarySelection: {
+                                layerName: "example_overlay",
+                                annotationType: "Missing",
+                            },
+                            colourMap: "magma",
+                            layers: [
+                                {
+                                    name: "example_overlay",
+                                    types: [
+                                        {
+                                            annotationType: "Example",
+                                            colour: [
+                                                0.2,
+                                                0.4,
+                                                0.6,
+                                                1,
+                                            ],
+                                            visible: true,
+                                            opacity: 1,
+                                        },
+                                    ],
+                                },
+                            ],
+                        },
+                        scaleBar: {
+                            enabled: true,
+                            included: true,
+                            colour: "#ffffff",
+                            opacity: 80,
+                            size: "default",
+                            units: "metric",
+                        },
+                    }),
+                ),
+        ).toThrow(
+            "Snapshot metadata contains an invalid secondary annotation selection.",
+        );
+    });
+
+    it("rejects an invalid slide path", () => {
+        expect(
+            () =>
+                parseSnapshotMetadata(
+                    JSON.stringify({
+                        version: 1,
+                        slide: {
+                            path: "",
+                        },
+                        viewport: {
+                            centre: [120, -80],
+                            zoom: 4,
+                            rotation: 0,
+                        },
+                    }),
+                ),
+        ).toThrow(
+            "Snapshot metadata does not contain a valid slide path.",
+        );
+    });
+
+    it("rejects an invalid viewport", () => {
+        expect(
+            () =>
+                parseSnapshotMetadata(
+                    JSON.stringify({
+                        version: 1,
+                        slide: {
+                            path: "slides/example.svs",
+                        },
+                        viewport: {
+                            centre: [120],
+                            zoom: 4,
+                            rotation: 0,
+                        },
+                    }),
+                ),
+        ).toThrow(
+            "Snapshot metadata does not contain a valid viewport.",
+        );
+    });
+
+    it("rejects an invalid overlay", () => {
+        expect(
+            () =>
+                parseSnapshotMetadata(
+                    JSON.stringify({
+                        version: 1,
+                        slide: {
+                            path: "slides/example.svs",
+                        },
+                        viewport: {
+                            centre: [120, -80],
+                            zoom: 4,
+                            rotation: 0,
+                        },
+                        overlays: [
+                            {
+                                name: "example_overlay",
+                                path: "",
+                                visible: true,
+                                opacity: 0.75,
+                                zIndex: 1,
+                                order: 1,
+                            },
+                        ],
+                        scaleBar: {
+                            enabled: true,
+                            included: true,
+                            colour: "#ffffff",
+                            opacity: 80,
+                            size: "default",
+                            units: "metric",
+                        },
+                    }),
+                ),
+        ).toThrow(
+            "Snapshot metadata contains an invalid overlay.",
+        );
+    });
+
+    it("rejects invalid scale bar settings", () => {
+        expect(
+            () =>
+                parseSnapshotMetadata(
+                    JSON.stringify({
+                        version: 1,
+                        slide: {
+                            path: "slides/example.svs",
+                        },
+                        viewport: {
+                            centre: [120, -80],
+                            zoom: 4,
+                            rotation: 0,
+                        },
+                        overlays: [],
+                        scaleBar: {
+                            enabled: true,
+                            included: true,
+                            colour: "#ffffff",
+                            opacity: 80,
+                            size: "default",
+                            units: "invalid",
+                        },
+                    }),
+                ),
+        ).toThrow(
+            "Snapshot metadata does not contain valid scale bar settings.",
+        );
+    });
+
+    it("rejects an invalid scale bar colour", () => {
+        expect(
+            () =>
+                parseSnapshotMetadata(
+                    JSON.stringify({
+                        version: 1,
+                        slide: {
+                            path: "slides/example.svs",
+                        },
+                        viewport: {
+                            centre: [120, -80],
+                            zoom: 4,
+                            rotation: 0,
+                        },
+                        overlays: [],
+                        scaleBar: {
+                            enabled: true,
+                            included: true,
+                            colour: "invalid",
+                            opacity: 80,
+                            size: "default",
+                            units: "metric",
+                        },
+                    }),
+                ),
+        ).toThrow(
+            "Snapshot metadata does not contain valid scale bar settings.",
+        );
+    });
+
+    it("rejects an unsupported scale bar size", () => {
+        expect(
+            () =>
+                parseSnapshotMetadata(
+                    JSON.stringify({
+                        version: 1,
+                        slide: {
+                            path: "slides/example.svs",
+                        },
+                        viewport: {
+                            centre: [120, -80],
+                            zoom: 4,
+                            rotation: 0,
+                        },
+                        overlays: [],
+                        scaleBar: {
+                            enabled: true,
+                            included: true,
+                            colour: "#ffffff",
+                            opacity: 80,
+                            size: "invalid",
+                            units: "metric",
+                        },
+                    }),
+                ),
+        ).toThrow(
+            "Snapshot metadata does not contain valid scale bar settings.",
+        );
+    });
+
+    it("rejects invalid JSON", () => {
+        expect(
+            () => parseSnapshotMetadata("{"),
+        ).toThrow(
+            "Snapshot metadata is not valid JSON.",
+        );
+    });
+
+    it("rejects non-object metadata", () => {
+        for (const json of [
+            "null",
+            "[]",
+            '"snapshot"',
+        ]) {
+            expect(
+                () => parseSnapshotMetadata(json),
+            ).toThrow(
+                "Snapshot metadata must be a JSON object.",
+            );
+        }
+    });
+
+    it("rejects unsupported versions", () => {
+        expect(
+            () =>
+                parseSnapshotMetadata(
+                    JSON.stringify({
+                        version: 2,
+                    }),
+                ),
+        ).toThrow(
+            "Unsupported snapshot metadata version.",
+        );
     });
 });
 

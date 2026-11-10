@@ -57,6 +57,7 @@ import {
     createSnapshotController,
     downloadSnapshot,
     downloadSnapshotMetadata,
+    parseSnapshotMetadata,
 } from "./controls/snapshot.js";
 import {
     createScaleBarController,
@@ -134,6 +135,16 @@ const snapshotScaleBarInput =
 const snapshotMetadataInput =
     document.getElementById(
         "settings-snapshot-metadata",
+    );
+
+const snapshotLoadButton =
+    document.getElementById(
+        "settings-snapshot-load",
+    );
+
+const snapshotFileInput =
+    document.getElementById(
+        "settings-snapshot-file",
     );
 
 const viewerPanel = document.getElementById("viewer-panel");
@@ -423,6 +434,8 @@ if (
     snapshotVisibleInput === null ||
     snapshotScaleBarInput === null ||
     snapshotMetadataInput === null ||
+    snapshotLoadButton === null ||
+    snapshotFileInput === null ||
     viewerPanel === null ||
     viewerPanelToggle === null ||
     layerEditor === null ||
@@ -3065,6 +3078,300 @@ const map = new OlMap({
 
 let scaleLineControl = null;
 
+async function restoreAnnotationSnapshotMetadata(
+    metadata,
+) {
+    const savedLayerNames =
+        new Set(
+            metadata.layers.map(
+                (layer) => layer.name,
+            ),
+        );
+
+    if (
+        savedLayerNames.size !==
+            annotationLayerNames.size ||
+        [...annotationLayerNames].some(
+            (layerName) =>
+                !savedLayerNames.has(layerName),
+        )
+    ) {
+        throw new Error(
+            "Snapshot annotation state does not match the loaded annotation layers.",
+        );
+    }
+
+    for (const layer of metadata.layers) {
+        const annotationTypes =
+            annotationTypesByLayer.get(
+                layer.name,
+            );
+
+        if (annotationTypes === undefined) {
+            throw new Error(
+                `Annotation layer is not available: ${layer.name}`,
+            );
+        }
+
+        const savedTypes =
+            layer.types.map(
+                (annotation) =>
+                    annotation.annotationType,
+            );
+
+        if (
+            annotationTypes.length !==
+                savedTypes.length ||
+            annotationTypes.some(
+                (annotationType) =>
+                    !savedTypes.some(
+                        (savedType) =>
+                            Object.is(
+                                savedType,
+                                annotationType,
+                            ),
+                    ),
+            )
+        ) {
+            throw new Error(
+                `Snapshot annotation types do not match layer: ${layer.name}`,
+            );
+        }
+
+        const colours =
+            new Map(
+                layer.types.map(
+                    (annotation) => [
+                        annotation.annotationType,
+                        [...annotation.colour],
+                    ],
+                ),
+            );
+
+        const visibility =
+            new Map(
+                layer.types.map(
+                    (annotation) => [
+                        annotation.annotationType,
+                        annotation.visible,
+                    ],
+                ),
+            );
+
+        const opacities =
+            new Map(
+                layer.types.map(
+                    (annotation) => [
+                        annotation.annotationType,
+                        annotation.opacity,
+                    ],
+                ),
+            );
+
+        annotationColoursByLayer.set(
+            layer.name,
+            colours,
+        );
+
+        annotationTypeVisibilityByLayer.set(
+            layer.name,
+            visibility,
+        );
+
+        annotationTypeOpacityByLayer.set(
+            layer.name,
+            opacities,
+        );
+
+        await setTileServerAnnotationOpacities(
+            opacities,
+            layer.name,
+        );
+    }
+
+    annotationPalette = "custom";
+    annotationColourMap =
+        metadata.colourMap;
+
+    if (metadata.displayMode === "type") {
+        await setAnnotationTypeMode({
+            refresh: false,
+        });
+    } else if (
+        metadata.displayMode === "property"
+    ) {
+        await setAnnotationPropertyMode(
+            metadata.property,
+            {
+                refresh: false,
+            },
+        );
+    } else {
+        const selection =
+            metadata.secondarySelection;
+
+        await setAnnotationSecondaryMode(
+            selection.layerName,
+            selection.annotationType,
+            metadata.property,
+            {
+                refresh: false,
+            },
+        );
+    }
+
+    refreshAnnotationLayers();
+    annotationsPanelController.render();
+}
+
+async function restoreSnapshotMetadata(metadata) {
+    await switchSlide(
+        metadata.slide.path,
+    );
+
+    const overlays =
+        [...metadata.overlays].sort(
+            (first, second) =>
+                first.order - second.order,
+        );
+
+    for (const overlay of overlays) {
+        await loadOverlay(
+            overlay.path,
+        );
+
+        const layer =
+            overlayLayers[overlay.name];
+
+        if (layer === undefined) {
+            throw new Error(
+                `Loaded overlay could not be found: ${overlay.name}`,
+            );
+        }
+
+        layer.setVisible(
+            overlay.visible,
+        );
+
+        layer.setOpacity(
+            overlay.opacity,
+        );
+
+        layer.setZIndex(
+            overlay.zIndex ?? undefined,
+        );
+    }
+
+    await restoreAnnotationSnapshotMetadata(
+        metadata.annotations,
+    );
+
+    layersPanelController.render();
+
+    scaleBarEnabledInput.checked =
+        metadata.scaleBar.enabled;
+
+    snapshotScaleBarInput.checked =
+        metadata.scaleBar.included;
+
+    scaleBarColourInput.value =
+        metadata.scaleBar.colour;
+
+    scaleBarOpacityInput.value =
+        metadata.scaleBar.opacity.toString();
+
+    scaleBarSizeSelect.value =
+        metadata.scaleBar.size;
+
+    scaleBarUnitsSelect.value =
+        metadata.scaleBar.units;
+
+    scaleBarController.updateSize();
+
+    const view = map.getView();
+
+    view.setCenter(
+        metadata.viewport.centre,
+    );
+
+    view.setZoom(
+        metadata.viewport.zoom,
+    );
+
+    view.setRotation(
+        metadata.viewport.rotation,
+    );
+}
+
+function createAnnotationSnapshotMetadata() {
+    const layers =
+        [...annotationLayerNames].map(
+            (layerName) => {
+                const annotationTypes =
+                    annotationTypesByLayer.get(
+                        layerName,
+                    ) ?? [];
+
+                const colours =
+                    annotationColoursByLayer.get(
+                        layerName,
+                    );
+
+                const visibility =
+                    annotationTypeVisibilityByLayer.get(
+                        layerName,
+                    );
+
+                const opacities =
+                    annotationTypeOpacityByLayer.get(
+                        layerName,
+                    );
+
+                return {
+                    name: layerName,
+                    types:
+                        annotationTypes.map(
+                            (annotationType) => ({
+                                annotationType,
+                                colour: [
+                                    ...(
+                                        colours?.get(
+                                            annotationType,
+                                        ) ??
+                                        [0, 0, 0, 1]
+                                    ),
+                                ],
+                                visible:
+                                    visibility?.get(
+                                        annotationType,
+                                    ) ?? true,
+                                opacity:
+                                    opacities?.get(
+                                        annotationType,
+                                    ) ?? 1,
+                            }),
+                        ),
+                };
+            },
+        );
+
+    return {
+        displayMode:
+            annotationDisplayMode,
+        property:
+            annotationProperty,
+        secondarySelection:
+            annotationSecondarySelection === null
+                ? null
+                : {
+                    ...annotationSecondarySelection,
+                },
+        colourMap:
+            annotationColourMap,
+        layers,
+    };
+}
+
 function createSnapshotMetadata() {
     const view = map.getView();
     const centre = view.getCenter();
@@ -3094,6 +3401,7 @@ function createSnapshotMetadata() {
             );
 
     return {
+        version: 1,
         url: window.location.href,
 
         slide: {
@@ -3113,11 +3421,13 @@ function createSnapshotMetadata() {
 
         overlays,
 
+        annotations:
+            createAnnotationSnapshotMetadata(),
+
         scaleBar: {
             enabled:
                 scaleBarEnabledInput.checked,
             included:
-                scaleBarEnabledInput.checked &&
                 snapshotScaleBarInput.checked,
             colour:
                 scaleBarColourInput.value,
@@ -3172,6 +3482,45 @@ const snapshotController =
             }
         },
     });
+
+snapshotLoadButton.addEventListener(
+    "click",
+    () => {
+        snapshotFileInput.click();
+    },
+);
+
+snapshotFileInput.addEventListener(
+    "change",
+    async () => {
+        const file =
+            snapshotFileInput.files?.[0];
+
+        if (file === undefined) {
+            return;
+        }
+
+        snapshotLoadButton.disabled = true;
+
+        try {
+            const metadata =
+                parseSnapshotMetadata(
+                    await file.text(),
+                );
+
+            await restoreSnapshotMetadata(
+                metadata,
+            );
+        } catch (error) {
+            console.error(
+                "Failed to load snapshot metadata.",
+                error,
+            );
+        } finally {
+            snapshotFileInput.value = "";
+        }
+    },
+);
 
 const loadingIndicatorController =
     createLoadingIndicatorController({
