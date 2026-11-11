@@ -16,7 +16,8 @@ optimizer and PyTorch ``DataLoader`` objects. The package provides:
   checkpoints.
 - **Export**: ``ModelExport`` writes a ``model_config.yaml`` next to the
   weights, and ``load_trained_model`` rebuilds the model and its IO
-  configuration for an inference engine.
+  configuration for an inference engine, re-using tiatoolbox machinery for loading
+  its packaged pre-trained models.
 
 Three example notebooks walk through complete runs:
 
@@ -255,9 +256,7 @@ Crops and zooms are dataset arguments, because each dataset has its own way of
 keeping targets aligned:
 
 - ``scale_jitter=0.1`` zooms half the patches by a factor between 0.9 and 1.1.
-  The range is centred on one, so the scale seen in training stays unbiased;
-  a zoom that only magnifies trains at a finer scale than inference sees and
-  did worse than no zoom at all.
+  The range is centred on one, so the scale seen in training stays unbiased.
 - ``crop_size=224`` trains on random crops of that size, which also give the
   zoom room: a crop of 224 in a 256-pixel patch zooms by 10% without padding.
 
@@ -278,7 +277,7 @@ keeping targets aligned:
      - A larger or smaller window around the patch is read, and the target is
        built for it, so zooming out never pads.
 
-Zooming out pads images with white and spatial targets with ``target_fill``. To
+Zooming out pads images with white and spatial targets with ``target_fill`` if needed. To
 keep padded pixels out of the loss, pass ``target_fill=task.ignore_index``,
 which every head of a task then ignores. The value must fit each target's dtype,
 so uint8 masks need an ignore value such as 255, with the task's
@@ -341,7 +340,7 @@ is used as it is. When a model returns several outputs, ``output_key`` selects
 one: a dictionary key, a sequence index (``output_key=0`` for a model returning
 its main output before auxiliary ones), or a tuple path of them through nested
 containers. Without one, a dense head reads the dictionary entry named after it,
-and any other output raises an error rather than guessing. ``channel_slice``
+and any other output raises an error. ``channel_slice``
 then selects channels of the output.
 
 .. list-table:: Batched shapes
@@ -487,7 +486,7 @@ disks and Gaussian heatmaps at annotation centroids, presence labels, the
 class with the largest coverage, and multi-label coverage vectors. Two builders
 combine others:
 
-- ``CompositeTargetBuilder`` returns a dictionary of named targets.
+- ``CompositeTargetBuilder`` returns a dictionary of named targets (useful for multi-head models).
 - ``StackedTargetBuilder`` stacks channels of the same size into one array.
 
 Query options (``where``, ``geometry_predicate``, ``min_area`` and
@@ -587,9 +586,7 @@ The trainer writes its files to ``output_dir`` (default ``training_output``):
 - ``model_config.yaml``: written when the trainer has a ``ModelExport``; see
   below.
 
-``save_last=False`` and ``save_best=False`` turn either checkpoint off. Files
-are written atomically, so an interrupted write never leaves a corrupt
-checkpoint.
+``save_last=False`` and ``save_best=False`` turn either checkpoint off.
 
 ``trainer.fit(resume_from="run/last.ckpt")`` continues from the next epoch.
 Build the model, task, optimizer, scheduler and loaders as for the original

@@ -69,4 +69,10 @@ jobs:
           tiatoolbox/wsicore/metadata/ \
           tiatoolbox/wsicore/wsireader/factory.py \
           tiatoolbox/wsicore/wsireader/detection.py \
-          tiatoolbox/wsicore/wsireader/types.py
+          tiatoolbox/wsicore/wsireader/types.py \
+          tiatoolbox/wsicore/wsireader/__init__.py \
+          tiatoolbox/wsicore/wsireader/jp2.py \
+          tiatoolbox/wsicore/wsireader/dicom.py \
+          tiatoolbox/wsicore/wsireader/ngff.py \
+          tiatoolbox/wsicore/wsireader/annotation_store.py \
+          tiatoolbox/wsicore/wsireader/transformed.py

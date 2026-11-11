@@ -79,7 +79,14 @@ class AnnotationStoreReader(WSIReader):
         if info is None:
             # try to get metadata from store
             try:
-                info = WSIMeta(**json.loads(self.store.metadata["wsi_meta"]))
+                if not isinstance(self.store, SQLiteStore):
+                    msg = "Metadata is only available on an SQLite annotation store."
+                    raise TypeError(msg)
+                wsi_meta = self.store.metadata["wsi_meta"]
+                if not isinstance(wsi_meta, str):
+                    msg = "Stored wsi_meta must be a JSON string."
+                    raise TypeError(msg)
+                info = WSIMeta(**json.loads(wsi_meta))
             except KeyError as exc:
                 if self.base_wsi is not None:
                     # get the metadata from the base reader.

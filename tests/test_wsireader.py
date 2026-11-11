@@ -32,7 +32,7 @@ from skimage.registration import phase_cross_correlation
 from wsidicom import WsiDicom
 
 from tiatoolbox import cli, utils
-from tiatoolbox.annotation import SQLiteStore
+from tiatoolbox.annotation import DictionaryStore, SQLiteStore
 from tiatoolbox.utils import env_detection as toolbox_env
 from tiatoolbox.utils import imread, tiff_to_fsspec
 from tiatoolbox.utils.exceptions import FileNotSupportedError
@@ -2360,6 +2360,22 @@ def test_store_reader_no_types(track_tmp_path: Path, remote_sample: Callable) ->
         assert reader.renderer.score_prop is None
 
 
+def test_store_reader_rejects_non_sqlite_store() -> None:
+    """Test AnnotationStoreReader rejects metadata lookup on a non-SQLite store."""
+    with pytest.raises(
+        TypeError, match="Metadata is only available on an SQLite annotation store"
+    ):
+        AnnotationStoreReader(DictionaryStore())
+
+
+def test_store_reader_rejects_non_string_wsi_meta(track_tmp_path: Path) -> None:
+    """Test AnnotationStoreReader rejects wsi_meta that is not a JSON string."""
+    store = SQLiteStore(track_tmp_path / "store.db")
+    store.metadata["wsi_meta"] = {"slide_dimensions": [1, 1]}
+    with pytest.raises(TypeError, match="Stored wsi_meta must be a JSON string"):
+        AnnotationStoreReader(store)
+
+
 def test_store_reader_info_from_base(
     track_tmp_path: Path, remote_sample: Callable
 ) -> None:
@@ -3366,6 +3382,17 @@ def test_read_dicom_with_metadata(remote_sample: Callable) -> None:
     # Assert objective power inferred from mpp.
     assert np.all(wsi.info.mpp == np.array([0.2498, 0.2498]))
     assert wsi.info.objective_power == 40.0
+
+
+def test_transformed_reader_df_without_inverse(sample_svs: Path) -> None:
+    """Test displacement lookup before the inverse reader is initialized."""
+    wsi = transformed.TransformedWSIReader(
+        sample_svs, target_img=sample_svs, transform=np.eye(3)
+    )
+    with pytest.raises(
+        ValueError, match="Inverse displacement reader has not been initialized"
+    ):
+        wsi.get_transformed_location_df((0, 0), (1, 1), 0)
 
 
 def test_read_rect_transformedreader_svs_baseline(
