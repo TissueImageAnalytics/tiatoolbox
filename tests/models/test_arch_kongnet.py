@@ -340,14 +340,14 @@ def test_kongnet_extract_component_maps_requires_full_head_output() -> None:
 
 
 def test_kongnet_postproc_instance_class_maps() -> None:
-    """KongNet should build deterministic CoNIC-style maps from full-head output."""
+    """KongNet should build deterministic instance outputs from full-head output."""
     model = KongNet(
         num_heads=2,
         num_channels_per_head=[3, 3],
         target_channels=[2, 5],
         min_distance=4,
         threshold_abs=0.35,
-        class_dict={1: "Tumour", 2: "Lymphocyte"},
+        class_dict={0: "Tumour", 1: "Lymphocyte"},
     )
 
     logits = np.full((6, 64, 64), -8.0, dtype=np.float32)
@@ -374,17 +374,11 @@ def test_kongnet_postproc_instance_class_maps() -> None:
 
     assert isinstance(result, KongNetInstancePostProcResult)
     assert result.instance_map.shape == (64, 64)
-    assert result.class_map.shape == (64, 64)
-    assert result.conic_map.shape == (64, 64, 2)
     assert set(np.unique(result.instance_map)) == {0, 1, 2}
-    assert result.class_map[20, 18] == 1
-    assert result.class_map[20, 46] == 2
-    assert result.instance_map[20, 18] != 0
-    assert result.instance_map[20, 46] != 0
-    assert result.marker_map[20, 18] != 0
-    assert result.marker_map[20, 46] != 0
     assert np.count_nonzero(result.peak_map) == 2
-    assert result.instance_classes == {1: 1, 2: 2}
+    # Class ids are head indices, the keys of ``class_dict``.
+    assert result.instance_classes[int(result.instance_map[20, 18])] == 0
+    assert result.instance_classes[int(result.instance_map[20, 46])] == 1
 
 
 @pytest.mark.parametrize("class_assignment", ["mean_mask", "seed"])
@@ -413,10 +407,12 @@ def test_kongnet_instance_outputs_match_full_tile_reference(
     assert len(info["type"]) == len(result.instance_classes) == 4
     for position, (instance_id, class_id) in enumerate(result.instance_classes.items()):
         pixels = result.instance_map == instance_id
-        assert np.all(result.class_map[pixels] == class_id)
-        assert np.all(pixels[result.marker_map == instance_id])
+        assert info["type"][position] == class_id
         if class_assignment == "mean_mask":
-            assert class_id == 1 + int(np.argmax(mask[pixels].mean(axis=0)))
+            assert class_id == int(np.argmax(mask[pixels].mean(axis=0)))
+        else:
+            seed = np.max(centroid[pixels], axis=0)
+            assert class_id == int(np.argmax(seed))
         rows, cols = np.nonzero(pixels)
         expected_box = [cols.min() + 5, rows.min() + 7, cols.max() + 6, rows.max() + 8]
         np.testing.assert_array_equal(info["box"][position], expected_box)
@@ -434,7 +430,7 @@ def test_kongnet_segmentor_postproc_returns_engine_task_dict() -> None:
         target_channels=[2, 5],
         min_distance=4,
         threshold_abs=0.35,
-        class_dict={1: "Tumour", 2: "Lymphocyte"},
+        class_dict={0: "Tumour", 1: "Lymphocyte"},
     )
 
     raw = np.zeros((64, 64, 6), dtype=np.float32)
@@ -461,7 +457,8 @@ def test_kongnet_segmentor_postproc_returns_engine_task_dict() -> None:
     info_dict = task_output["info_dict"]
     assert set(info_dict) == {"box", "centroid", "contours", "prob", "type"}
     assert len(info_dict["contours"]) == 2
-    assert set(info_dict["type"].tolist()) == {1, 2}
+    assert set(info_dict["type"].tolist()) == {0, 1}
+    assert all(int(key) in model.class_dict for key in info_dict["type"])
     assert np.all(info_dict["box"][:, 0] >= 10)
     assert np.all(info_dict["box"][:, 1] >= 20)
 
@@ -474,7 +471,7 @@ def test_kongnet_segmentor_postproc_handles_empty_tile() -> None:
         target_channels=[2, 5],
         min_distance=4,
         threshold_abs=0.35,
-        class_dict={1: "Tumour", 2: "Lymphocyte"},
+        class_dict={0: "Tumour", 1: "Lymphocyte"},
     )
 
     output = model.postproc(
@@ -534,7 +531,7 @@ def test_kongnet_info_dict_prob_follows_seed_across_classes() -> None:
         threshold_abs=0.3,
     )
     info = _kongnet_instance_result_to_info_dict(result)
-    assert info["type"].tolist() == [2]
+    assert info["type"].tolist() == [1]
     assert info["prob"].tolist() == pytest.approx([0.8])
 
 
@@ -728,6 +725,8 @@ def test_kongnet_wsi_inference(remote_sample: Callable, track_tmp_path: Path) ->
     assert Path(annotation_store_path).exists()
     store = SQLiteStore.open(annotation_store_path)
     assert 900 < len(store) < 1100
+    # The next run overwrites this file, which Windows refuses while it is open.
+    store.close()
 
     detector = NucleusDetector(model="KongNet_Det_MIDOG_1")
     out = detector.run(
@@ -746,6 +745,7 @@ def test_kongnet_wsi_inference(remote_sample: Callable, track_tmp_path: Path) ->
     assert Path(annotation_store_path).exists()
     store = SQLiteStore.open(annotation_store_path)
     assert len(store) == 0
+    store.close()
 
 
 @pytest.mark.parametrize("component", ["mask", "boundary", "centroid"])
@@ -760,9 +760,6 @@ def test_invalid_component_map_shapes(component: str) -> None:
 @pytest.mark.parametrize(
     ("kwargs", "message"),
     [
-        ({"class_ids": [1]}, "one positive class id per"),
-        ({"class_ids": [1, 1]}, "unique positive integers"),
-        ({"class_ids": [0, 2]}, "unique positive integers"),
         ({"mask_threshold": 0}, "mask_threshold"),
         ({"mask_threshold": 1.1}, "mask_threshold"),
         ({"min_distance": 0}, "min_distance"),
@@ -770,7 +767,7 @@ def test_invalid_component_map_shapes(component: str) -> None:
     ],
 )
 def test_invalid_instance_postproc_options(kwargs: dict, message: str) -> None:
-    """Instance postprocessing validates class IDs and numerical settings."""
+    """Instance postprocessing validates its numerical settings."""
     empty = np.zeros((8, 8, 2), np.float32)
     with pytest.raises(ValueError, match=message):
         kongnet_instance_postproc(
@@ -787,9 +784,8 @@ def test_no_centroid_seeds_returns_empty_instances() -> None:
     result = kongnet_instance_postproc(maps, min_distance=2, threshold_abs=0.5)
     assert maps.shape == (8, 8, 2)
     assert result.instance_classes == {}
-    assert result.foreground_mask.all()
-    np.testing.assert_array_equal(result.conic_map, np.zeros((8, 8, 2)))
-    np.testing.assert_array_equal(result.marker_map, np.zeros((8, 8)))
+    np.testing.assert_array_equal(result.instance_map, np.zeros((8, 8)))
+    np.testing.assert_array_equal(result.peak_map, np.zeros((8, 8, 2)))
 
 
 def test_component_maps_accept_grad_enabled_tensors() -> None:
@@ -825,26 +821,13 @@ def test_component_maps_require_all_three_components() -> None:
 def test_duplicate_target_channels_are_rejected() -> None:
     """Duplicate inference channels must not create ambiguous output metadata."""
     with pytest.raises(ValueError, match="duplicate indices"):
-        KongNet._build_training_output_spec(
-            num_channels_per_head=[3], target_channels=[2, 2], class_dict=None
+        KongNet(
+            min_distance=2,
+            threshold_abs=0.5,
+            num_heads=1,
+            num_channels_per_head=[3],
+            target_channels=[2, 2],
         )
-
-
-@pytest.mark.parametrize(
-    ("class_dict", "names"),
-    [
-        ({1: "Cell", 2: "Cell"}, ["cell", "cell_1"]),
-        ({1: "Unmatched"}, ["head_0", "head_1"]),
-    ],
-)
-def test_head_names_are_unique_and_fall_back(
-    class_dict: dict, names: list[str]
-) -> None:
-    """Duplicate labels are disambiguated and incompatible mappings use head names."""
-    specs = KongNet._build_training_output_spec(
-        num_channels_per_head=[3, 3], target_channels=[2, 5], class_dict=class_dict
-    )
-    assert [head.name for head in specs] == names
 
 
 def test_segmentor_requires_one_map_per_head() -> None:

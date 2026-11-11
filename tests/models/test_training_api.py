@@ -19,7 +19,6 @@ from tiatoolbox.models.dataset import predefined_preproc_func
 from tiatoolbox.models.dataset.dataset_abc import PatchDataset
 from tiatoolbox.models.models_abc import ModelABC, load_model_state_dict
 from tiatoolbox.models.training import (
-    CheckpointConfig,
     ClassificationTask,
     DenseHeadSpec,
     ModelExport,
@@ -29,8 +28,7 @@ from tiatoolbox.models.training import (
     StructuredDenseTask,
     Trainer,
     TrainerConfig,
-    get_classification_augmentation,
-    get_segmentation_augmentation,
+    get_augmentation,
     load_trained_model,
     split_indices,
 )
@@ -117,6 +115,8 @@ def test_callable_losses_preserve_accumulated_updates(
             torch.optim.SGD(candidate.parameters(), lr=0.1),
             DataLoader(dataset, batch_size=batch_size),
             config=TrainerConfig(
+                save_best=False,
+                save_last=False,
                 device="cpu",
                 amp=False,
                 grad_accum_steps=accumulation,
@@ -124,7 +124,6 @@ def test_callable_losses_preserve_accumulated_updates(
                 output_dir=tmp_path / str(batch_size),
                 log_every_n_steps=0,
             ),
-            checkpoint_config=CheckpointConfig(save_last=False, save_best=False),
         )
         row = trainer.fit()[0]
         results.append((candidate, {k: v for k, v in row.items() if k != "epoch_time"}))
@@ -146,7 +145,9 @@ def test_callable_weighted_mean_and_safe_targets() -> None:
         ce = functional.cross_entropy(logits, targets, reduction="none")
         return (1 - torch.exp(-ce)).square() * ce
 
-    task = ClassificationTask(loss=focal, target_mode="single_label", ignore_index=-7)
+    task = ClassificationTask(
+        loss=focal, target_mode="single_label", ignore_index=-7, output_key="out"
+    )
     loss = task.compute_loss({"out": logits}, targets)
     expected = focal(logits[[0, 2]], targets[[0, 2]]).mean()
     torch.testing.assert_close(loss, expected)
@@ -335,13 +336,14 @@ def test_trainer_history_records_lr_epoch_time_and_runs_callbacks(
         val_loader=DataLoader(data, batch_size=4),
         scheduler=torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.5),
         config=TrainerConfig(
+            save_best=False,
+            save_last=False,
             max_epochs=2,
             device="cpu",
             amp=False,
             output_dir=tmp_path,
             log_every_n_steps=0,
         ),
-        checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
         callbacks=[lambda owner, metrics: seen.append((owner, metrics))],
     )
     history = trainer.fit()
@@ -471,7 +473,7 @@ def test_trainer_warns_when_dataset_preproc_differs(
 
 def test_presets_are_seeded_pair_transforms() -> None:
     """A preset applies geometry then appearance and replays per-sample seeds."""
-    preset = get_segmentation_augmentation("heavy")
+    preset = get_augmentation("heavy")
     image = np.random.default_rng(1).integers(0, 255, (16, 16, 3), dtype=np.uint8)
     mask = np.zeros((16, 16), dtype=np.int64)
     mask[:4] = 1
@@ -493,7 +495,7 @@ def test_with_transforms_shares_the_index_but_not_runtime_state(
         (tmp_path / label).mkdir()
         Image.fromarray(np.ones((4, 4, 3), np.uint8)).save(tmp_path / label / "x.png")
     base = PatchFolderClassificationDataset(tmp_path, image_transform=np.negative)
-    copy_ = base.with_transforms(pair_transform=get_classification_augmentation())
+    copy_ = base.with_transforms(pair_transform=get_augmentation())
     assert copy_.samples is base.samples
     assert copy_.image_transform is base.image_transform  # `...` keeps a stage
     assert base.pair_transform is None

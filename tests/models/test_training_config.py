@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 import torch
 
-from tiatoolbox.models.training import CheckpointConfig, TrainerConfig
+from tiatoolbox.models.training import TrainerConfig
 from tiatoolbox.models.training.config import (
     resolve_trainer_amp,
     resolve_trainer_device,
@@ -41,7 +41,7 @@ def test_invalid_amp_option() -> None:
 def test_invalid_checkpoint_interval(interval: int) -> None:
     """Checkpoint intervals must be positive."""
     with pytest.raises(ValueError, match="save_last_every"):
-        CheckpointConfig(save_last_every=interval)
+        TrainerConfig(save_last_every=interval)
 
 
 @pytest.mark.parametrize("available", [False, True])

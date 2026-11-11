@@ -11,7 +11,6 @@ import yaml
 from torch import nn
 from torch.nn import functional
 from torch.utils.data import DataLoader
-from torchvision.transforms import v2
 
 import tiatoolbox.models.training.augmentations as training_augmentations
 from tiatoolbox.models.architecture.kongnet import KongNet
@@ -24,25 +23,17 @@ from tiatoolbox.models.models_abc import (
     load_torch_model,
 )
 from tiatoolbox.models.training import (
-    BinaryDiskTargetBuilder,
-    CheckpointConfig,
     ClassificationTask,
-    CompositeTargetBuilder,
     DenseHeadSpec,
-    GaussianHeatmapTargetBuilder,
-    MaskTargetBuilder,
     ModelExport,
     PatchFolderClassificationDataset,
     PatchMaskPairDataset,
-    PresenceTargetBuilder,
     SegmentationTask,
-    StackedTargetBuilder,
     StructuredDenseTask,
     Trainer,
     TrainerConfig,
-    get_annotation_augmentation,
-    get_classification_augmentation,
-    get_segmentation_augmentation,
+    TrainingAugmentationPreset,
+    get_augmentation,
     load_trained_model,
     split_indices,
 )
@@ -377,77 +368,43 @@ def test_patch_mask_pair_dataset_raises_on_duplicate_relative_keys(
         _ = PatchMaskPairDataset(image_dir=image_dir, mask_dir=mask_dir)
 
 
-def test_classification_augmentation_preset_returns_image_transform() -> None:
-    """Classification presets should expose an image-only dataset transform."""
-    preset = get_classification_augmentation("light")
-    image = np.full((16, 16, 3), fill_value=128, dtype=np.uint8)
+def test_preset_moves_images_and_keeps_scalar_labels() -> None:
+    """Scalar labels need no declaration: images move and the label stays."""
+    image = np.random.default_rng(1).integers(0, 200, (16, 16, 3), dtype=np.uint8)
+    preset = get_augmentation("light")
+    outcomes = set()
+    for seed in range(16):
+        preset.set_random_seed(seed)
+        transformed, label = preset(image, 3)
+        assert transformed.shape == image.shape
+        assert label == 3
+        outcomes.add(transformed.tobytes())
+    assert len(outcomes) > 1
 
-    transformed = preset.image_transform(image)
 
-    assert preset.image_transform is not None
-    assert preset.pair_transform is None
-    assert transformed.shape == image.shape
-
-
-def test_segmentation_augmentation_preset_splits_pair_and_image_transforms() -> None:
-    """Segmentation presets should separate paired geometry from image effects."""
-    preset = get_segmentation_augmentation("light")
+def test_preset_moves_masks_with_their_values() -> None:
+    """Masks move whole, so their labels are exact."""
+    preset = get_augmentation("light")
     image = np.full((16, 16, 3), fill_value=128, dtype=np.uint8)
     mask = np.zeros((16, 16), dtype=np.uint8)
     mask[:, :8] = 1
 
-    transformed_image, transformed_mask = preset.pair_transform(image, mask)
-    transformed_image = preset.image_transform(transformed_image)
+    transformed_image, transformed_mask = preset(image, mask)
 
-    assert preset.pair_transform is not None
-    assert preset.image_transform is not None
     assert transformed_image.shape == image.shape
     assert transformed_mask.shape == mask.shape
     assert set(np.unique(transformed_mask)).issubset({0, 1})
+    assert transformed_mask.sum() == mask.sum()
 
 
-def test_annotation_augmentation_preset_uses_pair_transform_for_masks() -> None:
-    """Annotation presets should only enable paired geometry for spatial targets."""
-    spatial_preset = get_annotation_augmentation(
-        "light",
-        target_builder=MaskTargetBuilder(class_mapping={"tumor": 1}),
-    )
-    scalar_preset = get_annotation_augmentation(
-        "light",
-        target_builder=PresenceTargetBuilder(),
-    )
-
-    assert spatial_preset.pair_transform is not None
-    assert spatial_preset.image_transform is not None
-    assert scalar_preset.pair_transform is None
-    assert scalar_preset.image_transform is not None
-
-
-def test_annotation_augmentation_preset_supports_structured_spatial_targets(
+def test_preset_supports_structured_spatial_targets(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Structured spatial leaves should share geometry while scalars stay fixed."""
     monkeypatch.setattr(
-        training_augmentations,
-        "_geometric_ops",
-        lambda **_kwargs: [v2.RandomHorizontalFlip(p=1.0)],
+        training_augmentations, "_draw_moves", lambda _shape: (True, False, 0)
     )
-
-    preset = get_annotation_augmentation(
-        "light",
-        target_builder=CompositeTargetBuilder(
-            {
-                "mask": MaskTargetBuilder(class_mapping={"tumor": 1}),
-                "signals": CompositeTargetBuilder(
-                    {
-                        "disk": BinaryDiskTargetBuilder(radius=1),
-                        "heatmap": GaussianHeatmapTargetBuilder(sigma=1.0),
-                    },
-                ),
-                "presence": PresenceTargetBuilder(),
-            },
-        ),
-    )
+    preset = TrainingAugmentationPreset(nn.Identity())
 
     image = np.arange(3 * 4 * 3, dtype=np.uint8).reshape(3, 4, 3)
     target = {
@@ -480,9 +437,8 @@ def test_annotation_augmentation_preset_supports_structured_spatial_targets(
         "presence": 1,
     }
 
-    transformed_image, transformed_target = preset.pair_transform(image, target)
+    transformed_image, transformed_target = preset(image, target)
 
-    assert preset.pair_transform is not None
     assert np.array_equal(transformed_image, np.fliplr(image))
     assert np.array_equal(transformed_target["mask"], np.fliplr(target["mask"]))
     assert np.array_equal(
@@ -496,72 +452,11 @@ def test_annotation_augmentation_preset_supports_structured_spatial_targets(
     assert transformed_target["presence"] == 1
 
 
-def test_annotation_augmentation_preset_splits_mixed_stacked_targets(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Mixed stacked masks and heatmaps should use per-channel interpolation."""
-    monkeypatch.setattr(
-        training_augmentations,
-        "_geometric_ops",
-        lambda **_kwargs: [training_augmentations._TrainingAffine(degrees=(15, 15))],
-    )
-
-    target_builder = CompositeTargetBuilder(
-        {
-            "tumor": StackedTargetBuilder(
-                {
-                    "mask": MaskTargetBuilder(class_mapping=None),
-                    "centroid": GaussianHeatmapTargetBuilder(sigma=1.0),
-                }
-            ),
-            "presence": PresenceTargetBuilder(),
-        }
-    )
-    preset = get_annotation_augmentation("medium", target_builder=target_builder)
-
-    image = np.zeros((32, 32, 3), dtype=np.uint8)
-    square = np.zeros((32, 32), dtype=np.float32)
-    square[8:24, 8:24] = 1.0
-    target = {
-        "tumor": np.stack([square, square], axis=-1),
-        "presence": 1,
-    }
-
-    transformed_image, transformed_target = preset.pair_transform(image, target)
-    transformed_stack = transformed_target["tumor"]
-    mask_channel = transformed_stack[..., 0]
-    heatmap_channel = transformed_stack[..., 1]
-
-    assert preset.pair_transform is not None
-    assert transformed_image.shape == image.shape
-    assert transformed_stack.shape == target["tumor"].shape
-    assert set(np.unique(mask_channel)).issubset({0.0, 1.0})
-    assert np.any((heatmap_channel > 0.0) & (heatmap_channel < 1.0))
-    assert transformed_target["presence"] == 1
-
-
-def test_augmentation_presets_construct_for_all_levels() -> None:
-    """All preset levels should construct without error."""
-    for level in ("light", "medium", "heavy", "strong"):
-        assert get_classification_augmentation(level).image_transform is not None
-        assert get_segmentation_augmentation(level).pair_transform is not None
-        assert (
-            get_annotation_augmentation(
-                level,
-                target_builder=MaskTargetBuilder(class_mapping={"tumor": 1}),
-            ).pair_transform
-            is not None
-        )
-
-
 def test_binary_bce_classification_task_supports_vector_and_column_logits() -> None:
     """Binary BCE classification should support `(N,)` and `(N, 1)` logits."""
     targets = torch.tensor([1, 0, 1, 0], dtype=torch.long)
 
-    vector_task = ClassificationTask(
-        loss="bce_with_logits",
-        target_mode="binary",
-    )
+    vector_task = ClassificationTask(loss="bce_with_logits")
     vector_logits = torch.tensor([6.0, -6.0, 6.0, -6.0], dtype=torch.float32)
     vector_loss = vector_task.compute_loss(vector_logits, targets)
     vector_metrics = vector_task.compute_metrics(vector_logits, targets)
@@ -581,10 +476,7 @@ def test_binary_bce_classification_task_supports_vector_and_column_logits() -> N
 
 def test_multilabel_bce_classification_task_supports_multilabel_targets() -> None:
     """Multi-label BCE classification should compute loss and metrics end-to-end."""
-    task = ClassificationTask(
-        loss="bce_with_logits",
-        target_mode="multi_label",
-    )
+    task = ClassificationTask(loss="bce_with_logits")
     logits = torch.tensor(
         [[6.0, -6.0, 6.0], [-6.0, 6.0, -6.0]],
         dtype=torch.float32,
@@ -615,11 +507,7 @@ def test_classification_task_metrics_respect_ignore_index() -> None:
     assert single_label_metrics["accuracy"] == pytest.approx(1.0)
     assert single_label_metrics["f1"] == pytest.approx(1.0)
 
-    multilabel_task = ClassificationTask(
-        loss="bce_with_logits",
-        target_mode="multi_label",
-        ignore_index=-100,
-    )
+    multilabel_task = ClassificationTask(loss="bce_with_logits", ignore_index=-100)
     multilabel_logits = torch.tensor(
         [[6.0, -6.0], [-6.0, 6.0]],
         dtype=torch.float32,
@@ -650,13 +538,7 @@ def test_classification_task_reports_common_shape_mismatches() -> None:
 
 
 def test_classification_task_validation_for_target_modes() -> None:
-    """Classification tasks should enforce compatible loss/target-mode pairs."""
-    task = ClassificationTask(
-        loss="bce_with_logits",
-        target_mode="multi_label",
-    )
-    assert isinstance(task, ClassificationTask)
-
+    """Named losses fix the target mode; callable losses must state theirs."""
     callable_binary_task = ClassificationTask(
         loss=nn.BCEWithLogitsLoss(reduction="none"),
         target_mode="binary",
@@ -666,18 +548,10 @@ def test_classification_task_validation_for_target_modes() -> None:
     with pytest.raises(ValueError, match="Unsupported classification loss `auto`"):
         _ = ClassificationTask(loss="auto")
 
-    for target_mode in ("binary", "multi_label"):
-        with pytest.raises(ValueError, match="requires `loss='bce_with_logits'`"):
-            _ = ClassificationTask(loss="cross_entropy", target_mode=target_mode)
-
-    with pytest.raises(
-        ValueError,
-        match="does not support single-label targets",
-    ):
-        _ = ClassificationTask(
-            loss="bce_with_logits",
-            target_mode="single_label",
-        )
+    for loss in ("cross_entropy", "bce_with_logits"):
+        for target_mode in ("single_label", "binary", "multi_label"):
+            with pytest.raises(ValueError, match="only for callable losses"):
+                _ = ClassificationTask(loss=loss, target_mode=target_mode)
 
 
 def test_trainer_export_rebuilds_a_registry_style_model(
@@ -764,7 +638,7 @@ def test_trainer_rejects_a_classifier_head_that_disagrees_with_the_task(
     with pytest.raises(ValueError, match="Build the model with output_mode='multi"):
         build(
             softmax_head,
-            ClassificationTask(loss="bce_with_logits", target_mode="multi_label"),
+            ClassificationTask(loss="bce_with_logits"),
         )
     one_output = CNNModel("resnet18", num_classes=1)
     with pytest.raises(ValueError, match="Build the model with output_mode='single"):
@@ -773,22 +647,26 @@ def test_trainer_rejects_a_classifier_head_that_disagrees_with_the_task(
     multi_label = CNNModel("resnet18", num_classes=2, output_mode="multi_label")
     task = ClassificationTask(loss="bce_with_logits")
     build(multi_label, task)
-    kwargs = {"backbone": "resnet18", "num_classes": 2}
-    with pytest.raises(ValueError, match="Record the trained head"):
-        build(multi_label, task, ModelExport(model_kwargs=kwargs))
-    with pytest.raises(ValueError, match="cannot rebuild CNNModel"):
-        build(
-            multi_label,
-            task,
-            ModelExport(model_kwargs={**kwargs, "output_mode": "binary"}),
-        )
-    with pytest.raises(ValueError, match="Record the trained head"):
-        ModelExport(model_kwargs={**kwargs, "num_classes": 3}).check_model(multi_label)
-    build(
-        multi_label,
-        task,
-        ModelExport(model_kwargs={**kwargs, "output_mode": "multi_label"}),
+
+
+def test_export_records_the_classifier_head_from_the_model(
+    track_tmp_path: Path,
+) -> None:
+    """Heads rebuild from the model itself, whatever ``model_kwargs`` says."""
+    weights = track_tmp_path / "weights.pth"
+    for output_mode, num_classes in (("multi_label", 2), ("binary", 1)):
+        model = CNNModel("resnet18", num_classes=num_classes, output_mode=output_mode)
+        save_model_weights(model, weights)
+        path = ModelExport(
+            model_kwargs={"backbone": "resnet18", "num_classes": 7}
+        ).save(track_tmp_path / "config.yaml", model, weights)
+        loaded, _ = load_trained_model(path)
+        assert loaded.num_classes == num_classes
+        assert loaded.output_mode == output_mode
+    other = ModelExport(model_kwargs={"num_classes": 2}).to_config(
+        nn.Linear(2, 2), weights
     )
+    assert other["architecture"]["kwargs"] == {"num_classes": 2}
 
 
 def test_binary_classifier_trains_exports_and_infers_probabilities(
@@ -808,7 +686,7 @@ def test_binary_classifier_trains_exports_and_infers_probabilities(
         config=TrainerConfig(
             max_epochs=1, output_dir=output_dir, amp=False, log_every_n_steps=0
         ),
-        export=ModelExport(model_kwargs={"backbone": "resnet18", "num_classes": 1}),
+        export=ModelExport(model_kwargs={"backbone": "resnet18"}),
     ).fit()
 
     loaded, _ = load_trained_model(output_dir)
@@ -976,7 +854,6 @@ def test_structured_dense_task_supports_weighted_multi_head_tensor_outputs() -> 
             DenseHeadSpec(
                 name="auxiliary",
                 loss="mse",
-                target_mode="regression",
                 target_key="auxiliary",
                 channel_slice=2,
                 loss_weight=0.5,
@@ -1222,12 +1099,13 @@ def test_trainer_supports_structured_targets_and_epoch_hooks(
         train_loader=train_loader,
         val_loader=val_loader,
         config=TrainerConfig(
+            save_best=False,
+            save_last=False,
             max_epochs=1,
             amp=False,
             output_dir=track_tmp_path / "structured_targets",
             log_every_n_steps=0,
         ),
-        checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
     )
 
     history = trainer.fit()
@@ -1266,10 +1144,11 @@ def test_trainer_uses_auto_device_and_amp_defaults(track_tmp_path: Path) -> None
         train_loader=loader,
         val_loader=loader,
         config=TrainerConfig(
+            save_best=False,
+            save_last=False,
             max_epochs=1,
             output_dir=track_tmp_path / "auto_config",
         ),
-        checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
     )
 
     assert trainer.device.type in {"cpu", "cuda"}
@@ -1292,12 +1171,13 @@ def test_trainer_requires_validation_loader_for_val_monitor(
             train_loader=train_loader,
             val_loader=None,
             config=TrainerConfig(
+                save_best=False,
+                save_last=False,
                 max_epochs=1,
                 monitor="val_loss",
                 amp=False,
                 output_dir=track_tmp_path / "missing_val_loader",
             ),
-            checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
         )
 
 
@@ -1317,6 +1197,8 @@ def test_trainer_val_monitor_updates_only_on_validation_epochs(
         train_loader=train_loader,
         val_loader=val_loader,
         config=TrainerConfig(
+            save_best=False,
+            save_last=False,
             max_epochs=3,
             val_interval=2,
             monitor="val_loss",
@@ -1324,7 +1206,6 @@ def test_trainer_val_monitor_updates_only_on_validation_epochs(
             amp=False,
             output_dir=track_tmp_path / "val_monitor",
         ),
-        checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
     )
 
     epoch_metrics = iter(
@@ -1389,13 +1270,14 @@ def test_reduce_on_plateau_steps_only_when_monitor_is_available(
         train_loader=train_loader,
         val_loader=val_loader,
         config=TrainerConfig(
+            save_best=False,
+            save_last=False,
             max_epochs=3,
             val_interval=2,
             monitor="val_loss",
             amp=False,
             output_dir=track_tmp_path / "plateau_monitor",
         ),
-        checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
     )
 
     epoch_metrics = iter(
@@ -1480,11 +1362,12 @@ def test_trainer_resume_supports_wrapped_load_state_dict_models(
         train_loader=_build_dummy_loader(),
         val_loader=_build_dummy_loader(),
         config=TrainerConfig(
+            save_best=False,
+            save_last=False,
             max_epochs=1,
             amp=False,
             output_dir=track_tmp_path / "wrapped_resume_source",
         ),
-        checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
     )
 
     checkpoint_path = track_tmp_path / "wrapped_resume.ckpt"
@@ -1498,11 +1381,12 @@ def test_trainer_resume_supports_wrapped_load_state_dict_models(
         train_loader=_build_dummy_loader(),
         val_loader=_build_dummy_loader(),
         config=TrainerConfig(
+            save_best=False,
+            save_last=False,
             max_epochs=1,
             amp=False,
             output_dir=track_tmp_path / "wrapped_resume_target",
         ),
-        checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
     )
 
     start_epoch = resumed_trainer._resume_from_checkpoint(checkpoint_path)
@@ -1566,16 +1450,17 @@ def test_binary_segmentation_task_handles_all_ignored_pixels() -> None:
         ("smooth_l1", "multiclass", "regression"),
     ],
 )
-def test_dense_tasks_reject_conflicting_named_losses(
+def test_dense_tasks_reject_target_modes_for_named_losses(
     loss: str, target_mode: str, implied: str
 ) -> None:
-    """Named losses fix the target mode, so conflicts fail at construction."""
-    head = DenseHeadSpec("head", loss=loss, target_mode=implied)
+    """Named losses fix the target mode, so stating any fails at construction."""
+    head = DenseHeadSpec("head", loss=loss)
     assert StructuredDenseTask([head]).heads == [head]
-    with pytest.raises(ValueError, match=f"supervises `{implied}` targets"):
-        StructuredDenseTask([DenseHeadSpec("head", loss=loss, target_mode=target_mode)])
-    with pytest.raises(ValueError, match=f"supervises `{implied}` targets"):
-        SegmentationTask(loss=loss, target_mode=target_mode)
+    for mode in (target_mode, implied):
+        with pytest.raises(ValueError, match=f"supervises `{implied}` targets"):
+            StructuredDenseTask([DenseHeadSpec("head", loss=loss, target_mode=mode)])
+        with pytest.raises(ValueError, match=f"supervises `{implied}` targets"):
+            SegmentationTask(loss=loss, target_mode=mode)
     with pytest.raises(ValueError, match="Unsupported dense loss `hinge`"):
         StructuredDenseTask([DenseHeadSpec("head", loss="hinge")])
 

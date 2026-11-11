@@ -10,14 +10,9 @@ Training guide for input/loss contracts, extension points and resume.
 
 from tiatoolbox.models.training.augmentations import (
     TrainingAugmentationPreset,
-    get_annotation_augmentation,
-    get_classification_augmentation,
-    get_segmentation_augmentation,
+    get_augmentation,
 )
-from tiatoolbox.models.training.config import (
-    CheckpointConfig,
-    TrainerConfig,
-)
+from tiatoolbox.models.training.config import TrainerConfig
 from tiatoolbox.models.training.datasets import (
     PatchAnnotationDataset,
     PatchFolderClassificationDataset,
@@ -40,7 +35,6 @@ from tiatoolbox.models.training.targets import (
     MaskTargetBuilder,
     MultiLabelTargetBuilder,
     PresenceTargetBuilder,
-    StackedSpatialTargetSpec,
     StackedTargetBuilder,
     TargetBuilderABC,
 )
@@ -61,7 +55,6 @@ __all__ = [
     "AnnotationQuery",
     "BinaryDiskTargetBuilder",
     "BoundaryTargetBuilder",
-    "CheckpointConfig",
     "ClassBalancedIndexSampler",
     "ClassificationTask",
     "CompositeTargetBuilder",
@@ -78,7 +71,6 @@ __all__ = [
     "PresenceTargetBuilder",
     "SegmentationTask",
     "SlideAnnotationPatchDataset",
-    "StackedSpatialTargetSpec",
     "StackedTargetBuilder",
     "StructuredDenseTask",
     "TargetBuilderABC",
@@ -87,9 +79,7 @@ __all__ = [
     "TrainingAugmentationPreset",
     "TrainingTaskABC",
     "generate_slide_patch_coordinates",
-    "get_annotation_augmentation",
-    "get_classification_augmentation",
-    "get_segmentation_augmentation",
+    "get_augmentation",
     "load_trained_model",
     "set_seed",
     "split_indices",

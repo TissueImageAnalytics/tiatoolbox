@@ -6,14 +6,11 @@ import copy
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 import torch
 from torch import nn
 from torch.nn import functional
-
-if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Mapping, Sequence
 
 _CLASSIFICATION_DIMS = 2
 _DENSE_LABEL_DIMS = 3
@@ -21,37 +18,20 @@ _DENSE_LOGIT_DIMS = 4
 _MIN_MULTICLASS_CHANNELS = 2
 _BINARY_THRESHOLD = 0.5
 
-ClassificationTargetMode = Literal[
-    "auto",
-    "single_label",
-    "binary",
-    "multi_label",
-]
-DenseLossMode = Literal[
-    "auto",
-    "cross_entropy",
-    "bce_with_logits",
-    "mse",
-    "l1",
-    "smooth_l1",
-]
-DenseTargetMode = Literal["auto", "multiclass", "binary", "regression"]
+ClassificationTargetMode = Literal["single_label", "binary", "multi_label"]
+DenseLossMode = Literal["cross_entropy", "bce_with_logits", "mse", "l1", "smooth_l1"]
+DenseTargetMode = Literal["multiclass", "binary", "regression"]
 DenseMetricName = Literal["dice", "iou", "mae", "mse"]
-NestedKey = str | tuple[str, ...]
+NestedKey = str | int | tuple[str | int, ...]
 LossFunction = Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
 
-# Named dense losses fix the target semantics; conflicting modes are rejected.
+# Named dense losses fix the target semantics; callable losses declare theirs.
 _DENSE_LOSS_TARGET_MODES: dict[str, DenseTargetMode] = {
     "cross_entropy": "multiclass",
     "bce_with_logits": "binary",
     "mse": "regression",
     "l1": "regression",
     "smooth_l1": "regression",
-}
-_DENSE_TARGET_MODE_LOSSES: dict[str, DenseLossMode] = {
-    "multiclass": "cross_entropy",
-    "binary": "bce_with_logits",
-    "regression": "mse",
 }
 _REGRESSION_LOSSES = {
     "mse": functional.mse_loss,
@@ -60,9 +40,9 @@ _REGRESSION_LOSSES = {
 }
 
 
-def _validate_loss_callable(loss: LossFunction, target_mode: str) -> None:
+def _validate_loss_callable(loss: LossFunction, target_mode: str | None) -> None:
     """Require explicit target semantics and an unreduced criterion."""
-    if target_mode == "auto":
+    if target_mode is None:
         msg = "Callable losses require an explicit `target_mode`."
         raise ValueError(msg)
     if getattr(loss, "reduction", "none") != "none":
@@ -73,27 +53,20 @@ def _validate_loss_callable(loss: LossFunction, target_mode: str) -> None:
 def _validate_class_indices(
     targets: torch.Tensor,
     ignore_index: int,
-    num_classes: int | None,
+    num_classes: int,
     *,
     kind: str,
 ) -> None:
     """Raise when supervised targets fall outside ``[0, num_classes)``.
 
-    Reading the result synchronises accelerator tensors, so tasks run this on
-    the CPU targets given to ``loss_normalizers`` and check device tensors only
-    while the class count is unknown. ``num_classes=None`` checks the sign only.
+    Reading the result synchronises accelerator tensors, so the trainer passes
+    targets that are still on the CPU.
     """
-    invalid = targets < 0
-    if num_classes is not None:
-        invalid = invalid | (targets >= num_classes)
+    invalid = (targets < 0) | (targets >= num_classes)
     if bool((invalid & (targets != ignore_index)).any()):
-        if num_classes is None:
-            problem = "negative class indices"
-        else:
-            problem = f"class indices outside the valid range [0, {num_classes - 1}]"
         msg = (
-            f"{kind} targets contain {problem} and not equal to "
-            f"ignore_index `{ignore_index}`."
+            f"{kind} targets contain class indices outside the valid range "
+            f"[0, {num_classes - 1}] and not equal to ignore_index `{ignore_index}`."
         )
         raise ValueError(msg)
 
@@ -132,22 +105,44 @@ def _is_soft_label(targets: torch.Tensor) -> bool:
     )
 
 
-def _first_tensor_from_mapping(output: Mapping) -> torch.Tensor:
-    """Return the first tensor found in a mapping output."""
-    for value in output.values():
-        if isinstance(value, torch.Tensor):
-            return value
-    msg = "No tensor value found in model output mapping."
-    raise ValueError(msg)
+def _select_nested_value(value: object, key: NestedKey, *, kind: str) -> object:
+    """Follow a key, an index or a tuple path of them through nested containers."""
+    key_path = key if isinstance(key, tuple) else (key,)
+    current = value
+    for part in key_path:
+        if isinstance(current, dict):
+            found = part in current
+        elif isinstance(current, (list, tuple)):
+            found = isinstance(part, int) and -len(current) <= part < len(current)
+        else:
+            msg = (
+                f"{kind} path `{key_path}` expects nested dictionaries or sequences, "
+                f"but encountered `{type(current).__name__}`."
+            )
+            raise ValueError(msg)  # noqa: TRY004 - preserve validation API
+        if not found:
+            msg = f"{kind} path `{key_path}` could not be resolved."
+            raise ValueError(msg)
+        current = current[part]
+    return current
 
 
-def _first_tensor_from_sequence(output: Sequence) -> torch.Tensor:
-    """Return the first tensor found in a sequence output."""
-    for value in output:
-        if isinstance(value, torch.Tensor):
-            return value
-    msg = "No tensor value found in model output sequence."
-    raise ValueError(msg)
+def _select_output(output: object, key: NestedKey | None) -> torch.Tensor:
+    """Select a tensor from a model's output; a bare tensor is used as it is."""
+    if isinstance(output, torch.Tensor):
+        return output
+    if key is None:
+        msg = (
+            f"The model returned a `{type(output).__name__}`, so the task cannot tell "
+            "which output to use. Set `output_key` to a dictionary key, a sequence "
+            "index, or a tuple path of them."
+        )
+        raise ValueError(msg)
+    selected = _select_nested_value(output, key, kind="Output")
+    if not isinstance(selected, torch.Tensor):
+        msg = f"`output_key` {key!r} does not select a tensor output."
+        raise ValueError(msg)  # noqa: TRY004 - preserve validation API
+    return selected
 
 
 class TrainingTaskABC(ABC):
@@ -156,8 +151,9 @@ class TrainingTaskABC(ABC):
     Implement ``loss_components`` to return the objective as one or more named,
     weighted mean losses. Override ``loss_normalizers`` with matching keys when
     a mean is not over samples, for example over valid pixels, so the trainer
-    can weight uneven microbatches. Metrics are optional: accumulate detached,
-    bounded statistics in ``update_epoch_state`` and reduce them in
+    can weight uneven microbatches. Override ``validate_targets`` to check each
+    batch's targets against the model's output. Metrics are optional: accumulate
+    detached, bounded statistics in ``update_epoch_state`` and reduce them in
     ``compute_epoch_metrics``. ``compute_loss`` and ``compute_metrics`` are
     single-batch conveniences built on these hooks; the trainer does not call
     them. Task state is not saved in checkpoints; keep criteria stateless or
@@ -167,42 +163,21 @@ class TrainingTaskABC(ABC):
     def __init__(
         self: TrainingTaskABC,
         *,
-        output_key: str | None = None,
-        output_index: int | None = None,
+        output_key: NestedKey | None = None,
         ignore_index: int = -100,
     ) -> None:
         """Initialize :class:`TrainingTaskABC`."""
         self.output_key = output_key
-        self.output_index = output_index
         self.ignore_index = ignore_index
 
     def select_output(self: TrainingTaskABC, output: object) -> torch.Tensor:
-        """Select a tensor output for loss and metric computation."""
-        if isinstance(output, torch.Tensor):
-            return output
+        """Select a tensor output for loss and metric computation.
 
-        if isinstance(output, dict):
-            if self.output_key is not None:
-                selected = output.get(self.output_key)
-                if not isinstance(selected, torch.Tensor):
-                    msg = f"Output key `{self.output_key}` does not contain a tensor."
-                    raise ValueError(msg)
-                return selected
-            return _first_tensor_from_mapping(output)
-
-        if isinstance(output, (list, tuple)):
-            if self.output_index is not None:
-                selected = output[self.output_index]
-                if not isinstance(selected, torch.Tensor):
-                    msg = (
-                        f"Output index `{self.output_index}` does not contain a tensor."
-                    )
-                    raise ValueError(msg)
-                return selected
-            return _first_tensor_from_sequence(output)
-
-        msg = f"Unsupported model output type: `{type(output).__name__}`."
-        raise TypeError(msg)
+        A tensor is used as it is, which also suits models that return several
+        outputs only in training mode. Other outputs need ``output_key``: a
+        dictionary key, a sequence index, or a tuple path of them.
+        """
+        return _select_output(output, self.output_key)
 
     # This default hook is overridden by tasks that keep per-epoch state.
     def reset_epoch_state(  # skipcq: PYL-R0201
@@ -254,8 +229,23 @@ class TrainingTaskABC(ABC):
         """
         return {"loss": batch_size}
 
+    # Tasks whose targets depend on the output's shape override this hook.
+    def validate_targets(  # skipcq: PYL-R0201
+        self,
+        output: object,  # noqa: ARG002 - hook signature
+        targets: object,  # noqa: ARG002 - hook signature
+    ) -> None:
+        """Raise when a batch's targets cannot supervise the model's output.
+
+        The trainer calls this once per batch with targets still on the CPU, so
+        read only the output's shape: reading its values would synchronise with
+        the device. Shape errors are left to ``loss_components``.
+        """
+        return
+
     def compute_loss(self, output: object, targets: object) -> torch.Tensor:
         """Return the objective for one batch: the sum of its loss components."""
+        self.validate_targets(output, targets)
         return sum(self.loss_components(output, targets).values())
 
     def compute_metrics(self, output: object, targets: object) -> dict[str, float]:
@@ -265,6 +255,7 @@ class TrainingTaskABC(ABC):
         statistics are left untouched provided ``reset_epoch_state`` assigns
         fresh state rather than clearing shared containers in place.
         """
+        self.validate_targets(output, targets)
         task = copy.copy(self)
         task.reset_epoch_state(training=False)
         task.update_epoch_state(output, targets)
@@ -276,15 +267,19 @@ class DenseHeadSpec:
     """Select and supervise one dense output.
 
     ``loss`` is a named loss or a callable returning unreduced losses with the
-    prepared target shape. Callables require an explicit ``target_mode``; a
-    named loss implies one (``cross_entropy`` is multiclass, ``bce_with_logits``
-    is binary, the rest are regression) and a conflicting ``target_mode`` is
-    rejected at construction. Losses are averaged over valid target elements,
-    then multiplied by ``loss_weight``. Class weights multiply elements, not
-    the denominator.
-    ``target_key`` and ``output_key`` can be nested dictionary key tuples;
-    absent keys default to the head name for dictionary inputs. ``channel_slice``
-    selects output channels while preserving the channel dimension.
+    prepared target shape. A named loss fixes the target semantics:
+    ``cross_entropy`` is multiclass, ``bce_with_logits`` is binary and the rest
+    are regression. A callable declares them with ``target_mode``, which is only
+    for callables. Losses are averaged over valid target elements, then
+    multiplied by ``loss_weight``. Class weights multiply elements, not the
+    denominator.
+    ``output_key`` selects the head's output from a model returning several: a
+    dictionary key, a sequence index, or a tuple path of them. Without one, a
+    head reads the dictionary entry named after it, and other containers raise; a
+    tensor output is used as it is. ``target_key`` selects the head's target in
+    the same way and also defaults to the head name for dictionaries.
+    ``channel_slice`` selects output channels while preserving the channel
+    dimension.
     ``metrics=None`` chooses Dice/IoU for classification and MAE/MSE for regression;
     an empty tuple disables metrics. ``metric_classes`` restricts the mean
     Dice/IoU to the listed classes (or binary channels), for example ``(1, 2)``
@@ -295,11 +290,10 @@ class DenseHeadSpec:
     """
 
     name: str
-    loss: DenseLossMode | LossFunction = "auto"
-    target_mode: DenseTargetMode = "auto"
+    loss: DenseLossMode | LossFunction
+    target_mode: DenseTargetMode | None = None
     target_key: NestedKey | None = None
     output_key: NestedKey | None = None
-    output_index: int | None = None
     channel_slice: int | slice | tuple[int, ...] | list[int] | None = None
     loss_weight: float = 1.0
     metrics: tuple[DenseMetricName, ...] | None = None
@@ -309,9 +303,8 @@ class DenseHeadSpec:
 class StructuredDenseTask(TrainingTaskABC):
     """Train dense heads using independent valid-element loss normalization.
 
-    ``heads`` must have unique names and positive weights. Head selectors take
-    precedence over task-level ``output_key``/``output_index`` fallbacks.
-    ``ignore_index`` applies to every head. ``prefix_head_metrics`` controls
+    ``heads`` must have unique names and positive weights. ``ignore_index``
+    applies to every head. ``prefix_head_metrics`` controls
     score prefixes for a single head; multiple heads always retain prefixes.
     Each head is one loss component, so with several heads the history also
     reports each head's weighted mean loss as ``<head>_loss``.
@@ -321,17 +314,11 @@ class StructuredDenseTask(TrainingTaskABC):
         self: StructuredDenseTask,
         heads: list[DenseHeadSpec],
         *,
-        output_key: str | None = None,
-        output_index: int | None = None,
         ignore_index: int = -100,
         prefix_head_metrics: bool = True,
     ) -> None:
         """Initialize :class:`StructuredDenseTask`."""
-        super().__init__(
-            output_key=output_key,
-            output_index=output_index,
-            ignore_index=ignore_index,
-        )
+        super().__init__(ignore_index=ignore_index)
         if not heads:
             msg = "`heads` must contain at least one dense head specification."
             raise ValueError(msg)
@@ -339,25 +326,21 @@ class StructuredDenseTask(TrainingTaskABC):
             msg_0 = "Dense head names must be unique."
             raise ValueError(msg_0)
         for head in heads:
-            if head.target_mode not in {"auto", "multiclass", "binary", "regression"}:
-                msg = f"Unsupported dense target mode `{head.target_mode}`."
-                raise ValueError(msg)
             if callable(head.loss):
                 _validate_loss_callable(head.loss, head.target_mode)
-            elif head.loss != "auto":
-                implied_mode = _DENSE_LOSS_TARGET_MODES.get(head.loss)
-                if implied_mode is None:
-                    msg = (
-                        f"Unsupported dense loss `{head.loss}` for head `{head.name}`."
-                    )
+                if head.target_mode not in {"multiclass", "binary", "regression"}:
+                    msg = f"Unsupported dense target mode `{head.target_mode}`."
                     raise ValueError(msg)
-                if head.target_mode not in {"auto", implied_mode}:
-                    msg = (
-                        f"Dense head `{head.name}` uses `loss='{head.loss}'`, which "
-                        f"supervises `{implied_mode}` targets, but "
-                        f"`target_mode='{head.target_mode}'` was requested."
-                    )
-                    raise ValueError(msg)
+            elif head.loss not in _DENSE_LOSS_TARGET_MODES:
+                msg = f"Unsupported dense loss `{head.loss}` for head `{head.name}`."
+                raise ValueError(msg)
+            elif head.target_mode is not None:
+                msg = (
+                    f"Dense head `{head.name}` uses `loss='{head.loss}'`, which "
+                    f"supervises `{_DENSE_LOSS_TARGET_MODES[head.loss]}` targets. "
+                    "`target_mode` is only for callable losses."
+                )
+                raise ValueError(msg)
             if head.loss_weight <= 0:
                 msg = (
                     f"Dense head `{head.name}` must have a positive `loss_weight`, "
@@ -376,59 +359,21 @@ class StructuredDenseTask(TrainingTaskABC):
         self.heads = heads
         self.prefix_head_metrics = prefix_head_metrics
         self._epoch_states: dict[str, _MetricState] = {}
-        # Class counts seen in forward passes enable CPU-side range checks.
-        self._head_num_classes: dict[str, int] = {}
 
     @staticmethod
-    def _select_nested_value(
-        value: object,
-        key: NestedKey,
-        *,
-        kind: str,
-    ) -> object:
-        """Resolve a nested mapping value from a string or tuple key path."""
-        key_path = (key,) if isinstance(key, str) else key
-        current = value
-        for part in key_path:
-            if not isinstance(current, dict):
-                msg = (
-                    f"{kind} path `{key_path}` expects nested mappings, "
-                    f"but encountered `{type(current).__name__}`."
-                )
-                raise ValueError(msg)  # noqa: TRY004 - preserve validation API
-            if part not in current:
-                msg = f"{kind} path `{key_path}` could not be resolved."
-                raise ValueError(msg)
-            current = current[part]
-        return current
-
-    def _select_head_output(
-        self: StructuredDenseTask,
-        output: object,
-        head: DenseHeadSpec,
-    ) -> torch.Tensor:
+    def _select_head_output(output: object, head: DenseHeadSpec) -> torch.Tensor:
         """Resolve one head tensor from raw model output."""
-        head_output: object
-        if head.output_key is not None:
-            head_output = self._select_nested_value(
-                output, head.output_key, kind="Output"
-            )
-        elif head.output_index is not None:
-            if not isinstance(output, (list, tuple)):
+        key = head.output_key
+        if key is None and isinstance(output, dict):
+            if head.name not in output:
                 msg = (
-                    f"Dense head `{head.name}` requested `output_index`, "
-                    f"but model output is `{type(output).__name__}`."
+                    f"Dense head `{head.name}` reads the output named after it, but "
+                    f"the outputs are named {list(output)}. Rename the head or set "
+                    "its `output_key`."
                 )
                 raise ValueError(msg)
-            head_output = output[head.output_index]
-        elif isinstance(output, dict) and head.name in output:
-            head_output = output[head.name]
-        else:
-            head_output = self.select_output(output)
-
-        if not isinstance(head_output, torch.Tensor):
-            msg = f"Dense head `{head.name}` did not resolve to a tensor output."
-            raise ValueError(msg)  # noqa: TRY004 - preserve validation API
+            key = head.name
+        head_output = _select_output(output, key)
 
         if head.channel_slice is None:
             return head_output
@@ -446,9 +391,7 @@ class StructuredDenseTask(TrainingTaskABC):
         """Resolve one head target tensor from raw task targets."""
         head_target: object
         if head.target_key is not None:
-            head_target = self._select_nested_value(
-                targets, head.target_key, kind="Target"
-            )
+            head_target = _select_nested_value(targets, head.target_key, kind="Target")
         elif isinstance(targets, dict):
             if head.name not in targets:
                 msg = (
@@ -467,37 +410,21 @@ class StructuredDenseTask(TrainingTaskABC):
         return head_target
 
     @staticmethod
-    def _declared_head_loss(head: DenseHeadSpec) -> DenseLossMode | None:
-        """Return the loss mode fixed by the head specification, if any."""
-        if not callable(head.loss) and head.loss != "auto":
-            return head.loss
-        return _DENSE_TARGET_MODE_LOSSES.get(head.target_mode)
-
-    @classmethod
-    def _resolve_head_loss(
-        cls: type[StructuredDenseTask],
-        head: DenseHeadSpec,
-        logits: torch.Tensor,
-    ) -> DenseLossMode:
-        """Resolve the effective loss mode for one head."""
-        declared = cls._declared_head_loss(head)
-        if declared is not None:
-            return declared
-        if logits.ndim == _DENSE_LOGIT_DIMS and logits.shape[1] == 1:
-            return "bce_with_logits"
-        return "cross_entropy"
+    def _head_target_mode(head: DenseHeadSpec) -> DenseTargetMode:
+        """Return the target mode a callable head declares or a named loss fixes."""
+        if callable(head.loss):
+            return head.target_mode
+        return _DENSE_LOSS_TARGET_MODES[head.loss]
 
     @staticmethod
     def _resolve_head_metrics(
         head: DenseHeadSpec,
-        resolved_loss: DenseLossMode,
+        mode: DenseTargetMode,
     ) -> tuple[DenseMetricName, ...]:
         """Resolve the effective metric set for one head."""
         if head.metrics is not None:
             return head.metrics
-        if resolved_loss in {"mse", "l1", "smooth_l1"}:
-            return ("mae", "mse")
-        return ("dice", "iou")
+        return ("mae", "mse") if mode == "regression" else ("dice", "iou")
 
     @staticmethod
     def _validate_dense_batch_and_spatial_shapes(
@@ -522,7 +449,6 @@ class StructuredDenseTask(TrainingTaskABC):
 
     def _prepare_multiclass_dense_tensors(
         self: StructuredDenseTask,
-        head: DenseHeadSpec,
         logits: torch.Tensor,
         targets: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -550,14 +476,6 @@ class StructuredDenseTask(TrainingTaskABC):
             mode="multiclass",
         )
         targets = targets.long()
-        num_classes = logits.shape[1]
-        # Check device tensors until the class count is known; afterwards
-        # ``loss_normalizers`` validates CPU targets before each transfer.
-        if self._head_num_classes.get(head.name) != num_classes:
-            _validate_class_indices(
-                targets, self.ignore_index, num_classes, kind="Dense multiclass"
-            )
-            self._head_num_classes[head.name] = num_classes
         return logits, targets, targets != self.ignore_index
 
     def _prepare_binary_dense_tensors(
@@ -626,12 +544,12 @@ class StructuredDenseTask(TrainingTaskABC):
         head: DenseHeadSpec,
         logits: torch.Tensor,
         targets: torch.Tensor,
-        resolved_loss: DenseLossMode,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Validate and normalize one head's tensors for its resolved loss."""
-        if resolved_loss == "cross_entropy":
-            return self._prepare_multiclass_dense_tensors(head, logits, targets)
-        if resolved_loss == "bce_with_logits":
+        """Validate and normalize one head's tensors for its target mode."""
+        mode = self._head_target_mode(head)
+        if mode == "multiclass":
+            return self._prepare_multiclass_dense_tensors(logits, targets)
+        if mode == "binary":
             return self._prepare_binary_dense_tensors(logits, targets)
         return self._prepare_regression_dense_tensors(logits, targets)
 
@@ -640,40 +558,33 @@ class StructuredDenseTask(TrainingTaskABC):
         head: DenseHeadSpec,
         logits: torch.Tensor,
         targets: torch.Tensor,
-    ) -> tuple[torch.Tensor, DenseLossMode]:
+    ) -> torch.Tensor:
         """Compute the detached or trainable loss tensor for one dense head."""
-        resolved_loss = self._resolve_head_loss(head, logits)
-        logits, targets, valid = self._prepare_head_tensors(
-            head, logits, targets, resolved_loss
-        )
+        logits, targets, valid = self._prepare_head_tensors(head, logits, targets)
         if callable(head.loss):
-            return _call_loss(head.loss, logits, targets, valid), resolved_loss
-        if resolved_loss == "cross_entropy":
+            return _call_loss(head.loss, logits, targets, valid)
+        if head.loss == "cross_entropy":
             losses = functional.cross_entropy(
                 logits, targets, ignore_index=self.ignore_index, reduction="none"
             )
-        elif resolved_loss == "bce_with_logits":
+        elif head.loss == "bce_with_logits":
             losses = functional.binary_cross_entropy_with_logits(
                 logits, targets, reduction="none"
             )
         else:
-            losses = _REGRESSION_LOSSES[resolved_loss](
-                logits, targets, reduction="none"
-            )
-        return _masked_mean(losses, valid), resolved_loss
+            losses = _REGRESSION_LOSSES[head.loss](logits, targets, reduction="none")
+        return _masked_mean(losses, valid)
 
     def _head_metric_state(
         self,
         head: DenseHeadSpec,
         logits: torch.Tensor,
         targets: torch.Tensor,
-        resolved_loss: DenseLossMode,
     ) -> _MetricState:
         """Build additive statistics for one dense head."""
-        names = self._resolve_head_metrics(head, resolved_loss)
-        logits, targets, valid = self._prepare_head_tensors(
-            head, logits, targets, resolved_loss
-        )
+        mode = self._head_target_mode(head)
+        names = self._resolve_head_metrics(head, mode)
+        logits, targets, valid = self._prepare_head_tensors(head, logits, targets)
         classes = head.metric_classes
         if classes is not None and max(classes) >= logits.shape[1]:
             msg = (
@@ -681,11 +592,11 @@ class StructuredDenseTask(TrainingTaskABC):
                 f"{max(classes)}, but its output has {logits.shape[1]} channels."
             )
             raise ValueError(msg)
-        if resolved_loss == "cross_entropy":
+        if mode == "multiclass":
             return _MetricState.multiclass(
                 logits.argmax(1), targets, valid, logits.shape[1], names, classes
             )
-        if resolved_loss == "bce_with_logits":
+        if mode == "binary":
             return _MetricState.binary(
                 logits > 0, targets > _BINARY_THRESHOLD, valid, names, classes
             )
@@ -702,9 +613,7 @@ class StructuredDenseTask(TrainingTaskABC):
                 continue
             logits = self._select_head_output(output, head)
             target = self._select_head_target(targets, head)
-            state = self._head_metric_state(
-                head, logits, target, self._resolve_head_loss(head, logits)
-            )
+            state = self._head_metric_state(head, logits, target)
             if head.name in self._epoch_states:
                 self._epoch_states[head.name].add(state)
             else:
@@ -724,20 +633,27 @@ class StructuredDenseTask(TrainingTaskABC):
         targets: object,
         batch_size: int,  # noqa: ARG002 - hook signature
     ) -> dict[str, int]:
-        """Count supervised elements per head, validating class indices on CPU."""
-        counts = {}
+        """Count supervised elements per head."""
+        return {
+            head.name: int(
+                (self._select_head_target(targets, head) != self.ignore_index).sum()
+            )
+            for head in self.heads
+        }
+
+    def validate_targets(self, output: object, targets: object) -> None:
+        """Raise when multiclass targets fall outside a head's output channels."""
         for head in self.heads:
-            target = self._select_head_target(targets, head)
-            num_classes = self._head_num_classes.get(head.name)
-            if (
-                num_classes is not None
-                or self._declared_head_loss(head) == "cross_entropy"
-            ):
+            if self._head_target_mode(head) != "multiclass":
+                continue
+            logits = self._select_head_output(output, head)
+            if logits.ndim == _DENSE_LOGIT_DIMS:
                 _validate_class_indices(
-                    target, self.ignore_index, num_classes, kind="Dense multiclass"
+                    self._select_head_target(targets, head),
+                    self.ignore_index,
+                    logits.shape[1],
+                    kind="Dense multiclass",
                 )
-            counts[head.name] = int((target != self.ignore_index).sum())
-        return counts
 
     def loss_components(
         self, output: object, targets: object
@@ -748,7 +664,7 @@ class StructuredDenseTask(TrainingTaskABC):
                 head,
                 self._select_head_output(output, head),
                 self._select_head_target(targets, head),
-            )[0]
+            )
             * head.loss_weight
             for head in self.heads
         }
@@ -767,19 +683,21 @@ class StructuredDenseTask(TrainingTaskABC):
 class ClassificationTask(TrainingTaskABC):
     """Train from raw classification logits and tensor labels.
 
-    Named losses are ``cross_entropy`` and ``bce_with_logits``. A callable loss
-    requires an explicit ``target_mode`` and must return one unreduced value per
-    target element (e.g. ``nn.CrossEntropyLoss(reduction='none')``). The task
-    replaces ignored targets with zero before calling it and averages only valid
-    elements. Criterion modules' buffers follow the logits' device; trainable
-    criteria and batch-coupled objectives require a custom :class:`TrainingTaskABC`.
+    Named losses fix the target semantics: ``cross_entropy`` is single-label,
+    and ``bce_with_logits`` is binary for one output and multi-label for several.
+    Their metrics differ: binary F1 averages the two classes, and multi-label F1
+    the outputs. A callable loss requires an explicit ``target_mode``, which is
+    only for callables, and must return one unreduced value per target element
+    (e.g. ``nn.CrossEntropyLoss(reduction='none')``). So a one-output head scored
+    as multi-label needs a callable BCE loss. The task replaces ignored targets
+    with zero before calling a callable and averages only valid elements.
+    Criterion modules' buffers follow the logits' device; trainable criteria and
+    batch-coupled objectives require a custom :class:`TrainingTaskABC`.
 
     Single-label logits/targets have shapes ``(N, C)``/``(N,)`` with ``C >= 2``;
     floating ``(N, C)`` targets are class probabilities (soft labels, as from
     mixup or distillation), always supervised and scored by their argmax.
     Binary BCE accepts ``(N,)`` or ``(N, 1)``; multi-label BCE accepts ``(N, C)``.
-    Named ``cross_entropy`` only supports ``single_label`` targets; ``binary``
-    and ``multi_label`` modes require ``bce_with_logits`` or a callable loss.
     Use ``single_label`` for a callable cross-entropy loss, including two classes.
     Metrics are epoch accuracy and macro-F1, excluding ``ignore_index``.
     """
@@ -788,96 +706,67 @@ class ClassificationTask(TrainingTaskABC):
         self: ClassificationTask,
         *,
         loss: str | LossFunction = "cross_entropy",
-        target_mode: ClassificationTargetMode = "auto",
-        output_key: str | None = None,
-        output_index: int | None = None,
+        target_mode: ClassificationTargetMode | None = None,
+        output_key: NestedKey | None = None,
         ignore_index: int = -100,
     ) -> None:
         """Initialize :class:`ClassificationTask`."""
-        super().__init__(
-            output_key=output_key,
-            output_index=output_index,
-            ignore_index=ignore_index,
-        )
+        super().__init__(output_key=output_key, ignore_index=ignore_index)
         self.loss = loss
         self.target_mode = target_mode
-        if target_mode not in {"auto", "single_label", "binary", "multi_label"}:
-            msg = f"Unsupported classification target mode `{target_mode}`."
-            raise ValueError(msg)
         self._epoch_state: _MetricState | None = None
-        # The class count seen in forward passes enables CPU-side range checks.
-        self._num_classes: int | None = None
 
         if callable(loss):
             _validate_loss_callable(loss, target_mode)
-            self.loss_fn = loss
-        elif self.loss == "cross_entropy":
-            if self.target_mode in {"binary", "multi_label"}:
-                msg = (
-                    f"`target_mode='{self.target_mode}'` requires "
-                    "`loss='bce_with_logits'`."
-                )
+            if target_mode not in {"single_label", "binary", "multi_label"}:
+                msg = f"Unsupported classification target mode `{target_mode}`."
                 raise ValueError(msg)
+            self.loss_fn = loss
+        elif loss not in {"cross_entropy", "bce_with_logits"}:
+            msg = f"Unsupported classification loss `{loss}`."
+            raise ValueError(msg)
+        elif target_mode is not None:
+            msg = (
+                "`target_mode` is only for callable losses: `cross_entropy` is "
+                "single-label, and `bce_with_logits` is binary for one output and "
+                "multi-label for several."
+            )
+            raise ValueError(msg)
+        elif loss == "cross_entropy":
             self.loss_fn = nn.CrossEntropyLoss(
                 ignore_index=self.ignore_index, reduction="none"
             )
-        elif self.loss == "bce_with_logits":
-            if self.target_mode == "single_label":
-                msg = "`loss='bce_with_logits'` does not support single-label targets."
-                raise ValueError(msg)
-            self.loss_fn = nn.BCEWithLogitsLoss(reduction="none")
         else:
-            msg = f"Unsupported classification loss `{self.loss}`."
-            raise ValueError(msg)
-
-    def _declared_target_mode(
-        self: ClassificationTask,
-    ) -> Literal["single_label", "binary", "multi_label"] | None:
-        """Return the target mode fixed by configuration, before any forward."""
-        if self.target_mode != "auto":
-            return self.target_mode
-        return "single_label" if self.loss == "cross_entropy" else None
+            self.loss_fn = nn.BCEWithLogitsLoss(reduction="none")
 
     def required_output_mode(
         self: ClassificationTask, num_classes: int
-    ) -> Literal["single_label", "binary", "multi_label"]:
+    ) -> ClassificationTargetMode:
         """Return the ``output_mode`` a classifier with ``num_classes`` outputs needs.
 
         TIAToolbox's ``CNNModel`` and ``TimmModel`` apply softmax or sigmoid
         in ``infer_batch`` according to their ``output_mode``, which must
         match the objective they were trained with.
         """
-        declared = self._declared_target_mode()
-        if declared is not None:
-            return declared
+        if self.target_mode is not None:
+            return self.target_mode
+        if self.loss == "cross_entropy":
+            return "single_label"
         return "binary" if num_classes == 1 else "multi_label"
+
+    @property
+    def _single_label(self: ClassificationTask) -> bool:
+        """Return whether targets are class indices or probabilities over outputs."""
+        return self.target_mode == "single_label" or self.loss == "cross_entropy"
 
     def _resolve_target_mode(
         self: ClassificationTask,
         logits: torch.Tensor,
-        targets: torch.Tensor,
-    ) -> Literal["single_label", "binary", "multi_label"]:
-        """Resolve the effective target mode for the current batch."""
-        declared = self._declared_target_mode()
-        if declared is not None:
-            return declared
-
-        if logits.ndim == 1 or (
-            logits.ndim == _CLASSIFICATION_DIMS and logits.shape[1] == 1
-        ):
-            return "binary"
-        if (
-            logits.ndim == _CLASSIFICATION_DIMS
-            and logits.shape[1] > 1
-            and targets.shape == logits.shape
-        ):
-            return "multi_label"
-
-        msg = (
-            "Unable to infer classification target mode from `logits` and "
-            "`targets`. Provide `target_mode` explicitly."
+    ) -> ClassificationTargetMode:
+        """Return the target mode for logits; shape errors are reported later."""
+        return self.required_output_mode(
+            logits.shape[1] if logits.ndim >= _CLASSIFICATION_DIMS else 1
         )
-        raise ValueError(msg)
 
     @staticmethod
     def _prepare_single_label_logits(logits: torch.Tensor) -> torch.Tensor:
@@ -929,17 +818,6 @@ class ClassificationTask(TrainingTaskABC):
             )
             raise ValueError(msg)
 
-        num_classes = logits.shape[1]
-        # Check device tensors until the class count is known; afterwards
-        # ``loss_normalizers`` validates CPU targets before each transfer.
-        if self._num_classes != num_classes:
-            _validate_class_indices(
-                targets,
-                self.ignore_index,
-                num_classes,
-                kind="Single-label classification",
-            )
-            self._num_classes = num_classes
         return logits, targets, targets != self.ignore_index
 
     def _prepare_binary_tensors(
@@ -1007,7 +885,7 @@ class ClassificationTask(TrainingTaskABC):
         if not isinstance(targets, torch.Tensor):
             msg = "Classification tasks require tensor targets."
             raise ValueError(msg)  # noqa: TRY004 - preserve validation API
-        target_mode = self._resolve_target_mode(logits, targets)
+        target_mode = self._resolve_target_mode(logits)
 
         if target_mode == "single_label":
             logits, targets, valid_mask = self._prepare_single_label_tensors(
@@ -1026,20 +904,29 @@ class ClassificationTask(TrainingTaskABC):
         targets: object,
         batch_size: int,  # noqa: ARG002 - hook signature
     ) -> dict[str, int]:
-        """Count supervised samples or labels, validating class indices on CPU."""
+        """Count supervised samples or labels."""
         if not isinstance(targets, torch.Tensor):
             msg = "Classification tasks require tensor targets."
             raise ValueError(msg)  # noqa: TRY004 - preserve validation API
-        if self._declared_target_mode() == "single_label":
-            if _is_soft_label(targets):
-                return {"loss": int(targets.shape[0])}
+        if self._single_label and _is_soft_label(targets):
+            return {"loss": int(targets.shape[0])}
+        return {"loss": int((targets != self.ignore_index).sum())}
+
+    def validate_targets(self, output: object, targets: object) -> None:
+        """Raise when single-label targets fall outside the model's output classes."""
+        logits = self.select_output(output)
+        if (
+            self._single_label
+            and logits.ndim == _CLASSIFICATION_DIMS
+            and isinstance(targets, torch.Tensor)
+            and not _is_soft_label(targets)
+        ):
             _validate_class_indices(
                 targets,
                 self.ignore_index,
-                self._num_classes,
+                logits.shape[1],
                 kind="Single-label classification",
             )
-        return {"loss": int((targets != self.ignore_index).sum())}
 
     def _metric_state(self, output: object, targets: object) -> _MetricState:
         """Build additive classification statistics."""
@@ -1047,7 +934,7 @@ class ClassificationTask(TrainingTaskABC):
         if not isinstance(targets, torch.Tensor):
             msg = "Classification tasks require tensor targets."
             raise ValueError(msg)  # noqa: TRY004 - preserve validation API
-        mode = self._resolve_target_mode(logits, targets)
+        mode = self._resolve_target_mode(logits)
         if mode == "single_label":
             logits, targets, valid = self._prepare_single_label_tensors(logits, targets)
             truth = targets.argmax(1) if _is_soft_label(targets) else targets
@@ -1088,6 +975,7 @@ class SegmentationTask(StructuredDenseTask):
     Set ``target_mode`` explicitly for a callable: ``multiclass`` uses integer
     labels, ``binary`` uses independent foreground channels. Outputs must be raw
     logits of shape ``(N, C, H, W)``; targets must have matching spatial dimensions.
+    ``output_key`` selects the output of a model returning several.
     ``metric_classes`` selects the classes averaged into Dice/IoU, as for
     :class:`DenseHeadSpec`.
     Use :class:`StructuredDenseTask` for regression or multiple outputs.
@@ -1097,9 +985,8 @@ class SegmentationTask(StructuredDenseTask):
         self,
         *,
         loss: DenseLossMode | LossFunction = "cross_entropy",
-        target_mode: DenseTargetMode = "auto",
-        output_key: str | None = None,
-        output_index: int | None = None,
+        target_mode: DenseTargetMode | None = None,
+        output_key: NestedKey | None = None,
         ignore_index: int = -100,
         metric_classes: tuple[int, ...] | None = None,
     ) -> None:
@@ -1110,12 +997,11 @@ class SegmentationTask(StructuredDenseTask):
                     name="segmentation",
                     loss=loss,
                     target_mode=target_mode,
+                    output_key=output_key,
                     metrics=("dice", "iou"),
                     metric_classes=metric_classes,
                 )
             ],
-            output_key=output_key,
-            output_index=output_index,
             ignore_index=ignore_index,
             prefix_head_metrics=False,
         )

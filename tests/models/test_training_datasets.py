@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import pickle
+import random
+import re
 from contextlib import closing
 from typing import TYPE_CHECKING
 from unittest.mock import Mock
@@ -12,22 +14,20 @@ import numpy as np
 import pytest
 import torch
 from PIL import Image
-from shapely.geometry import box
+from shapely.geometry import Point, box
 
 from tiatoolbox.annotation import Annotation, DictionaryStore, SQLiteStore
 from tiatoolbox.models.training import (
+    CompositeTargetBuilder,
+    GaussianHeatmapTargetBuilder,
     MaskTargetBuilder,
+    MultiLabelTargetBuilder,
     PatchAnnotationDataset,
     PatchFolderClassificationDataset,
     PatchMaskPairDataset,
     PresenceTargetBuilder,
     SlideAnnotationPatchDataset,
-)
-from tiatoolbox.models.training.augmentations import (
-    TrainingAugmentationPreset,
-    _RandomZoom,
-    _ScaleJitter,
-    _window_layout,
+    StackedTargetBuilder,
 )
 from tiatoolbox.models.training.datasets import (
     _ensure_tensor_image,
@@ -53,7 +53,7 @@ def test_unreadable_image(tmp_path: Path) -> None:
     """Corrupt images fail at decoding with the offending path."""
     path = tmp_path / "corrupt.png"
     path.write_text("not an image")
-    with pytest.raises(ValueError, match=f"Unable to read image: {path}"):
+    with pytest.raises(ValueError, match=re.escape(f"Unable to read image: {path}")):
         _load_image(path)
 
 
@@ -256,21 +256,23 @@ def test_inherited_dataset_reopens_owned_handles(
         torch.testing.assert_close(actual["target"], expected["target"])
 
 
-@pytest.mark.parametrize("scale", [1.0, 0.0001])
-def test_annotation_zoom_identity_and_subpixel_fallback(scale: float) -> None:
-    """Identity or subpixel zoom windows retain the original image and annotations."""
+@pytest.mark.parametrize("window", [(0, 0, 4, 4), (-9000, -9000, 9004, 9004)])
+def test_annotation_zoom_identity_and_subpixel_fallback(
+    monkeypatch: pytest.MonkeyPatch, window: tuple[int, int, int, int]
+) -> None:
+    """Identity windows and windows that shrink the patch away keep the patch."""
     image = np.arange(4 * 4 * 3, dtype=np.uint8).reshape(4, 4, 3)
-    builder = MaskTargetBuilder()
-    zoom = _ScaleJitter(_RandomZoom((scale, scale), 1), "mask")
-    preset = TrainingAugmentationPreset(scale_jitter=zoom)
+    monkeypatch.setattr(
+        "tiatoolbox.models.training.datasets._sample_zoom_window",
+        lambda _rng, _input, _output, jitter, **_kwargs: (
+            window if jitter else (0, 0, 4, 4)
+        ),
+    )
     with PatchAnnotationDataset(
-        [image], DictionaryStore(), builder, pair_transform=preset
+        [image], DictionaryStore(), MaskTargetBuilder(), scale_jitter=0.5
     ) as dataset:
         dataset.set_epoch(0, 19)
-        zoom.set_random_seed(dataset._sample_seed(0, 0))
-        window, shape = zoom.sample_window((4, 4))
-        if scale < 1:
-            assert _window_layout(window, (4, 4), shape) is None
+        assert dataset._zoom_window(0, (4, 4)) is None
         sample = dataset[0]
         torch.testing.assert_close(
             sample["image"], torch.from_numpy(image).permute(2, 0, 1).float()
@@ -280,11 +282,8 @@ def test_annotation_zoom_identity_and_subpixel_fallback(scale: float) -> None:
         )
 
 
-def test_slide_zoom_can_extend_past_slide() -> None:
+def test_slide_zoom_can_extend_past_slide(monkeypatch: pytest.MonkeyPatch) -> None:
     """Disabling within_bound preserves a centred zoom even outside slide edges."""
-    preset = TrainingAugmentationPreset(
-        scale_jitter=_ScaleJitter(_RandomZoom((0.5, 0.5), 1), "mask")
-    )
     reader = VirtualWSIReader(np.zeros((16, 16, 3), np.uint8))
     with SlideAnnotationPatchDataset(
         [reader],
@@ -292,8 +291,13 @@ def test_slide_zoom_can_extend_past_slide() -> None:
         MaskTargetBuilder(),
         8,
         within_bound=False,
-        pair_transform=preset,
+        scale_jitter=0.5,
     ) as dataset:
+        monkeypatch.setattr(
+            dataset,
+            "_zoom_window",
+            lambda *_args, **_kwargs: ((-4, -4, 12, 12), (8, 8)),
+        )
         sample = dataset[0]
         assert sample["bounds"].tolist() == [-4, -4, 12, 12]
         assert sample["image"].shape == (3, 8, 8)
@@ -316,3 +320,189 @@ def test_slide_jitter_can_extend_past_slide(monkeypatch: pytest.MonkeyPatch) -> 
         # Seed zero draws the offset (5, 2), which is not clipped to the slide.
         assert sample["bounds"].tolist() == [13, 10, 21, 18]
         assert sample["image"].shape == (3, 8, 8)
+
+
+def _noise(shape: tuple[int, ...]) -> np.ndarray:
+    """Return uint8 pixels that padding's white cannot be confused with."""
+    return np.random.default_rng(5).integers(10, 200, shape, dtype=np.uint8)
+
+
+def test_mask_pairs_zoom_alike_in_seeded_training_passes_only() -> None:
+    """Pairs share a replayable window; validation and direct indexing see patches."""
+    image = _noise((32, 32, 3))
+    labels = np.repeat(np.arange(1, 33, dtype=np.int64)[None], 32, axis=0)
+    dataset = PatchMaskPairDataset(
+        images=[image], masks=[labels], scale_jitter=0.4, target_fill=-1
+    )
+    torch.testing.assert_close(dataset[0]["target"], torch.from_numpy(labels))
+    samples = []
+    for epoch in range(24):
+        dataset.set_epoch(epoch, 3)
+        sample, replay = dataset[0], dataset[0]
+        torch.testing.assert_close(sample["image"], replay["image"])
+        torch.testing.assert_close(sample["target"], replay["target"])
+        assert sample["image"].shape == (3, 32, 32)
+        assert sample["target"].shape == (32, 32)
+        padding = sample["target"] == -1
+        assert torch.all(sample["image"][:, padding] == 255)
+        assert torch.all(sample["image"][:, ~padding] < 255)
+        samples.append(sample["target"])
+    # Some patches keep their scale; others zoom in or out, padding when out.
+    assert any(torch.equal(target, torch.from_numpy(labels)) for target in samples)
+    assert any((target == -1).any() for target in samples)
+    assert any(
+        not (target == -1).any() and not torch.equal(target, torch.from_numpy(labels))
+        for target in samples
+    )
+    dataset.set_epoch(1, 3, training=False)
+    torch.testing.assert_close(dataset[0]["target"], torch.from_numpy(labels))
+
+
+def test_mask_pair_crops_and_shape_checks() -> None:
+    """Crops move labels with pixels; mismatched and uint8-padded masks raise."""
+    image = _noise((16, 24, 3))
+    labels = np.arange(16 * 24, dtype=np.int64).reshape(16, 24)
+    dataset = PatchMaskPairDataset(images=[image], masks=[labels], crop_size=(12, 20))
+    for epoch in range(6):
+        dataset.set_epoch(epoch, 3)
+        sample = dataset[0]
+        assert sample["target"].shape == (12, 20)
+        top, left = np.divmod(int(sample["target"][0, 0]), 24)
+        np.testing.assert_array_equal(
+            sample["target"].numpy(), labels[top : top + 12, left : left + 20]
+        )
+        np.testing.assert_array_equal(
+            sample["image"].numpy(),
+            np.moveaxis(image[top : top + 12, left : left + 20], -1, 0).astype(
+                np.float32
+            ),
+        )
+    mismatched = PatchMaskPairDataset(
+        images=[image], masks=[np.zeros((8, 8), np.int64)], crop_size=4
+    )
+    mismatched.set_epoch(0, 3)
+    with pytest.raises(ValueError, match="same height and width"):
+        _ = mismatched[0]
+    too_large = PatchMaskPairDataset(images=[image], masks=[labels], crop_size=20)
+    too_large.set_epoch(0, 3)
+    with pytest.raises(ValueError, match="do not fit"):
+        _ = too_large[0]
+    with pytest.raises(ValueError, match="scale_jitter"):
+        PatchMaskPairDataset(images=[image], masks=[labels], scale_jitter=1)
+    with pytest.raises(ValueError, match="crop_size"):
+        PatchMaskPairDataset(images=[image], masks=[labels], crop_size=0)
+
+
+def test_uint8_mask_needs_a_fill_within_its_range() -> None:
+    """Padding reports fills that would wrap around in the mask's dtype."""
+    dataset = PatchMaskPairDataset(
+        images=[_noise((16, 16, 3))],
+        masks=[np.zeros((16, 16), np.uint8)],
+        target_fill=-100,
+    )
+    dataset.set_epoch(0, 3)
+    dataset._zoom_window = lambda *_args, **_kwargs: ((-8, -8, 24, 24), (16, 16))
+    with pytest.raises(ValueError, match="cannot be represented"):
+        _ = dataset[0]
+
+
+def test_classification_folders_resize_only_images(tmp_path: Path) -> None:
+    """Crops and zooms leave folder labels alone, and validation sees whole patches."""
+    (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
+    image = _noise((16, 16, 3))
+    for name in ("a", "b"):
+        Image.fromarray(image).save(tmp_path / name / "patch.png")
+    dataset = PatchFolderClassificationDataset(tmp_path, crop_size=12, scale_jitter=0.2)
+    assert dataset[1]["image"].shape == (3, 16, 16)
+    assert dataset[1]["target"].item() == 1
+    views = set()
+    for epoch in range(12):
+        dataset.set_epoch(epoch, 7)
+        sample = dataset[1]
+        assert sample["image"].shape == (3, 12, 12)
+        assert sample["target"].item() == 1
+        views.add(sample["image"].numpy().tobytes())
+    assert len(views) > 1
+    dataset.set_epoch(0, 7, training=False)
+    assert dataset[1]["image"].shape == (3, 16, 16)
+
+
+def test_annotation_crops_build_every_kind_of_target() -> None:
+    """Crops resize stacks and masks alike and rebuild scalar and vector labels."""
+    store = DictionaryStore()
+    store.append(Annotation(Point(12, 8).buffer(3), {"type": "a"}))
+    store.append(Annotation(Point(20, 8).buffer(1), {"type": "b"}))
+    builder = CompositeTargetBuilder(
+        {
+            "stack": StackedTargetBuilder(
+                {
+                    "mask": MaskTargetBuilder(),
+                    "heat": GaussianHeatmapTargetBuilder(sigma=1.0),
+                }
+            ),
+            "mask": MaskTargetBuilder(),
+            "present": PresenceTargetBuilder(),
+            "labels": MultiLabelTargetBuilder(
+                class_mapping={"a": 0, "b": 1}, class_property="type"
+            ),
+        }
+    )
+    with PatchAnnotationDataset(
+        [_noise((16, 24, 3))], store, builder, scale_jitter=0.1, crop_size=(12, 20)
+    ) as dataset:
+        dataset.set_epoch(0, 7)
+        for epoch in range(6):
+            dataset.set_epoch(epoch, 7)
+            sample = dataset[0]
+            assert sample["image"].shape == (3, 12, 20)
+            assert sample["target"]["stack"].shape == (2, 12, 20)
+            assert sample["target"]["mask"].shape == (12, 20)
+            assert sample["target"]["present"].shape == ()
+            assert sample["target"]["labels"].shape == (2,)
+
+
+def test_annotation_scalar_labels_describe_the_window() -> None:
+    """A scalar target is rebuilt for the window, so it needs no spatial declaration."""
+    store = DictionaryStore()
+    store.append(Annotation(box(0, 0, 4, 4)))
+    with PatchAnnotationDataset(
+        [_noise((16, 16, 3))], store, PresenceTargetBuilder(), scale_jitter=0.5
+    ) as dataset:
+        assert dataset[0]["target"].item() == 1
+        dataset._zoom_window = lambda *_args, **_kwargs: ((8, 8, 16, 16), (16, 16))
+        assert dataset[0]["target"].item() == 0
+        assert dataset[0]["image"].shape == (3, 16, 16)
+        dataset._zoom_window = lambda *_args, **_kwargs: ((-8, -8, 24, 24), (16, 16))
+        assert dataset[0]["target"].item() == 1
+
+
+def test_zoom_uses_the_sample_seed_and_leaves_random_streams_alone() -> None:
+    """Windows come from the run seed, the epoch and the sample index alone."""
+    dataset = PatchMaskPairDataset(
+        images=[_noise((16, 16, 3))] * 2,
+        masks=[np.zeros((16, 16), np.int64)] * 2,
+        scale_jitter=0.5,
+    )
+    assert dataset._zoom_window(0, (16, 16)) is None  # No seed yet.
+    dataset.set_epoch(0, 3)
+    states = (torch.get_rng_state(), np.random.get_state(), random.getstate())  # noqa: NPY002
+    first = [dataset._zoom_window(index, (16, 16)) for index in range(2)]
+    _ = dataset[0]
+    torch.testing.assert_close(torch.get_rng_state(), states[0])
+    np.testing.assert_array_equal(np.random.get_state()[1], states[1][1])  # noqa: NPY002
+    assert random.getstate() == states[2]
+    assert first == [dataset._zoom_window(index, (16, 16)) for index in range(2)]
+    draws = set()
+    for epoch in range(12):
+        dataset.set_epoch(epoch, 3)
+        draws.add(dataset._zoom_window(0, (16, 16)))
+    assert len(draws) > 2
+    dataset.set_epoch(0, 3, training=False)
+    assert dataset._zoom_window(0, (16, 16)) is None
+    assert (
+        PatchMaskPairDataset(
+            images=[_noise((16, 16, 3))], masks=[np.zeros((16, 16), np.int64)]
+        )._zoom_window(0, (16, 16))
+        is None
+    )

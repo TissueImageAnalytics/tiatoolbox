@@ -11,30 +11,6 @@ import torch
 AmpDtype = Literal["float16", "bfloat16"]
 
 
-@dataclass
-class CheckpointConfig:
-    """File names and save behavior for checkpoints, weights and model configs.
-
-    ``last.ckpt`` is rewritten every ``save_last_every`` epochs, and always
-    after the final epoch, including one ended by early stopping.
-    ``model_config_filename`` is written when the trainer is given a
-    :class:`~tiatoolbox.models.training.ModelExport`.
-    """
-
-    save_last: bool = True
-    save_best: bool = True
-    save_last_every: int = 1
-    last_filename: str = "last.ckpt"
-    best_weights_filename: str = "best_model_weights.pth"
-    model_config_filename: str = "model_config.yaml"
-
-    def __post_init__(self: CheckpointConfig) -> None:
-        """Validate checkpoint configuration values."""
-        if self.save_last_every <= 0:
-            msg = "`save_last_every` must be a positive integer."
-            raise ValueError(msg)
-
-
 def resolve_trainer_device(device: str | torch.device = "auto") -> torch.device:
     """Resolve a trainer device specification to a concrete torch device."""
     if isinstance(device, str) and device == "auto":
@@ -91,6 +67,11 @@ class TrainerConfig:
     ``cudnn_benchmark`` lets cuDNN pick the fastest kernels for fixed input
     shapes; it is ignored when ``deterministic`` is set. ``progress_bar`` shows
     a bar for each training and validation pass.
+
+    ``save_best`` writes the best monitored weights to
+    ``best_model_weights.pth``. ``save_last`` rewrites the full training state in
+    ``last.ckpt`` every ``save_last_every`` epochs, and always after the final
+    epoch, including one ended by early stopping.
     """
 
     max_epochs: int = 1
@@ -111,6 +92,9 @@ class TrainerConfig:
     output_dir: Path | str = Path("training_output")
     log_every_n_steps: int = 20
     progress_bar: bool = False
+    save_last: bool = True
+    save_best: bool = True
+    save_last_every: int = 1
 
     def __post_init__(self: TrainerConfig) -> None:
         """Validate trainer configuration values."""
@@ -140,6 +124,9 @@ class TrainerConfig:
             raise ValueError(msg)
         if self.grad_clip_norm is not None and self.grad_clip_norm <= 0:
             msg = "`grad_clip_norm` must be positive when provided."
+            raise ValueError(msg)
+        if self.save_last_every <= 0:
+            msg = "`save_last_every` must be a positive integer."
             raise ValueError(msg)
         if not isinstance(self.amp, bool) and self.amp != "auto":
             msg = "`amp` must be a boolean or 'auto'."

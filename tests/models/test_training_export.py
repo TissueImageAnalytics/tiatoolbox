@@ -19,7 +19,6 @@ from tiatoolbox.models.dataset.classification import (
 )
 from tiatoolbox.models.training import ModelExport, load_trained_model
 from tiatoolbox.models.training.checkpoint import save_checkpoint, save_model_weights
-from tiatoolbox.models.training.export import _default_argument
 
 if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
@@ -58,17 +57,11 @@ def test_custom_preprocessing_warning(
     """Exports explain when preprocessing must be restored by the caller."""
     model = CNNModel("resnet18", num_classes=2)
     model.preproc_func = lambda image: image / 255
-    config = ModelExport(
-        model_kwargs={"backbone": "resnet18", "num_classes": 2}
-    ).to_config(model, tmp_path / "weights.pth")
+    config = ModelExport(model_kwargs={"backbone": "resnet18"}).to_config(
+        model, tmp_path / "weights.pth"
+    )
     assert "dataset" not in config
     assert "set it again after load_trained_model" in caplog.text
-
-
-@pytest.mark.parametrize("name", ["in_features", "missing"])
-def test_constructor_argument_without_default(name: str) -> None:
-    """Required and absent constructor arguments do not invent export defaults."""
-    assert _default_argument(nn.Linear, name) is None
 
 
 def test_checkpoint_temporary_creation_failure(

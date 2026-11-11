@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-import functools
 import itertools
 import math
-import pickle
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, TypedDict, Unpack
 
 import cv2
@@ -16,21 +13,16 @@ import shapely
 from shapely.geometry import MultiPolygon, Polygon, box
 from shapely.ops import unary_union
 
-from tiatoolbox.annotation.dsl import PY_GLOBALS
-
 if TYPE_CHECKING:  # pragma: no cover
-    from collections.abc import Callable
-
     from shapely.geometry.base import BaseGeometry
 
     from tiatoolbox.annotation import Annotation, AnnotationStore
-    from tiatoolbox.type_hints import Predicate, Properties
+    from tiatoolbox.type_hints import Predicate
 
 _SPATIAL_DIMS = 2
 
 Bounds = tuple[float, float, float, float]
 TargetType = np.ndarray | int | float | dict[str, "TargetType"]
-SpatialTargetKind = Literal["mask", "image"]
 DEFAULT_GEOMETRY_PREDICATE = "intersects"
 DEFAULT_DISTANCE = 0.0
 
@@ -57,40 +49,6 @@ def _positive_int(value: int, name: str) -> int:
         msg = f"`{name}` must be a positive integer."
         raise ValueError(msg)
     return value
-
-
-@dataclass(frozen=True)
-class StackedSpatialTargetSpec:
-    """Describe per-channel interpolation for a stacked spatial target."""
-
-    channels: tuple[tuple[str, SpatialTargetKind], ...]
-
-    def __post_init__(self: StackedSpatialTargetSpec) -> None:
-        """Validate stacked channel specs."""
-        if not self.channels:
-            msg = "Stacked spatial target specs must contain at least one channel."
-            raise ValueError(msg)
-
-        names = [name for name, _kind in self.channels]
-        if len(names) != len(set(names)):
-            msg = "Stacked spatial target channel names must be unique."
-            raise ValueError(msg)
-
-        for name, kind in self.channels:
-            if not isinstance(name, str):
-                msg = "Stacked spatial target channel names must be strings."
-                raise ValueError(msg)  # noqa: TRY004 - preserve validation API
-            if kind not in {"mask", "image"}:
-                msg = (
-                    f"Unsupported stacked spatial target kind `{kind}` for "
-                    f"channel `{name}`. Choose from `mask` or `image`."
-                )
-                raise ValueError(msg)
-
-
-SpatialTargetSpec = (
-    SpatialTargetKind | StackedSpatialTargetSpec | dict[str, "SpatialTargetSpec"]
-)
 
 
 def _as_bounds(bounds: tuple[float, ...] | list[float] | np.ndarray) -> Bounds:
@@ -369,8 +327,9 @@ class TargetBuilderABC(ABC):
 
     Annotation geometries and ``patch_bounds`` are expected to use the same
     slide/baseline coordinate space. Dense targets returned by builders are in
-    patch pixel coordinates with shape ``output_shape``. Every builder accepts
-    the :class:`AnnotationQuery` options ``where``, ``geometry_predicate``,
+    patch pixel coordinates: NumPy arrays that start with ``output_shape``, which
+    lets augmentation find them. Every builder accepts the
+    :class:`AnnotationQuery` options ``where``, ``geometry_predicate``,
     ``min_area`` and ``distance``.
     """
 
@@ -401,11 +360,6 @@ class TargetBuilderABC(ABC):
             min_area=self.min_area,
             distance=self.distance,
         )
-
-    @property
-    def spatial_target_spec(self: TargetBuilderABC) -> SpatialTargetSpec | None:
-        """Describe which target leaves should share spatial transforms."""
-        return None
 
     def create_target(
         self: TargetBuilderABC,
@@ -445,177 +399,122 @@ def _has_query_settings(builder: TargetBuilderABC) -> bool:
     )
 
 
-def _has_non_where_query_settings(builder: TargetBuilderABC) -> bool:
-    """Return whether a builder has query settings that need a store query.
-
-    Only ``where`` can be applied to an already-queried annotation mapping;
-    ``geometry_predicate``, ``min_area`` and ``distance`` cannot.
-    """
-    return (
-        builder.geometry_predicate != DEFAULT_GEOMETRY_PREDICATE
-        or builder.min_area is not None
-        or builder.distance != DEFAULT_DISTANCE
-    )
+def _queried_descendants(builders: dict[str, TargetBuilderABC]) -> list[str]:
+    """Name the builders, at any depth, that have their own query settings."""
+    names = []
+    for name, builder in builders.items():
+        if _has_query_settings(builder):
+            names.append(name)
+        nested = getattr(builder, "builders", {})
+        names.extend(f"{name}.{child}" for child in _queried_descendants(nested))
+    return names
 
 
-def _validate_shared_query_children(
-    parent: TargetBuilderABC,
-    builders: dict[str, TargetBuilderABC],
-) -> None:
-    """Ensure children handed a shared query result only filter with ``where``."""
-    conflicting = [
-        name
-        for name, builder in builders.items()
-        if _has_non_where_query_settings(builder)
-    ]
-    if conflicting:
-        msg = (
-            f"{type(parent).__name__} cannot combine parent query settings with "
-            "child `geometry_predicate`, `min_area` or `distance` settings: "
-            "children of a shared annotation query may only filter with `where`. "
-            "Move these settings to the parent builder or remove the parent "
-            f"query settings. Conflicting children: {', '.join(conflicting)}."
-        )
-        raise ValueError(msg)
+class _CombinedTargetBuilder(TargetBuilderABC):
+    """Combine the targets of named child builders.
 
-
-@functools.lru_cache(maxsize=128)
-def _compile_where(where: str | bytes) -> Callable[[Properties], bool]:
-    """Compile a string or pickled ``where`` predicate into a Python callable.
-
-    Mirrors :meth:`AnnotationStore._eval_where`, which ``DictionaryStore`` uses
-    to filter annotations in Python, but string predicates are compiled once
-    and cached so per-annotation evaluation stays cheap.
-    """
-    if isinstance(where, bytes):
-        predicate = pickle.loads(where)  # skipcq: BAN-B301  # noqa: S301
-        return lambda properties: bool(predicate(properties))
-
-    code = compile(where, "<where>", "eval")
-
-    def evaluate(properties: Properties) -> bool:
-        """Evaluate the compiled annotation predicate against its properties."""
-        return bool(
-            eval(  # skipcq: PYL-W0123,  # noqa: S307
-                code,
-                PY_GLOBALS,
-                {"props": properties},
-            ),
-        )
-
-    return evaluate
-
-
-def _filter_annotations(
-    annotations: dict[str, Annotation],
-    where: Predicate | None,
-) -> dict[str, Annotation]:
-    """Filter a queried annotation mapping with a ``where`` predicate in Python."""
-    if where is None:
-        return annotations
-    predicate = _compile_where(where) if isinstance(where, str | bytes) else where
-    return {
-        key: annotation
-        for key, annotation in annotations.items()
-        if predicate(annotation.properties)
-    }
-
-
-class CompositeTargetBuilder(TargetBuilderABC):
-    """Combine multiple target builders into a nested target dictionary.
-
-    Without query settings on the composite, every child builder issues its
-    own annotation query. When ``where``, ``geometry_predicate``, ``min_area``
-    or ``distance`` is set on the composite, a single shared query is issued
-    and its result is handed to every child. Children may narrow the shared
-    result with their own ``where`` predicate, which is then evaluated in
-    Python per annotation, but may not set other query settings.
+    With query settings of its own, a combiner runs one store query for all its
+    children, which may then have no query settings, at any depth. Without them,
+    each child runs its own query.
     """
 
     def __init__(
-        self: CompositeTargetBuilder,
+        self: _CombinedTargetBuilder,
         builders: dict[str, TargetBuilderABC],
         **query: Unpack[AnnotationQuery],
     ) -> None:
-        """Initialize :class:`CompositeTargetBuilder`."""
+        """Initialize a combination of child builders."""
         super().__init__(**query)
         if not builders:
             msg = "`builders` must contain at least one target builder."
             raise ValueError(msg)
         self.builders = builders
+        self._queried_children = _queried_descendants(builders)
+        if self._queried_children and _has_query_settings(self):
+            msg = (
+                f"{type(self).__name__} has query settings of its own, so all its "
+                "children share one query and cannot have their own. Move the "
+                "settings to the parent, or remove the parent's so that each child "
+                f"queries for itself. Conflicting children: "
+                f"{', '.join(self._queried_children)}."
+            )
+            raise ValueError(msg)
+
+    def _combine(
+        self: _CombinedTargetBuilder,
+        targets: dict[str, TargetType],
+        output_shape: tuple[int, int],  # noqa: ARG002 - hook signature
+    ) -> TargetType:
+        """Combine the children's targets into this builder's target."""
+        return targets
 
     def create_target(
-        self: CompositeTargetBuilder,
+        self: _CombinedTargetBuilder,
         *,
         store: AnnotationStore,
         patch_bounds: tuple[float, ...] | list[float] | np.ndarray,
         output_shape: tuple[int, int] | list[int] | np.ndarray,
-    ) -> dict[str, TargetType]:
-        """Build a structured target by delegating to named sub-builders.
-
-        A parent-level query is shared by all children when the composite owns
-        query settings; children may then narrow the shared result with their
-        own ``where`` predicate. Otherwise, each child builder issues its own
-        annotation query.
-        """
+    ) -> TargetType:
+        """Build the target from one shared query, or from one query per child."""
+        if _has_query_settings(self):
+            return super().create_target(
+                store=store, patch_bounds=patch_bounds, output_shape=output_shape
+            )
         normalized_bounds = _as_bounds(patch_bounds)
         normalized_shape = _normalize_output_shape(output_shape)
-
-        if _has_query_settings(self):
-            _validate_shared_query_children(self, self.builders)
-            annotations = self.query_annotations(store, normalized_bounds)
-            return self.build_target(annotations, normalized_bounds, normalized_shape)
-
-        return {
-            name: builder.create_target(
-                store=store,
-                patch_bounds=normalized_bounds,
-                output_shape=normalized_shape,
-            )
-            for name, builder in self.builders.items()
-        }
-
-    @property
-    def spatial_target_spec(
-        self: CompositeTargetBuilder,
-    ) -> dict[str, SpatialTargetSpec] | None:
-        """Describe the nested spatial leaves produced by child builders."""
-        spatial_specs: dict[str, SpatialTargetSpec] = {}
-        for name, builder in self.builders.items():
-            child_spec = builder.spatial_target_spec
-            if child_spec is not None:
-                spatial_specs[name] = child_spec
-        if not spatial_specs:
-            return None
-        return spatial_specs
+        return self._combine(
+            {
+                name: builder.create_target(
+                    store=store,
+                    patch_bounds=normalized_bounds,
+                    output_shape=normalized_shape,
+                )
+                for name, builder in self.builders.items()
+            },
+            normalized_shape,
+        )
 
     def build_target(
-        self: CompositeTargetBuilder,
+        self: _CombinedTargetBuilder,
         annotations: dict[str, Annotation],
         patch_bounds: Bounds,
         output_shape: tuple[int, int],
-    ) -> dict[str, TargetType]:
-        """Build a structured target from shared queried annotations.
-
-        Each child receives the annotations that satisfy its own ``where``
-        predicate, evaluated in Python per annotation. Children with other
-        query settings (``geometry_predicate``, ``min_area``, ``distance``)
-        raise a :class:`ValueError`; use :meth:`create_target` without parent
-        query settings when children need distinct queries.
-        """
-        _validate_shared_query_children(self, self.builders)
-        return {
-            name: builder.build_target(
-                _filter_annotations(annotations, builder.where),
-                patch_bounds,
-                output_shape,
+    ) -> TargetType:
+        """Build the target from annotations queried once for all children."""
+        if self._queried_children:
+            msg = (
+                f"{type(self).__name__} cannot build a target from one set of "
+                "annotations, because these children query for themselves: "
+                f"{', '.join(self._queried_children)}. Use `create_target`."
             )
-            for name, builder in self.builders.items()
-        }
+            raise ValueError(msg)
+        return self._combine(
+            {
+                name: builder.build_target(annotations, patch_bounds, output_shape)
+                for name, builder in self.builders.items()
+            },
+            output_shape,
+        )
 
 
-class StackedTargetBuilder(TargetBuilderABC):
-    """Stack multiple spatial target maps into a single multi-channel array."""
+class CompositeTargetBuilder(_CombinedTargetBuilder):
+    """Combine multiple target builders into a nested target dictionary.
+
+    Without query settings on the composite, every child builder issues its
+    own annotation query. When ``where``, ``geometry_predicate``, ``min_area``
+    or ``distance`` is set on the composite, a single shared query is issued
+    and its result is handed to every child, which then may not have query
+    settings of its own.
+    """
+
+
+class StackedTargetBuilder(_CombinedTargetBuilder):
+    """Stack multiple spatial target maps into a single multi-channel array.
+
+    Children query as for :class:`CompositeTargetBuilder`: one shared query when
+    the stack has query settings, which children then may not have, and
+    otherwise one query per child.
+    """
 
     def __init__(
         self: StackedTargetBuilder,
@@ -625,70 +524,17 @@ class StackedTargetBuilder(TargetBuilderABC):
         **query: Unpack[AnnotationQuery],
     ) -> None:
         """Initialize :class:`StackedTargetBuilder`."""
-        super().__init__(**query)
-        if not builders:
-            msg = "`builders` must contain at least one target builder."
-            raise ValueError(msg)
-        self.builders = builders
+        super().__init__(builders, **query)
         self.dtype = np.dtype(dtype)
 
-    @property
-    def spatial_target_spec(self: StackedTargetBuilder) -> StackedSpatialTargetSpec:
-        """Describe per-channel interpolation for the stacked spatial map."""
-        child_specs: list[tuple[str, SpatialTargetKind]] = []
-        for name, builder in self.builders.items():
-            child_spec = builder.spatial_target_spec
-            if not isinstance(child_spec, str) or child_spec not in {"mask", "image"}:
-                msg = (
-                    "StackedTargetBuilder only supports child builders with "
-                    f"leaf spatial specs, but `{name}` returned `{child_spec}`."
-                )
-                raise ValueError(msg)
-            child_specs.append((name, child_spec))
-        return StackedSpatialTargetSpec(tuple(child_specs))
-
-    def create_target(
+    def _combine(
         self: StackedTargetBuilder,
-        *,
-        store: AnnotationStore,
-        patch_bounds: tuple[float, ...] | list[float] | np.ndarray,
-        output_shape: tuple[int, int] | list[int] | np.ndarray,
-    ) -> np.ndarray:
-        """Build and stack all child targets for one patch.
-
-        A parent-level query is shared by all children when the stack owns query
-        settings; children may then narrow the shared result with their own
-        ``where`` predicate, evaluated in Python, but may not set other query
-        settings. Otherwise, each child builder owns its annotation query
-        configuration so per-channel filters such as ``where`` and
-        ``geometry_predicate`` remain intact.
-        """
-        normalized_bounds = _as_bounds(patch_bounds)
-        normalized_shape = _normalize_output_shape(output_shape)
-
-        if _has_query_settings(self):
-            _validate_shared_query_children(self, self.builders)
-            annotations = self.query_annotations(store, normalized_bounds)
-            return self.build_target(annotations, normalized_bounds, normalized_shape)
-
-        channel_targets = {
-            name: builder.create_target(
-                store=store,
-                patch_bounds=normalized_bounds,
-                output_shape=normalized_shape,
-            )
-            for name, builder in self.builders.items()
-        }
-        return self._stack_channel_targets(channel_targets, normalized_shape)
-
-    def _stack_channel_targets(
-        self: StackedTargetBuilder,
-        channel_targets: dict[str, TargetType],
+        targets: dict[str, TargetType],
         output_shape: tuple[int, int],
     ) -> np.ndarray:
-        """Validate and stack named 2D channel targets."""
+        """Validate and stack named 2D channel targets, with channels last."""
         stacked_targets: list[np.ndarray] = []
-        for name, child_target in channel_targets.items():
+        for name, child_target in targets.items():
             if (
                 not isinstance(child_target, np.ndarray)
                 or child_target.ndim != _SPATIAL_DIMS
@@ -708,32 +554,6 @@ class StackedTargetBuilder(TargetBuilderABC):
             stacked_targets.append(child_target.astype(self.dtype, copy=False))
 
         return np.stack(stacked_targets, axis=-1)
-
-    def build_target(
-        self: StackedTargetBuilder,
-        annotations: dict[str, Annotation],
-        patch_bounds: Bounds,
-        output_shape: tuple[int, int],
-    ) -> np.ndarray:
-        """Build a dense stacked target with channels on the last axis.
-
-        This method consumes an already-queried annotation mapping and hands
-        each child the annotations that satisfy its own ``where`` predicate,
-        evaluated in Python per annotation. Children with other query settings
-        (``geometry_predicate``, ``min_area``, ``distance``) raise a
-        :class:`ValueError`; use :meth:`create_target` without parent query
-        settings when child builders need distinct queries.
-        """
-        _validate_shared_query_children(self, self.builders)
-        channel_targets = {
-            name: builder.build_target(
-                _filter_annotations(annotations, builder.where),
-                patch_bounds,
-                output_shape,
-            )
-            for name, builder in self.builders.items()
-        }
-        return self._stack_channel_targets(channel_targets, output_shape)
 
 
 def _paint_order(annotations: dict[str, Annotation]) -> list[Annotation]:
@@ -797,11 +617,6 @@ class MaskTargetBuilder(TargetBuilderABC):
             return None
         return int(self.class_mapping[class_value])
 
-    @property
-    def spatial_target_spec(self: MaskTargetBuilder) -> Literal["mask"]:
-        """Rasterized semantic masks should use mask interpolation."""
-        return "mask"
-
     def build_target(
         self: MaskTargetBuilder,
         annotations: dict[str, Annotation],
@@ -856,11 +671,6 @@ class BoundaryTargetBuilder(TargetBuilderABC):
         self.background_value = float(background_value)
         self.line_width = _positive_int(line_width, "line_width")
         self.point_radius = _positive_int(point_radius, "point_radius")
-
-    @property
-    def spatial_target_spec(self: BoundaryTargetBuilder) -> Literal["mask"]:
-        """Binary boundary maps should use mask interpolation."""
-        return "mask"
 
     def build_target(
         self: BoundaryTargetBuilder,
@@ -1081,11 +891,6 @@ class BinaryDiskTargetBuilder(TargetBuilderABC):
             msg = "`radius` must be a non-negative integer."
             raise ValueError(msg)
 
-    @property
-    def spatial_target_spec(self: BinaryDiskTargetBuilder) -> Literal["mask"]:
-        """Binary disk maps should use mask interpolation."""
-        return "mask"
-
     def build_target(
         self: BinaryDiskTargetBuilder,
         annotations: dict[str, Annotation],
@@ -1137,13 +942,6 @@ class GaussianHeatmapTargetBuilder(TargetBuilderABC):
         if self.truncate <= 0:
             msg = "`truncate` must be positive."
             raise ValueError(msg)
-
-    @property
-    def spatial_target_spec(
-        self: GaussianHeatmapTargetBuilder,
-    ) -> Literal["image"]:
-        """Continuous heatmaps should use image interpolation."""
-        return "image"
 
     def build_target(
         self: GaussianHeatmapTargetBuilder,

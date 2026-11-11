@@ -42,7 +42,7 @@ subfolder of images per class.
     from tiatoolbox.models.dataset import predefined_preproc_func
     from tiatoolbox.models.training import (
         ClassificationTask, PatchFolderClassificationDataset, Trainer,
-        TrainerConfig, get_classification_augmentation, set_seed, split_indices,
+        TrainerConfig, get_augmentation, set_seed, split_indices,
     )
 
     set_seed(42)  # Before building the model, so its initial weights are seeded.
@@ -53,9 +53,7 @@ subfolder of images per class.
     train_idx, val_idx = split_indices(
         len(dataset), stratify=dataset.targets, seed=42,
     )
-    augmented = dataset.with_transforms(
-        pair_transform=get_classification_augmentation("light"),
-    )
+    augmented = dataset.with_transforms(pair_transform=get_augmentation("light"))
     train_loader = DataLoader(
         Subset(augmented, train_idx), batch_size=16, shuffle=True,
     )
@@ -126,7 +124,8 @@ dictionaries, lists or tuples of tensors.
 Sample pipeline
 ~~~~~~~~~~~~~~~
 
-Every dataset accepts four optional stages, applied in this order:
+Every dataset accepts four optional stages, applied in this order, after any
+crop or zoom (see `Crops and zooms`_):
 
 1. ``pair_transform(image, target)``: shared geometry and augmentation. The
    augmentation presets go here.
@@ -144,7 +143,8 @@ when a dataset's ``preproc`` differs from a TIAToolbox model's
 ``preproc_func``.
 
 ``dataset.with_transforms(...)`` returns a copy that shares the sample index,
-with the stages you name replaced; passing ``None`` removes a stage.
+with the stages you name replaced; passing ``None`` removes a stage. The copy
+keeps the dataset's crop and zoom settings.
 
 Images and targets
 ~~~~~~~~~~~~~~~~~~
@@ -171,9 +171,9 @@ tissue with ``input_masks`` and ``min_mask_ratio``.
 - ``jitter=N`` shifts each patch by up to ``N`` pixels in training passes, with
   a new seeded offset every epoch. Validation passes and direct indexing use
   the grid.
-- With a preset's ``scale_jitter``, a zoomed patch is read from a larger or
-  smaller window centred on it and resized to the patch size; its ``bounds``
-  give the window read.
+- ``scale_jitter`` and ``crop_size`` read a larger or smaller window centred on
+  each patch and resize it to the training size; ``bounds`` gives the window
+  read.
 - ``compute_targets(builder)`` builds every patch's target from the
   annotations alone, without reading pixels. With ``PresenceTargetBuilder``, it
   labels patches for a stratified split or a ``ClassBalancedIndexSampler``.
@@ -199,9 +199,8 @@ other functions.
 Augmentation
 ------------
 
-``get_classification_augmentation``, ``get_segmentation_augmentation`` and
-``get_annotation_augmentation`` return presets that you pass as a dataset's
-``pair_transform``. Each takes a level:
+``get_augmentation(level)`` returns a preset that you pass as a dataset's
+``pair_transform``, for any dataset and any kind of target:
 
 .. list-table::
    :header-rows: 1
@@ -230,38 +229,65 @@ al., `arXiv:2206.15274 <https://arxiv.org/abs/2206.15274>`_), which can also be
 used on its own.
 
 Presets change geometry first, then appearance. At every level, they flip
-patches and turn them by multiples of 90 degrees, which moves pixels exactly.
-Other geometry is opt-in, through arguments of all three functions:
+patches and turn them by multiples of 90 degrees, which moves pixels exactly,
+so class IDs, one-pixel boundaries and heatmaps keep their values. Rectangular
+patches only turn by 0 or 180 degrees, so they keep their shape.
 
-- ``scale_jitter=0.1`` zooms half the patches by a factor between 0.9 and 1.1.
-  The range is centred on one, so the scale seen in training stays unbiased;
-  a zoom that only magnifies trains at a finer scale than inference sees and
-  did worse than no zoom at all. Zooming out pads the patch.
-  ``crop_size=224`` trains on random crops of that size, which also give the
-  zoom room: a crop of 224 in a 256-pixel patch zooms by 10% without padding.
-  ``SlideAnnotationPatchDataset`` reads a larger or smaller window around each
-  patch instead, so it never pads.
-- ``rotation=20`` rotates half the patches by up to 20 degrees. It resamples
-  the targets, which can break one-pixel boundaries, and pads the corners.
+Spatial targets are NumPy arrays that start with the image's height and width,
+at any depth of dictionaries, lists and tuples; they move with the image. Scalars
+and label vectors are unchanged. Any other array or tensor raises an error,
+because it cannot follow the image.
 
-Padding is white in images, ``target_fill`` in masks and zero in heatmaps. To
-keep padded mask pixels out of the loss, pass ``target_fill=task.ignore_index``.
-The value must fit the mask's dtype, so uint8 masks need an ignore value such
-as 255, with the task's ``ignore_index`` set to match.
-
-``PatchAnnotationDataset`` and ``SlideAnnotationPatchDataset`` build their
-targets for the cropped or zoomed window, so masks, one-pixel boundaries and
-centroids are drawn at the training resolution rather than resampled. Other
-spatial targets follow the image, using the interpolation their target builder
-declares: nearest-neighbour for ``"mask"`` targets, bilinear for ``"image"``
-targets such as heatmaps. Non-spatial labels are unchanged. Pass
-``target_builder=`` to ``get_annotation_augmentation`` so that it knows which
-targets are which.
+Presets do not rotate by other angles, as that would resample targets, break
+one-pixel boundaries and pad the corners. For free rotation or other custom
+geometry, pass your own ``pair_transform(image, target)``. If it has a
+``set_random_seed(seed)`` method, datasets call it with each sample's seed.
 
 Stain augmentation applies to RGB images only: it estimates the stains of each
 patch separately and skips patches with almost no tissue. Preset randomness is
 seeded from the run seed, the epoch and the sample index, so it is repeatable,
 including with persistent workers, and leaves the model's random state alone.
+
+Crops and zooms
+~~~~~~~~~~~~~~~
+
+Crops and zooms are dataset arguments, because each dataset has its own way of
+keeping targets aligned:
+
+- ``scale_jitter=0.1`` zooms half the patches by a factor between 0.9 and 1.1.
+  The range is centred on one, so the scale seen in training stays unbiased;
+  a zoom that only magnifies trains at a finer scale than inference sees and
+  did worse than no zoom at all.
+- ``crop_size=224`` trains on random crops of that size, which also give the
+  zoom room: a crop of 224 in a 256-pixel patch zooms by 10% without padding.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 36 64
+
+   * - Dataset
+     - Target for a window
+   * - ``PatchFolderClassificationDataset``
+     - The label is unchanged; only the image is resized.
+   * - ``PatchMaskPairDataset``
+     - The mask is resized by nearest neighbour, which keeps its values exact.
+   * - ``PatchAnnotationDataset``
+     - The target is built for the window, so masks, one-pixel boundaries and
+       centroids are drawn at the training resolution rather than resampled.
+   * - ``SlideAnnotationPatchDataset``
+     - A larger or smaller window around the patch is read, and the target is
+       built for it, so zooming out never pads.
+
+Zooming out pads images with white and spatial targets with ``target_fill``. To
+keep padded pixels out of the loss, pass ``target_fill=task.ignore_index``,
+which every head of a task then ignores. The value must fit each target's dtype,
+so uint8 masks need an ignore value such as 255, with the task's
+``ignore_index`` set to match.
+
+Like ``jitter``, crops and zooms apply only in training passes: validation
+passes and direct indexing see whole patches, so one dataset can serve both
+splits. Windows are seeded from the run seed, the epoch and the sample index.
+Without the trainer, call ``dataset.set_epoch(epoch, seed)`` to turn them on.
 
 Tasks, losses and metrics
 -------------------------
@@ -307,15 +333,16 @@ whose ``postproc_func`` then takes the argmax, and sigmoid for ``binary`` and
 ``output_mode="auto"`` (the default) is ``binary`` for one output and
 ``single_label`` otherwise, so a multi-label head must be built with
 ``output_mode="multi_label"``. The trainer raises when a classifier's mode
-disagrees with its ``ClassificationTask``, and ``ModelExport`` checks that
-``model_kwargs`` rebuilds the same head. Apply the activation yourself when
-calling ``forward`` directly.
+disagrees with its ``ClassificationTask``, and ``ModelExport`` records the
+model's mode. Apply the activation yourself when calling ``forward`` directly.
 
-Output and target sizes must match: tasks do not resize or crop. When a model
-returns several outputs, a task selects one with ``output_key`` for a
-dictionary or ``output_index`` for a sequence, and otherwise uses the first
-tensor. Dense heads can also select a nested key and a channel range
-(``channel_slice``).
+Output and target sizes must match: tasks do not resize or crop. A tensor output
+is used as it is. When a model returns several outputs, ``output_key`` selects
+one: a dictionary key, a sequence index (``output_key=0`` for a model returning
+its main output before auxiliary ones), or a tuple path of them through nested
+containers. Without one, a dense head reads the dictionary entry named after it,
+and any other output raises an error rather than guessing. ``channel_slice``
+then selects channels of the output.
 
 .. list-table:: Batched shapes
    :header-rows: 1
@@ -345,13 +372,15 @@ Losses
 ~~~~~~
 
 - ``ClassificationTask`` uses cross-entropy, for single-label targets, by
-  default; binary and multi-label targets need ``loss="bce_with_logits"``.
-- Dense heads with ``loss="auto"`` choose by target mode: BCE for ``binary``,
-  MSE for ``regression`` and cross-entropy for ``multiclass``. When the target
-  mode is also automatic, one output channel means BCE and several mean
-  cross-entropy. ``l1`` and ``smooth_l1`` are also available.
-- A named loss fixes the target mode, and an incompatible combination, such as
-  cross-entropy with binary targets, raises when the task is built.
+  default. ``loss="bce_with_logits"`` treats one output as binary and several as
+  multi-label. Their metrics differ: binary F1 averages the two classes, and
+  multi-label F1 averages the outputs. A one-output head scored as multi-label
+  needs a callable BCE loss with ``target_mode="multi_label"``.
+- Dense heads name their loss: ``cross_entropy`` for integer class masks,
+  ``bce_with_logits`` for independent binary channels, and ``mse``, ``l1`` or
+  ``smooth_l1`` for regression. ``SegmentationTask`` defaults to cross-entropy.
+- A named loss fixes the target mode, so ``target_mode`` is only for callable
+  losses (see `Custom losses`_).
 
 Positions whose target equals the task's ``ignore_index`` (default -100) are
 left out of losses and metrics. Each loss is a mean over supervised positions:
@@ -438,6 +467,10 @@ Subclass ``TrainingTaskABC`` for another objective or metric:
   denominator, computed from the targets before the forward pass, so that
   accumulated batches are weighted correctly. The default treats a single
   ``"loss"`` as a mean over samples.
+- ``validate_targets(output, targets)`` can check a batch's targets against the
+  model's output, as the built-in tasks check class indices against the number
+  of output channels. The trainer calls it once per batch with targets still on
+  the CPU, so read only the output's shape. The default does nothing.
 - Metrics are optional: ``reset_epoch_state``, ``update_epoch_state`` and
   ``compute_epoch_metrics`` accumulate detached statistics of bounded size over
   an epoch.
@@ -459,14 +492,21 @@ combine others:
 
 Query options (``where``, ``geometry_predicate``, ``min_area`` and
 ``distance``) set on either combiner run one store query for all its children,
-which can narrow the result with their own ``where``.
+which then cannot have query options of their own, at any depth. Otherwise each
+child runs its own query, as when each class's channels select that class with
+``where``. A query runs an exact geometry test on every annotation whose bounds
+touch the patch, so six per-class queries on CoNIC patches take about 9 ms where
+one takes about 2 ms. ``geometry_predicate="bbox_intersects"`` on each child
+skips the test, also returning annotations whose bounds touch the patch when
+their shapes do not.
 ``MaskTargetBuilder(instance_ids=True)`` paints one ID per annotation, largest
 first so nested annotations stay visible; a ``target_transform`` can derive
 distance or horizontal/vertical maps from it for instance segmentation.
 
-To write a builder, subclass ``TargetBuilderABC``, implement ``build_target``
-and, for spatial targets, declare ``spatial_target_spec``. Accept the shared
-query options as ``**query: Unpack[AnnotationQuery]`` and pass them to
+To write a builder, subclass ``TargetBuilderABC`` and implement
+``build_target``. Return spatial targets as NumPy arrays that start with
+``output_shape``, so that augmentation can find them. Accept the shared query
+options as ``**query: Unpack[AnnotationQuery]`` and pass them to
 ``super().__init__``.
 
 Training configuration
@@ -541,14 +581,14 @@ Checkpoints and resuming
 The trainer writes its files to ``output_dir`` (default ``training_output``):
 
 - ``last.ckpt``: the full training state, written after every epoch. With
-  ``CheckpointConfig(save_last_every=N)`` it is written every ``N`` epochs and
+  ``TrainerConfig(save_last_every=N)`` it is written every ``N`` epochs and
   after the last one, which saves time for large models.
 - ``best_model_weights.pth``: the weights from the best monitored epoch.
 - ``model_config.yaml``: written when the trainer has a ``ModelExport``; see
   below.
 
-``CheckpointConfig`` also renames these files or turns either checkpoint off.
-Files are written atomically, so an interrupted write never leaves a corrupt
+``save_last=False`` and ``save_best=False`` turn either checkpoint off. Files
+are written atomically, so an interrupted write never leaves a corrupt
 checkpoint.
 
 ``trainer.fit(resume_from="run/last.ckpt")`` continues from the next epoch.
@@ -589,7 +629,7 @@ returns the model with its weights and the IO configuration, as
     trainer = Trainer(
         ...,
         export=ModelExport(
-            model_kwargs={"backbone": "resnet18", "num_classes": 2},
+            model_kwargs={"backbone": "resnet18"},
             ioconfig=ioconfig,
             class_dict={0: "normal", 1: "tumour"},
         ),
@@ -599,17 +639,18 @@ returns the model with its weights and the IO configuration, as
     model, ioconfig = load_trained_model("run")
     PatchPredictor(model=model).run(images=..., ioconfig=ioconfig, ...)
 
-- ``model_kwargs`` must rebuild the trained head: for ``CNNModel`` and
-  ``TimmModel``, ``num_classes`` and ``output_mode`` are checked against the
-  model when the trainer starts and when the configuration is written, so a
-  multi-label head needs ``"output_mode": "multi_label"`` in ``model_kwargs``.
+- For ``CNNModel`` and ``TimmModel``, ``num_classes`` and ``output_mode`` are
+  recorded from the trained model, so ``model_kwargs`` needs only the rest of
+  their arguments, such as the backbone.
 - Only classes from ``tiatoolbox.models.architecture`` are rebuilt from the
   file, so loading never imports other code. For any other model, pass
   ``model=`` an instance to load the weights into, or a class to build from the
   recorded arguments.
 - A class can also select an inference variant of the trained architecture:
   ``model=KongNetSegmentor`` loads a trained ``KongNet`` for
-  ``MultiTaskSegmentor``. ``weights="last.ckpt"`` loads another weights file.
+  ``MultiTaskSegmentor``. KongNet class IDs are head indices in both of its
+  engines, so one ``class_dict`` names detections and instances.
+  ``weights="last.ckpt"`` loads another weights file.
 - Only constructor arguments in ``model_kwargs`` are recorded. Post-processing
   settings travel with the model when they are constructor arguments, as
   KongNet's thresholds are. Keep training-only arguments out of
@@ -636,7 +677,6 @@ file utilities and device resolution stay in their own modules.
 
    tiatoolbox.models.training.Trainer
    tiatoolbox.models.training.TrainerConfig
-   tiatoolbox.models.training.CheckpointConfig
    tiatoolbox.models.training.ClassificationTask
    tiatoolbox.models.training.SegmentationTask
    tiatoolbox.models.training.StructuredDenseTask
@@ -659,7 +699,6 @@ file utilities and device resolution stay in their own modules.
    tiatoolbox.models.training.MultiLabelTargetBuilder
    tiatoolbox.models.training.CompositeTargetBuilder
    tiatoolbox.models.training.StackedTargetBuilder
-   tiatoolbox.models.training.StackedSpatialTargetSpec
    tiatoolbox.models.training.ClassBalancedIndexSampler
    tiatoolbox.models.training.GroupedBlockSampler
 
@@ -670,7 +709,5 @@ file utilities and device resolution stay in their own modules.
    tiatoolbox.models.training.split_indices
    tiatoolbox.models.training.generate_slide_patch_coordinates
    tiatoolbox.models.training.set_seed
-   tiatoolbox.models.training.get_classification_augmentation
-   tiatoolbox.models.training.get_segmentation_augmentation
-   tiatoolbox.models.training.get_annotation_augmentation
+   tiatoolbox.models.training.get_augmentation
    tiatoolbox.models.training.load_trained_model

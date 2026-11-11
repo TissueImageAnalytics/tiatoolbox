@@ -31,7 +31,6 @@ from tiatoolbox.models.training import (
     PatchAnnotationDataset,
     PresenceTargetBuilder,
     SlideAnnotationPatchDataset,
-    StackedSpatialTargetSpec,
     StackedTargetBuilder,
     generate_slide_patch_coordinates,
 )
@@ -376,91 +375,26 @@ def test_stacked_target_builder_delegates_child_specific_filters(
     assert target[2, 7, 1] == pytest.approx(1.0)
 
 
-def test_stacked_target_builder_rejects_parent_and_child_query_settings(
-    store_factory: Callable[..., SQLiteStore],
+@pytest.mark.parametrize(
+    "child",
+    [
+        {"where": 'props["class"] == "tumor"'},
+        {"min_area": 30},
+        {"geometry_predicate": "contains"},
+        {"distance": 1.0},
+    ],
+)
+@pytest.mark.parametrize("combiner", [StackedTargetBuilder, CompositeTargetBuilder])
+def test_parent_queries_reject_child_query_settings(
+    combiner: type, child: dict[str, object]
 ) -> None:
-    """Stacked builders should not silently combine parent and child queries.
-
-    Only ``where`` can be applied to a shared query result in Python; other child
-    query settings cannot be honoured and must raise.
-    """
-    builder = StackedTargetBuilder(
-        {
-            "mask": MaskTargetBuilder(
-                min_area=30,
-                class_mapping=None,
-            ),
-        },
-        where='props["class"] == "stroma"',
-    )
-
-    with pytest.raises(ValueError, match=r"cannot combine parent query settings.*mask"):
-        builder.create_target(
-            store=store_factory(":memory:"),
-            patch_bounds=(0, 0, 10, 10),
-            output_shape=(10, 10),
-        )
-
-
-def test_stacked_target_builder_applies_child_where_to_shared_query(
-    store_factory: Callable[..., SQLiteStore],
-    track_tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A parent stacked query may be narrowed per child with a Python `where`."""
-    store = _create_test_store(
-        store_factory, track_tmp_path / "stacked_shared_child_where.db"
-    )
-    query_calls: list[dict[str, object]] = []
-    original_query = store.query
-
-    def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
-        """Record query options before delegating to the store."""
-        query_calls.append(dict(kwargs))
-        return original_query(*args, **kwargs)
-
-    monkeypatch.setattr(store, "query", counting_query)
-
-    def is_stroma(properties: dict[str, object]) -> bool:
-        """Select annotations whose class is stroma."""
-        return properties.get("class") == "stroma"
-
-    builder = StackedTargetBuilder(
-        {
-            "all": MaskTargetBuilder(class_mapping=None),
-            "tumor": MaskTargetBuilder(
-                where='props["class"] == "tumor"',
-                class_mapping=None,
-            ),
-            "stroma": MaskTargetBuilder(where=is_stroma, class_mapping=None),
-            "pickled": MaskTargetBuilder(
-                where=pickle.dumps(_is_tumor_class),
-                class_mapping=None,
-            ),
-        },
-        where='has_key(props, "class")',
-    )
-
-    target = builder.create_target(
-        store=store,
-        patch_bounds=(0, 0, 10, 10),
-        output_shape=(10, 10),
-    )
-
-    assert len(query_calls) == 1
-    assert query_calls[0]["where"] == 'has_key(props, "class")'
-    assert target[2, 2, 0] == pytest.approx(1.0)
-    assert target[2, 7, 0] == pytest.approx(1.0)
-    assert target[2, 2, 1] == pytest.approx(1.0)
-    assert target[2, 7, 1] == pytest.approx(0.0)
-    assert target[2, 2, 2] == pytest.approx(0.0)
-    assert target[2, 7, 2] == pytest.approx(1.0)
-    np.testing.assert_array_equal(target[..., 3], target[..., 1])
-
-
-def _is_tumor_class(properties: dict[str, object]) -> bool:
-    """Module-level predicate so that it can be pickled as a `where` filter."""
-    return properties.get("class") == "tumor"
+    """A shared query cannot honour child queries, so combining them raises at once."""
+    parent = {"where": 'props["class"] == "stroma"'}
+    children = {"mask": MaskTargetBuilder(class_mapping=None, **child)}
+    with pytest.raises(ValueError, match=r"query settings.*children: mask\.$"):
+        combiner(children, **parent)
+    # The children's own queries stand when the parent has none.
+    assert combiner(children).builders == children
 
 
 def test_stacked_target_builder_forwards_parent_query_options(
@@ -535,25 +469,6 @@ def test_stacked_target_builder_forwards_parent_query_options(
     assert distance_query_calls[0]["distance"] == pytest.approx(2.0)
     assert distance_filtered[5, 5, 0] == pytest.approx(1.0)
     assert distance_filtered[9, 9, 0] == pytest.approx(0.0)
-
-
-def test_stacked_target_builder_reports_per_channel_spatial_specs() -> None:
-    """Stacked target builders should preserve mixed interpolation metadata."""
-    builder = StackedTargetBuilder(
-        {
-            "mask": MaskTargetBuilder(class_mapping=None),
-            "boundary": BoundaryTargetBuilder(),
-            "heatmap": GaussianHeatmapTargetBuilder(sigma=1.0),
-        }
-    )
-
-    assert builder.spatial_target_spec == StackedSpatialTargetSpec(
-        (
-            ("mask", "mask"),
-            ("boundary", "mask"),
-            ("heatmap", "image"),
-        )
-    )
 
 
 def test_stacked_target_builder_honours_child_geometry_predicates(
@@ -742,14 +657,14 @@ def _conic_recipe(**parent_kwargs: object) -> CompositeTargetBuilder:
     )
 
 
-def test_composite_target_builder_shared_query_matches_per_child_queries(
+def test_composite_target_builder_runs_one_query_per_child(
     store_factory: Callable[..., SQLiteStore],
     track_tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """One parent query plus Python `where` filters must equal six store queries."""
+    """Each class's channels select that class, in six store queries."""
     store = _create_nucleus_store(
-        store_factory, track_tmp_path / "composite_shared_query.db"
+        store_factory, track_tmp_path / "composite_child_queries.db"
     )
     query_calls: list[dict[str, object]] = []
     original_query = store.query
@@ -762,40 +677,75 @@ def test_composite_target_builder_shared_query_matches_per_child_queries(
     monkeypatch.setattr(store, "query", counting_query)
     patch_bounds, output_shape = (0, 0, 64, 64), (64, 64)
 
-    separate = _conic_recipe().create_target(
+    builder = _conic_recipe()
+    separate = builder.create_target(
         store=store, patch_bounds=patch_bounds, output_shape=output_shape
     )
     assert len(query_calls) == len(_CONIC_LABELS)
     assert {call["where"] for call in query_calls} == {
         f'props["class"] == "{label}"' for label in _CONIC_LABELS
     }
-
-    query_calls.clear()
-    parent_where = 'has_key(props, "class")'
-    shared_builder = _conic_recipe(where=parent_where)
-    shared = shared_builder.create_target(
-        store=store, patch_bounds=patch_bounds, output_shape=output_shape
-    )
-    assert len(query_calls) == 1
-    assert query_calls[0]["where"] == parent_where
-
-    assert set(shared) == set(separate) == {label.lower() for label in _CONIC_LABELS}
-    for name, expected in separate.items():
+    assert set(separate) == {label.lower() for label in _CONIC_LABELS}
+    for expected in separate.values():
         assert expected.shape == (64, 64, 3)
         assert expected[..., 0].any()
-        np.testing.assert_array_equal(shared[name], expected)
 
-    # build_target on an already-queried mapping applies the same child filters.
-    annotations = original_query(patch_bounds, where=parent_where)
-    rebuilt = shared_builder.build_target(
-        annotations, (0.0, 0.0, 64.0, 64.0), output_shape
-    )
-    for name, expected in separate.items():
-        np.testing.assert_array_equal(rebuilt[name], expected)
+    restored = pickle.loads(pickle.dumps(builder))  # noqa: S301
+    assert set(restored.builders) == set(builder.builders)
 
-    restored = pickle.loads(pickle.dumps(shared_builder))  # noqa: S301
-    assert restored.where == parent_where
-    assert set(restored.builders) == set(shared_builder.builders)
+    # One set of annotations cannot satisfy the children's own queries.
+    annotations = original_query(patch_bounds)
+    with pytest.raises(ValueError, match=r"query for themselves.*create_target"):
+        builder.build_target(annotations, (0.0, 0.0, 64.0, 64.0), output_shape)
+
+
+def test_parent_queries_reject_query_settings_at_any_depth() -> None:
+    """Nested combiners name the children whose queries a parent cannot honour."""
+    with pytest.raises(ValueError, match=r"children: neutrophil, epithelial"):
+        _conic_recipe(where='has_key(props, "class")')
+    nested = {
+        "stack": StackedTargetBuilder(
+            {"mask": MaskTargetBuilder(where='props["class"] == "tumor"')}
+        )
+    }
+    with pytest.raises(ValueError, match=r"children: stack\.mask\.$"):
+        CompositeTargetBuilder(nested, min_area=1.0)
+    with pytest.raises(ValueError, match=r"themselves: stack\.mask\."):
+        CompositeTargetBuilder(nested).build_target({}, (0.0, 0.0, 4.0, 4.0), (4, 4))
+
+
+def test_nested_parent_query_is_shared_by_its_children(
+    store_factory: Callable[..., SQLiteStore],
+    track_tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A nested combiner's query serves its subtree, beside children's own queries."""
+    store = _create_test_store(store_factory, track_tmp_path / "nested_queries.db")
+    calls: list[object] = []
+    original_query = store.query
+
+    def counting_query(*args: object, **kwargs: object) -> dict[str, Annotation]:
+        """Record each query's filter before delegating to the store."""
+        calls.append(kwargs["where"])
+        return original_query(*args, **kwargs)
+
+    monkeypatch.setattr(store, "query", counting_query)
+    tumor, stroma = 'props["class"] == "tumor"', 'props["class"] == "stroma"'
+    target = CompositeTargetBuilder(
+        {
+            "tumor": StackedTargetBuilder(
+                {"mask": MaskTargetBuilder(), "edge": BoundaryTargetBuilder()},
+                where=tumor,
+            ),
+            "stroma": MaskTargetBuilder(where=stroma),
+        }
+    ).create_target(store=store, patch_bounds=(0, 0, 10, 10), output_shape=(10, 10))
+    assert calls == [tumor, stroma]
+    assert target["tumor"].shape == (10, 10, 2)
+    assert target["tumor"][2, 2, 0] == 1
+    assert target["tumor"][2, 7, 0] == 0
+    assert target["stroma"][2, 7] == 1
+    assert target["stroma"][2, 2] == 0
 
 
 def test_composite_target_builder_forwards_parent_query_options(
@@ -823,10 +773,7 @@ def test_composite_target_builder_forwards_parent_query_options(
                 class_mapping={"tumor": 1, "stroma": 2},
                 class_property="class",
             ),
-            "stroma": BinaryDiskTargetBuilder(
-                where='props["class"] == "stroma"',
-                radius=1,
-            ),
+            "disk": BinaryDiskTargetBuilder(radius=1),
         },
         min_area=30,
     ).create_target(
@@ -842,33 +789,8 @@ def test_composite_target_builder_forwards_parent_query_options(
     assert target["mask"][2, 2] == 1
     assert target["mask"][2, 7] == 0
     # The stroma polygon (area 25) is excluded by the shared `min_area` query.
-    assert not target["stroma"].any()
-
-
-def test_composite_target_builder_rejects_shared_query_with_child_settings(
-    store_factory: Callable[..., SQLiteStore],
-) -> None:
-    """Children of a shared composite query may only filter with `where`."""
-    builder = CompositeTargetBuilder(
-        {
-            "mask": MaskTargetBuilder(
-                class_mapping=None,
-                geometry_predicate="contains",
-            ),
-            "boundary": BoundaryTargetBuilder(where='props["class"] == "tumor"'),
-        },
-        min_area=1.0,
-    )
-
-    expected = r"CompositeTargetBuilder cannot combine parent query settings.*mask\.$"
-    with pytest.raises(ValueError, match=expected):
-        builder.create_target(
-            store=store_factory(":memory:"),
-            patch_bounds=(0, 0, 10, 10),
-            output_shape=(10, 10),
-        )
-    with pytest.raises(ValueError, match=expected):
-        builder.build_target({}, (0.0, 0.0, 10.0, 10.0), (10, 10))
+    assert target["disk"][:, :5].any()
+    assert not target["disk"][:, 5:].any()
 
 
 def _legacy_clip_and_rescale(
@@ -1881,21 +1803,6 @@ def test_builders_forward_query_options_to_the_store() -> None:
 
 
 @pytest.mark.parametrize(
-    ("channels", "message"),
-    [
-        ((), "at least one channel"),
-        ((("x", "mask"), ("x", "image")), "unique"),
-        (((1, "mask"),), "names must be strings"),
-        ((("x", "invalid"),), "Unsupported stacked spatial target kind"),
-    ],
-)
-def test_invalid_stacked_target_spec(channels: tuple, message: str) -> None:
-    """Stacked channels require unique names and known interpolation kinds."""
-    with pytest.raises(ValueError, match=message):
-        StackedSpatialTargetSpec(channels)
-
-
-@pytest.mark.parametrize(
     ("argument", "value"),
     [
         ("patch_bounds", (0, 0, 4)),
@@ -1910,14 +1817,6 @@ def test_invalid_target_region(argument: str, value: tuple) -> None:
     kwargs = {"patch_bounds": (0, 0, 4, 4), "output_shape": (4, 4), argument: value}
     with pytest.raises(ValueError, match=argument):
         MaskTargetBuilder().create_target(store=DictionaryStore(), **kwargs)
-
-
-def test_nonspatial_composition_has_no_spatial_spec() -> None:
-    """A composite of scalar labels needs no paired spatial augmentation."""
-    builder = CompositeTargetBuilder({"presence": PresenceTargetBuilder()})
-    assert builder.spatial_target_spec is None
-    with pytest.raises(ValueError, match="leaf spatial specs"):
-        _ = StackedTargetBuilder({"presence": builder}).spatial_target_spec
 
 
 @pytest.mark.parametrize("target", [1, np.zeros((4, 4, 1)), np.zeros((3, 4))])

@@ -39,7 +39,6 @@ from tiatoolbox.models.models_abc import (
 )
 from tiatoolbox.models.training import (
     BoundaryTargetBuilder,
-    CheckpointConfig,
     ClassificationTask,
     CompositeTargetBuilder,
     CoverageClassTargetBuilder,
@@ -57,17 +56,11 @@ from tiatoolbox.models.training import (
     Trainer,
     TrainerConfig,
     TrainingAugmentationPreset,
-    get_classification_augmentation,
-    get_segmentation_augmentation,
+    get_augmentation,
 )
 from tiatoolbox.models.training.augmentations import (
-    _RandomQuarterTurn,
-    _RandomZoom,
-    _ScaleJitter,
+    _apply_appearance,
     _StainAugmentation,
-    _TorchvisionImageTransform,
-    _TorchvisionSpatialPairTransform,
-    _TrainingAffine,
     _window_layout,
     _zoom_image,
 )
@@ -116,9 +109,8 @@ def make_trainer(
             monitor="train_loss",
             output_dir=tmp_path,
             log_every_n_steps=0,
-            **kwargs,
+            **({"save_best": False, "save_last": False} | kwargs),
         ),
-        checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
     )
 
 
@@ -459,25 +451,6 @@ def test_deterministic_backend_configuration_does_not_require_seed(
     assert not torch.backends.cudnn.benchmark
 
 
-def test_continuous_targets_use_zero_affine_padding(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Targets share geometry but do not inherit white RGB padding."""
-    op = _TrainingAffine(degrees=0)
-    monkeypatch.setattr(op, "get_params", lambda *_args: (0, (3, 0), 1, (0, 0)))
-    transform = _TorchvisionSpatialPairTransform(
-        [op], {"heat": "image", "mask": "mask"}
-    )
-    image, targets = transform(
-        np.zeros((16, 16, 3), np.uint8),
-        {"heat": np.ones((16, 16), np.float32), "mask": np.ones((16, 16), np.uint8)},
-    )
-    assert np.all(image[:, :3] == 255)
-    assert np.all(targets["heat"][:, :3] == 0)
-    assert np.all(targets["heat"][:, 3:] == 1)
-    assert np.all(targets["mask"][:, :3] == 0)
-
-
 @pytest.mark.parametrize("dtype", [np.uint8, np.uint16, np.float32])
 def test_image_conversion_keeps_values_and_channels(
     dtype: type[np.generic],
@@ -651,16 +624,16 @@ def test_sqlite_close_does_not_reopen_a_closed_database(tmp_path: Path) -> None:
 def test_stain_augmentation_uses_the_pipeline_seed() -> None:
     """The adapter preserves seeded augmentation with the standalone augmentor."""
     transform = _StainAugmentation(sigma1=0.4, sigma2=0.2, p=1)
-    pipeline = _TorchvisionImageTransform(v2.Compose([transform]))
+    preset = TrainingAugmentationPreset(v2.Compose([transform]))
     image = np.random.default_rng(8).integers(40, 190, (16, 16, 3), dtype=np.uint8)
-    pipeline.set_random_seed(123)
-    expected = pipeline(image)
-    pipeline.set_random_seed(123)
-    np.testing.assert_array_equal(pipeline(image), expected)
-    pipeline.set_random_seed(456)
-    assert not np.array_equal(pipeline(image), expected)
+    preset.set_random_seed(123)
+    expected, _ = preset(image, 0)
+    preset.set_random_seed(123)
+    np.testing.assert_array_equal(preset(image, 0)[0], expected)
+    preset.set_random_seed(456)
+    assert not np.array_equal(preset(image, 0)[0], expected)
     transform.p = 0
-    np.testing.assert_array_equal(pipeline(image), image)
+    np.testing.assert_array_equal(_apply_appearance(preset.appearance, image), image)
 
 
 @pytest.mark.parametrize(("workers", "persistent"), [(0, False), (2, False), (2, True)])
@@ -680,9 +653,8 @@ def test_resume_matches_uninterrupted_training(
         model = nn.Sequential(
             nn.Flatten(), nn.Linear(192, 8), nn.ReLU(), nn.Dropout(0.5), nn.Linear(8, 2)
         )
-        preset = get_classification_augmentation("heavy")
         dataset = PatchFolderClassificationDataset(
-            root.parent, image_transform=preset.image_transform
+            root.parent, pair_transform=get_augmentation("heavy")
         )
         loader = DataLoader(
             dataset,
@@ -691,11 +663,16 @@ def test_resume_matches_uninterrupted_training(
             num_workers=workers,
             persistent_workers=persistent,
         )
-        trainer = make_trainer(
-            output_dir, model, ClassificationTask(), loader, seed=13, max_epochs=epochs
+        return make_trainer(
+            output_dir,
+            model,
+            ClassificationTask(),
+            loader,
+            seed=13,
+            max_epochs=epochs,
+            save_best=True,
+            save_last=True,
         )
-        trainer.checkpoint_config = CheckpointConfig()
-        return trainer
 
     full = build(tmp_path / "full", 2)
     first = build(tmp_path / "split", 1)
@@ -746,9 +723,10 @@ def test_resume_retains_patience_and_previous_best_weights(tmp_path: Path) -> No
             loader,
             max_epochs=epochs,
             early_stopping_patience=2,
+            save_best=True,
+            save_last=True,
         )
         trainer.optimizer.param_groups[0]["lr"] = 0
-        trainer.checkpoint_config = CheckpointConfig()
         return trainer
 
     first = build(tmp_path / "first", 2)
@@ -940,9 +918,7 @@ def _random_supervised_batch(
     targets = torch.where(ignored, torch.full_like(targets, -100), targets)
     builders = {
         "classification": ClassificationTask,
-        "binary": partial(
-            ClassificationTask, loss="bce_with_logits", target_mode="binary"
-        ),
+        "binary": partial(ClassificationTask, loss="bce_with_logits"),
         "multilabel": partial(ClassificationTask, loss="bce_with_logits"),
         "segmentation": SegmentationTask,
         "dense_binary": partial(SegmentationTask, loss="bce_with_logits"),
@@ -1019,9 +995,7 @@ def test_sync_free_reductions_match_indexed_reference(kind: str) -> None:
         state = task._metric_state(logits, targets)
     else:
         head = task.heads[0]
-        state = task._head_metric_state(
-            head, logits, targets, task._resolve_head_loss(head, logits)
-        )
+        state = task._head_metric_state(head, logits, targets)
     totals, subset = _reference_statistics(kind, logits.detach(), targets)
     torch.testing.assert_close(state.totals, totals)
     if subset is not None:
@@ -1037,11 +1011,9 @@ def test_sync_free_reductions_match_indexed_reference(kind: str) -> None:
 
 @pytest.mark.parametrize("kind", _IGNORED_KINDS)
 def test_batch_loss_and_metric_paths_do_not_read_device_values(kind: str) -> None:
-    """After the first forward, losses and epoch statistics never synchronise."""
+    """Losses and epoch statistics never synchronise, from the first batch on."""
     task, logits, targets = _random_supervised_batch(kind)
     logits.requires_grad_()
-    task.loss_normalizers(targets, logits.shape[0])  # CPU targets, pre-transfer.
-    task.compute_loss(logits, targets)  # The first forward may check class ranges.
     task.reset_epoch_state(training=True)
     with _ForbidDeviceSync():
         for batch_targets in (targets, torch.full_like(targets, -100)):
@@ -1050,25 +1022,113 @@ def test_batch_loss_and_metric_paths_do_not_read_device_values(kind: str) -> Non
     assert task.compute_epoch_metrics()
 
 
-def test_class_index_validation_runs_on_cpu_targets(tmp_path: Path) -> None:
-    """Out-of-range labels are reported by ``loss_normalizers`` before transfer."""
+@pytest.mark.parametrize("bad", [[0, -1], [0, 3]])
+def test_classification_targets_are_validated_for_every_call(bad: list[int]) -> None:
+    """Every call reports bad labels clearly, not just the first."""
     task = ClassificationTask()
-    with pytest.raises(ValueError, match="negative class indices"):
-        task.loss_normalizers(torch.tensor([0, -1]), 2)
-    task.compute_loss(torch.zeros(2, 3), torch.tensor([0, 1]))
-    with pytest.raises(ValueError, match=r"outside the valid range \[0, 2\]"):
-        task.loss_normalizers(torch.tensor([0, 3]), 2)
+    logits, good = torch.zeros(2, 3), torch.tensor([0, 2])
+    for _ in range(2):
+        task.compute_loss(logits, good)
+        task.compute_metrics(logits, good)
+        for call in (task.validate_targets, task.compute_loss, task.compute_metrics):
+            with pytest.raises(ValueError, match=r"outside the valid range \[0, 2\]"):
+                call(logits, torch.tensor(bad))
+    # Counting supervised targets is separate from checking them.
+    assert task.loss_normalizers(torch.tensor(bad), 2) == {"loss": 2}
+    task.validate_targets(logits, torch.tensor([-100, 2]))
+
+
+def test_dense_targets_are_validated_per_head_for_every_call() -> None:
+    """Each multiclass head is checked against its own selected channels."""
+    task = StructuredDenseTask(
+        [
+            DenseHeadSpec("a", "cross_entropy", channel_slice=slice(0, 2)),
+            DenseHeadSpec("b", "cross_entropy", channel_slice=slice(2, 5)),
+            DenseHeadSpec("c", "mse", channel_slice=5),
+        ]
+    )
+    logits = torch.zeros(1, 6, 1, 2)
+    good = {
+        "a": torch.tensor([[[0, 1]]]),
+        "b": torch.tensor([[[0, 2]]]),
+        "c": torch.tensor([[[7.0, -7.0]]]),
+    }
+    for _ in range(2):
+        task.compute_loss(logits, good)
+        for head, values, top in (("a", [[[0, 2]]], 1), ("b", [[[0, 3]]], 2)):
+            bad = good | {head: torch.tensor(values)}
+            for call in (task.validate_targets, task.compute_loss):
+                with pytest.raises(
+                    ValueError, match=rf"outside the valid range \[0, {top}\]"
+                ):
+                    call(logits, bad)
+    assert task.loss_normalizers(good | {"a": torch.tensor([[[0, 9]]])}, 1) == {
+        "a": 2,
+        "b": 2,
+        "c": 2,
+    }
+
+
+def test_target_validation_reads_only_the_output_shape() -> None:
+    """Meta tensors have shapes but no values, so reading values would raise."""
+    ClassificationTask().validate_targets(
+        torch.zeros(2, 3, device="meta"), torch.tensor([0, 2])
+    )
+    SegmentationTask().validate_targets(
+        torch.zeros(1, 2, 1, 2, device="meta"), torch.tensor([[[0, 1]]])
+    )
+    with pytest.raises(ValueError, match="outside the valid range"):
+        ClassificationTask().validate_targets(
+            torch.zeros(2, 3, device="meta"), torch.tensor([0, 3])
+        )
+
+
+def test_target_validation_leaves_shape_errors_to_the_loss() -> None:
+    """Soft labels and unexpected ranks skip the check for the clearer later error."""
+    task = ClassificationTask()
+    task.validate_targets(torch.zeros(2, 3), torch.tensor([[0.2, 0.8, 0.0]] * 2))
+    task.validate_targets(torch.zeros(3), torch.tensor([9, 9, 9]))
+    with pytest.raises(ValueError, match="expects logits with shape"):
+        task.compute_loss(torch.zeros(3), torch.tensor([9, 9, 9]))
     dense = SegmentationTask()
-    assert dense.loss_normalizers(torch.tensor([[[0, 7]]]), 1) == {"segmentation": 2}
-    dense.compute_loss(torch.zeros(1, 2, 1, 2), torch.tensor([[[0, 1]]]))
-    with pytest.raises(ValueError, match=r"outside the valid range \[0, 1\]"):
-        dense.loss_normalizers(torch.tensor([[[0, 7]]]), 1)
+    dense.validate_targets(torch.zeros(1, 2), torch.tensor([[[9]]]))
+    with pytest.raises(ValueError, match="expect logits with shape"):
+        dense.compute_loss(torch.zeros(1, 2), torch.tensor([[[9]]]))
+    binary = ClassificationTask(loss="bce_with_logits")
+    binary.validate_targets(torch.zeros(2), torch.tensor([9.0, 9.0]))
+
+
+def test_trainer_validates_cpu_targets_in_every_batch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Bad labels in later batches raise, and the check sees untransferred targets."""
     loader = DataLoader(
-        TensorDataset(torch.ones(2, 2), torch.tensor([0, 5], dtype=torch.long))
+        TensorDataset(torch.ones(4, 2), torch.tensor([0, 1, 0, 5], dtype=torch.long)),
+        batch_size=2,
     )
     trainer = make_trainer(tmp_path, nn.Linear(2, 2), ClassificationTask(), loader)
     with pytest.raises(ValueError, match="outside the valid range"):
         trainer.fit()
+
+    seen = []
+    validate = trainer.task.validate_targets
+    monkeypatch.setattr(
+        trainer.task,
+        "validate_targets",
+        lambda output, targets: (seen.append(targets), validate(output, targets)),
+    )
+    # A clone tells the transferred targets apart from the CPU batch.
+    monkeypatch.setattr(trainer, "_move_to_device", lambda value: value.clone())
+    batch_targets = torch.tensor([0, 1])
+    trainer._forward(
+        torch.ones(2, 2),
+        batch_targets,
+        None,
+        training=False,
+        normalizers={"loss": 2},
+    )
+    assert len(seen) == 1
+    assert seen[0] is batch_targets
 
 
 def test_epoch_metrics_are_empty_before_any_epoch() -> None:
@@ -1076,7 +1136,9 @@ def test_epoch_metrics_are_empty_before_any_epoch() -> None:
     tasks = (
         ClassificationTask(),
         SegmentationTask(),
-        StructuredDenseTask([DenseHeadSpec("a"), DenseHeadSpec("b", metrics=())]),
+        StructuredDenseTask(
+            [DenseHeadSpec("a", "mse"), DenseHeadSpec("b", "mse", metrics=())]
+        ),
     )
     assert all(task.compute_epoch_metrics() == {} for task in tasks)
 
@@ -1186,31 +1248,6 @@ def test_compiled_model_checkpoints_use_plain_model_keys(tmp_path: Path) -> None
     assert torch.equal(plain[1].weight, model[1].weight)
     recompiled = torch.compile(nn.Sequential(nn.Flatten(), nn.Linear(2, 2)))
     load_model_state_dict(recompiled, load_checkpoint(tmp_path / "last.ckpt"))
-
-
-@pytest.mark.parametrize("preset", ["classification", "segmentation"])
-def test_rectangular_patches_keep_their_shape(preset: str) -> None:
-    """Quarter turns never swap the height and width of rectangular patches."""
-    image = np.zeros((16, 24, 3), dtype=np.uint8)
-    mask = np.zeros((16, 24), dtype=np.int64)
-    for seed in range(24):
-        if preset == "classification":
-            augmentation = get_classification_augmentation("heavy")
-            augmentation.image_transform.set_random_seed(seed)
-            assert augmentation.image_transform(image).shape == image.shape
-        else:
-            augmentation = get_segmentation_augmentation("heavy")
-            augmentation.pair_transform.set_random_seed(seed)
-            out_image, out_mask = augmentation.pair_transform(image, mask)
-            assert (out_image.shape, out_mask.shape) == (image.shape, mask.shape)
-
-    square = torch.arange(9).reshape(1, 3, 3)
-    outcomes = set()
-    for seed in range(32):
-        torch.manual_seed(seed)
-        outcomes.add(tuple(_RandomQuarterTurn()(square).flatten().tolist()))
-    # Square patches still use every multiple of 90 degrees.
-    assert len(outcomes) == 4
 
 
 def test_supplied_class_mapping_allows_absent_classes(tmp_path: Path) -> None:
@@ -1495,14 +1532,12 @@ def test_last_checkpoint_frequency_still_saves_the_final_epoch(
             output_dir=tmp_path,
             log_every_n_steps=0,
             progress_bar=True,
+            save_last_every=2,
         ),
-        checkpoint_config=CheckpointConfig(save_last_every=2),
         callbacks=[record],
     )
     trainer.fit()
     assert saved_epochs == [None, 2, 3]
-    with pytest.raises(ValueError, match="save_last_every"):
-        CheckpointConfig(save_last_every=0)
 
 
 def _slide_dataset(**kwargs: object) -> SlideAnnotationPatchDataset:
@@ -1546,15 +1581,16 @@ def test_slide_jitter_shifts_training_patches_reproducibly() -> None:
         _slide_dataset(jitter=-1)
 
 
-def test_slide_patches_zoom_out_by_reading_a_larger_window() -> None:
+def test_slide_patches_zoom_out_by_reading_a_larger_window(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Zooming out reads a larger centred window, kept inside the slide."""
     dataset = _slide_dataset()
     store = dataset.annotation_store_specs[0]
-    preset = TrainingAugmentationPreset(
-        scale_jitter=_ScaleJitter(_RandomZoom((0.5, 0.5), 1.0), "mask")
+    zoomed = dataset.with_transforms()
+    monkeypatch.setattr(
+        zoomed, "_zoom_window", lambda *_args, **_kwargs: ((-8, -8, 24, 24), (16, 16))
     )
-    zoomed = dataset.with_transforms(pair_transform=preset)
-    zoomed.set_epoch(0, 5)
     slide = np.arange(48 * 48 * 3, dtype=np.uint32).reshape(48, 48, 3) % 251
     for index, sample in enumerate(zoomed):
         x_min, y_min, x_max, y_max = sample["bounds"].tolist()
@@ -1580,14 +1616,78 @@ def test_slide_patches_zoom_out_by_reading_a_larger_window() -> None:
     assert 0 < int(zoomed[0]["target"].sum()) < 16 * 16 / 2
 
 
+def test_slide_zoom_draws_centred_windows_in_training_passes_only() -> None:
+    """Seeded training passes zoom around the patch; others read the grid."""
+    dataset = _slide_dataset(scale_jitter=0.5)
+    grid = dataset.sample_bounds.tolist()
+    assert [dataset[i]["bounds"].tolist() for i in range(len(dataset))] == grid
+    sizes = set()
+    for epoch in range(4):
+        dataset.set_epoch(epoch * 2, 5)
+        for index, (x_min, y_min, x_max, y_max) in enumerate(grid):
+            sample = dataset[index]
+            assert sample["image"].shape == (3, 16, 16)
+            assert sample["target"].shape == (16, 16)
+            left, top, right, bottom = sample["bounds"].tolist()
+            sizes.add(right - left)
+            assert bottom - top == right - left
+            assert 0 <= left <= right <= 48
+            assert 0 <= top <= bottom <= 48
+            if x_min >= 16 and x_max <= 32 and y_min >= 16 and y_max <= 32:
+                # Room on every side keeps the window centred on the patch.
+                assert abs((left + right) - (x_min + x_max)) <= 1
+                assert abs((top + bottom) - (y_min + y_max)) <= 1
+    assert 16 in sizes
+    assert min(sizes) < 16 < max(sizes)
+    dataset.set_epoch(1, 5, training=False)
+    assert [dataset[i]["bounds"].tolist() for i in range(len(dataset))] == grid
+
+
+def test_trainer_crops_training_passes_and_validates_whole_patches(
+    tmp_path: Path,
+) -> None:
+    """A shared dataset gives crops to training and whole patches to validation."""
+    image = np.zeros((16, 16, 3), np.uint8)
+    dataset = PatchMaskPairDataset(
+        images=[image] * 4, masks=[np.zeros((16, 16), np.int64)] * 4, crop_size=12
+    )
+    shapes = {True: set(), False: set()}
+
+    class Recorder(nn.Conv2d):
+        """Record the size of each pass's inputs."""
+
+        def forward(self, images: torch.Tensor) -> torch.Tensor:
+            """Remember the spatial size of this pass."""
+            shapes[self.training].add(tuple(images.shape[-2:]))
+            return super().forward(images)
+
+    model = Recorder(3, 2, 1)
+    trainer = Trainer(
+        model,
+        SegmentationTask(),
+        torch.optim.SGD(model.parameters(), lr=0.1),
+        DataLoader(dataset, batch_size=2),
+        val_loader=DataLoader(dataset, batch_size=2),
+        config=TrainerConfig(
+            save_best=False,
+            save_last=False,
+            device="cpu",
+            amp=False,
+            output_dir=tmp_path,
+        ),
+    )
+    trainer.fit()
+    assert shapes == {True: {(12, 12)}, False: {(16, 16)}}
+
+
 @pytest.mark.parametrize(
-    ("scale", "crop_size", "window_size"),
-    [((1.5, 1.5), None, 21), ((0.8, 0.8), (24, 24), 30), ((0.8, 0.8), None, 40)],
+    ("crop_size", "window"),
+    [(None, (5, 6, 26, 27)), ((24, 24), (1, 1, 31, 31)), (None, (-4, -4, 36, 36))],
 )
 def test_annotation_patches_draw_targets_for_the_zoomed_window(
-    scale: tuple[float, float],
+    monkeypatch: pytest.MonkeyPatch,
     crop_size: tuple[int, int] | None,
-    window_size: int,
+    window: tuple[int, int, int, int],
 ) -> None:
     """Zoomed patches get targets drawn for their window, so thin rings stay closed.
 
@@ -1602,17 +1702,15 @@ def test_annotation_patches_draw_targets_for_the_zoomed_window(
         {"boundary": BoundaryTargetBuilder(line_width=1), "mask": MaskTargetBuilder()}
     )
     image = np.random.default_rng(0).integers(0, 250, (32, 32, 3), dtype=np.uint8)
-    zoom = _RandomZoom(scale, 1.0, crop_size, target_fill=9)
-    preset = TrainingAugmentationPreset(
-        scale_jitter=_ScaleJitter(zoom, builder.spatial_target_spec)
+    dataset = PatchAnnotationDataset(
+        [image], store, builder, crop_size=crop_size, target_fill=9
     )
-    dataset = PatchAnnotationDataset([image], store, builder, pair_transform=preset)
-    dataset.set_epoch(0, 3)
+    output_shape = crop_size or (32, 32)
+    monkeypatch.setattr(
+        dataset, "_zoom_window", lambda *_args, **_kwargs: (window, output_shape)
+    )
     sample = dataset[0]
-    preset.set_random_seed(dataset._sample_seed(0, 0))
-    window, output_shape = preset.scale_jitter.sample_window((32, 32))
-    assert output_shape == (crop_size or (32, 32))
-    assert window[2] - window[0] == window_size
+    window_size = window[2] - window[0]
     inner, box = _window_layout(window, (32, 32), output_shape)
     expected = builder.create_target(
         store=store, patch_bounds=inner, output_shape=(box[3] - box[1], box[2] - box[0])

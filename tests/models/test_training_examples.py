@@ -156,7 +156,7 @@ def test_kongnet_example_heads_read_the_builder_targets(
 
 def test_kongnet_example_augmentation_replays_seeds_in_workers() -> None:
     """The example's preset pair transform replays seeds after worker pickling."""
-    preset = training.get_annotation_augmentation("heavy", spatial_target_spec="mask")
+    preset = training.get_augmentation("heavy")
     assert "preproc=KongNet.preproc" in _cell_source(15, "from_dirs(")
     training_split = _cell_source(15, "with_transforms(")
     assert "with_transforms(pair_transform=train_augmentation)" in training_split

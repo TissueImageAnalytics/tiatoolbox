@@ -17,7 +17,6 @@ from torch.utils.data import (
 )
 
 from tiatoolbox.models.training import (
-    CheckpointConfig,
     ClassificationTask,
     ModelExport,
     Trainer,
@@ -43,13 +42,14 @@ def trainer(tmp_path: Path) -> Trainer:
         torch.optim.SGD(model.parameters(), lr=0.1),
         loader,
         config=TrainerConfig(
+            save_best=False,
+            save_last=False,
             device="cpu",
             amp=False,
             monitor="train_loss",
             output_dir=tmp_path,
             log_every_n_steps=0,
         ),
-        checkpoint_config=CheckpointConfig(save_best=False, save_last=False),
     )
 
 
@@ -170,7 +170,6 @@ def test_export_requires_saved_weights(trainer: Trainer) -> None:
             trainer.optimizer,
             trainer.train_loader,
             config=trainer.config,
-            checkpoint_config=trainer.checkpoint_config,
             export=ModelExport(),
         )
 

@@ -25,12 +25,12 @@ from tiatoolbox.models.training.checkpoint import (
     save_model_weights,
 )
 from tiatoolbox.models.training.config import (
-    CheckpointConfig,
     TrainerConfig,
     resolve_trainer_amp,
     resolve_trainer_device,
 )
 from tiatoolbox.models.training.datasets import _TrainingDataset
+from tiatoolbox.models.training.export import DEFAULT_CONFIG_FILENAME
 from tiatoolbox.models.training.tasks import ClassificationTask
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -48,6 +48,8 @@ if TYPE_CHECKING:  # pragma: no cover
 
 _BATCH_IMAGE_DIMS = 4
 _MIN_BATCH_ITEMS = 2
+_LAST_CHECKPOINT = "last.ckpt"
+_BEST_WEIGHTS = "best_model_weights.pth"
 
 
 def _inner_datasets(dataset: Dataset) -> Iterator[Dataset]:
@@ -146,17 +148,13 @@ class Trainer:
         val_loader: DataLoader | None = None,
         scheduler: LRScheduler | None = None,
         config: TrainerConfig | None = None,
-        checkpoint_config: CheckpointConfig | None = None,
         export: ModelExport | None = None,
         callbacks: Sequence[EpochCallback] | None = None,
     ) -> None:
         """Initialize :class:`Trainer`."""
         self.config = config or TrainerConfig()
-        self.checkpoint_config = checkpoint_config or CheckpointConfig()
         self.export = export
-        if export is not None and not (
-            self.checkpoint_config.save_best or self.checkpoint_config.save_last
-        ):
+        if export is not None and not (self.config.save_best or self.config.save_last):
             msg = "`export` needs saved weights: enable `save_best` or `save_last`."
             raise ValueError(msg)
         self.callbacks = list(callbacks or [])
@@ -263,7 +261,7 @@ class Trainer:
         ``CNNModel`` and ``TimmModel`` turn logits into probabilities with
         softmax or sigmoid according to their ``output_mode``, so a head
         trained with BCE must say so, or engines return the wrong
-        probabilities. ``ModelExport`` must also rebuild the same head.
+        probabilities.
         """
         model = unwrap_model(self.model)
         output_mode = getattr(model, "output_mode", None)
@@ -283,8 +281,6 @@ class Trainer:
                 f"output_mode='{expected}'."
             )
             raise ValueError(msg)
-        if self.export is not None:
-            self.export.check_model(model)
 
     def _check_preprocessing(self: Trainer) -> None:
         """Warn when datasets preprocess differently from inference engines.
@@ -515,6 +511,8 @@ class Trainer:
                 enabled=use_autocast,
             ):
                 output = self.model(images)
+                # Check the targets still on the CPU, to avoid a device sync.
+                self.task.validate_targets(output, batch_targets)
                 components = self.task.loss_components(output, targets)
             if components.keys() != normalizers.keys():
                 msg = "Loss components and normalizers must have matching keys."
@@ -687,13 +685,8 @@ class Trainer:
 
     def _save_model_config(self: Trainer) -> None:
         """Write the inference configuration next to the weights it names."""
-        config = self.checkpoint_config
-        weights = (
-            config.best_weights_filename if config.save_best else config.last_filename
-        )
-        self.export.save(
-            self.output_dir / config.model_config_filename, self.model, weights
-        )
+        weights = _BEST_WEIGHTS if self.config.save_best else _LAST_CHECKPOINT
+        self.export.save(self.output_dir / DEFAULT_CONFIG_FILENAME, self.model, weights)
 
     def _carry_over_best_weights(self: Trainer, previous_dir: Path) -> None:
         """Copy the resumed run's best weights when resuming into a new directory.
@@ -701,10 +694,10 @@ class Trainer:
         The best score is restored with the checkpoint, so the matching weights
         must stay beside it even if training never improves after resuming.
         """
-        if not self.checkpoint_config.save_best:
+        if not self.config.save_best:
             return
-        name = self.checkpoint_config.best_weights_filename
-        previous, current = previous_dir / name, self.output_dir / name
+        previous = previous_dir / _BEST_WEIGHTS
+        current = self.output_dir / _BEST_WEIGHTS
         if previous.is_file() and not current.exists():
             shutil.copy2(previous, current)
 
@@ -776,22 +769,19 @@ class Trainer:
             self.best_monitor_value = monitor_value
             self.best_epoch = epoch
             self.patience_counter = 0
-            if self.checkpoint_config.save_best:
-                best_path = (
-                    self.output_dir / self.checkpoint_config.best_weights_filename
-                )
-                save_model_weights(self.model, best_path)
+            if self.config.save_best:
+                save_model_weights(self.model, self.output_dir / _BEST_WEIGHTS)
         else:
             self.patience_counter += 1
 
     def _save_last_checkpoint(self, epoch: int, *, final: bool) -> None:
         """Save on configured intervals and always at the final epoch."""
-        if self.checkpoint_config.save_last and (
-            final or epoch % self.checkpoint_config.save_last_every == 0
+        if self.config.save_last and (
+            final or epoch % self.config.save_last_every == 0
         ):
             save_checkpoint(
                 self._build_checkpoint_state(epoch),
-                self.output_dir / self.checkpoint_config.last_filename,
+                self.output_dir / _LAST_CHECKPOINT,
             )
 
     # Keep validation, best-weight tracking, checkpointing, and stopping in epoch order.
