@@ -383,8 +383,8 @@ class StructuredDenseTask(TrainingTaskABC):
             return head_output[:, channel_slice, ...].unsqueeze(1)
         return head_output[:, channel_slice, ...]
 
+    @staticmethod
     def _select_head_target(
-        self: StructuredDenseTask,
         targets: object,
         head: DenseHeadSpec,
     ) -> torch.Tensor:

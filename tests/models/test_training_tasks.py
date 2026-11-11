@@ -166,8 +166,11 @@ def test_auxiliary_outputs_are_selected_by_position() -> None:
     assert components["aux"] > components["main"]
 
 
-DENSE_LOSSES = {"multiclass": "cross_entropy", "binary": "bce_with_logits"}
-DENSE_LOSSES["regression"] = "mse"
+DENSE_LOSSES = {
+    "multiclass": "cross_entropy",
+    "binary": "bce_with_logits",
+    "regression": "mse",
+}
 
 
 @pytest.mark.parametrize("mode", ["multiclass", "binary", "regression"])

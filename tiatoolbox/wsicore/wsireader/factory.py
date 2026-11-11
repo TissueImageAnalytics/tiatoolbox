@@ -10,6 +10,7 @@ import numpy as np
 import openslide
 from upath import UPath
 
+from tiatoolbox import utils
 from tiatoolbox.utils.exceptions import FileNotSupportedError
 
 from .detection import is_dicom, is_ngff, is_valid_zarr_fsspec
