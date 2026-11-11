@@ -146,7 +146,7 @@ def _handle_special_cases(
     """
     from .base import _handle_virtual_wsi  # noqa: PLC0415
 
-    suffixes = input_path.suffixes
+    _, _, suffixes = utils.misc.split_path_name_ext(str(input_path))
     last_suffix = suffixes[-1] if suffixes else None
     post_proc = "auto" if post_proc is None else post_proc
 
