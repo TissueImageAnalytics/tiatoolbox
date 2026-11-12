@@ -440,10 +440,10 @@ class _CombinedTargetBuilder(TargetBuilderABC):
             )
             raise ValueError(msg)
 
-    @staticmethod
-    def _combine(
+    def _combine(  # skipcq: PYL-R0201  - hook signature
+        self: _CombinedTargetBuilder,
         targets: dict[str, TargetType],
-        output_shape: tuple[int, int],  # noqa: ARG004 - hook signature
+        output_shape: tuple[int, int],  # noqa: ARG002 - hook signature
     ) -> TargetType:
         """Combine the children's targets into this builder's target."""
         return targets

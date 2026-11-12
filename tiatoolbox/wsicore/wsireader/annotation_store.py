@@ -81,10 +81,12 @@ class AnnotationStoreReader(WSIReader):
             try:
                 if not isinstance(self.store, SQLiteStore):
                     msg = "Metadata is only available on an SQLite annotation store."
+                    self.close()
                     raise TypeError(msg)
                 wsi_meta = self.store.metadata["wsi_meta"]
                 if not isinstance(wsi_meta, str):
                     msg = "Stored wsi_meta must be a JSON string."
+                    self.close()
                     raise TypeError(msg)
                 info = WSIMeta(**json.loads(wsi_meta))
             except KeyError as exc:

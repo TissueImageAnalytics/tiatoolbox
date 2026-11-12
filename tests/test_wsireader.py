@@ -2305,17 +2305,27 @@ def test_store_reader_closes_only_what_it_opens(
     store.close()
 
     # A store opened before a failed construction is closed too.
-    opened = []
+    bad_meta_path = track_tmp_path / "bad_meta.db"
+    bad_meta_store = SQLiteStore(bad_meta_path)
+    bad_meta_store.metadata["wsi_meta"] = {"slide_dimensions": [64, 64]}
+    bad_meta_store.close()
+    opened: list[SQLiteStore] = []
 
-    def open_store(path: Path) -> SQLiteStore:
-        """Open a store and track it for cleanup."""
-        opened.append(SQLiteStore(path))
-        return opened[-1]
+    class TrackedStore(SQLiteStore):
+        """SQLiteStore that records each instance for cleanup checks."""
 
-    monkeypatch.setattr(wsireader.annotation_store, "SQLiteStore", open_store)
+        def __init__(self, path: Path) -> None:
+            super().__init__(path)
+            opened.append(self)
+
+    monkeypatch.setattr(wsireader.annotation_store, "SQLiteStore", TrackedStore)
     with pytest.raises(ValueError, match="No metadata found"):
         AnnotationStoreReader(store_path)
     assert not opened[0].cons
+
+    with pytest.raises(TypeError, match="Stored wsi_meta must be a JSON string"):
+        AnnotationStoreReader(bad_meta_path)
+    assert not opened[1].cons
 
 
 def test_store_reader_base_wsi_str(remote_sample: Callable) -> None:
@@ -2374,6 +2384,7 @@ def test_store_reader_rejects_non_string_wsi_meta(track_tmp_path: Path) -> None:
     store.metadata["wsi_meta"] = {"slide_dimensions": [1, 1]}
     with pytest.raises(TypeError, match="Stored wsi_meta must be a JSON string"):
         AnnotationStoreReader(store)
+    store.close()
 
 
 def test_store_reader_info_from_base(
