@@ -8,5 +8,6 @@ from tiatoolbox.tools import (
     stainaugment,
     stainextract,
     stainnorm,
+    strongaugment,
     tissuemask,
 )

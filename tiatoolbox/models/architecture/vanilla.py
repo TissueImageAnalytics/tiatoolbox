@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
+import numpy as np
 import timm
 import torch
 import torchvision.models as torch_models
@@ -11,10 +12,9 @@ from timm.layers import SwiGLUPacked
 from torch import nn
 
 from tiatoolbox.models.architecture.utils import argmax_last_axis
-from tiatoolbox.models.models_abc import ModelABC
+from tiatoolbox.models.models_abc import ModelABC, unwrap_model
 
 if TYPE_CHECKING:  # pragma: no cover
-    import numpy as np
     from torch.nn import Module, Sequential
     from torchvision.models import WeightsEnum
 
@@ -212,10 +212,65 @@ def _get_timm_architecture(
     raise ValueError(msg)
 
 
+ClassifierOutputMode = Literal["auto", "single_label", "binary", "multi_label"]
+_OUTPUT_MODES = ("auto", "single_label", "binary", "multi_label")
+_BINARY_THRESHOLD = 0.5
+_MIN_SINGLE_LABEL_OUTPUTS = 2
+
+
+def resolve_output_mode(
+    output_mode: str, num_classes: int
+) -> Literal["single_label", "binary", "multi_label"]:
+    """Resolve a classifier's ``output_mode``, which fixes its inference activation.
+
+    ``"auto"`` is ``"binary"`` for one output and ``"single_label"`` otherwise.
+    ``single_label`` heads turn logits into probabilities with softmax and
+    predict the argmax; ``binary`` and ``multi_label`` heads use sigmoid and
+    predict each output above 0.5, as heads trained with BCE need.
+    """
+    if output_mode not in _OUTPUT_MODES:
+        msg = f"Unsupported output mode `{output_mode}`; choose one of {_OUTPUT_MODES}."
+        raise ValueError(msg)
+    if output_mode == "auto":
+        return "binary" if num_classes == 1 else "single_label"
+    if output_mode == "binary" and num_classes != 1:
+        msg = f"`output_mode='binary'` needs one output, not {num_classes}."
+        raise ValueError(msg)
+    if output_mode == "single_label" and num_classes < _MIN_SINGLE_LABEL_OUTPUTS:
+        msg = "`output_mode='single_label'` needs at least two outputs."
+        raise ValueError(msg)
+    return output_mode
+
+
+def _binary_labels(probabilities: np.ndarray) -> np.ndarray:
+    """Label a binary head: 1 where its one probability exceeds 0.5."""
+    return (probabilities[..., 0] > _BINARY_THRESHOLD).astype(np.uint8)
+
+
+def _multi_label_labels(probabilities: np.ndarray) -> np.ndarray:
+    """Label every class of a multi-label head independently, 1 above 0.5."""
+    return (probabilities > _BINARY_THRESHOLD).astype(np.uint8)
+
+
+_LABEL_FUNCTIONS = {
+    "single_label": argmax_last_axis,
+    "binary": _binary_labels,
+    "multi_label": _multi_label_labels,
+}
+
+
+def _output_activation(model: nn.Module) -> Literal["softmax", "sigmoid"]:
+    """Return the activation that turns a classifier's logits into probabilities."""
+    mode = getattr(unwrap_model(model), "output_mode", "single_label")
+    return "softmax" if mode == "single_label" else "sigmoid"
+
+
 def _infer_batch(
     model: nn.Module,
     batch_data: torch.Tensor,
     device: str,
+    *,
+    activation: Literal["softmax", "sigmoid"] | None = None,
 ) -> np.ndarray:
     """Run inference on an input batch.
 
@@ -229,6 +284,9 @@ def _infer_batch(
             `torch.utils.data.DataLoader`.
         device (str):
             Transfers model to the specified device. Default is "cpu".
+        activation (str):
+            ``"softmax"`` (over the final axis) or ``"sigmoid"`` to apply to
+            the output, or ``None`` to return it as is.
 
     Returns:
         dict[str, np.ndarray]:
@@ -253,6 +311,10 @@ def _infer_batch(
 
     with torch.inference_mode():
         output = model(img_patches_device)
+        if activation == "softmax":
+            output = torch.softmax(output, dim=-1)
+        elif activation == "sigmoid":
+            output = torch.sigmoid(output)
     # Output should be a single tensor or scalar
     return output.cpu().numpy()
 
@@ -268,10 +330,19 @@ class CNNModel(ModelABC):
             Name of the CNN model backbone (e.g., "resnet18", "densenet121").
         num_classes (int):
             Number of classes output by model. Defaults to 1.
+        output_mode (str, keyword-only):
+            What the outputs mean, which fixes how ``infer_batch`` turns
+            them into probabilities and ``postproc_func`` into labels:
+            ``"single_label"`` (softmax, then argmax) or ``"binary"`` and
+            ``"multi_label"`` (sigmoid, then a 0.5 threshold), the latter
+            two for heads trained with BCE. ``"auto"`` (default) is
+            ``"binary"`` for one output and ``"single_label"`` otherwise.
 
     Attributes:
         num_classes (int):
             Number of classes output by the model.
+        output_mode (str):
+            The resolved output mode.
         feat_extract (nn.Module):
             Backbone CNN model.
         pool (nn.Module):
@@ -286,10 +357,18 @@ class CNNModel(ModelABC):
 
     """
 
-    def __init__(self: CNNModel, backbone: str, num_classes: int = 1) -> None:
+    def __init__(
+        self: CNNModel,
+        backbone: str,
+        num_classes: int = 1,
+        *,
+        output_mode: ClassifierOutputMode = "auto",
+    ) -> None:
         """Initialize :class:`CNNModel`."""
         super().__init__()
         self.num_classes = num_classes
+        self.output_mode = resolve_output_mode(output_mode, num_classes)
+        self.postproc_func = _LABEL_FUNCTIONS[self.output_mode]
 
         # By default pretrained weights are not downloaded
         self.feat_extract = _get_architecture(backbone)
@@ -316,14 +395,15 @@ class CNNModel(ModelABC):
         feat = self.feat_extract(imgs)
         gap_feat = self.pool(feat)
         gap_feat = torch.flatten(gap_feat, 1)
-        logit = self.classifier(gap_feat)
-        return torch.softmax(logit, -1)
+        return self.classifier(gap_feat)
 
     @staticmethod
     def postproc(image: np.ndarray) -> np.ndarray:
         """Define the post-processing of this class of model.
 
-        This simply applies argmax along last axis of the input.
+        This simply applies argmax along last axis of the input, the
+        default for ``single_label`` heads; an instance's ``postproc_func``
+        follows its ``output_mode``.
 
         Args:
             image (np.ndarray):
@@ -360,7 +440,12 @@ class CNNModel(ModelABC):
             >>> print(output)
 
         """
-        return _infer_batch(model=model, batch_data=batch_data, device=device)
+        return _infer_batch(
+            model=model,
+            batch_data=batch_data,
+            device=device,
+            activation=_output_activation(model),
+        )
 
 
 class TimmModel(ModelABC):
@@ -386,10 +471,18 @@ class TimmModel(ModelABC):
             Number of classes output by model.
         pretrained (bool, keyword-only):
             Whether to load pretrained weights.
+        output_mode (str, keyword-only):
+            What the outputs mean, as for :class:`CNNModel`:
+            ``"single_label"`` (softmax, then argmax), ``"binary"`` or
+            ``"multi_label"`` (sigmoid, then a 0.5 threshold), or ``"auto"``
+            (default), which is ``"binary"`` for one output and
+            ``"single_label"`` otherwise.
 
     Attributes:
         num_classes (int):
             Number of classes output by the model.
+        output_mode (str):
+            The resolved output mode.
         pretrained (bool):
             Whether to load pretrained weights.
         feat_extract (nn.Module):
@@ -411,11 +504,14 @@ class TimmModel(ModelABC):
         num_classes: int = 1,
         *,
         pretrained: bool,
+        output_mode: ClassifierOutputMode = "auto",
     ) -> None:
         """Initialize :class:`TimmModel`."""
         super().__init__()
         self.pretrained = pretrained
         self.num_classes = num_classes
+        self.output_mode = resolve_output_mode(output_mode, num_classes)
+        self.postproc_func = _LABEL_FUNCTIONS[self.output_mode]
         self.feat_extract = _get_timm_architecture(
             arch_name=backbone, pretrained=pretrained
         )
@@ -440,14 +536,15 @@ class TimmModel(ModelABC):
         """
         feat = self.feat_extract(imgs)
         feat = torch.flatten(feat, 1)
-        logit = self.classifier(feat)
-        return torch.softmax(logit, -1)
+        return self.classifier(feat)
 
     @staticmethod
     def postproc(image: np.ndarray) -> np.ndarray:
         """Define the post-processing of this class of model.
 
-        This simply applies argmax along last axis of the input.
+        This simply applies argmax along last axis of the input, the
+        default for ``single_label`` heads; an instance's ``postproc_func``
+        follows its ``output_mode``.
 
         Args:
             image (np.ndarray):
@@ -488,7 +585,12 @@ class TimmModel(ModelABC):
             >>> print(output)
 
         """
-        return _infer_batch(model=model, batch_data=batch_data, device=device)
+        return _infer_batch(
+            model=model,
+            batch_data=batch_data,
+            device=device,
+            activation=_output_activation(model),
+        )
 
 
 class CNNBackbone(ModelABC):

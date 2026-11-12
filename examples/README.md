@@ -107,6 +107,18 @@ Demonstrates the use of the TIAToolbox implementation of the [KongNet model](htt
 
 [![image](../docs/images/nucleus_detection_classification.png)](./12-nucleus-detection.ipynb)
 
+### 13. Training Patch Classifiers from Per-Class Patch Folders ([13-training-patch-folder-classification](./13-training-patch-folder-classification.ipynb))
+
+Shows how to train a patch classifier using the new training package in `tiatoolbox.models.training` for the folder-based classification setup, where each class corresponds to a subfolder of patches. The notebook covers dataset construction with the model's preprocessing, index-based splits with `split_indices`, explicit optimizer/scheduler setup, trainer configuration, checkpointing, resuming training from `last.ckpt`, and whole-slide inference with the model rebuilt by `load_trained_model`.
+
+### 14. Training Tissue Segmentation from Slide + Annotation Store Pairs ([14-training-slide-annotation-segmentation](./14-training-slide-annotation-segmentation.ipynb))
+
+Shows how to train a semantic segmentation model directly from whole-slide images and paired TIAToolbox annotation stores using `SlideAnnotationPatchDataset`. The notebook demonstrates building baseline-coordinate tissue annotations from `WSIReader.tissue_mask()`, labelling and balancing patches from those annotations, training at 2 mpp, running WSI inference with `SemanticSegmentor`, and comparing predicted vs. reference tissue masks side-by-side.
+
+### 15. Training KongNet on CoNIC ([15-training-kongnet-conic](./15-training-kongnet-conic.ipynb))
+
+Shows how to train a KongNet model, with its encoder initialised from ImageNet weights, on a downloadable 2,001-patch sample of the CoNIC dataset using the new structured dense training path in `tiatoolbox.models.training`. The notebook pairs PNG patches with TIAToolbox annotation stores, builds mask, boundary and centroid targets for each CoNIC cell class, derives a `StructuredDenseTask` from KongNet's output specification with `StructuredDenseTask.from_output_spec()`, trains for a short demo run, inspects patch-level predictions and instance post-processing, and segments nuclei in a whole-slide image with the model rebuilt by `load_trained_model`.
+
 ## B) Examples of High-Level Analysis (Pipelines) Using TIAToolbox
 
 List of Jupyter notebooks demonstrating how to use TIAToolbox for high-level analysis in computational pathology.

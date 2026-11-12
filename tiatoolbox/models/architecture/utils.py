@@ -615,7 +615,7 @@ def peak_detection_map_overlap(
                 r, c, confidence = (
                     centroid[0],
                     centroid[1],
-                    peak["mean_intensity"],
+                    peak["intensity_mean"],
                 )
                 out_probs[int(r), int(c), ch] = confidence
 

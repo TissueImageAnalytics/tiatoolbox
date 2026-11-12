@@ -24,12 +24,27 @@ class _TorchPreprocCaller:
 
     """
 
-    def __init__(self: _TorchPreprocCaller, preprocs: list) -> None:
+    def __init__(
+        self: _TorchPreprocCaller, preprocs: list, *, dataset_name: str | None = None
+    ) -> None:
         self.func = transforms.Compose(preprocs)
+        self.dataset_name = dataset_name
 
     def __call__(self: _TorchPreprocCaller, img: np.ndarray | Image) -> torch.Tensor:
         tensor: torch.Tensor = self.func(img)
         return tensor.permute((1, 2, 0))
+
+    def __eq__(self: _TorchPreprocCaller, other: object) -> bool:
+        """Treat predefined preprocessing for the same dataset as equal."""
+        name = getattr(self, "dataset_name", None)
+        if name is None or not isinstance(other, _TorchPreprocCaller):
+            return NotImplemented
+        return name == getattr(other, "dataset_name", None)
+
+    def __hash__(self: _TorchPreprocCaller) -> int:
+        """Hash consistently with equality."""
+        name = getattr(self, "dataset_name", None)
+        return hash(name) if name is not None else id(self)
 
 
 def predefined_preproc_func(dataset_name: str) -> _TorchPreprocCaller:
@@ -59,5 +74,5 @@ def predefined_preproc_func(dataset_name: str) -> _TorchPreprocCaller:
             msg,
         )
 
-    preprocs = preproc_dict[dataset_name]
-    return _TorchPreprocCaller(preprocs)
+    # Lets trained-model configs record and restore the same preprocessing.
+    return _TorchPreprocCaller(preproc_dict[dataset_name], dataset_name=dataset_name)

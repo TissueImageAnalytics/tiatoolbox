@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import os
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 import torch
 import torch._dynamo
 import torch.distributed as dist
 from torch import nn
+from torch._dynamo.eval_frame import OptimizedModule
 from torch.nn.parallel import DistributedDataParallel
 
 from tiatoolbox.models.architecture.utils import is_torch_compile_compatible
@@ -21,6 +23,43 @@ if TYPE_CHECKING:  # pragma: no cover
     from pathlib import Path
 
     import numpy as np
+    from torch.nn.modules.module import _IncompatibleKeys
+
+
+def unwrap_model(model: nn.Module) -> nn.Module:
+    """Return the plain module inside parallel and ``torch.compile`` wrappers.
+
+    DataParallel, DistributedDataParallel and compiled-module wrappers are
+    removed in any nesting order, so state dict keys match the bare model. A
+    model that merely owns a submodule called ``module`` is returned unchanged.
+    """
+    while True:
+        if isinstance(model, (nn.DataParallel, DistributedDataParallel)):
+            model = model.module
+        elif isinstance(model, OptimizedModule):
+            # PyTorch exposes the original compiled module through this attribute.
+            model = model._orig_mod  # skipcq: PYL-W0212  # noqa: SLF001
+        else:
+            return model
+
+
+def load_model_state_dict(
+    model: nn.Module,
+    payload: Mapping[str, Any],
+    *,
+    strict: bool = True,
+) -> _IncompatibleKeys:
+    """Load a bare state dictionary or a trainer's ``model_state_dict`` entry.
+
+    Parallel and compiled-module wrappers are unwrapped. Architecture-specific
+    legacy formats are handled by the model's own ``load_state_dict``
+    implementation. Loading is attempted once, so errors and ``strict=False``
+    retain their PyTorch semantics.
+    """
+    state = payload.get("model_state_dict")
+    if not isinstance(state, Mapping):
+        state = payload
+    return unwrap_model(model).load_state_dict(state, strict=strict)
 
 
 def load_torch_model(model: nn.Module, weights: str | Path) -> nn.Module:
@@ -39,8 +78,8 @@ def load_torch_model(model: nn.Module, weights: str | Path) -> nn.Module:
     """
     # ! assume to be saved in single GPU mode
     # always load on to the CPU
-    saved_state_dict = torch.load(weights, map_location="cpu")
-    model.load_state_dict(saved_state_dict, strict=True)
+    saved_state_dict = torch.load(weights, map_location="cpu", weights_only=True)
+    load_model_state_dict(model, saved_state_dict, strict=True)
     return model
 
 
@@ -236,21 +275,24 @@ class ModelABC(ABC, torch.nn.Module):
 
         return model
 
-    def load_weights_from_file(self: ModelABC, weights: str | Path) -> torch.nn.Module:
-        """Helper function to load a torch model.
+    def load_weights_from_file(
+        self: ModelABC, weights: str | Path
+    ) -> _IncompatibleKeys:
+        """Load model weights from a file on CPU.
 
         Args:
             self (ModelABC):
                 A torch model as :class:`ModelABC`.
             weights (str or Path):
-                Path to pretrained weights.
+                Path to pretrained weights or a trainer checkpoint payload.
 
         Returns:
-            torch.nn.Module:
-                Torch model with pretrained weights loaded on CPU.
+            _IncompatibleKeys:
+                Missing and unexpected keys reported by
+                :meth:`torch.nn.Module.load_state_dict`.
 
         """
         # ! assume to be saved in single GPU mode
         # always load on to the CPU
-        saved_state_dict = torch.load(weights, map_location="cpu")
-        return super().load_state_dict(saved_state_dict, strict=True)
+        saved_state_dict = torch.load(weights, map_location="cpu", weights_only=True)
+        return load_model_state_dict(self, saved_state_dict, strict=True)
