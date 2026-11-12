@@ -72,10 +72,7 @@ class AnnotationStoreReader(WSIReader):
             store = SQLiteStore(Path(store))
             self._opened.append(store)
         self.store = store
-        self.base_wsi = base_wsi
-        if isinstance(base_wsi, (str, Path)):
-            self.base_wsi = WSIReader.open(base_wsi)
-            self._opened.append(self.base_wsi)
+        self.base_wsi = self._open_base_wsi(base_wsi)
         if info is None:
             # try to get metadata from store
             try:
@@ -116,6 +113,16 @@ class AnnotationStoreReader(WSIReader):
         if self.base_wsi is not None:
             self.on_slide = True
         self.alpha = alpha
+
+    def _open_base_wsi(
+        self: AnnotationStoreReader,
+        base_wsi: WSIReader | str | None,
+    ) -> WSIReader | None:
+        """Return the base slide reader, opening it if a path is given."""
+        if isinstance(base_wsi, (str, Path)):
+            base_wsi = WSIReader.open(base_wsi)
+            self._opened.append(base_wsi)
+        return base_wsi
 
     def _info(self: AnnotationStoreReader) -> WSIMeta:
         """Get the metadata of the slide."""
