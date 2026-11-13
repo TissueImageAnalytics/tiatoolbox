@@ -674,7 +674,9 @@ def test_handle_tiff_wsi_openslide_error(
     )
 
     # Patch OpenSlideWSIReader to raise OpenSlideError
-    monkeypatch.setattr(wsireader.base, "OpenSlideWSIReader", raise_openslide_error)
+    monkeypatch.setattr(
+        wsireader.openslide, "OpenSlideWSIReader", raise_openslide_error
+    )
 
     # Patch is_tiled_tiff to return True so fallback to TIFFWSIReader is triggered
     monkeypatch.setattr(wsireader.base, "is_tiled_tiff", lambda _: True)
@@ -702,11 +704,13 @@ def test_handle_tiff_wsi_openslide_success(
 
     # Patch detect_format to return a valid format
     monkeypatch.setattr(
-        wsireader.base.openslide.OpenSlide, "detect_format", lambda _: "SVS"
+        wsireader.openslide.openslide.OpenSlide, "detect_format", lambda _: "SVS"
     )
 
     # Patch OpenSlideWSIReader.__init__ to bypass actual init logic
-    with patch.object(wsireader.base.OpenSlideWSIReader, "__init__", return_value=None):
+    with patch.object(
+        wsireader.openslide.OpenSlideWSIReader, "__init__", return_value=None
+    ):
         result = wsireader._handle_tiff_wsi(
             input_path=tiff_path,
             mpp=(0.5, 0.5),

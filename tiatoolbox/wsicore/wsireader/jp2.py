@@ -19,7 +19,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
     import numpy as np
 
-    from tiatoolbox.type_hints import IntBounds, IntPair, Resolution, Units
+    from tiatoolbox.type_hints import IntBounds, IntPair, Resolution, Units, WSIPostProc
 
 
 class JP2WSIReader(WSIReader):
@@ -39,7 +39,7 @@ class JP2WSIReader(WSIReader):
         input_img: str | Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
-        post_proc: str | callable | None = "auto",
+        post_proc: WSIPostProc = "auto",
     ) -> None:
         """Initialize :class:`OmnyxJP2WSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power, post_proc=post_proc)
@@ -548,8 +548,9 @@ class JP2WSIReader(WSIReader):
         # Check capture resolution box
         if "cres" in boxes:
             # Get the resolution in pixels per meter
-            ppm_x = boxes.get("cres").horizontal_resolution
-            ppm_y = boxes.get("cres").vertical_resolution
+            cres = boxes["cres"]
+            ppm_x = cres.horizontal_resolution
+            ppm_y = cres.vertical_resolution
             mpp_x = utils.misc.ppu2mpp(ppm_x, "meter")
             mpp_y = utils.misc.ppu2mpp(ppm_y, "meter")
             mpp = [mpp_x, mpp_y]
@@ -557,7 +558,7 @@ class JP2WSIReader(WSIReader):
         # resolution). This XML contains pipe seperated key values e.g.
         # "AppMag = 40 | ..."" in a <description> tag.
         if "xml " in boxes:
-            description = boxes.get("xml ").xml.find("description")
+            description = boxes["xml "].xml.find("description")
             if description is not None and description.text:
                 matches = re.search(
                     r"AppMag\s*=\s*(\d+)",

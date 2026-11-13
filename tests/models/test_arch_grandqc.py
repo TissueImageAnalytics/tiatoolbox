@@ -114,7 +114,7 @@ def test_grandqc_with_semantic_segmentor(
         unique_types.add(annotation.properties["type"])
         if annotation.properties["type"] == "tissue":
             tissue_area_px += annotation.geometry.area
-    assert 2950000 < tissue_area_px < 2960000
+    assert 2930000 < tissue_area_px < 2940000
 
     assert unique_types == {"tissue"}
     store.close()

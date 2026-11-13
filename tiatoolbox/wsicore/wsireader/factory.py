@@ -23,13 +23,13 @@ if TYPE_CHECKING:  # pragma: no cover
     from .annotation_store import AnnotationStoreReader
     from .base import (
         FsspecJsonWSIReader,
-        OpenSlideWSIReader,
         TIFFWSIReader,
         VirtualWSIReader,
         WSIReader,
     )
     from .dicom import DICOMWSIReader
     from .ngff import NGFFWSIReader
+    from .openslide import OpenSlideWSIReader
     from .types import WSIReaderExtraParams, WSIReaderParams
 
 
@@ -147,7 +147,7 @@ def _handle_special_cases(
     """
     from .base import _handle_virtual_wsi  # noqa: PLC0415
 
-    _, _, suffixes = utils.misc.split_path_name_ext(input_path)
+    _, _, suffixes = utils.misc.split_path_name_ext(str(input_path))
     last_suffix = suffixes[-1] if suffixes else None
     post_proc = "auto" if post_proc is None else post_proc
 
@@ -180,7 +180,7 @@ def _default_reader(
     post_proc: WSIPostProc = "auto",
 ) -> WSIReader:
     """Fallback reader."""
-    from .base import OpenSlideWSIReader  # noqa: PLC0415
+    from .openslide import OpenSlideWSIReader  # noqa: PLC0415
 
     return OpenSlideWSIReader(
         input_path,
@@ -197,7 +197,7 @@ def try_openslide(
     power: Number | None,
 ) -> OpenSlideWSIReader | None:
     """Try to create an OpenSlideWSIReader if the input is a TIFF file."""
-    from .base import OpenSlideWSIReader  # noqa: PLC0415
+    from .openslide import OpenSlideWSIReader  # noqa: PLC0415
 
     if last_suffix in (".tif", ".tiff"):
         try:
