@@ -86,7 +86,7 @@ def _handle_virtual_wsi(
         *args: Number | tuple | str | WSIMeta | None,
         **kwargs: dict,
     ) -> VirtualWSIReader:
-        """Create a virtual WSI from a numpy array."""
+        """Create a virtual WSI from a NumPy array."""
         return VirtualWSIReader(input_path, *args, **kwargs)
 
     suffix_to_reader = {
@@ -134,7 +134,7 @@ def _handle_tiff_wsi(
     """
     if openslide.OpenSlide.detect_format(input_path) is not None:
         try:
-            from .openslide import OpenSlideWSIReader  # noqa: PLC0415
+            from .openslide import OpenSlideWSIReader  # skipcq: PYL-R0401  # noqa: PLC0415
 
             return OpenSlideWSIReader(
                 input_path, mpp=mpp, power=power, post_proc=post_proc
