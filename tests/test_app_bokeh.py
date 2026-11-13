@@ -9,6 +9,7 @@ import json
 import re
 import shutil
 import sys
+import tempfile
 import threading
 import time
 import types
@@ -24,7 +25,7 @@ import requests
 from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
 from bokeh.events import ButtonClick, DoubleTap, MenuItemClick
-from bokeh.models import ColorBar
+from bokeh.models import ColorBar, ColorPicker, Column, Slider, Toggle
 from bokeh.models.tiles import WMTSTileSource
 from bokeh.plotting import figure
 from flask_cors import CORS
@@ -48,6 +49,7 @@ BOKEH_PATH = importlib_resources.files("tiatoolbox.visualization.bokeh_app")
 FILLED = 0
 MICRON_FORMATTER = 1
 GRIDLINES = 2
+_RUNNING_ON_CI = toolbox_env.running_on_ci()
 
 
 # Helper function
@@ -582,6 +584,10 @@ def test_load_img_overlay(doc: Document, data_path: pytest.TempPathFactory) -> N
     assert full_name in main.UI["vstate"].layer_dict
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test running hovernet on a box."""
     slide_select = doc.get_model_by_name("slide_select0")
@@ -621,6 +627,10 @@ def test_hovernet_on_box(doc: Document, data_path: pytest.TempPathFactory) -> No
     assert len(main.UI["type_column"].children) == 1
 
 
+@pytest.mark.skipif(
+    _RUNNING_ON_CI,
+    reason="Local test only.",
+)
 def test_sam_segment(doc: Document, data_path: pytest.TempPathFactory) -> None:
     """Test running SAM on a box."""
     slide_select = doc.get_model_by_name("slide_select0")
@@ -2063,3 +2073,610 @@ def test_populate_slide_list_dicom_container(
     # Internal files should not appear
     assert ("case1/000001.dcm", "case1/000001.dcm") not in mock_select.options
     assert ("case1/000002.dcm", "case1/000002.dcm") not in mock_select.options
+
+
+def test_segment_on_box(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test segment_on_box callback."""
+    slide_path = track_tmp_path / "slide.svs"
+    slide_path.touch()
+
+    annotation_calls: list[list[str]] = []
+    removed_dirs: list[Path] = []
+
+    class FakeWSI:
+        """Minimal WSI."""
+
+        @staticmethod
+        def slide_thumbnail() -> np.ndarray:
+            """Return thumbnail."""
+            return np.zeros(
+                (100, 200, 3),
+                dtype=np.uint8,
+            )
+
+    class FakeSession:
+        """Fake requests session."""
+
+        @staticmethod
+        def put(
+            url: str,
+            data: dict[str, str],
+        ) -> object:
+            """Return fake response."""
+            _ = url, data
+
+            return SimpleNamespace(
+                text=json.dumps(["tumour"]),
+            )
+
+    class FakeSegmentor:
+        """Fake nucleus instance segmentor."""
+
+        def __init__(
+            self,
+            model: str,
+            batch_size: int,
+        ) -> None:
+            assert model == "hovernet_fast-pannuke"
+            assert batch_size == 24
+
+            self.ioconfig = SimpleNamespace(
+                save_resolution={
+                    "resolution": 0.25,
+                },
+            )
+
+        def run(
+            self,
+            **kwargs: object,
+        ) -> dict[Path, list[str]]:
+            """Return fake annotation path."""
+            _ = self, kwargs
+
+            return {
+                slide_path: [
+                    str(track_tmp_path / "hover_out.db"),
+                ],
+            }
+
+    class FakeImage:
+        """Fake image."""
+
+        def save(self, path: Path) -> None:
+            """Do nothing."""
+            _ = self, path
+
+    def _fake_fromarray(
+        array: np.ndarray,
+    ) -> FakeImage:
+        """Return fake image."""
+        _ = array
+
+        return FakeImage()
+
+    def _fake_make_safe_name(path: str) -> str:
+        """Return path unchanged."""
+        return path
+
+    def _fake_update_ui_on_new_annotations(
+        ann_types: list[str],
+    ) -> None:
+        """Capture annotation types."""
+        annotation_calls.append(ann_types)
+
+    def _fake_rmtree(path: Path) -> None:
+        """Capture removed paths."""
+        removed_dirs.append(path)
+
+    monkeypatch.setattr(
+        main,
+        "NucleusInstanceSegmentor",
+        FakeSegmentor,
+    )
+
+    monkeypatch.setattr(
+        main.Image,
+        "fromarray",
+        _fake_fromarray,
+    )
+
+    monkeypatch.setattr(
+        main,
+        "make_safe_name",
+        _fake_make_safe_name,
+    )
+
+    monkeypatch.setattr(
+        main,
+        "update_ui_on_new_annotations",
+        _fake_update_ui_on_new_annotations,
+    )
+
+    monkeypatch.setattr(
+        main,
+        "rmtree",
+        _fake_rmtree,
+    )
+
+    monkeypatch.setattr(
+        tempfile,
+        "mkdtemp",
+        lambda: str(track_tmp_path / "tmp"),
+    )
+
+    def _fake_select_device(
+        *,
+        on_gpu: bool,
+    ) -> str:
+        """Return CPU device for testing."""
+        _ = on_gpu
+
+        return "cpu"
+
+    monkeypatch.setattr(
+        main,
+        "select_device",
+        _fake_select_device,
+    )
+
+    main.UI = {
+        "box_source": SimpleNamespace(
+            data={
+                "x": [50],
+                "y": [-50],
+                "width": [20],
+                "height": [20],
+            },
+        ),
+        "vstate": SimpleNamespace(
+            wsi=FakeWSI(),
+            dims=(200, 100),
+            slide_path=slide_path,
+            model_mpp=None,
+        ),
+        "s": FakeSession(),
+    }
+
+    main.segment_on_box()
+
+    assert annotation_calls == [["tumour"]]
+    assert removed_dirs
+    assert main.UI["vstate"].model_mpp == 0.25
+
+
+def test_sam_segment_with_point_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """Test SAM segmentation callback using point prompts."""
+    annotation_calls: list[list[str]] = []
+
+    roi = np.zeros(
+        (100, 100, 3),
+        dtype=np.uint8,
+    )
+
+    class FakeWSI:
+        """Minimal WSI."""
+
+        @staticmethod
+        def read_bounds(
+            bounds: tuple[int, int, int, int],
+            resolution: float,
+            units: str,
+        ) -> np.ndarray:
+            """Return fake region of interest."""
+            _ = bounds, resolution, units
+
+            return roi
+
+    class FakeSession:
+        """Fake requests session."""
+
+        @staticmethod
+        def put(
+            url: str,
+            data: dict[str, str],
+        ) -> object:
+            """Return fake response."""
+            _ = url, data
+
+            return SimpleNamespace(
+                text=json.dumps(["sam_mask"]),
+            )
+
+    class FakePromptSegmentor:
+        """Fake prompt segmentor."""
+
+        def __init__(self) -> None:
+            self.offset = None
+
+        @staticmethod
+        def calc_mpp(
+            area_dims: tuple[int, int],
+            base_mpp: float,
+            fixed_size: int,
+        ) -> tuple[float, float]:
+            """Return deterministic scaling."""
+            _ = area_dims, base_mpp, fixed_size
+
+            return 0.5, 1.0
+
+        def run(
+            self,
+            images: list[np.ndarray],
+            point_coords: np.ndarray | None = None,
+            box_coords: np.ndarray | None = None,
+            save_dir: Path | None = None,
+            device: str = "cpu",
+        ) -> list[Path]:
+            """Return fake annotation path."""
+            _ = (
+                self,
+                images,
+                point_coords,
+                box_coords,
+                save_dir,
+                device,
+            )
+
+            return [
+                track_tmp_path / "sam_output.db",
+            ]
+
+    def _fake_make_safe_name(path: str) -> str:
+        """Return file path unchanged."""
+        return path
+
+    def _fake_update_ui_on_new_annotations(
+        ann_types: list[str],
+    ) -> None:
+        """Capture annotation types."""
+        annotation_calls.append(ann_types)
+
+    def _fake_mkdtemp(
+        suffix: str = "",
+    ) -> str:
+        """Return fake temp directory."""
+        _ = suffix
+
+        return str(track_tmp_path)
+
+    monkeypatch.setattr(
+        main,
+        "PromptSegmentor",
+        FakePromptSegmentor,
+    )
+
+    monkeypatch.setattr(
+        main,
+        "make_safe_name",
+        _fake_make_safe_name,
+    )
+
+    monkeypatch.setattr(
+        main,
+        "update_ui_on_new_annotations",
+        _fake_update_ui_on_new_annotations,
+    )
+
+    monkeypatch.setattr(
+        main.tempfile,
+        "mkdtemp",
+        _fake_mkdtemp,
+    )
+
+    def _fake_select_device(
+        *,
+        on_gpu: bool,
+    ) -> str:
+        """Return CPU device for testing."""
+        _ = on_gpu
+
+        return "cpu"
+
+    monkeypatch.setattr(
+        main,
+        "select_device",
+        _fake_select_device,
+    )
+
+    main.UI = {
+        "p": SimpleNamespace(
+            x_range=SimpleNamespace(start=0, end=100),
+            y_range=SimpleNamespace(start=-100, end=0),
+        ),
+        "pt_source": SimpleNamespace(
+            data={
+                "x": [50],
+                "y": [-50],
+            },
+        ),
+        "box_source": SimpleNamespace(
+            data={
+                "x": [],
+                "y": [],
+                "width": [],
+                "height": [],
+            },
+        ),
+        "vstate": SimpleNamespace(
+            dims=(1000, 1000),
+            mpp=(0.25, 0.25),
+            wsi=FakeWSI(),
+        ),
+        "s": FakeSession(),
+    }
+
+    main.sam_segment()
+
+    assert annotation_calls == [["sam_mask"]]
+
+
+def test_initialise_overlay_removes_stale_widgets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test stale type and color widgets are removed."""
+    type_keep = Toggle(label="Tumour", active=True)
+    type_remove = Toggle(label="OldType", active=True)
+
+    colour_keep = ColorPicker(name="Tumour")
+    colour_slider = Slider(name="nodes_slider")
+    colour_remove = ColorPicker(name="OldType")
+
+    fake_vstate = SimpleNamespace(
+        types={"Tumour"},
+        layer_dict={},
+        mapper={"Tumour": (1.0, 0.0, 0.0, 1.0)},
+        colors=[],
+    )
+
+    main.win_dicts.clear()
+
+    main.win_dicts.append(
+        {
+            "vstate": fake_vstate,
+            "type_column": Column(
+                children=[
+                    type_keep,
+                    type_remove,
+                ],
+            ),
+            "color_column": Column(
+                children=[
+                    colour_keep,
+                    colour_slider,
+                    colour_remove,
+                ],
+            ),
+        },
+    )
+
+    main.UI.active = 0
+
+    def _fake_build_predicate() -> str:
+        """Avoid exercising predicate logic."""
+        return "True"
+
+    monkeypatch.setattr(
+        main,
+        "build_predicate",
+        _fake_build_predicate,
+    )
+
+    main.initialise_overlay()
+
+    assert type_keep in main.UI["type_column"].children
+    assert type_remove not in main.UI["type_column"].children
+
+    assert colour_keep in main.UI["color_column"].children
+    assert colour_slider in main.UI["color_column"].children
+    assert colour_remove not in main.UI["color_column"].children
+
+
+def test_update_ui_on_new_annotations_resets_cprop() -> None:
+    """Test cprop is reset to 'type' when no valid property is selected."""
+    main.win_dicts.clear()
+
+    class FakeResponse:
+        """Minimal response object."""
+
+        text = '["probability", "area"]'
+
+    fake_vstate = SimpleNamespace(
+        types=[],
+        props=[],
+        props_old=["old_prop"],
+    )
+
+    def _fake_get(
+        url: str,
+    ) -> FakeResponse:
+        """Return fake response."""
+        _ = url
+
+        return FakeResponse()
+
+    main.win_dicts.append(
+        {
+            "vstate": fake_vstate,
+            "s": SimpleNamespace(
+                get=_fake_get,
+            ),
+            "type_cmap_select": SimpleNamespace(
+                options=[],
+            ),
+            "node_source": SimpleNamespace(
+                data={"x_": []},
+            ),
+            "cprop_input": SimpleNamespace(
+                value=[],
+                options=[],
+            ),
+        },
+    )
+
+    main.UI.active = 0
+
+    called: dict[str, object] = {}
+
+    def _fake_get_mapper_for_prop(prop: str) -> dict[str, str]:
+        """Capture selected property."""
+        called["prop"] = prop
+        return {"fake": "mapper"}
+
+    def _fake_update_renderer(
+        renderer_type: str,
+        mapper: object,
+    ) -> None:
+        """Capture renderer updates."""
+        called["renderer_type"] = renderer_type
+        called["mapper"] = mapper
+
+    def _fake_initialise_overlay() -> None:
+        """Do nothing."""
+
+    def _fake_change_tiles(layer: str) -> None:
+        """Do nothing."""
+        _ = layer
+
+    original_get_mapper = main.get_mapper_for_prop
+    original_update_renderer = main.update_renderer
+    original_initialise_overlay = main.initialise_overlay
+    original_change_tiles = main.change_tiles
+
+    try:
+        main.get_mapper_for_prop = _fake_get_mapper_for_prop
+        main.update_renderer = _fake_update_renderer
+        main.initialise_overlay = _fake_initialise_overlay
+        main.change_tiles = _fake_change_tiles
+
+        main.update_ui_on_new_annotations(["Tumour"])
+
+    finally:
+        main.get_mapper_for_prop = original_get_mapper
+        main.update_renderer = original_update_renderer
+        main.initialise_overlay = original_initialise_overlay
+        main.change_tiles = original_change_tiles
+
+    assert main.UI["cprop_input"].value == ["type"]
+
+    assert called["prop"] == "type"
+    assert called["renderer_type"] == "mapper"
+
+
+def test_model_drop_cb() -> None:
+    """Test model selection callback."""
+    main.win_dicts.clear()
+
+    vstate = SimpleNamespace(
+        current_model="old_model",
+    )
+
+    main.win_dicts.append(
+        {
+            "vstate": vstate,
+        },
+    )
+
+    main.UI.active = 0
+
+    main.model_drop_cb(
+        attr="value",
+        old="old_model",
+        new="SAM",
+    )
+
+    assert main.UI["vstate"].current_model == "SAM"
+
+
+def test_to_model_cb_hovernet(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test HoverNet callback dispatch."""
+    called = False
+
+    def _fake_segment_on_box() -> None:
+        """Fake segment on box."""
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(
+        main,
+        "segment_on_box",
+        _fake_segment_on_box,
+    )
+
+    main.win_dicts.clear()
+
+    main.win_dicts.append(
+        {
+            "vstate": SimpleNamespace(
+                current_model="hovernet",
+            ),
+        },
+    )
+
+    main.UI.active = 0
+
+    main.to_model_cb(attr=None)
+
+    assert called is True
+
+
+def test_to_model_cb_sam(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test SAM callback dispatch."""
+    called = False
+
+    def _fake_sam_segment() -> None:
+        """Fake sam segment."""
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(
+        main,
+        "sam_segment",
+        _fake_sam_segment,
+    )
+
+    main.win_dicts.clear()
+
+    main.win_dicts.append(
+        {
+            "vstate": SimpleNamespace(
+                current_model="SAM",
+            ),
+        },
+    )
+
+    main.UI.active = 0
+
+    main.to_model_cb(attr=None)
+
+    assert called is True
+
+
+def test_to_model_cb_unknown_model(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test unknown model warning."""
+    main.win_dicts.clear()
+
+    main.win_dicts.append(
+        {
+            "vstate": SimpleNamespace(
+                current_model="unknown",
+            ),
+        },
+    )
+
+    main.UI.active = 0
+
+    main.to_model_cb(attr=None)
+
+    assert "unknown model" in caplog.text

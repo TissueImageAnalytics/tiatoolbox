@@ -16,7 +16,7 @@ class SAM(ModelABC):
     Meta AI's zero-shot segmentation model.
     SAM is used for interactive general-purpose segmentation.
 
-    Currently supports SAM.
+    Currently, supports SAM.
 
     SAM accepts an RGB image patch along with a list of point and bounding
     box coordinates as prompts.

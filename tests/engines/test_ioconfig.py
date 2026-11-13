@@ -3,7 +3,11 @@
 import numpy as np
 import pytest
 
-from tiatoolbox.models import IOSegmentorConfig, ModelIOConfigABC
+from tiatoolbox.models import (
+    IOInstanceSegmentorConfig,
+    IOSegmentorConfig,
+    ModelIOConfigABC,
+)
 
 
 def test_validation_error_io_config() -> None:
@@ -119,3 +123,57 @@ def test_ios_to_baseline_without_save_resolution() -> None:
 
     # save_resolution should remain None after conversion
     assert new_cfg.save_resolution is None
+
+
+def test_model_ioconfig_to_baseline_with_save_resolution() -> None:
+    """Test baseline conversion when save_resolution is present."""
+    config = IOSegmentorConfig(
+        input_resolutions=[{"units": "mpp", "resolution": 0.25}],
+        output_resolutions=[{"units": "mpp", "resolution": 0.5}],
+        patch_input_shape=(256, 256),
+        patch_output_shape=(128, 128),
+        stride_shape=(128, 128),
+        save_resolution={"units": "mpp", "resolution": 1.0},
+    )
+
+    config.to_baseline()
+
+    # Coverage test, no assertion required beyond successful execution.
+    assert config.save_resolution is not None
+
+
+def test_iosegmentorconfig_to_baseline_with_save_resolution() -> None:
+    """Test IOSegmentorConfig baseline conversion with save resolution."""
+    config = IOSegmentorConfig(
+        input_resolutions=[{"units": "mpp", "resolution": 0.25}],
+        output_resolutions=[{"units": "mpp", "resolution": 0.5}],
+        patch_input_shape=(256, 256),
+        patch_output_shape=(128, 128),
+        stride_shape=(128, 128),
+        save_resolution={"units": "mpp", "resolution": 1.0},
+    )
+
+    baseline = config.to_baseline()
+
+    assert baseline.save_resolution is not None
+    assert baseline.save_resolution["units"] == "baseline"
+
+
+def test_ioinstancesegmentorconfig_to_baseline() -> None:
+    """Test IOInstanceSegmentorConfig baseline conversion."""
+    config = IOInstanceSegmentorConfig(
+        input_resolutions=[{"units": "mpp", "resolution": 0.25}],
+        output_resolutions=[{"units": "mpp", "resolution": 0.5}],
+        patch_input_shape=(256, 256),
+        patch_output_shape=(128, 128),
+        stride_shape=(128, 128),
+        margin=32,
+        tile_shape=(512, 512),
+    )
+
+    result = config.to_baseline()
+
+    assert isinstance(
+        result,
+        IOInstanceSegmentorConfig,
+    )
