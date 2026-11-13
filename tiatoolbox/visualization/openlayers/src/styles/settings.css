@@ -314,9 +314,10 @@
 }
 
 
-/* Settings reset button */
+/* Settings action buttons */
 
-.settings-reset-button {
+.settings-reset-button,
+.settings-action-button {
     height: 30px;
     flex-shrink: 0;
     padding: 4px 10px;
@@ -334,19 +335,22 @@
 }
 
 
-.settings-reset-button:hover {
+.settings-reset-button:hover,
+.settings-action-button:hover {
     background: var(--viewer-control-hover-background);
     color: var(--viewer-control-hover-foreground);
 }
 
 
-.settings-reset-button:active {
+.settings-reset-button:active,
+.settings-action-button:active {
     background: var(--viewer-control-pressed-background);
     color: var(--viewer-control-pressed-foreground);
 }
 
 
-.settings-reset-button:focus {
+.settings-reset-button:focus,
+.settings-action-button:focus {
     border-color: var(--viewer-control-focus-border);
     outline: none;
 }

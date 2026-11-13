@@ -50,6 +50,18 @@ import {
     createGridController,
 } from "./controls/grid.js";
 import {
+    createLoadingIndicatorController,
+} from "./controls/loading-indicator.js";
+import {
+    captureMapSnapshot,
+    createSnapshotController,
+    downloadSnapshot,
+    downloadSnapshotMetadata,
+    getSnapshotOverlayLayer,
+    parseSnapshotMetadata,
+    validateSnapshotAnnotationRestore,
+} from "./controls/snapshot.js";
+import {
     createScaleBarController,
 } from "./controls/scale-bar.js";
 import {
@@ -96,6 +108,46 @@ function createSlideSource(sessionId, slideInfo, version) {
 
 const mapElement = document.getElementById("map");
 const viewerApp = document.querySelector(".viewer-app");
+
+const viewerLoadingIndicator =
+    document.getElementById(
+        "viewer-loading-indicator",
+    );
+
+const snapshotButton =
+    document.getElementById(
+        "snapshot-button",
+    );
+
+const snapshotControl =
+    document.querySelector(
+        ".snapshot-control",
+    );
+
+const snapshotVisibleInput =
+    document.getElementById(
+        "settings-snapshot-visible",
+    );
+
+const snapshotScaleBarInput =
+    document.getElementById(
+        "settings-snapshot-scale-bar",
+    );
+
+const snapshotMetadataInput =
+    document.getElementById(
+        "settings-snapshot-metadata",
+    );
+
+const snapshotLoadButton =
+    document.getElementById(
+        "settings-snapshot-load",
+    );
+
+const snapshotFileInput =
+    document.getElementById(
+        "settings-snapshot-file",
+    );
 
 const viewerPanel = document.getElementById("viewer-panel");
 const viewerPanelToggle = document.getElementById(
@@ -378,6 +430,14 @@ if (mapElement === null || viewerApp === null) {
 }
 
 if (
+    viewerLoadingIndicator === null ||
+    snapshotButton === null ||
+    snapshotControl === null ||
+    snapshotVisibleInput === null ||
+    snapshotScaleBarInput === null ||
+    snapshotMetadataInput === null ||
+    snapshotLoadButton === null ||
+    snapshotFileInput === null ||
     viewerPanel === null ||
     viewerPanelToggle === null ||
     layerEditor === null ||
@@ -602,6 +662,9 @@ const settingsPanelController =
         scaleBarOpacityInput,
         scaleBarSizeSelect,
         scaleBarUnitsSelect,
+        snapshotVisibleInput,
+        snapshotScaleBarInput,
+        snapshotMetadataInput,
 
         onAnnotationInspectionChange() {
             if (
@@ -677,6 +740,7 @@ let overlayVersion = Date.now();
 let currentSlideInfo = null;
 let currentSlidePath = null;
 const overlayLayers = {};
+const overlayPaths = new Map();
 const annotationLayerNames = new Set();
 const annotationColours = new Map();
 const annotationColoursByLayer = new Map();
@@ -3014,6 +3078,411 @@ const map = new OlMap({
     }),
 });
 
+let scaleLineControl = null;
+
+async function restoreAnnotationSnapshotMetadata(
+    metadata,
+) {
+    validateSnapshotAnnotationRestore(
+        metadata,
+        annotationLayerNames,
+        annotationTypesByLayer,
+    );
+
+    for (const layer of metadata.layers) {
+        const colours =
+            new Map(
+                layer.types.map(
+                    (annotation) => [
+                        annotation.annotationType,
+                        [...annotation.colour],
+                    ],
+                ),
+            );
+
+        const visibility =
+            new Map(
+                layer.types.map(
+                    (annotation) => [
+                        annotation.annotationType,
+                        annotation.visible,
+                    ],
+                ),
+            );
+
+        const opacities =
+            new Map(
+                layer.types.map(
+                    (annotation) => [
+                        annotation.annotationType,
+                        annotation.opacity,
+                    ],
+                ),
+            );
+
+        annotationColoursByLayer.set(
+            layer.name,
+            colours,
+        );
+
+        annotationTypeVisibilityByLayer.set(
+            layer.name,
+            visibility,
+        );
+
+        annotationTypeOpacityByLayer.set(
+            layer.name,
+            opacities,
+        );
+
+        await setTileServerAnnotationOpacities(
+            opacities,
+            layer.name,
+        );
+    }
+
+    annotationPalette = "custom";
+    annotationColourMap =
+        metadata.colourMap;
+
+    if (metadata.displayMode === "type") {
+        await setAnnotationTypeMode({
+            refresh: false,
+        });
+    } else if (
+        metadata.displayMode === "property"
+    ) {
+        await setAnnotationPropertyMode(
+            metadata.property,
+            {
+                refresh: false,
+            },
+        );
+    } else {
+        const selection =
+            metadata.secondarySelection;
+
+        await setAnnotationSecondaryMode(
+            selection.layerName,
+            selection.annotationType,
+            metadata.property,
+            {
+                refresh: false,
+            },
+        );
+    }
+
+    refreshAnnotationLayers();
+    annotationsPanelController.render();
+}
+
+async function restoreSnapshotMetadata(metadata) {
+    await switchSlide(
+        metadata.slide.path,
+    );
+
+    const overlays =
+        [...metadata.overlays].sort(
+            (first, second) =>
+                first.order - second.order,
+        );
+
+    for (const overlay of overlays) {
+        await loadOverlay(
+            overlay.path,
+        );
+
+        const layer =
+            getSnapshotOverlayLayer(
+                overlayLayers,
+                overlay.name,
+            );
+
+        layer.setVisible(
+            overlay.visible,
+        );
+
+        layer.setOpacity(
+            overlay.opacity,
+        );
+
+        layer.setZIndex(
+            overlay.zIndex ?? undefined,
+        );
+    }
+
+    await restoreAnnotationSnapshotMetadata(
+        metadata.annotations,
+    );
+
+    layersPanelController.render();
+
+    scaleBarEnabledInput.checked =
+        metadata.scaleBar.enabled;
+
+    snapshotScaleBarInput.checked =
+        metadata.scaleBar.included;
+
+    scaleBarColourInput.value =
+        metadata.scaleBar.colour;
+
+    scaleBarOpacityInput.value =
+        metadata.scaleBar.opacity.toString();
+
+    scaleBarSizeSelect.value =
+        metadata.scaleBar.size;
+
+    scaleBarUnitsSelect.value =
+        metadata.scaleBar.units;
+
+    scaleBarController.updateSize();
+
+    const view = map.getView();
+
+    view.setCenter(
+        metadata.viewport.centre,
+    );
+
+    view.setZoom(
+        metadata.viewport.zoom,
+    );
+
+    view.setRotation(
+        metadata.viewport.rotation,
+    );
+}
+
+function createAnnotationSnapshotMetadata() {
+    const layers =
+        [...annotationLayerNames].map(
+            (layerName) => {
+                const annotationTypes =
+                    annotationTypesByLayer.get(
+                        layerName,
+                    ) ?? [];
+
+                const colours =
+                    annotationColoursByLayer.get(
+                        layerName,
+                    );
+
+                const visibility =
+                    annotationTypeVisibilityByLayer.get(
+                        layerName,
+                    );
+
+                const opacities =
+                    annotationTypeOpacityByLayer.get(
+                        layerName,
+                    );
+
+                return {
+                    name: layerName,
+                    types:
+                        annotationTypes.map(
+                            (annotationType) => ({
+                                annotationType,
+                                colour: [
+                                    ...(
+                                        colours?.get(
+                                            annotationType,
+                                        ) ??
+                                        [0, 0, 0, 1]
+                                    ),
+                                ],
+                                visible:
+                                    visibility?.get(
+                                        annotationType,
+                                    ) ?? true,
+                                opacity:
+                                    opacities?.get(
+                                        annotationType,
+                                    ) ?? 1,
+                            }),
+                        ),
+                };
+            },
+        );
+
+    return {
+        displayMode:
+            annotationDisplayMode,
+        property:
+            annotationProperty,
+        secondarySelection:
+            annotationSecondarySelection === null
+                ? null
+                : {
+                    ...annotationSecondarySelection,
+                },
+        colourMap:
+            annotationColourMap,
+        layers,
+    };
+}
+
+function createSnapshotMetadata() {
+    const view = map.getView();
+    const centre = view.getCenter();
+    const mapLayers =
+        map.getLayers().getArray();
+
+    const overlays =
+        Object.entries(overlayLayers)
+            .map(([layerName, layer]) => ({
+                name: layerName,
+                path:
+                    overlayPaths.get(
+                        layerName,
+                    ) ?? null,
+                visible:
+                    layer.getVisible(),
+                opacity:
+                    layer.getOpacity(),
+                zIndex:
+                    layer.getZIndex() ?? null,
+                order:
+                    mapLayers.indexOf(layer),
+            }))
+            .sort(
+                (first, second) =>
+                    first.order - second.order,
+            );
+
+    return {
+        version: 1,
+        url: window.location.href,
+
+        slide: {
+            path: currentSlidePath,
+        },
+
+        viewport: {
+            centre:
+                centre === undefined
+                    ? null
+                    : [...centre],
+            zoom:
+                view.getZoom() ?? null,
+            rotation:
+                view.getRotation(),
+        },
+
+        overlays,
+
+        annotations:
+            createAnnotationSnapshotMetadata(),
+
+        scaleBar: {
+            enabled:
+                scaleBarEnabledInput.checked,
+            included:
+                snapshotScaleBarInput.checked,
+            colour:
+                scaleBarColourInput.value,
+            opacity:
+                Number(
+                    scaleBarOpacityInput.value,
+                ),
+            size:
+                scaleBarSizeSelect.value,
+            units:
+                scaleBarUnitsSelect.value,
+        },
+    };
+}
+
+const snapshotController =
+    createSnapshotController({
+        button: snapshotButton,
+
+        hasSlide: () =>
+            currentSlideInfo !== null,
+
+        async onSnapshot() {
+            if (currentSlidePath === null) {
+                return;
+            }
+
+            const scaleBarElement =
+                snapshotScaleBarInput.checked
+                    ? scaleLineControl?.element ?? null
+                    : null;
+
+            const blob =
+                await captureMapSnapshot(
+                    map,
+                    scaleBarElement,
+                );
+
+            const basename =
+                `${getFileStem(currentSlidePath)}_snapshot`;
+
+            downloadSnapshot(
+                blob,
+                `${basename}.png`,
+            );
+
+            if (snapshotMetadataInput.checked) {
+                downloadSnapshotMetadata(
+                    createSnapshotMetadata(),
+                    `${basename}.json`,
+                );
+            }
+        },
+    });
+
+snapshotLoadButton.addEventListener(
+    "click",
+    () => {
+        snapshotFileInput.click();
+    },
+);
+
+snapshotFileInput.addEventListener(
+    "change",
+    async () => {
+        const file =
+            snapshotFileInput.files?.[0];
+
+        if (file === undefined) {
+            return;
+        }
+
+        snapshotLoadButton.disabled = true;
+
+        try {
+            const metadata =
+                parseSnapshotMetadata(
+                    await file.text(),
+                );
+
+            await restoreSnapshotMetadata(
+                metadata,
+            );
+        } catch (error) {
+            console.error(
+                "Failed to load snapshot metadata.",
+                error,
+            );
+        } finally {
+            snapshotFileInput.value = "";
+        }
+    },
+);
+
+const loadingIndicatorController =
+    createLoadingIndicatorController({
+        map,
+        element: viewerLoadingIndicator,
+
+        onChange(loading) {
+            snapshotController.setLoading(
+                loading,
+            );
+        },
+    });
+
 const annotationHighlightStyle =
     new Style({
         fill: new Fill({
@@ -3082,8 +3551,6 @@ const {
 } = mapControlsController;
 
 // Scale bar
-let scaleLineControl = null;
-
 const scaleBarController =
     createScaleBarController({
         map,
@@ -3176,6 +3643,11 @@ function updateControlVisibility() {
     mapControlsController.updateVisibility();
     gridController.updateVisibility();
     overviewMapController.updateVisibility();
+
+    snapshotControl.classList.toggle(
+        "viewer-control-hidden",
+        !snapshotVisibleInput.checked,
+    );
 }
 
 function resetSettingsToDefaults() {
@@ -3315,6 +3787,8 @@ function clearOverlayLayers() {
     for (const layerName of Object.keys(overlayLayers)) {
         delete overlayLayers[layerName];
     }
+
+    overlayPaths.clear();
 
     annotationLayerNames.clear();
     annotationTypesByLayer.clear();
@@ -3471,10 +3945,11 @@ async function removeSlide() {
     setViewerEnabled(false);
     mapControlsController.updateZoomLevel();
     filesPanelController.updateActionState();
+    snapshotController.updateButton();
 }
 
 // Replace the current slide and rebuild its source, projection and view.
-async function switchSlide(slidePath) {
+async function switchSlideImpl(slidePath) {
     if (sessionId === null) {
         throw new Error("Dynamic slide switching requires a TileServer session.");
     }
@@ -3558,9 +4033,19 @@ async function switchSlide(slidePath) {
     mapControlsController.updateZoomLevel();
 }
 
+async function switchSlide(slidePath) {
+    loadingIndicatorController.begin();
+
+    try {
+        return await switchSlideImpl(slidePath);
+    } finally {
+        loadingIndicatorController.end();
+    }
+}
+
 layersPanelController.render();
 
-async function loadOverlay(overlayPath) {
+async function loadOverlayImpl(overlayPath) {
     if (sessionId === null || currentSlideInfo === null) {
         throw new Error(
             "Dynamic overlay loading requires a loaded slide.",
@@ -3730,6 +4215,8 @@ async function loadOverlay(overlayPath) {
         overlayVersion += 1;
     }
 
+    overlayPaths.set(layerName, overlayPath);
+
     const source = new Zoomify({
         url:
             `/tileserver/layer/${encodeURIComponent(layerName)}/` +
@@ -3777,6 +4264,16 @@ async function loadOverlay(overlayPath) {
     return result;
 }
 
+async function loadOverlay(overlayPath) {
+    loadingIndicatorController.begin();
+
+    try {
+        return await loadOverlayImpl(overlayPath);
+    } finally {
+        loadingIndicatorController.end();
+    }
+}
+
 async function removeOverlay(layerName) {
     const overlayLayer = overlayLayers[layerName];
     const wasAnnotation =
@@ -3817,6 +4314,7 @@ async function removeOverlay(layerName) {
     );
 
     delete overlayLayers[layerName];
+    overlayPaths.delete(layerName);
 
     if (wasAnnotation) {
         invalidateAnnotationInspectionRequests();

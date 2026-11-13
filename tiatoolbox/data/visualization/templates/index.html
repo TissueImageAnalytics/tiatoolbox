@@ -23,6 +23,16 @@
             data-layers="{{ layers }}"
         ></div>
 
+        <div
+            id="viewer-loading-indicator"
+            class="viewer-loading-indicator ol-unselectable ol-control"
+            role="status"
+            aria-live="polite"
+        >
+            <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+            <span>Loading…</span>
+        </div>
+
         <div class="reset-view-control ol-unselectable ol-control">
             <button
                 id="reset-view-button"
@@ -56,6 +66,17 @@
                     <i class="fas fa-sliders-h"></i>
                 </button>
             </div>
+        </div>
+
+        <div class="snapshot-control ol-control">
+            <button
+                id="snapshot-button"
+                type="button"
+                title="Save snapshot"
+                aria-label="Save snapshot"
+            >
+                <i class="fas fa-camera"></i>
+            </button>
         </div>
 
         <div class="annotation-control ol-unselectable ol-control">
@@ -358,6 +379,14 @@
                     data-settings-tab="scale-bar"
                 >
                     Scale Bar
+                </button>
+
+                <button
+                    class="settings-tab"
+                    type="button"
+                    data-settings-tab="snapshot"
+                >
+                    Snapshot
                 </button>
 
                 <button
@@ -898,6 +927,100 @@
                                 Imperial
                             </option>
                         </select>
+                    </div>
+                </section>
+
+                <section
+                    class="settings-tab-panel hidden"
+                    data-settings-panel="snapshot"
+                >
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Show snapshot button
+                            </div>
+                            <div class="settings-option-description">
+                                Display the snapshot button on the viewer.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-snapshot-visible"
+                                type="checkbox"
+                                aria-label="Show snapshot button"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Include scale bar
+                            </div>
+                            <div class="settings-option-description">
+                                Include the visible scale bar in saved snapshots.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-snapshot-scale-bar"
+                                type="checkbox"
+                                aria-label="Include scale bar in snapshots"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Export metadata JSON
+                            </div>
+                            <div class="settings-option-description">
+                                Download snapshot metadata alongside the PNG.
+                            </div>
+                        </div>
+
+                        <label class="settings-switch">
+                            <input
+                                id="settings-snapshot-metadata"
+                                type="checkbox"
+                                aria-label="Export snapshot metadata JSON"
+                                checked
+                            >
+                            <span class="settings-switch-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="settings-option">
+                        <div class="settings-option-text">
+                            <div class="settings-option-label">
+                                Load snapshot metadata
+                            </div>
+                            <div class="settings-option-description">
+                                Restore a viewer state from snapshot metadata JSON.
+                            </div>
+                        </div>
+
+                        <button
+                            id="settings-snapshot-load"
+                            class="settings-action-button"
+                            type="button"
+                        >
+                            Load JSON
+                        </button>
+
+                        <input
+                            id="settings-snapshot-file"
+                            type="file"
+                            accept="application/json,.json"
+                            hidden
+                        >
                     </div>
                 </section>
 

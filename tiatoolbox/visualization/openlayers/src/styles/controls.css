@@ -8,6 +8,7 @@
 .reset-view-control,
 .viewer-panel-control,
 .layer-editor-control,
+.snapshot-control,
 .annotation-control,
 .settings-control {
     padding: 0;
@@ -28,6 +29,7 @@
 .reset-view-control:hover,
 .viewer-panel-control:hover,
 .layer-editor-control:hover,
+.snapshot-control:hover,
 .annotation-control:hover,
 .settings-control:hover {
     background: var(--viewer-control-background);
@@ -44,6 +46,7 @@
 .reset-view-control button,
 .viewer-panel-control button,
 .layer-editor-control button,
+.snapshot-control button,
 .annotation-control button,
 .settings-control button {
     width: 32px;
@@ -64,6 +67,7 @@
 .reset-view-control button:hover:not(:disabled),
 .viewer-panel-control button:hover:not(:disabled),
 .layer-editor-control button:hover:not(:disabled),
+.snapshot-control button:hover:not(:disabled),
 .annotation-control button:hover:not(:disabled),
 .settings-control button:hover:not(:disabled) {
     background: var(--viewer-control-hover-background);
@@ -81,6 +85,7 @@
 .reset-view-control button:active:not(:disabled),
 .viewer-panel-control button:active:not(:disabled),
 .layer-editor-control button:active:not(:disabled),
+.snapshot-control button:active:not(:disabled),
 .annotation-control button:active:not(:disabled),
 .settings-control button:active:not(:disabled) {
     background: var(--viewer-control-pressed-background);
@@ -229,6 +234,39 @@
     left: 8px;
     z-index: 1000;
     background: transparent;
+}
+
+
+/* Loading indicator */
+
+.viewer-loading-indicator {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    z-index: 1001;
+
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    padding: 6px 10px;
+
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+
+    border-radius: 4px;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.3);
+
+    font-size: 12px;
+    white-space: nowrap;
+
+    pointer-events: none;
+    transform: translateX(-50%);
+}
+
+
+.viewer-loading-indicator[hidden] {
+    display: none;
 }
 
 
@@ -401,4 +439,18 @@
 .ol-layerswitcher,
 .ol-control.ol-layerswitcher {
     display: none;
+}
+
+
+/* Snapshot button */
+
+.snapshot-control,
+.snapshot-control:hover {
+    position: absolute;
+    top: 8px;
+    right: 88px;
+    bottom: auto;
+    left: auto;
+    z-index: 1000;
+    background: transparent;
 }
