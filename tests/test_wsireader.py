@@ -3864,7 +3864,7 @@ def test_openslide_estimate_mpp_edge_cases() -> None:
         "tiff.ResolutionUnit": "inch",
         # Missing YResolution
     }
-    with patch("tiatoolbox.wsicore.wsireader.base.logger") as mock_logger:
+    with patch("tiatoolbox.wsicore.wsireader.openslide.logger") as mock_logger:
         result = OpenSlideWSIReader._estimate_mpp(props)
         mock_logger.warning.assert_called()
         assert result is None
@@ -4148,6 +4148,7 @@ def test_virtualwsireader_info_edge_cases() -> None:
 
 
 def test_tiffwsireader_parse_svs_tag_edge_cases() -> None:
+    # skipcq: FLK-D202  # noqa: ERA001
     """Test TIFFWSIReaderDelegate.parse_svs_tag with edge cases."""
 
     # Create a mock TiffPages object
@@ -4314,7 +4315,7 @@ def test_virtual_read_rect_resolution_coord_space_roundtrip() -> None:
 class TestTryOpenSlide:
     """Unit tests for the WSIReader.try_openslide static method."""
 
-    @patch("tiatoolbox.wsicore.wsireader.base.OpenSlideWSIReader")
+    @patch("tiatoolbox.wsicore.wsireader.openslide.OpenSlideWSIReader")
     def test_tiff_suffix_success(self, mock_reader: MagicMock) -> None:
         """Test that a valid TIFF file results in an OpenSlideWSIReader instance."""
         mock_instance = MagicMock()
@@ -4334,7 +4335,7 @@ class TestTryOpenSlide:
         )
         assert result is mock_instance
 
-    @patch("tiatoolbox.wsicore.wsireader.base.OpenSlideWSIReader")
+    @patch("tiatoolbox.wsicore.wsireader.openslide.OpenSlideWSIReader")
     def test_tiff_suffix_raises_openslide_error(self, mock_reader: MagicMock) -> None:
         """Test that OpenSlide errors are caught and the function returns None."""
         mock_reader.side_effect = openslide.OpenSlideError("bad file")
