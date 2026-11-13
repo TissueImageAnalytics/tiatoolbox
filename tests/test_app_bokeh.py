@@ -2434,9 +2434,6 @@ def test_initialise_overlay_removes_stale_widgets(
         colors=[],
     )
 
-    #
-    # Build the backing store used by UIWrapper.
-    #
     main.win_dicts.clear()
 
     main.win_dicts.append(
@@ -2460,10 +2457,14 @@ def test_initialise_overlay_removes_stale_widgets(
 
     main.UI.active = 0
 
+    def _fake_build_predicate() -> str:
+        """Avoid exercising predicate logic."""
+        return "True"
+
     monkeypatch.setattr(
         main,
         "build_predicate",
-        lambda: None,
+        _fake_build_predicate,
     )
 
     main.initialise_overlay()
@@ -2478,13 +2479,12 @@ def test_initialise_overlay_removes_stale_widgets(
 
 def test_update_ui_on_new_annotations_resets_cprop() -> None:
     """Test cprop is reset to 'type' when no valid property is selected."""
+    main.win_dicts.clear()
 
     class FakeResponse:
         """Minimal response object."""
 
         text = '["probability", "area"]'
-
-    main.win_dicts.clear()
 
     fake_vstate = SimpleNamespace(
         types=[],
