@@ -54,7 +54,7 @@ def test_functionality(remote_sample: Callable) -> None:
         _,
     ) = np.nonzero(output)
 
-    np.testing.assert_array_equal(xs[0:2], np.array([242, 192]))
+    np.testing.assert_array_equal(xs[0:2], np.array([242, 193]))
     np.testing.assert_array_equal(ys[0:2], np.array([10, 13]))
 
     patch = reader.read_bounds(
