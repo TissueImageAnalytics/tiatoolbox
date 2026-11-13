@@ -8,7 +8,7 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from numbers import Number
 from pathlib import Path
-from typing import TYPE_CHECKING, Unpack
+from typing import TYPE_CHECKING, Unpack, overload
 
 import matplotlib.colors as mcolors
 import numpy as np
@@ -44,9 +44,10 @@ if TYPE_CHECKING:  # pragma: no cover
         NumPair,
         Resolution,
         Units,
+        WSIPostProc,
     )
 
-    from .types import WSIReaderParams
+    from .types import WSIReaderExtraParams, WSIReaderInstanceType, WSIReaderParams
 
 pixman_warning()
 
@@ -168,13 +169,43 @@ class WSIReader:
 
     """
 
+    @overload
+    @staticmethod
+    def open(  # pragma: no cover
+        input_img: np.ndarray,
+        mpp: tuple[Number, Number] | Number | None = None,
+        power: Number | None = None,
+        post_proc: WSIPostProc = "auto",
+        **kwargs: Unpack[WSIReaderExtraParams],
+    ) -> VirtualWSIReader: ...
+
+    @overload
+    @staticmethod
+    def open(  # pragma: no cover
+        input_img: str | Path,
+        mpp: tuple[Number, Number] | Number | None = None,
+        power: Number | None = None,
+        post_proc: WSIPostProc = "auto",
+        **kwargs: Unpack[WSIReaderExtraParams],
+    ) -> WSIReader: ...
+
+    @overload
+    @staticmethod
+    def open(  # pragma: no cover
+        input_img: WSIReaderInstanceType,
+        mpp: tuple[Number, Number] | Number | None = None,
+        power: Number | None = None,
+        post_proc: WSIPostProc = "auto",
+        **kwargs: Unpack[WSIReaderExtraParams],
+    ) -> WSIReaderInstanceType: ...
+
     @staticmethod
     def open(
         input_img: str | Path | np.ndarray | WSIReader,
-        mpp: tuple[Number, Number] | None = None,
+        mpp: tuple[Number, Number] | Number | None = None,
         power: Number | None = None,
-        post_proc: str | callable | None = "auto",
-        **kwargs: Unpack[WSIReaderParams],
+        post_proc: WSIPostProc = "auto",
+        **kwargs: Unpack[WSIReaderExtraParams],
     ) -> WSIReader:
         """Return an appropriate :class:`.WSIReader` object.
 
@@ -188,8 +219,9 @@ class WSIReader:
                 which is an already created tiatoolbox WSI handler. In
                 the latter case, the function directly passes the
                 input_imge to the output.
-            mpp (tuple):
+            mpp (tuple or Number):
                 (x, y) tuple of the MPP in the units of the input image.
+                A single number is used for both x and y.
             power (float):
                 Objective power of the input image.
             post_proc (str | callable | None):
