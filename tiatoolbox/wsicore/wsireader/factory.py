@@ -20,10 +20,10 @@ if TYPE_CHECKING:  # pragma: no cover
 
     from tiatoolbox.type_hints import WSIPostProc
 
+    from . import OpenSlideWSIReader
     from .annotation_store import AnnotationStoreReader
     from .base import (
         FsspecJsonWSIReader,
-        OpenSlideWSIReader,
         TIFFWSIReader,
         VirtualWSIReader,
         WSIReader,
@@ -180,7 +180,7 @@ def _default_reader(
     post_proc: WSIPostProc = "auto",
 ) -> WSIReader:
     """Fallback reader."""
-    from .base import OpenSlideWSIReader  # noqa: PLC0415
+    from .openslide import OpenSlideWSIReader  # noqa: PLC0415
 
     return OpenSlideWSIReader(
         input_path,
@@ -197,7 +197,7 @@ def try_openslide(
     power: Number | None,
 ) -> OpenSlideWSIReader | None:
     """Try to create an OpenSlideWSIReader if the input is a TIFF file."""
-    from .base import OpenSlideWSIReader  # noqa: PLC0415
+    from .openslide import OpenSlideWSIReader  # noqa: PLC0415
 
     if last_suffix in (".tif", ".tiff"):
         try:
