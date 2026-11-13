@@ -59,6 +59,7 @@ def _handle_virtual_wsi(
     mpp: tuple[Number, Number] | None,
     power: Number | None,
 ) -> VirtualWSIReader | None:
+    # skipcq: FLK-D202  # noqa: ERA001
     """Handle virtual WSI cases.
 
     Args:

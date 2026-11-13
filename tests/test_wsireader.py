@@ -4148,6 +4148,7 @@ def test_virtualwsireader_info_edge_cases() -> None:
 
 
 def test_tiffwsireader_parse_svs_tag_edge_cases() -> None:
+    # skipcq: FLK-D202  # noqa: ERA001
     """Test TIFFWSIReaderDelegate.parse_svs_tag with edge cases."""
 
     # Create a mock TiffPages object
