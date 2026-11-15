@@ -12,10 +12,12 @@ from tiatoolbox.wsicore.wsimeta import WSIMeta
 from .base import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from numbers import Number
     from pathlib import Path
 
-    from tiatoolbox.type_hints import IntBounds, IntPair, Resolution, Units
-    from tiatoolbox.wsicore import WSIReaderParams
+    from tiatoolbox.type_hints import IntBounds, IntPair, Resolution, Units, WSIPostProc
+
+    from .types import WSIReaderExtraParams
 
 
 class DICOMWSIReader(WSIReader):
@@ -26,13 +28,21 @@ class DICOMWSIReader(WSIReader):
     def __init__(
         self: DICOMWSIReader,
         input_img: str | Path | np.ndarray,
-        post_proc: str | callable | None = "auto",
-        **kwargs: Unpack[WSIReaderParams],
+        mpp: tuple[Number, Number] | None = None,
+        power: Number | None = None,
+        post_proc: WSIPostProc = "auto",
+        **kwargs: Unpack[WSIReaderExtraParams],
     ) -> None:
         """Initialize :class:`DICOMWSIReader`."""
         from wsidicom import WsiDicom  # noqa: PLC0415
 
-        super().__init__(input_img=input_img, post_proc=post_proc, **kwargs)
+        super().__init__(
+            input_img=input_img,
+            mpp=mpp,
+            power=power,
+            post_proc=post_proc,
+            **kwargs,
+        )
         self.wsi = WsiDicom.open(input_img)
 
     def _info(self: DICOMWSIReader) -> WSIMeta:

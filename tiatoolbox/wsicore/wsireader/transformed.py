@@ -83,7 +83,7 @@ class TransformedWSIReader(WSIReader):
         self.target_wsi_reader = WSIReader.open(
             input_img=target_img, mpp=mpp, power=power
         )
-        self.inverse_loc_reader = None
+        self.inverse_loc_reader: VirtualWSIReader | None = None
         if transform is None:
             error_message = (
                 "Transform cannot be None. "
@@ -364,7 +364,7 @@ class TransformedWSIReader(WSIReader):
         - output: numpy array of shape (M, N, 3), the sampled image.
         """
         # Convert b to float32 and split into x and y maps
-        b_float = b.astype(np.float32)
+        b_float: np.ndarray = b.astype(np.float32)
         map_x = b_float[..., 0]
         map_y = b_float[..., 1]
 
@@ -411,6 +411,9 @@ class TransformedWSIReader(WSIReader):
 
         """
         # read relevant bit of inverse displacement field
+        if self.inverse_loc_reader is None:
+            msg = "Inverse displacement reader has not been initialized."
+            raise ValueError(msg)
         inv_locs = self.inverse_loc_reader.read_rect(
             location, size, level, coord_space="resolution", interpolation="lanczos"
         )

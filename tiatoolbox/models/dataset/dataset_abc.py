@@ -304,11 +304,7 @@ class WSIPatchDataset(PatchDatasetABC):
         )
         self.img_path = Path(img_path)
         wsireader_kwargs = {} if wsireader_kwargs is None else wsireader_kwargs
-        reader = (
-            input_img
-            if isinstance(input_img, WSIReader)
-            else WSIReader.open(self.img_path, **wsireader_kwargs)
-        )
+        reader = WSIReader.open(input_img, **wsireader_kwargs)
         # To support multi-threading
         # Helps pickle using Path
         self.reader = None

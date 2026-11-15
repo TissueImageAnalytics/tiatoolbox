@@ -1,14 +1,19 @@
-"""Define TypedDict for WSIReader input params."""
+"""Define shared types for WSIReader parameters and instances."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict, TypeVar
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable
     from numbers import Number
 
     from tiatoolbox.wsicore.wsimeta import WSIMeta
+
+    from .base import WSIReader
+
+# Preserves the concrete reader class passed to WSIReader.open.
+WSIReaderInstanceType = TypeVar("WSIReaderInstanceType", bound="WSIReader")
 
 
 class WSIReaderParams(TypedDict, total=False):
