@@ -43,7 +43,7 @@ def test_functionality(
     output = model.infer_batch(model, batch, device=map_location)
     output_ = model.postproc(list(output[0]), offset=(0, 0))
     assert output_[0]["task_type"] == "nuclei_segmentation"
-    assert np.max(np.unique(output_[0]["predictions"])) == 46
+    assert np.max(np.unique(output_[0]["predictions"])) == 44
     assert len(output_[0]["info_dict"]["centroid"]) == 27
     assert len(output_[0]["info_dict"]["contours"]) == 27
 

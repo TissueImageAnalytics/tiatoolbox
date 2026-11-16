@@ -12,10 +12,12 @@ from tiatoolbox.wsicore.wsimeta import WSIMeta
 from .base import WSIReader
 
 if TYPE_CHECKING:  # pragma: no cover
+    from numbers import Number
     from pathlib import Path
 
-    from tiatoolbox.type_hints import IntBounds, IntPair, Resolution, Units
-    from tiatoolbox.wsicore import WSIReaderParams
+    from tiatoolbox.type_hints import IntBounds, IntPair, Resolution, Units, WSIPostProc
+
+    from .types import WSIReaderExtraParams
 
 
 class DICOMWSIReader(WSIReader):
@@ -26,13 +28,21 @@ class DICOMWSIReader(WSIReader):
     def __init__(
         self: DICOMWSIReader,
         input_img: str | Path | np.ndarray,
-        post_proc: str | callable | None = "auto",
-        **kwargs: Unpack[WSIReaderParams],
+        mpp: tuple[Number, Number] | None = None,
+        power: Number | None = None,
+        post_proc: WSIPostProc = "auto",
+        **kwargs: Unpack[WSIReaderExtraParams],
     ) -> None:
         """Initialize :class:`DICOMWSIReader`."""
         from wsidicom import WsiDicom  # noqa: PLC0415
 
-        super().__init__(input_img=input_img, post_proc=post_proc, **kwargs)
+        super().__init__(
+            input_img=input_img,
+            mpp=mpp,
+            power=power,
+            post_proc=post_proc,
+            **kwargs,
+        )
         self.wsi = WsiDicom.open(input_img)
 
     def _info(self: DICOMWSIReader) -> WSIMeta:
@@ -61,7 +71,7 @@ class DICOMWSIReader(WSIReader):
         mpp = (mm_per_pixel.width * 1e3, mm_per_pixel.height * 1e3)
 
         objective_power = None
-        ops_seq = getattr(dataset, "OpticalPathSequence", None)
+        ops_seq = getattr(dataset, "_optical_path_sequence", None)
         if ops_seq:
             ops = ops_seq[0]
             if hasattr(ops, "ObjectiveLensPower"):
@@ -73,6 +83,7 @@ class DICOMWSIReader(WSIReader):
             mpp=mpp,
         )
 
+        vendor = getattr(dataset.base_metadata.equipment, "manufacturer", "Unknown")
         return WSIMeta(
             slide_dimensions=level_dimensions[0],
             level_dimensions=level_dimensions,
@@ -81,7 +92,7 @@ class DICOMWSIReader(WSIReader):
             mpp=mpp,
             objective_power=objective_power,
             level_count=len(level_dimensions),
-            vendor=dataset.Manufacturer,
+            vendor=vendor,
             file_path=self.input_path,
         )
 

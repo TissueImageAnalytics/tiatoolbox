@@ -10,6 +10,7 @@ Run all:
 
 Run one file's tests only, e.g. just mc_dropout:
     pytest tests/test_mc_dropout_units.py -k mc_dropout -v -s
+
 """
 
 from __future__ import annotations
@@ -36,7 +37,7 @@ from tiatoolbox.models.engine.uncertainty import decompose_uncertainty
 
 
 class DummyCNNModel(nn.Module):
-    """Minimal stand-in for tiatoolbox's CNNModel: feat_extract -> classifier."""
+    """Minimal stand-in for TIAToolbox's CNNModel: feat_extract -> classifier."""
 
     def __init__(self, *, with_dropout: bool = False) -> None:
         """Initialize :class:`DummyCNNModel`.
@@ -77,7 +78,8 @@ class DummyCNNModel(nn.Module):
     ) -> torch.Tensor:
         """Run a forward pass and return softmax probabilities.
 
-        Mimics tiatoolbox's CNNModel.infer_batch(model, images, device) interface.
+        Mimics TIAToolbox's CNNModel.infer_batch(model, images, device) interface.
+
         """
         with torch.no_grad():
             logits = model(batch_data.to(device))
@@ -138,7 +140,7 @@ def test_mc_dropout_mode_restores_previous_training_state() -> None:
     with mc_dropout_mode(model):
         pass
 
-    assert model.training is True  # restored, not forced to eval afterwards
+    assert model.training is True  # restored, not forced to eval afterward
     assert model.bn.training is True
 
 
@@ -358,3 +360,19 @@ def test_bayesian_wrapper_infer_batch_populates_uncertainty_stats() -> None:
     for key in ("mean_probs", "aleatoric", "epistemic", "total", "mc_probs"):
         assert key in batch_stats
     assert batch_stats["mc_probs"].shape == (8, 4, 2)  # [T, B, C]
+
+
+def test_bayesian_wrapper_injects_dropout_successfully() -> None:
+    """Test successful dropout injection."""
+    model = DummyCNNModel(with_dropout=False)
+
+    wrapper = BayesianModelWrapper(
+        base_model=model,
+        inject_dropout=True,
+        dropout_p=0.2,
+    )
+
+    assert has_dropout_layers(wrapper.base_model)
+
+    assert wrapper.n_samples == 30
+    assert wrapper.class_dim == -1

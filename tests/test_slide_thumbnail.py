@@ -9,13 +9,12 @@ from click.testing import CliRunner
 
 from tiatoolbox import cli
 from tiatoolbox.utils.env_detection import running_on_ci
-from tiatoolbox.wsicore import wsireader
-from tiatoolbox.wsicore.wsireader import jp2
+from tiatoolbox.wsicore.wsireader import jp2, openslide
 
 
 def test_wsireader_get_thumbnail_openslide(sample_svs: Path) -> None:
     """Test for get_thumbnail as a python function."""
-    wsi = wsireader.OpenSlideWSIReader(sample_svs)
+    wsi = openslide.OpenSlideWSIReader(sample_svs)
     slide_thumbnail = wsi.slide_thumbnail()
     assert isinstance(slide_thumbnail, np.ndarray)
     assert slide_thumbnail.dtype == "uint8"

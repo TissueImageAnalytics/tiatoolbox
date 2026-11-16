@@ -64,6 +64,7 @@ import zarr
 from tqdm.auto import tqdm
 
 from tiatoolbox import logger
+from tiatoolbox.models.architecture.utils import eval_model_if_nn_module
 from tiatoolbox.models.dataset.dataset_abc import WSIPatchDataset
 from tiatoolbox.utils.misc import (
     dict_to_store_semantic_segmentor,
@@ -504,8 +505,7 @@ class SemanticSegmentor(PatchPredictor):
 
         # Set inference mode once here; infer_batch no longer calls
         # model.eval() internally (needed for Monte Carlo Dropout wrappers).
-        if isinstance(self.model, torch.nn.Module):
-            self.model.eval()
+        self.model = eval_model_if_nn_module(model=self.model)
         infer_batch = self._get_model_attr("infer_batch")
         for batch_idx, batch_data in enumerate(tqdm_loop):
             batch_output = infer_batch(

@@ -31,10 +31,13 @@ class mc_dropout_mode:  # noqa: N801 - intentional snake_case context-manager na
         Run 3 stochastic forward passes with dropout active while keeping
         BatchNorm in eval mode:
 
+        >>> model = nn.Module()
+        >>> images = '/path/to/images'
         >>> model.eval()
         >>> with mc_dropout_mode(model):
         ...     samples = [model(images) for _ in range(3)]
         >>> # on exit, all modules are back to their previous training state
+
     """
 
     def __init__(self, model: nn.Module) -> None:
@@ -47,6 +50,7 @@ class mc_dropout_mode:  # noqa: N801 - intentional snake_case context-manager na
 
         """
         self.model = model
+
         # Save training state of ALL modules (not just Dropout) so BatchNorm
         # and the root module are restored correctly on exit, since
         # `self.model.eval()` puts the whole tree in eval mode.
@@ -120,6 +124,7 @@ def inject_dropout_before_classifier(
 
     Idempotent: if a `nn.Dropout` already immediately precedes the
     classifier it is left untouched.
+
     """
     head = getattr(model, "classifier", None)
     if head is None:

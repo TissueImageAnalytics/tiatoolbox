@@ -8,6 +8,7 @@ import zarr
 from zarr.storage import FsspecStore
 
 from tiatoolbox import logger, utils
+from tiatoolbox.wsicore.metadata import ngff
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 from tiatoolbox.wsicore.wsireader import ArrayView
 
@@ -19,7 +20,8 @@ if TYPE_CHECKING:  # pragma: no cover
     import numpy as np
 
     from tiatoolbox.type_hints import IntBounds, IntPair, Resolution, Units
-    from tiatoolbox.wsicore import WSIReaderParams
+
+    from .types import WSIReaderParams
 
 
 class NGFFWSIReader(WSIReader):
@@ -37,8 +39,6 @@ class NGFFWSIReader(WSIReader):
         super().__init__(path, **kwargs)
         from imagecodecs import numcodecs  # noqa: PLC0415
 
-        from tiatoolbox.wsicore.metadata import ngff  # noqa: PLC0415
-
         numcodecs.register_codecs()
         storage_options = kwargs.get("storage_options", {})
         store = FsspecStore.from_url(path, storage_options=storage_options)
@@ -48,24 +48,30 @@ class NGFFWSIReader(WSIReader):
         axes = multiscales.get("axes")
         datasets = multiscales.get("datasets")
         omero = attrs.get("omero")
+        # NGFF stores multiscales as a list. This reader keeps the first entry.
+        self._multiscales = ngff.Multiscales(
+            version=multiscales.get("version"),
+            axes=[ngff.Axis(**axis) for axis in axes],
+            datasets=[
+                ngff.Dataset(
+                    path=dataset["path"],
+                    coordinateTransformations=[
+                        ngff.CoordinateTransform(
+                            type=transform.get("type", "identity"),
+                            scale=transform.get("scale"),
+                        )
+                        for transform in dataset.get("coordinateTransformations") or []
+                    ],
+                )
+                for dataset in datasets
+            ],
+        )
         self.zattrs = ngff.Zattrs(
             _creator=ngff.Creator(
                 name=attrs.get("name"),
                 version=attrs.get("version"),
             ),
-            multiscales=ngff.Multiscales(
-                version=multiscales.get("version"),
-                axes=[ngff.Axis(**axis) for axis in axes],
-                datasets=[
-                    ngff.Dataset(
-                        path=dataset["path"],
-                        coordinateTransformations=dataset.get(
-                            "coordinateTransformations",
-                        ),
-                    )
-                    for dataset in datasets
-                ],
-            ),
+            multiscales=self._multiscales,
             omero=ngff.Omero(
                 name=omero.get("name"),
                 id=omero.get("id"),
@@ -87,7 +93,7 @@ class NGFFWSIReader(WSIReader):
                 Containing metadata.
 
         """
-        multiscales = self.zattrs.multiscales
+        multiscales = self._multiscales
         mpp = self._get_mpp()
         # This needs to be replaced once an appropriate image is available for test.
         objective_power = None
@@ -133,7 +139,7 @@ class NGFFWSIReader(WSIReader):
 
         """
         # Check that the required axes are present
-        multiscales = self.zattrs.multiscales
+        multiscales = self._multiscales
         axes_dict = {a.name.lower(): a for a in multiscales.axes}
         if "x" not in axes_dict or "y" not in axes_dict:
             return None
@@ -157,13 +163,13 @@ class NGFFWSIReader(WSIReader):
         ):
             return None
 
-        # Currently simply using the first scale transform
-        transforms = multiscales.datasets[0].coordinateTransformations
-        for t in transforms:
-            if "scale" in t and t.get("type") == "scale":
+        # Currently simply using the first scale transform.
+        for transform in multiscales.datasets[0].coordinateTransformations:
+            scale = transform.scale
+            if transform.type == "scale" and scale is not None:
                 x_index = multiscales.axes.index(x)
                 y_index = multiscales.axes.index(y)
-                return (t["scale"][x_index], t["scale"][y_index])
+                return (scale[x_index], scale[y_index])
         return None
 
     def read_rect(
