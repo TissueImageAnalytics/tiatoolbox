@@ -7,6 +7,7 @@ import shutil
 import sqlite3
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
 from unittest import mock
 
@@ -472,6 +473,38 @@ def test_aggregate_vertical_segment_skips_non_overlapping_chunk() -> None:
     )
 
     np.testing.assert_allclose(result, included_chunk)
+
+
+def test_get_wsi_output_shape_uses_existing_reader() -> None:
+    """Test get_wsi_output_shape when dataset already has a reader."""
+
+    class FakeReader:
+        """Minimal reader stub."""
+
+        def slide_dimensions(
+            self,
+            resolution: float,
+            units: str,
+        ) -> tuple[int, int]:
+            """Return fake WSI dimensions."""
+            _ = self
+            assert resolution == 0.5
+            assert units == "mpp"
+
+            return (1000, 500)  # width, height
+
+    dataset = SimpleNamespace(
+        wsi_shape=None,
+        img_path="dummy.svs",
+        resolution=0.5,
+        units="mpp",
+        reader=FakeReader(),
+    )
+
+    result = get_wsi_output_shape(dataset)
+
+    # Function returns (height, width)
+    assert result == (500, 1000)
 
 
 def test_store_vertical_segment_stops_when_output_shape_is_filled() -> None:
