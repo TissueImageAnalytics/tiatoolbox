@@ -1,3 +1,66 @@
+# ------------------------------------------------------------------------------------
+# GUIDE FOR NEW YAML ENTRIES
+# ------------------------------------------------------------------------------------
+
+# model-name: Unique name of the pretrained model. [e.g. resnet18-kather100k]
+    # hf_repo_id: Hugging Face repository that stores the model weights. [e.g. TIACentre/TIAToolbox_pretrained_weights]
+    # catalog: Information about the model and its intended use.
+        # description: Task that the model performs. [e.g. Detect and classify nuclei in colon histology images.]
+        # tissue_type: List of tissue types that the model supports. Use "agnostic" for models that support different tissue types. [e.g. colon, breast, agnostic]
+    # architecture: Model architecture and its parameters.
+        # class: Python class used to create the model. [e.g. hovernet.HoVerNet]
+        # kwargs: Parameters passed to the model class. The required parameters depend on the model class.
+            # backbone: Name of the neural network backbone. [e.g. resnet50]
+            # encoder: Name of the encoder network. [e.g. resnet50]
+            # num_input_channels: Number of input channels. [e.g. 3]
+            # num_output_channels: Number of output channels. [e.g. 2]
+            # num_classes: Number of classes that the model predicts. [e.g. 9]
+            # num_types: Number of nucleus types that the model predicts. Use null if the model does not classify nucleus types. [e.g. 6]
+            # num_layers: Number of tissue layers that the model predicts. [e.g. 5]
+            # class_dict: Map each class index to its class name. [e.g. {0: "Background", 1: "Tissue"}]
+            # nuc_type_dict: Map each nucleus type index to its name. [e.g. {0: "Background", 1: "Neoplastic"}]
+            # layer_type_dict: Map each tissue layer index to its name. [e.g. {0: "Background", 1: "Basal Epithelium"}]
+            # mode: Select the model operating mode. [e.g. fast, original]
+            # decoder_block: Number of layers in each decoder block. [e.g. [3, 3]]
+            # encoder_levels: Number of channels at each encoder level. [e.g. [32, 64, 128, 256]]
+            # skip_type: Method used to combine skip connections. [e.g. add]
+            # num_heads: Number of prediction heads in the model. [e.g. 6]
+            # num_channels_per_head: Number of channels assigned to each prediction head. [e.g. [3, 3, 3, 3, 3, 3]]
+            # target_channels: Indices of the output channels used for predictions. [e.g. [2, 5, 8, 11, 14, 17]]
+            # wide_decoder: Enable or disable the wide decoder. [e.g. false]
+            # min_distance: Minimum distance between detected points, in pixels. [e.g. 5]
+            # threshold_abs: Minimum absolute value used to select detections. [e.g. 0.5]
+            # threshold: Threshold used to select model predictions. [e.g. 0.95]
+            # radius: Radius used by the detection model. [e.g. 12]
+            # patch_output_shape: Output patch size in pixels, as [height, width]. [e.g. [13, 13]]
+            # tile_shape: Tile size in pixels, as [height, width]. [e.g. [2048, 2048]]
+    # ioconfig: Configuration for image input, output, and processing.
+        # class: Python class used to configure image input and output. [e.g. io_config.IOSegmentorConfig]
+        # kwargs: Parameters passed to the input/output configuration class.
+            # input_resolutions: List of resolutions at which the model reads images.
+                # resolution: Numerical value of the input image resolution. [e.g. 0.25]
+                # units: Unit used to specify the resolution. "mpp" means micrometres per pixel. "baseline" refers to the baseline image level. [e.g. mpp]
+            # output_resolutions: List of resolutions at which the model produces output.
+                # resolution: Numerical value of the output image resolution. [e.g. 0.25]
+                # units: Unit used to specify the output resolution. [e.g. mpp]
+            # patch_input_shape: Input patch size in pixels, as [height, width]. [e.g. [256, 256]]
+            # patch_output_shape: Output patch size in pixels, as [height, width]. [e.g. [164, 164]]
+            # stride_shape: Distance between the start positions of adjacent patches, in pixels, as [vertical, horizontal]. [e.g. [164, 164]]
+            # tile_shape: Tile size in pixels, as [height, width]. [e.g. [1024, 1024]]
+            # margin: Number of extra pixels around the tile boundary. [e.g. 128]
+            # save_resolution: Resolution used to save the model output.
+                # resolution: Numerical value of the saved output resolution. [e.g. 0.25]
+                # units: Unit used for the saved output resolution. [e.g. mpp]
+            # ignore_index: Class index that the model excludes from selected calculations. [e.g. 0]
+    # dataset: Name of the dataset used to train the model. [e.g. kather100k]
+
+# ------------------------------------------------------------------------------------
+
+
+# ------------------------------------------------------------------------------------
+# KATHER100K PATCH CLASSIFICATION MODELS
+# ------------------------------------------------------------------------------------
+
 alexnet-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -17,6 +80,7 @@ alexnet-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 resnet18-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -47,6 +111,7 @@ resnet18-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 resnet34-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -77,6 +142,7 @@ resnet34-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 resnet50-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -107,6 +173,7 @@ resnet50-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 resnet101-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -137,6 +204,7 @@ resnet101-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 resnext50_32x4d-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -167,6 +235,7 @@ resnext50_32x4d-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 resnext101_32x8d-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -197,6 +266,7 @@ resnext101_32x8d-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 wide_resnet50_2-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -227,6 +297,7 @@ wide_resnet50_2-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 wide_resnet101_2-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -257,6 +328,7 @@ wide_resnet101_2-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 densenet121-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -287,6 +359,7 @@ densenet121-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 densenet161-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -317,6 +390,7 @@ densenet161-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 densenet169-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -347,6 +421,7 @@ densenet169-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 densenet201-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -377,6 +452,7 @@ densenet201-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 mobilenet_v2-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -407,6 +483,7 @@ mobilenet_v2-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 mobilenet_v3_large-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -437,6 +514,7 @@ mobilenet_v3_large-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 mobilenet_v3_small-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -467,6 +545,7 @@ mobilenet_v3_small-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 googlenet-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -498,6 +577,11 @@ googlenet-kather100k:
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
 
+
+# ------------------------------------------------------------------------------------
+# PCAM PATCH CLASSIFICATION MODELS
+# ------------------------------------------------------------------------------------
+
 alexnet-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -521,6 +605,7 @@ alexnet-pcam:
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
+
 resnet18-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -544,6 +629,7 @@ resnet18-pcam:
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
+
 resnet34-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -567,6 +653,7 @@ resnet34-pcam:
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
+
 resnet50-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -590,6 +677,7 @@ resnet50-pcam:
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
+
 resnet101-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -613,6 +701,7 @@ resnet101-pcam:
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
+
 resnext50_32x4d-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -636,6 +725,7 @@ resnext50_32x4d-pcam:
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
+
 resnext101_32x8d-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -659,6 +749,7 @@ resnext101_32x8d-pcam:
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
+
 wide_resnet50_2-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -682,6 +773,7 @@ wide_resnet50_2-pcam:
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
+
 wide_resnet101_2-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -705,6 +797,7 @@ wide_resnet101_2-pcam:
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
+
 densenet121-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -728,6 +821,7 @@ densenet121-pcam:
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
+
 densenet161-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -751,6 +845,7 @@ densenet161-pcam:
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
+
 densenet169-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -774,6 +869,7 @@ densenet169-pcam:
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
+
 densenet201-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -797,6 +893,7 @@ densenet201-pcam:
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
+
 mobilenet_v2-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -820,6 +917,7 @@ mobilenet_v2-pcam:
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
+
 mobilenet_v3_large-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -843,6 +941,7 @@ mobilenet_v3_large-pcam:
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
+
 mobilenet_v3_small-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -866,6 +965,7 @@ mobilenet_v3_small-pcam:
             stride_shape: [96, 96]
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
+
 googlenet-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -890,6 +990,11 @@ googlenet-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 
+
+# ------------------------------------------------------------------------------------
+# IDARS PATCH CLASSIFICATION MODELS
+# ------------------------------------------------------------------------------------
+
 resnet18-idars-tumour:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -908,6 +1013,7 @@ resnet18-idars-tumour:
             patch_input_shape: [512, 512]
             stride_shape: [512, 512]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+
 resnet34-idars-msi:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -926,6 +1032,7 @@ resnet34-idars-msi:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
+
 resnet34-idars-braf:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -944,6 +1051,7 @@ resnet34-idars-braf:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
+
 resnet34-idars-cimp:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -962,6 +1070,7 @@ resnet34-idars-cimp:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
+
 resnet34-idars-cin:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -980,6 +1089,7 @@ resnet34-idars-cin:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
+
 resnet34-idars-tp53:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -998,6 +1108,7 @@ resnet34-idars-tp53:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
+
 resnet34-idars-hm:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
@@ -1017,6 +1128,10 @@ resnet34-idars-hm:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 
+
+# ------------------------------------------------------------------------------------
+# TISSUE SEGMENTATION MODELS
+# ------------------------------------------------------------------------------------
 
 fcn-tissue_mask:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
@@ -1106,6 +1221,68 @@ unet_tissue_mask_tsef:
             stride_shape: [256, 256]
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
             ignore_index: 0
+
+grandqc_tissue_detection:
+    hf_repo_id: TIACentre/GrandQC_Tissue_Detection
+    catalog:
+        description: >
+            Segmentation model for masking background from tissue regions
+        tissue_type:
+            - agnostic
+    architecture:
+        class: grandqc.GrandQCModel
+        kwargs:
+            num_output_channels: 2
+            class_dict: {
+                0: "Background",
+                1: "Tissue",
+            }
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 10.0}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 10.0}
+            patch_input_shape: [512, 512]
+            patch_output_shape: [512, 512]
+            stride_shape: [256, 256]
+            save_resolution: {'units': 'mpp', 'resolution': 10.0}
+            ignore_index: 0
+
+efficientunet-tissue_mask:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Segmentation model for tissue regions in images across cancer types.
+        tissue_type:
+            - agnostic
+    architecture:
+        class: efficientunet_tissue_mask_model.EfficientUNetTissueMaskModel
+        kwargs:
+            num_classes: 1
+            threshold: 0.95
+            class_dict: {
+                0: "Background",
+                1: "Tissue",
+            }
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 8.0}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 8.0}
+            patch_input_shape: [512, 512]
+            patch_output_shape: [512, 512]
+            stride_shape: [480, 480]
+            save_resolution: {'units': 'mpp', 'resolution': 8.0}
+            ignore_index: 0
+
+
+# ------------------------------------------------------------------------------------
+# NUCLEUS SEGMENTATION/CLASSIFICATION MODELS
+# ------------------------------------------------------------------------------------
 
 hovernet_fast-pannuke:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
@@ -1479,34 +1656,6 @@ nuclick_light-pannuke:
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
             ignore_index: 0
 
-grandqc_tissue_detection:
-    hf_repo_id: TIACentre/GrandQC_Tissue_Detection
-    catalog:
-        description: >
-            Segmentation model for masking background from tissue regions
-        tissue_type:
-            - agnostic
-    architecture:
-        class: grandqc.GrandQCModel
-        kwargs:
-            num_output_channels: 2
-            class_dict: {
-                0: "Background",
-                1: "Tissue",
-            }
-    ioconfig:
-        class: io_config.IOSegmentorConfig
-        kwargs:
-            input_resolutions:
-                - {'units': 'mpp', 'resolution': 10.0}
-            output_resolutions:
-                - {'units': 'mpp', 'resolution': 10.0}
-            patch_input_shape: [512, 512]
-            patch_output_shape: [512, 512]
-            stride_shape: [256, 256]
-            save_resolution: {'units': 'mpp', 'resolution': 10.0}
-            ignore_index: 0
-
 KongNet_CoNIC_1:
     hf_repo_id: TIACentre/KongNet_pretrained_weights
     catalog:
@@ -1734,32 +1883,3 @@ KongNet_Det_MIDOG_1:
             patch_output_shape: [512, 512]
             stride_shape: [492, 492]
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
-
-efficientunet-tissue_mask:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    catalog:
-        description: >
-            Segmentation model for tissue regions in images across cancer types.
-        tissue_type:
-            - agnostic
-    architecture:
-        class: efficientunet_tissue_mask_model.EfficientUNetTissueMaskModel
-        kwargs:
-            num_classes: 1
-            threshold: 0.95
-            class_dict: {
-                0: "Background",
-                1: "Tissue",
-            }
-    ioconfig:
-        class: io_config.IOSegmentorConfig
-        kwargs:
-            input_resolutions:
-                - {'units': 'mpp', 'resolution': 8.0}
-            output_resolutions:
-                - {'units': 'mpp', 'resolution': 8.0}
-            patch_input_shape: [512, 512]
-            patch_output_shape: [512, 512]
-            stride_shape: [480, 480]
-            save_resolution: {'units': 'mpp', 'resolution': 8.0}
-            ignore_index: 0
