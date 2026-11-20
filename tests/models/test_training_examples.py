@@ -26,7 +26,10 @@ from tiatoolbox.utils.misc import process_contours
 def _cell_source(number: int, marker: str) -> str:
     """Select a recipe by its source text rather than a mutable cell index."""
     path = next(
-        (Path(__file__).parents[2] / "examples").glob(f"{number}-*.ipynb"), None
+        (Path(__file__).parents[2] / "examples" / "training-pipelines").glob(
+            f"{number:02d}-*.ipynb"
+        ),
+        None,
     )
     assert path is not None, f"Missing training notebook {number}"
     notebook = json.loads(path.read_text(encoding="utf-8"))
@@ -64,7 +67,7 @@ def test_classification_example_keeps_validation_unaugmented(tmp_path: Path) -> 
         "Subset": Subset,
         "predefined_preproc_func": predefined_preproc_func,
     }
-    _run_recipe(_cell_source(13, "augmented ="), namespace)
+    _run_recipe(_cell_source(1, "augmented ="), namespace)
     train, val = namespace["train_dataset"], namespace["val_dataset"]
     assert train.dataset is not val.dataset
     assert train.dataset.samples is val.dataset.samples
@@ -92,7 +95,7 @@ def test_tissue_example_preserves_holes_and_closes_store(tmp_path: Path) -> None
         "closing": closing,
         "process_contours": process_contours,
     }
-    source = _cell_source(14, "store_path =")
+    source = _cell_source(2, "store_path =")
     _run_recipe(source, namespace)
     _run_recipe(source, namespace)
     with closing(SQLiteStore(namespace["store_path"])) as store:
@@ -119,7 +122,7 @@ def test_kongnet_example_splits_every_pair(
         "stores_dir": Path("stores"),
         "KongNet": KongNet,
     }
-    _run_recipe(_cell_source(15, "split_indices(len(dataset)"), namespace)
+    _run_recipe(_cell_source(3, "split_indices(len(dataset)"), namespace)
     train, val = namespace["train_indices"], namespace["val_indices"]
     assert len(train) > 0
     assert len(val) > 0
@@ -141,12 +144,12 @@ def test_kongnet_example_heads_read_the_builder_targets(
         "stores_dir": Path("stores"),
         "KongNet": KongNet,
     }
-    _run_recipe(_cell_source(15, "split_indices(len(dataset)"), namespace)
+    _run_recipe(_cell_source(3, "split_indices(len(dataset)"), namespace)
     # Use the real slices without building the network or loading encoder weights.
     namespace["KongNet"] = lambda **kwargs: SimpleNamespace(
         head_slices=KongNet.head_slices.fget(SimpleNamespace(**kwargs))
     )
-    _run_recipe(_cell_source(15, "StructuredDenseTask("), namespace)
+    _run_recipe(_cell_source(3, "StructuredDenseTask("), namespace)
     heads = namespace["task"].heads
     assert [head.name for head in heads] == list(namespace["target_builder"].builders)
     assert [head.channel_slice for head in heads] == [
@@ -157,8 +160,8 @@ def test_kongnet_example_heads_read_the_builder_targets(
 def test_kongnet_example_augmentation_replays_seeds_in_workers() -> None:
     """The example's preset pair transform replays seeds after worker pickling."""
     preset = training.get_augmentation("heavy")
-    assert "preproc=KongNet.preproc" in _cell_source(15, "from_dirs(")
-    training_split = _cell_source(15, "with_transforms(")
+    assert "preproc=KongNet.preproc" in _cell_source(3, "from_dirs(")
+    training_split = _cell_source(3, "with_transforms(")
     assert "with_transforms(pair_transform=train_augmentation)" in training_split
     # Round-trip only this locally constructed transform, as a worker would.
     worker_preset = pickle.loads(pickle.dumps(preset))  # noqa: S301
@@ -193,5 +196,5 @@ def test_kongnet_example_counts_confidence_valued_peaks() -> None:
         "ordered_head_keys": ["nuclei"],
         "pred_peak_maps": peaks[None],
     }
-    _run_recipe(_cell_source(15, "peak_count_rows ="), namespace)
+    _run_recipe(_cell_source(3, "peak_count_rows ="), namespace)
     assert namespace["peak_count_rows"] == [{"patch": "patch", "nuclei": 2}]
