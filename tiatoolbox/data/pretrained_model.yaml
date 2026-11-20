@@ -76,7 +76,7 @@ alexnet-kather100k:
             backbone: alexnet
             num_classes: 9
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -108,7 +108,7 @@ resnet18-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -140,7 +140,7 @@ resnet34-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -172,7 +172,7 @@ resnet50-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -204,7 +204,7 @@ resnet101-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -236,7 +236,7 @@ resnext50_32x4d-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -268,7 +268,7 @@ resnext101_32x8d-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -300,7 +300,7 @@ wide_resnet50_2-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -332,7 +332,7 @@ wide_resnet101_2-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -364,7 +364,7 @@ densenet121-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -396,7 +396,7 @@ densenet161-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -428,7 +428,7 @@ densenet169-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -460,7 +460,7 @@ densenet201-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -492,7 +492,7 @@ mobilenet_v2-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -524,7 +524,7 @@ mobilenet_v3_large-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -556,7 +556,7 @@ mobilenet_v3_small-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -588,7 +588,7 @@ googlenet-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -618,7 +618,7 @@ alexnet-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -643,7 +643,7 @@ resnet18-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -668,7 +668,7 @@ resnet34-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -693,7 +693,7 @@ resnet50-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -718,7 +718,7 @@ resnet101-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -743,7 +743,7 @@ resnext50_32x4d-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -768,7 +768,7 @@ resnext101_32x8d-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -793,7 +793,7 @@ wide_resnet50_2-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -818,7 +818,7 @@ wide_resnet101_2-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -843,7 +843,7 @@ densenet121-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -868,7 +868,7 @@ densenet161-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -893,7 +893,7 @@ densenet169-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -918,7 +918,7 @@ densenet201-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -943,7 +943,7 @@ mobilenet_v2-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -968,7 +968,7 @@ mobilenet_v3_large-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -993,7 +993,7 @@ mobilenet_v3_small-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -1018,7 +1018,7 @@ googlenet-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -1044,7 +1044,7 @@ resnet18-idars-tumour:
             backbone: resnet18
             num_classes: 2
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [512, 512]
             stride_shape: [512, 512]
@@ -1064,7 +1064,7 @@ resnet34-idars-msi:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -1084,7 +1084,7 @@ resnet34-idars-braf:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -1104,7 +1104,7 @@ resnet34-idars-cimp:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -1124,7 +1124,7 @@ resnet34-idars-cin:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -1144,7 +1144,7 @@ resnet34-idars-tp53:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -1164,7 +1164,7 @@ resnet34-idars-hm:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: io_config.IOpatch_predictorConfig
+        class: io_config.IOPatchPredictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
