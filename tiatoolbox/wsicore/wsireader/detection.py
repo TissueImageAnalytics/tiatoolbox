@@ -11,6 +11,7 @@ import fsspec
 import tifffile
 import zarr
 from packaging.version import Version
+from wsidicom import WsiDicom
 
 from tiatoolbox import logger
 
@@ -35,12 +36,12 @@ def is_dicom(path: Path) -> bool:
         bool: True if the file is a DICOM file.
 
     """
-    path = Path(path)
-    is_dcm = path.suffix.lower() == ".dcm"
-    is_dcm_dir = path.is_dir() and any(
-        p.suffix.lower() == ".dcm" for p in path.iterdir()
-    )
-    return is_dcm or is_dcm_dir
+    try:
+        WsiDicom.open(path)
+    except Exception:  # noqa: BLE001
+        return False
+    else:
+        return True
 
 
 def is_tiled_tiff(path: Path) -> bool:

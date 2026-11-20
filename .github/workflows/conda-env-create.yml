@@ -23,6 +23,14 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.12", "3.13", "3.14"]
 
+        include:
+          - os: ubuntu-latest
+            conda-subdir: linux-64
+          - os: windows-latest
+            conda-subdir: win-64
+          - os: macos-latest
+            conda-subdir: osx-64 # Forces Rosetta emulation index on Apple Silicon
+
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
 
@@ -37,6 +45,9 @@ jobs:
 
       # ✅ Install via micromamba
       - uses: mamba-org/setup-micromamba@v3
+        env:
+          MAMBA_NO_CACHE: "true" # Forces libmamba to fetch completely fresh metadata
+          CONDA_SUBDIR: ${{ matrix.conda-subdir }} # Native for Win/Linux, Rosetta for Mac
         with:
           environment-name: tiatoolbox
           environment-file: requirements/requirements.conda.generated.yml

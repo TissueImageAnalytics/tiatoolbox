@@ -90,6 +90,21 @@ If you already have a Python environment set up with all the prerequisite softwa
 
     $ pip install --no-deps tiatoolbox
 
+Optional Model Dependencies
+---------------------------
+
+Some models rely on packages that are not installed by default. These are declared as optional extras and imported lazily, so a standard installation of TIAToolbox works without them.
+
+The available extras are:
+
+* DeepSpot-M: ``deepspotm``
+
+Install one by naming it in brackets:
+
+.. code-block:: console
+
+    $ pip install "tiatoolbox[<extra>]"
+
 If you don't have `pip`_ installed, this `Python installation guide`_ can guide you through the process.
 
 .. _pip: https://pip.pypa.io
@@ -136,6 +151,12 @@ To upgrade an existing installation to the latest stable release:
 .. code-block:: console
 
     $ uv pip install --upgrade tiatoolbox
+
+To include one of the optional extras listed above:
+
+.. code-block:: console
+
+    $ uv pip install "tiatoolbox[<extra>]"
 
 **Development setup (from source)**
 

@@ -6,6 +6,7 @@ import json
 import logging
 import urllib
 from pathlib import Path, PureWindowsPath
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, NoReturn
 
 import joblib
@@ -208,11 +209,33 @@ def test_get_tile_layer_key_error(app: TileServer) -> None:
 
 
 def test_get_index(app: TileServer) -> None:
-    """Get the index page and check that it is HTML."""
+    """Get the legacy index page and check that it is HTML."""
     with app.test_client() as client:
         response = client.get("/")
+
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
+        assert b"/openlayers/viewer_legacy.js" in response.data
+        assert b"/openlayers/viewer_legacy.css" in response.data
+
+
+def test_get_index_creates_session(empty_app: TileServer) -> None:
+    """Test index creates a session when one does not exist."""
+    with empty_app.test_client() as client:
+        response = client.get("/")
+
+        assert response.status_code == 200
+
+        session_cookie = client.get_cookie("session_id")
+
+        assert session_cookie is not None
+
+        session_id = session_cookie.value
+
+        assert session_id in empty_app.layers
+        assert session_id in empty_app.pyramids
+        assert session_id in empty_app.renderers
+        assert session_id in empty_app.overlaps
 
 
 def test_create_with_dict(sample_svs: Path) -> None:
@@ -236,24 +259,861 @@ def test_cli_name_multiple_flag() -> None:
     """Test cli_name multiple flag."""
 
     @cli_name()
-    def dummy_fn() -> NoReturn:
+    def dummy_fn_single() -> NoReturn:
         """It is empty because it's a dummy function."""
 
-    assert "Multiple" not in dummy_fn.__click_params__[0].help
+    assert "Multiple" not in dummy_fn_single.__click_params__[0].help
 
     @cli_name(multiple=True)
-    def dummy_fn() -> NoReturn:
+    def dummy_fn_multiple() -> NoReturn:
         """It is empty because it's a dummy function."""
 
-    assert "Multiple" in dummy_fn.__click_params__[0].help
+    assert "Multiple" in dummy_fn_multiple.__click_params__[0].help
 
 
 def test_get_session_id(app: TileServer) -> None:
-    """Test session_id endpoint."""
+    """Test legacy session_id endpoint."""
     with app.test_client() as client:
         response = client.get("/tileserver/session_id")
+
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
+        assert response.data == b"done"
+
+
+def test_visualize_beta_session_id() -> None:
+    """Test creating a session for the experimental viewer."""
+    app = TileServer(
+        title="Testing beta TileServer",
+        layers={},
+        legacy=False,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/session_id")
+
+        assert response.status_code == 200
+        assert response.content_type == "application/json"
+
+        session_id = response.get_json()["session_id"]
+
+        assert session_id in app.layers
+        assert session_id in app.pyramids
+        assert client.get_cookie("session_id").value == session_id
+
+
+def test_visualize_beta_reuses_session() -> None:
+    """Test that the experimental viewer reuses its session."""
+    app = TileServer(
+        title="Testing beta TileServer",
+        layers={},
+        legacy=False,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/session_id")
+        session_id = response.get_json()["session_id"]
+
+        response = client.get("/tileserver/session_id")
+
+        assert response.get_json()["session_id"] == session_id
+        assert len(app.layers) == 1
+
+
+def test_visualize_beta_index() -> None:
+    """Test the experimental viewer starts with an empty viewer."""
+    app = TileServer(
+        title="Testing beta TileServer",
+        layers={},
+        legacy=False,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/")
+
+        assert response.status_code == 200
+        assert response.content_type == "text/html; charset=utf-8"
+        assert b"/openlayers/viewer.js" in response.data
+        assert b"/openlayers/viewer.css" in response.data
+        assert app.layers == {}
+        assert client.get_cookie("session_id") is None
+
+
+def test_configured_files(tmp_path: Path) -> None:
+    """Test files returned recursively from configured directories."""
+    slides = tmp_path / "slides"
+    overlays = tmp_path / "overlays"
+    nested_slides = slides / "nested"
+    nested_overlays = overlays / "nested"
+    unsupported_slide = slides / "unsupported.txt"
+    unsupported_overlay = overlays / "unsupported.txt"
+
+    slides.mkdir()
+    overlays.mkdir()
+    nested_slides.mkdir()
+    nested_overlays.mkdir()
+    unsupported_slide.touch()
+    unsupported_overlay.touch()
+
+    slide = slides / "slide.svs"
+    nested_slide = nested_slides / "nested.svs"
+    overlay = overlays / "overlay.png"
+    nested_overlay = nested_overlays / "nested.png"
+
+    slide.touch()
+    nested_slide.touch()
+    overlay.touch()
+    nested_overlay.touch()
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slides,
+        overlay_directory=overlays,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/files/slide")
+
+        assert response.status_code == 200
+        assert response.get_json() == {
+            "directory": "slides",
+            "files": [
+                {
+                    "name": "slide.svs",
+                    "path": "slides/slide.svs",
+                },
+                {
+                    "name": "nested/nested.svs",
+                    "path": "slides/nested/nested.svs",
+                },
+            ],
+        }
+
+        response = client.get("/tileserver/files/overlay")
+
+        assert response.status_code == 200
+        assert response.get_json() == {
+            "directory": "overlays",
+            "files": [
+                {
+                    "name": "overlay.png",
+                    "path": "overlays/overlay.png",
+                },
+                {
+                    "name": "nested/nested.png",
+                    "path": "overlays/nested/nested.png",
+                },
+            ],
+        }
+
+
+def test_configured_overlay_files_load_config(
+    tmp_path: Path,
+) -> None:
+    """Test overlay config is returned without being listed as an overlay."""
+    overlays = tmp_path / "overlays"
+    overlays.mkdir()
+
+    overlay = overlays / "annotations.json"
+    overlay.touch()
+
+    config_file = overlays / "demo_config.json"
+    config_file.write_text(
+        """
+{
+    "color_dict": {
+        "Tumour": [252, 161, 3, 255],
+        "Stroma": [3, 252, 40, 255]
+    }
+}
+""".strip(),
+        encoding="utf-8",
+    )
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        overlay_directory=overlays,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get(
+            "/tileserver/files/overlay",
+        )
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "directory": "overlays",
+        "files": [
+            {
+                "name": "annotations.json",
+                "path": "overlays/annotations.json",
+            },
+        ],
+        "config": {
+            "color_dict": {
+                "Tumour": [
+                    252,
+                    161,
+                    3,
+                    255,
+                ],
+                "Stroma": [
+                    3,
+                    252,
+                    40,
+                    255,
+                ],
+            },
+        },
+    }
+
+
+def test_configured_files_skips_external_symlink(
+    tmp_path: Path,
+) -> None:
+    """Test configured files ignore directories outside the configured path."""
+    slides = tmp_path / "slides"
+    slides.mkdir()
+
+    outside = tmp_path / "outside"
+    outside.mkdir()
+
+    external_link = slides / "external"
+    external_link.symlink_to(outside, target_is_directory=True)
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slides,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/files/slide")
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "directory": "slides",
+        "files": [],
+    }
+
+
+def test_change_slide_sets_missing_file_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test configured slide path is retained when reader metadata has no path."""
+    slides = tmp_path / "slides"
+    slides.mkdir()
+
+    ngff_slide = slides / "slide.ome.zarr"
+    ngff_slide.mkdir()
+
+    monkeypatch.setattr(
+        "tiatoolbox.visualization.tileserver.is_ngff",
+        lambda path: Path(path) == ngff_slide,
+    )
+
+    info = SimpleNamespace(
+        file_path=None,
+        mpp=[0.5, 0.5],
+    )
+    info.as_dict = lambda: {
+        "file_path": info.file_path,
+        "mpp": info.mpp,
+    }
+
+    reader = SimpleNamespace(info=info)
+
+    monkeypatch.setattr(
+        "tiatoolbox.visualization.tileserver.WSIReader.open",
+        lambda _path: reader,
+    )
+    monkeypatch.setattr(
+        "tiatoolbox.visualization.tileserver.ZoomifyGenerator",
+        lambda *_args, **_kwargs: object(),
+    )
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slides,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        setup_app(client)
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": "slides/slide.ome.zarr"},
+        )
+        assert response.status_code == 200
+
+        response = client.get("/tileserver/slide")
+
+    assert response.status_code == 200
+    assert response.get_json()["file_path"] == "slides/slide.ome.zarr"
+
+
+def test_configured_files_ngff_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test NGFF directories are returned as single configured files."""
+    slides = tmp_path / "slides"
+    slides.mkdir()
+
+    ngff_slide = slides / "slide.ome.zarr"
+    ngff_slide.mkdir()
+
+    (ngff_slide / "zarr.json").touch()
+    level = ngff_slide / "0"
+    level.mkdir()
+    (level / "chunk").touch()
+
+    invalid_zarr = slides / "invalid.zarr"
+    invalid_zarr.mkdir()
+    (invalid_zarr / "zarr.json").touch()
+
+    monkeypatch.setattr(
+        "tiatoolbox.visualization.tileserver.is_ngff",
+        lambda path: Path(path) == ngff_slide,
+    )
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slides,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/files/slide")
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "directory": "slides",
+        "files": [
+            {
+                "name": "slide.ome.zarr",
+                "path": "slides/slide.ome.zarr",
+            },
+        ],
+    }
+
+    assert (
+        app._resolve_client_file_path(
+            "slides/slide.ome.zarr",
+            "slide",
+        )
+        == ngff_slide.resolve()
+    )
+
+
+def test_dicom_is_image_overlay(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test DICOM files are treated as image overlays."""
+    dicom_path = tmp_path / "slide.dcm"
+    dicom_path.touch()
+
+    monkeypatch.setattr(
+        "tiatoolbox.visualization.tileserver.is_dicom",
+        lambda path: Path(path) == dicom_path,
+    )
+
+    assert TileServer._is_image_overlay(dicom_path)
+
+
+def test_ngff_is_image_overlay(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test NGFF directories are treated as image overlays."""
+    ngff_path = tmp_path / "overlay.zarr"
+    ngff_path.mkdir()
+
+    monkeypatch.setattr(
+        "tiatoolbox.visualization.tileserver.is_ngff",
+        lambda path: Path(path) == ngff_path,
+    )
+
+    assert TileServer._is_image_overlay(ngff_path)
+
+
+def test_configured_files_dicom_directory(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test DICOM directories are returned as single configured files."""
+    slides = tmp_path / "slides"
+    slides.mkdir()
+
+    dicom_slide = slides / "3DHISTECH-1"
+    dicom_slide.mkdir()
+
+    (dicom_slide / "000001.dcm").touch()
+    (dicom_slide / "000002.dcm").touch()
+
+    monkeypatch.setattr(
+        "tiatoolbox.visualization.tileserver.is_dicom",
+        lambda path: Path(path) == dicom_slide,
+    )
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slides,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/files/slide")
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "directory": "slides",
+        "files": [
+            {
+                "name": "3DHISTECH-1",
+                "path": "slides/3DHISTECH-1",
+            },
+        ],
+    }
+
+    assert (
+        app._resolve_client_file_path(
+            "slides/3DHISTECH-1",
+            "slide",
+        )
+        == dicom_slide.resolve()
+    )
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected"),
+    [
+        ("slide", "slides"),
+        ("overlay", "overlays"),
+    ],
+)
+def test_public_path_prefix(kind: str, expected: str) -> None:
+    """Test public prefixes for configured file types."""
+    assert TileServer._get_public_path_prefix(kind) == expected
+
+
+def test_public_path_prefix_invalid() -> None:
+    """Test requesting a public prefix for an invalid file type."""
+    with pytest.raises(
+        ValueError,
+        match=r"Invalid configured file type.",
+    ):
+        TileServer._get_public_path_prefix("invalid")
+
+
+def test_public_file_path_without_configured_directory(
+    tmp_path: Path,
+) -> None:
+    """Test public path fallback without a configured directory."""
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+    )
+
+    file_path = tmp_path / "slide.svs"
+
+    assert (
+        app._get_public_file_path(
+            file_path,
+            "slide",
+        )
+        == "slide.svs"
+    )
+
+
+def test_public_file_path_outside_configured_directory(
+    tmp_path: Path,
+) -> None:
+    """Test public path fallback outside the configured directory."""
+    slides = tmp_path / "slides"
+    slides.mkdir()
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slides,
+    )
+
+    file_path = tmp_path / "outside.svs"
+
+    assert (
+        app._get_public_file_path(
+            file_path,
+            "slide",
+        )
+        == "outside.svs"
+    )
+
+
+def test_change_slide_without_configured_directory() -> None:
+    """Test loading a slide without a configured directory."""
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        setup_app(client)
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": "slides/slide.svs"},
+        )
+
+    assert response.status_code == 400
+    assert response.get_data(as_text=True) == "Invalid slide path."
+
+
+def test_change_slide_missing_configured_file(
+    tmp_path: Path,
+) -> None:
+    """Test loading a missing configured slide."""
+    slides = tmp_path / "slides"
+    slides.mkdir()
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slides,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        setup_app(client)
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": "slides/missing.svs"},
+        )
+
+    assert response.status_code == 400
+    assert response.get_data(as_text=True) == "Invalid slide path."
+
+
+def test_visualize_beta_hides_configured_paths(
+    remote_sample: Callable,
+) -> None:
+    """Test configured files load without exposing absolute paths."""
+    slide_path = Path(remote_sample("svs-1-small")).resolve()
+    overlay_path = Path(
+        remote_sample("annotation_store_svs_1"),
+    ).resolve()
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slide_path.parent,
+        overlay_directory=overlay_path.parent,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    public_slide_path = f"slides/{slide_path.name}"
+    public_overlay_path = f"overlays/{overlay_path.name}"
+
+    with app.test_client() as client:
+        setup_app(client)
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": public_slide_path},
+        )
+
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": public_overlay_path},
+        )
+
+        assert response.status_code == 200
+
+        response = client.get("/tileserver/slide")
+
+        assert response.status_code == 200
+        assert response.get_json()["file_path"] == public_slide_path
+
+        response = client.get("/tileserver/overlay")
+
+        assert response.status_code == 200
+        assert response.get_json() == public_overlay_path
+
+        response = client.get("/tileserver/sessions")
+
+        assert response.status_code == 200
+        assert list(response.get_json().values()) == [
+            public_slide_path,
+        ]
+
+
+def test_visualize_beta_rejects_unsafe_file_paths(
+    tmp_path: Path,
+) -> None:
+    """Test configured files cannot escape their directory."""
+    slides = tmp_path / "slides"
+    slides.mkdir()
+
+    outside_slide = tmp_path / "outside.svs"
+    outside_slide.touch()
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slides,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        setup_app(client)
+
+        for slide_path in [
+            "slides/../outside.svs",
+            str(outside_slide.resolve()),
+        ]:
+            response = client.put(
+                "/tileserver/slide",
+                data={"slide_path": slide_path},
+            )
+
+            assert response.status_code == 400
+            assert response.get_data(as_text=True) == "Invalid slide path."
+
+
+def test_visualize_beta_rejects_unsafe_overlay_path(
+    tmp_path: Path,
+) -> None:
+    """Test overlays cannot escape their configured directory."""
+    overlays = tmp_path / "overlays"
+    overlays.mkdir()
+
+    outside_overlay = tmp_path / "outside.db"
+    outside_overlay.touch()
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        overlay_directory=overlays,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        setup_app(client)
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": "overlays/../outside.db"},
+        )
+
+    assert response.status_code == 400
+    assert response.get_data(as_text=True) == "Invalid overlay path."
+
+
+def test_configured_files_not_set() -> None:
+    """Test requesting files when no directory is configured."""
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/files/slide")
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "directory": None,
+        "files": [],
+    }
+
+
+def test_configured_files_invalid_kind() -> None:
+    """Test requesting an invalid configured file type."""
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/files/invalid")
+
+    assert response.status_code == 400
+    assert response.get_data(as_text=True) == ("Invalid configured file type.")
+
+
+def test_configured_files_unavailable_directory(
+    tmp_path: Path,
+) -> None:
+    """Test requesting a configured directory which becomes unavailable."""
+    slides = tmp_path / "slides"
+    slides.mkdir()
+
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+        slide_directory=slides,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    slides.rmdir()
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/files/slide")
+
+    assert response.status_code == 404
+    assert response.get_data(as_text=True) == (
+        "Configured file directory is unavailable."
+    )
+
+
+def test_get_overlay_without_store_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test getting an overlay without a persistent store path."""
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    monkeypatch.setattr(
+        app,
+        "get_ann_layer",
+        lambda _session_id: SimpleNamespace(
+            store=SimpleNamespace(path=None),
+        ),
+    )
+
+    with app.test_client() as client:
+        setup_app(client)
+        response = client.get("/tileserver/overlay")
+
+    assert response.status_code == 200
+    assert response.get_json() == ""
+
+
+def test_remove_slide_missing_session(empty_app: TileServer) -> None:
+    """Test removing a slide without an active session."""
+    with empty_app.test_client() as client:
+        response = client.delete("/tileserver/slide")
+
+        assert response.status_code == 404
+        assert response.get_data(as_text=True) == "Session not found."
+
+
+def test_remove_slide(
+    empty_app: TileServer,
+    remote_sample: Callable,
+) -> None:
+    """Test removing the current slide."""
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+
+        assert response.status_code == 200
+        assert "slide" in empty_app.layers[session_id]
+        assert "slide" in empty_app.pyramids[session_id]
+
+        response = client.delete("/tileserver/slide")
+
+        assert response.status_code == 200
+        assert response.get_data(as_text=True) == "done"
+        assert empty_app.layers[session_id] == {}
+        assert empty_app.pyramids[session_id] == {}
+        assert session_id not in empty_app.slide_mpps
+
+
+def test_remove_overlay(app: TileServer) -> None:
+    """Test removing an overlay layer."""
+    with app.test_client() as client:
+        response = client.delete("/tileserver/overlay/slide")
+
+        assert response.status_code == 400
+        assert response.data == b"Cannot remove the slide."
+
+        response = client.delete("/tileserver/overlay/missing")
+
+        assert response.status_code == 404
+        assert response.data == b"Layer not found."
+
+        assert "overlay" in app.layers["default"]
+        assert "overlay" in app.pyramids["default"]
+
+        response = client.delete("/tileserver/overlay/overlay")
+
+        assert response.status_code == 200
+        assert response.data == b"done"
+
+        assert "overlay" not in app.layers["default"]
+        assert "overlay" not in app.pyramids["default"]
+
+
+def test_change_slide_after_remove(
+    empty_app: TileServer,
+    remote_sample: Callable,
+) -> None:
+    """Test loading a new slide after removing the current slide."""
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        response = client.delete("/tileserver/slide")
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("wsi2_4k_4k_jpg"))},
+        )
+
+        assert response.status_code == 200
+        assert "slide" in empty_app.layers[session_id]
+        assert "slide" in empty_app.pyramids[session_id]
+        assert session_id in empty_app.slide_mpps
 
 
 def test_color_prop(app: TileServer) -> None:
@@ -323,6 +1183,12 @@ def test_change_cmap(app: TileServer) -> None:
         client.put("/tileserver/cmap", data={"cmap": json.dumps(None)})
         assert layer.renderer.mapper(0.5) == colormaps["jet"](0.5)
 
+        client.put(
+            "/tileserver/cmap",
+            data={"cmap": json.dumps("viridis")},
+        )
+        assert layer.renderer.mapper(0.5) == colormaps["viridis"](0.5)
+
         cdict = {"type1": [1, 0, 0], "type2": [0, 1, 0]}
         req_data = {"keys": list(cdict.keys()), "values": list(cdict.values())}
         client.put("/tileserver/cmap", data={"cmap": json.dumps(req_data)})
@@ -374,8 +1240,9 @@ def test_clear_overlays(app: TileServer) -> None:
         response = client.put("/tileserver/clear_overlays")
         assert response.status_code == 200
         assert response.content_type == "text/html; charset=utf-8"
-        # check that the overlay has been correctly cleared
-        assert "overlay" not in app.pyramids["default"]
+        # check all overlays are cleared while the slide remains
+        assert set(app.layers["default"]) == {"slide"}
+        assert set(app.pyramids["default"]) == {"slide"}
 
 
 def test_load_annotations_empty(
@@ -555,6 +1422,256 @@ def test_change_overlay(  # noqa: PLR0915
         assert layer.wsi.info.file_path == tiff_path
 
 
+def test_image_overlay_preserves_slide_metadata(
+    empty_app: TileServer,
+    remote_sample: Callable,
+) -> None:
+    """Test image overlays do not modify slide metadata."""
+    slide_path = remote_sample("wsi2_4k_4k_svs")
+    overlay_path = remote_sample("wsi2_4k_4k_jpg")
+
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(slide_path)},
+        )
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={"overlay_path": safe_str(overlay_path)},
+        )
+        assert response.status_code == 200
+
+        assert empty_app.layers[session_id]["slide"].info.file_path == slide_path
+
+        layer_name = Path(overlay_path).stem
+        assert (
+            Path(empty_app.layers[session_id][layer_name].info.file_path)
+            == overlay_path
+        )
+
+
+def test_named_image_overlay_replaces_existing(
+    empty_app: TileServer,
+    remote_sample: Callable,
+) -> None:
+    """Test replacing an explicitly named image overlay."""
+    first_path = remote_sample("wsi2_4k_4k_svs")
+    second_path = remote_sample("svs-1-small")
+
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(second_path)},
+        )
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(first_path),
+                "layer_name": "named-image",
+            },
+        )
+        assert response.status_code == 200
+        assert json.loads(response.data) == "named-image"
+        assert empty_app.layers[session_id]["named-image"].info.file_path == first_path
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(second_path),
+                "layer_name": "named-image",
+            },
+        )
+        assert response.status_code == 200
+        assert set(empty_app.layers[session_id]) == {
+            "slide",
+            "named-image",
+        }
+        assert set(empty_app.pyramids[session_id]) == {
+            "slide",
+            "named-image",
+        }
+        assert empty_app.layers[session_id]["named-image"].info.file_path == second_path
+
+
+def test_named_annotation_overlays(
+    empty_app: TileServer,
+    track_tmp_path: Path,
+    remote_sample: Callable,
+) -> None:
+    """Test coexistence, replacement, and removal of named annotations."""
+    sample_store = Path(remote_sample("annotation_store_svs_1"))
+
+    dat_path = track_tmp_path / "named.dat"
+    db_path = track_tmp_path / "named.db"
+    joblib.dump(make_simple_dat(), dat_path)
+
+    store = store_from_dat(dat_path)
+    store.dump(db_path)
+    store.close()
+
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(sample_store),
+                "layer_name": "first",
+            },
+        )
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(db_path),
+                "layer_name": "second",
+            },
+        )
+        assert response.status_code == 200
+
+        first_layer = empty_app.pyramids[session_id]["first"]
+        second_layer = empty_app.pyramids[session_id]["second"]
+
+        assert first_layer.renderer is not second_layer.renderer
+
+        second_where = second_layer.renderer.where
+        second_score_prop = second_layer.renderer.score_prop
+
+        response = client.put(
+            "/tileserver/renderer/where?layer=first",
+            data={
+                "val": json.dumps(
+                    'props["type"]==0',
+                ),
+            },
+        )
+        assert response.status_code == 200
+
+        assert first_layer.renderer.where == 'props["type"]==0'
+        assert second_layer.renderer.where == second_where
+
+        response = client.put(
+            "/tileserver/renderer/score_prop?layer=first",
+            data={
+                "val": json.dumps("prob"),
+            },
+        )
+        assert response.status_code == 200
+
+        assert first_layer.renderer.score_prop == "prob"
+        assert second_layer.renderer.score_prop == second_score_prop
+
+        assert set(empty_app.layers[session_id]) == {
+            "slide",
+            "first",
+            "second",
+        }
+
+        response = client.get("/tileserver/prop_values/type/all")
+
+        assert response.status_code == 200
+        assert set(json.loads(response.data)) == {0, 1, 2, 3, 4}
+
+        assert set(empty_app.pyramids[session_id]) == {
+            "slide",
+            "first",
+            "second",
+        }
+
+        first_store_path = empty_app.pyramids[session_id]["first"].store.path
+        second_store_path = empty_app.pyramids[session_id]["second"].store.path
+
+        assert SQLiteStore._connection_to_path(first_store_path) == sample_store
+        assert SQLiteStore._connection_to_path(second_store_path) == db_path
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(db_path),
+                "layer_name": "first",
+            },
+        )
+        assert response.status_code == 200
+
+        assert set(empty_app.pyramids[session_id]) == {
+            "slide",
+            "first",
+            "second",
+        }
+
+        first_store_path = empty_app.pyramids[session_id]["first"].store.path
+        assert SQLiteStore._connection_to_path(first_store_path) == db_path
+
+        response = client.delete("/tileserver/overlay/first")
+
+        assert response.status_code == 200
+        assert set(empty_app.layers[session_id]) == {
+            "slide",
+            "second",
+        }
+        assert set(empty_app.pyramids[session_id]) == {
+            "slide",
+            "second",
+        }
+        assert len(empty_app.pyramids[session_id]["second"].store) == 2
+
+
+def test_commit_named_annotation_overlay(
+    empty_app: TileServer,
+    track_tmp_path: Path,
+    remote_sample: Callable,
+) -> None:
+    """Test committing a named temporary annotation overlay."""
+    dat_path = track_tmp_path / "named.dat"
+    save_path = track_tmp_path / "named.db"
+    joblib.dump(make_simple_dat(), dat_path)
+
+    with empty_app.test_client() as client:
+        session_id = setup_app(client)
+        response = client.put(
+            "/tileserver/slide",
+            data={"slide_path": safe_str(remote_sample("svs-1-small"))},
+        )
+        assert response.status_code == 200
+
+        response = client.put(
+            "/tileserver/overlay",
+            data={
+                "overlay_path": safe_str(dat_path),
+                "layer_name": "named-annotations",
+            },
+        )
+        assert response.status_code == 200
+
+        store_path = empty_app.pyramids[session_id]["named-annotations"].store.path
+
+        assert store_path.name == (f"temp_{session_id}_named-annotations.db")
+
+        response = client.post(
+            "/tileserver/commit",
+            data={"save_path": safe_str(save_path)},
+        )
+        assert response.status_code == 200
+        assert response.data == b"done"
+
+    store = SQLiteStore(save_path)
+    assert len(store) == 2
+    store.close()
+
+
 def test_commit(
     empty_app: TileServer, track_tmp_path: Path, remote_sample: Callable
 ) -> None:
@@ -615,6 +1732,12 @@ def test_update_renderer(app: TileServer) -> None:
         assert app.overlaps["default"] == int(5 * 1.5)
 
         client.put(
+            "/tileserver/renderer/score_prop",
+            data={"val": json.dumps("prob")},
+        )
+        assert app.pyramids["default"]["overlay"].renderer.score_prop == "prob"
+
+        client.put(
             "/tileserver/renderer/where",
             data={"val": json.dumps(None)},
         )
@@ -624,6 +1747,96 @@ def test_update_renderer(app: TileServer) -> None:
             data={"val": json.dumps("None")},
         )
         assert app.pyramids["default"]["overlay"].renderer.where is None
+
+
+def test_annotation_opacities(app_alt: TileServer) -> None:
+    """Test annotation fill opacity by type."""
+    layer = app_alt.pyramids["default"]["layer-1"]
+
+    try:
+        annotation = next(
+            ann for ann in layer.store.values() if ann.properties.get("type") == "cell"
+        )
+    except StopIteration:
+        pytest.fail("Expected a cell annotation in layer-1.")
+
+    layer.renderer.score_prop = "prob"
+    layer.renderer.score_prop_edge = "prob"
+    layer.renderer.mapper = "viridis"
+
+    base_colour = layer.renderer.get_color(
+        annotation,
+        edge=False,
+    )
+
+    edge_colour = layer.renderer.get_color(
+        annotation,
+        edge=True,
+    )
+
+    with app_alt.test_client() as client:
+        response = client.put(
+            "/tileserver/annotation_opacities?layer=layer-1",
+            data={
+                "opacities": json.dumps(
+                    {
+                        "keys": [
+                            "cell",
+                            0,
+                        ],
+                        "values": [
+                            0.4,
+                            0.25,
+                        ],
+                    },
+                ),
+            },
+        )
+
+    assert response.status_code == 200
+
+    assert layer.renderer.type_opacities == {
+        "cell": 0.4,
+        0: 0.25,
+    }
+
+    colour = layer.renderer.get_color(
+        annotation,
+        edge=False,
+    )
+
+    assert colour[:3] == base_colour[:3]
+    assert colour[3] == int(0.4 * 255)
+
+    assert (
+        layer.renderer.get_color(
+            annotation,
+            edge=True,
+        )
+        == edge_colour
+    )
+
+    layer.renderer.score_prop_edge = None
+
+    layer.renderer.secondary_cmap = {
+        "type": "cell",
+        "score_prop": "prob",
+        "mapper": colormaps["viridis"],
+    }
+
+    secondary_colour = layer.renderer.get_color(
+        annotation,
+        edge=False,
+    )
+
+    assert secondary_colour[3] == int(0.4 * 255)
+
+    secondary_edge_colour = layer.renderer.get_color(
+        annotation,
+        edge=True,
+    )
+
+    assert secondary_edge_colour == (0, 0, 0, 255)
 
 
 def test_secondary_cmap(app: TileServer) -> None:
@@ -665,6 +1878,61 @@ def test_secondary_cmap(app: TileServer) -> None:
         )
         assert layer.renderer.secondary_cmap["mapper"]("type2") == [0, 1, 0]
 
+        # Test a secondary continuous mapper with its own range.
+        response = client.put(
+            "/tileserver/secondary_cmap",
+            data={
+                "type_id": json.dumps(0),
+                "prop": "prob",
+                "cmap": json.dumps("viridis"),
+                "range": json.dumps([0.2, 0.8]),
+            },
+        )
+
+        assert response.status_code == 200
+
+        mapper = layer.renderer.secondary_cmap["mapper"]
+
+        np.testing.assert_allclose(
+            mapper(0.2),
+            colormaps["viridis"](0),
+        )
+
+        np.testing.assert_allclose(
+            mapper(0.5),
+            colormaps["viridis"](0.5),
+        )
+
+        np.testing.assert_allclose(
+            mapper(0.8),
+            colormaps["viridis"](1.0),
+        )
+
+        # Test a constant range is expanded for normalisation.
+        response = client.put(
+            "/tileserver/secondary_cmap",
+            data={
+                "type_id": json.dumps(0),
+                "prop": "prob",
+                "cmap": json.dumps("viridis"),
+                "range": json.dumps([0.5, 0.5]),
+            },
+        )
+
+        assert response.status_code == 200
+
+        mapper = layer.renderer.secondary_cmap["mapper"]
+
+        np.testing.assert_allclose(
+            mapper(0.5),
+            colormaps["viridis"](0),
+        )
+
+        np.testing.assert_allclose(
+            mapper(1.5),
+            colormaps["viridis"](1.0),
+        )
+
 
 def test_get_props(app_alt: TileServer) -> None:
     """Test getting props."""
@@ -676,6 +1944,25 @@ def test_get_props(app_alt: TileServer) -> None:
 
         response = client.get("/tileserver/prop_names/'cell'")
         assert set(json.loads(response.data)) == {"prob", "type"}
+
+
+def test_get_props_by_layer(app: TileServer) -> None:
+    """Test getting properties from a named annotation layer."""
+    layer = app.pyramids["default"]["store_geojson"]
+    ann_props = layer.store.pquery(
+        select="*",
+        where=None,
+        unique=False,
+    )
+    expected = {prop for prop_dict in ann_props.values() for prop in prop_dict}
+
+    with app.test_client() as client:
+        response = client.get(
+            "/tileserver/prop_names/all?layer=store_geojson",
+        )
+
+    assert response.status_code == 200
+    assert set(json.loads(response.data)) == expected
 
 
 def test_get_property_values(app: TileServer) -> None:
@@ -692,6 +1979,45 @@ def test_get_property_values(app: TileServer) -> None:
         assert response.content_type == "text/html; charset=utf-8"
         # the only value of property 'type' for annotations of type 1 is 1
         assert set(json.loads(response.data)) == {1}
+
+
+def test_get_property_values_by_layer(app: TileServer) -> None:
+    """Test getting property values from a named annotation layer."""
+    layer = app.pyramids["default"]["store_geojson"]
+    expected = set(
+        layer.store.pquery(
+            select="props['type']",
+            where=None,
+            unique=True,
+        ),
+    )
+
+    with app.test_client() as client:
+        response = client.get(
+            "/tileserver/prop_values/type/all?layer=store_geojson",
+        )
+
+    assert response.status_code == 200
+    assert set(json.loads(response.data)) == expected
+
+
+def test_get_ann_layer_by_name(app: TileServer) -> None:
+    """Test getting a named annotation layer."""
+    layer = app.get_ann_layer(
+        "default",
+        "store_geojson",
+    )
+
+    assert layer is app.pyramids["default"]["store_geojson"]
+
+    with pytest.raises(
+        ValueError,
+        match="Annotation layer not found: missing",
+    ):
+        app.get_ann_layer(
+            "default",
+            "missing",
+        )
 
 
 def test_get_property_values_no_overlay(empty_app: TileServer) -> None:
@@ -744,6 +2070,63 @@ def test_point_query(app: TileServer) -> None:
 
     assert response.status_code == 200
     assert json.loads(response.data) == {}
+
+
+def test_point_query_by_layer(app: TileServer) -> None:
+    """Test point query on a named annotation layer."""
+    layer = app.pyramids["default"]["store_geojson"]
+
+    annotation = next(iter(layer.store.values()))
+    point = annotation.geometry.representative_point()
+
+    with app.test_client() as client:
+        response = client.get(
+            f"/tileserver/tap_query/{point.x}/{point.y}?layer=store_geojson",
+        )
+
+    assert response.status_code == 200
+    assert response.get_json() == annotation.properties
+
+
+def test_point_query_details_by_layer(
+    app: TileServer,
+) -> None:
+    """Test detailed point query returns annotation geometry and ID."""
+    layer = app.pyramids["default"]["store_geojson"]
+
+    annotations = list(
+        layer.store.items(),
+    )
+
+    assert annotations
+
+    annotation_id, annotation = annotations[0]
+
+    point = annotation.geometry.representative_point()
+
+    with app.test_client() as client:
+        response = client.get(
+            (
+                f"/tileserver/tap_query/"
+                f"{point.x}/{point.y}"
+                "?layer=store_geojson"
+                "&details=1"
+            ),
+        )
+
+    assert response.status_code == 200
+
+    result = response.get_json()
+
+    assert result["id"] == str(
+        annotation_id,
+    )
+
+    assert result["properties"] == annotation.properties
+
+    assert result["geometry"]["type"] == annotation.geometry.geom_type
+
+    assert result["geometry"]["coordinates"]
 
 
 def test_prop_range(app: TileServer) -> None:
@@ -917,6 +2300,32 @@ def test_sessions_no_slide_loaded(empty_app: TileServer) -> None:
         assert response.get_json() == {}
 
 
+def test_sessions_slide_without_file_path() -> None:
+    """Test sessions when slide metadata has no file path."""
+    app = TileServer(
+        "Testing TileServer",
+        {},
+        legacy=False,
+    )
+    app.config.from_mapping({"TESTING": True})
+
+    app.layers["test-session"] = {
+        "slide": SimpleNamespace(
+            info=SimpleNamespace(
+                as_dict=lambda: {"file_path": None},
+            ),
+        ),
+    }
+
+    with app.test_client() as client:
+        response = client.get("/tileserver/sessions")
+
+    assert response.status_code == 200
+    assert response.get_json() == {
+        "test-session": "",
+    }
+
+
 def test_sessions_one_slide_loaded(
     empty_app: TileServer, remote_sample: Callable
 ) -> None:
@@ -962,3 +2371,243 @@ def test_enhance_set_nopostproc(app: TileServer) -> None:
         )
         assert response.status_code == 200
         assert response.data.decode() == "done"
+
+
+def test_annotation_colours_are_deterministic(app: TileServer) -> None:
+    """Test annotation colours do not depend on type order."""
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={"types": json.dumps([0, -1, "Tumour"])},
+        )
+        assert response.status_code == 200
+        first = response.get_json()
+
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={"types": json.dumps(["Tumour", -1, 0])},
+        )
+        assert response.status_code == 200
+        second = response.get_json()
+
+    first_colours = dict(zip(first["keys"], first["values"], strict=False))
+    second_colours = dict(zip(second["keys"], second["values"], strict=False))
+
+    assert first_colours == second_colours
+    assert all(len(colour) == 4 for colour in first_colours.values())
+
+
+def test_annotation_colours_support_named_palette(
+    app: TileServer,
+) -> None:
+    """Test a named Matplotlib annotation palette."""
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={
+                "types": json.dumps(
+                    [
+                        0,
+                        1,
+                    ]
+                ),
+                "palette": "tab10",
+            },
+        )
+
+    assert response.status_code == 200
+
+    result = response.get_json()
+
+    expected = [
+        [
+            *map(
+                float,
+                colormaps["tab10"].colors[index][:3],
+            ),
+            1.0,
+        ]
+        for index in (
+            0,
+            1,
+        )
+    ]
+
+    assert result == {
+        "keys": [
+            0,
+            1,
+        ],
+        "values": expected,
+    }
+
+
+@pytest.mark.parametrize(
+    "palette_name",
+    [
+        "Set1",
+        "Set2",
+        "Set3",
+        "Dark2",
+        "Accent",
+        "Paired",
+        "tab10",
+        "tab20",
+        "tab20b",
+        "tab20c",
+    ],
+)
+def test_annotation_colours_named_palettes_are_distinct_and_deterministic(
+    app: TileServer,
+    palette_name: str,
+) -> None:
+    """Test named palettes give stable distinct annotation colours."""
+    annotation_types = [
+        "Tumor",
+        "Background",
+        "Dead",
+        "Other",
+        "Connective",
+        "Inflammatory",
+        "Inflammatory-other",
+        "Neoplastic",
+        "Non-neoplastic epithelial",
+        "Stroma",
+        "Necrosis",
+        "Lymphocyte",
+    ]
+
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={
+                "types": json.dumps(
+                    annotation_types,
+                ),
+                "palette": palette_name,
+            },
+        )
+        assert response.status_code == 200
+        first = response.get_json()
+
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={
+                "types": json.dumps(
+                    list(
+                        reversed(
+                            annotation_types,
+                        ),
+                    ),
+                ),
+                "palette": palette_name,
+            },
+        )
+        assert response.status_code == 200
+        second = response.get_json()
+
+    first_colours = dict(
+        zip(
+            first["keys"],
+            first["values"],
+            strict=False,
+        ),
+    )
+    second_colours = dict(
+        zip(
+            second["keys"],
+            second["values"],
+            strict=False,
+        ),
+    )
+
+    assert first_colours == second_colours
+
+    assert len(
+        {tuple(colour) for colour in first_colours.values()},
+    ) == len(annotation_types)
+
+
+def test_annotation_colours_automatic_are_distinct(
+    app: TileServer,
+) -> None:
+    """Test automatic colours distinguish common annotation classes."""
+    annotation_types = [
+        "Tumor",
+        "Background",
+        "Dead",
+        "Other",
+        "Connective",
+        "Inflammatory",
+        "Inflammatory-other",
+        "Neoplastic",
+        "Non-neoplastic epithelial",
+        "Stroma",
+        "Necrosis",
+        "Lymphocyte",
+    ]
+
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={
+                "types": json.dumps(
+                    annotation_types,
+                ),
+            },
+        )
+
+    assert response.status_code == 200
+
+    colours = response.get_json()["values"]
+
+    assert len(
+        {tuple(colour) for colour in colours},
+    ) == len(annotation_types)
+
+
+def test_annotation_colours_support_many_distinct_classes(
+    app: TileServer,
+) -> None:
+    """Test named palettes support many distinct annotation classes."""
+    annotation_types = [f"class-{index}" for index in range(40)]
+
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={
+                "types": json.dumps(
+                    annotation_types,
+                ),
+                "palette": "Set1",
+            },
+        )
+
+    assert response.status_code == 200
+
+    colours = response.get_json()["values"]
+
+    assert len(
+        {tuple(colour) for colour in colours},
+    ) == len(annotation_types)
+
+
+def test_annotation_colours_reject_unknown_palette(
+    app: TileServer,
+) -> None:
+    """Test unsupported annotation palettes are rejected."""
+    with app.test_client() as client:
+        response = client.put(
+            "/tileserver/annotation_colours",
+            data={
+                "types": json.dumps(
+                    [
+                        0,
+                    ]
+                ),
+                "palette": "not-a-palette",
+            },
+        )
+
+    assert response.status_code == 400
+    assert response.get_data(as_text=True) == "Invalid annotation colour request."

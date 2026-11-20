@@ -2023,3 +2023,43 @@ def test_module_auto_setup_doc(
     assert hasattr(main, "doc")
     assert hasattr(main.doc, "_roots")
     assert len(main.doc._roots) == 4
+
+
+def test_populate_slide_list_dicom_container(
+    monkeypatch: pytest.MonkeyPatch,
+    track_tmp_path: Path,
+) -> None:
+    """DICOM container directories should be listed as slides."""
+    # Create DICOM slide folder
+    dicom_dir = track_tmp_path / "case1"
+    dicom_dir.mkdir()
+
+    # Internal DICOM instances
+    (dicom_dir / "000001.dcm").touch()
+    (dicom_dir / "000002.dcm").touch()
+
+    class MockSelect:
+        def __init__(self) -> None:
+            self.options = []
+
+    mock_select = MockSelect()
+
+    # Mock UI
+    monkeypatch.setattr(
+        "tiatoolbox.visualization.bokeh_app.main.UI",
+        {"slide_select": mock_select},
+    )
+
+    # Mock DICOM detection
+    monkeypatch.setattr(
+        "tiatoolbox.visualization.bokeh_app.main.is_dicom",
+        lambda path: path == dicom_dir,
+    )
+
+    main.populate_slide_list(track_tmp_path)
+
+    assert ("case1", "case1") in mock_select.options
+
+    # Internal files should not appear
+    assert ("case1/000001.dcm", "case1/000001.dcm") not in mock_select.options
+    assert ("case1/000002.dcm", "case1/000002.dcm") not in mock_select.options

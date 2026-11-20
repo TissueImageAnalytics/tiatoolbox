@@ -163,6 +163,18 @@ def test_imresize_no_scale_factor() -> None:
     assert resized_img.shape == (100, 100, 3)
 
 
+def test_imresize_output_size_interpolation() -> None:
+    """Test imresize selects interpolation from output_size like scale_factor."""
+    img = np.zeros((448, 448, 3), dtype=np.uint8)
+    for output_size, scale_factor in [((224, 224), 0.5), ((896, 896), 2.0)]:
+        interpolations = []
+        for kwargs in ({"output_size": output_size}, {"scale_factor": scale_factor}):
+            with patch.object(cv2, "resize", wraps=cv2.resize) as mock_resize:
+                utils.transforms.imresize(img, **kwargs)
+            interpolations.append(mock_resize.call_args.kwargs["interpolation"])
+        assert interpolations[0] == interpolations[1]
+
+
 def test_imresize_no_scale_factor_or_output_size() -> None:
     """Test imresize with no scale_factor or output_size."""
     img = np.zeros((2000, 1000, 3))

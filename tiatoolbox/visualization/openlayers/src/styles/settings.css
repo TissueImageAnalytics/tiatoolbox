@@ -1,0 +1,386 @@
+/* Settings panel */
+
+.settings-panel {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 1100;
+
+    width: 720px;
+    height: 480px;
+    max-width: calc(100vw - 80px);
+    max-height: calc(100vh - 80px);
+    box-sizing: border-box;
+    overflow: hidden;
+
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+
+    text-shadow: 0 0 2px var(--viewer-control-foreground-shadow);
+
+    border-radius: 10px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+
+    transform: translate(-50%, -50%);
+}
+
+
+.settings-panel.hidden {
+    display: none;
+}
+
+
+.settings-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px 8px 18px;
+    border-bottom: 1px solid var(--viewer-control-border);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+
+.settings-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--viewer-control-foreground);
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+
+.settings-close:hover {
+    background: var(--viewer-control-hover-background);
+    color: var(--viewer-control-hover-foreground);
+}
+
+
+.settings-close:active {
+    background: var(--viewer-control-pressed-background);
+    color: var(--viewer-control-pressed-foreground);
+}
+
+
+.settings-close:focus {
+    outline: none;
+}
+
+
+/* Settings tabs */
+
+.settings-tabs {
+    display: flex;
+
+    padding: 0 18px;
+
+    border-bottom: 1px solid var(--viewer-control-border);
+}
+
+
+.settings-tab {
+    padding: 11px 16px;
+
+    border: 0;
+    border-bottom: 2px solid transparent;
+
+    background: transparent;
+    color: var(--viewer-control-muted-foreground);
+
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+
+.settings-tab:hover {
+    color: var(--viewer-control-hover-foreground);
+    background: var(--viewer-control-hover-background);
+}
+
+
+.settings-tab.active {
+    border-bottom-color: var(--viewer-control-selected-background);
+    color: var(--viewer-control-selected-foreground);
+    background: var(--viewer-control-selected-background);
+}
+
+
+.settings-tab:focus {
+    outline: none;
+}
+
+
+/* Settings content */
+
+.settings-panel-body {
+    height: calc(100% - 83px);
+    overflow-y: auto;
+}
+
+
+.settings-tab-panel {
+    padding: 0 20px 20px;
+}
+
+
+.settings-tab-panel.hidden {
+    display: none;
+}
+
+
+.settings-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+
+    padding: 16px 0;
+
+    border-bottom: 1px solid var(--viewer-control-border);
+}
+
+
+.settings-option:last-child {
+    border-bottom: 0;
+}
+
+
+.settings-option-text {
+    min-width: 0;
+}
+
+
+.settings-option-label {
+    margin-bottom: 3px;
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+
+.settings-option-description {
+    color: var(--viewer-control-muted-foreground);
+
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+
+/* Settings switch */
+
+.settings-switch {
+    position: relative;
+
+    width: 38px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+
+.settings-switch input {
+    position: absolute;
+
+    width: 0;
+    height: 0;
+
+    opacity: 0;
+}
+
+
+.settings-switch-slider {
+    position: absolute;
+    inset: 0;
+
+    background: var(--viewer-control-surface-background);
+
+    border-radius: 10px;
+
+    cursor: pointer;
+
+    transition: background 150ms ease;
+}
+
+
+.settings-switch-slider::before {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+
+    width: 14px;
+    height: 14px;
+
+    background: var(--viewer-control-foreground);
+
+    border-radius: 50%;
+
+    content: "";
+
+    transition: transform 150ms ease;
+}
+
+
+.settings-switch input:checked + .settings-switch-slider {
+    background: var(--viewer-control-selected-background);
+}
+
+
+.settings-switch input:checked + .settings-switch-slider::before {
+    transform: translateX(18px);
+}
+
+
+.settings-switch input:focus-visible + .settings-switch-slider {
+    outline: 2px solid var(--viewer-control-focus-border);
+    outline-offset: 2px;
+}
+
+
+/* Settings colour */
+
+.settings-colour-input {
+    width: 38px;
+    height: 28px;
+    flex-shrink: 0;
+    padding: 2px;
+
+    border: 1px solid var(--viewer-control-border);
+    border-radius: 4px;
+
+    background: var(--viewer-control-surface-background);
+
+    cursor: pointer;
+}
+
+
+.settings-colour-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+
+.settings-colour-input::-webkit-color-swatch {
+    border: 0;
+    border-radius: 2px;
+}
+
+
+.settings-colour-input::-moz-color-swatch {
+    border: 0;
+    border-radius: 2px;
+}
+
+
+/* Settings select */
+
+.settings-select {
+    width: 150px;
+    height: 30px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+
+    padding: 4px 8px;
+
+    border: 1px solid var(--viewer-control-border);
+    border-radius: 4px;
+
+    background: var(--viewer-control-surface-background);
+    color: var(--viewer-control-foreground);
+
+    font-family: inherit;
+    font-size: 11px;
+
+    cursor: pointer;
+}
+
+
+.settings-select:hover {
+    border-color: var(--viewer-control-focus-border);
+}
+
+
+.settings-select:focus {
+    border-color: var(--viewer-control-focus-border);
+    outline: none;
+}
+
+
+/* Settings reset button */
+
+.settings-reset-button {
+    height: 30px;
+    flex-shrink: 0;
+    padding: 4px 10px;
+
+    border: 1px solid var(--viewer-control-border);
+    border-radius: 4px;
+
+    background: var(--viewer-control-surface-background);
+    color: var(--viewer-control-foreground);
+
+    font-family: inherit;
+    font-size: 11px;
+
+    cursor: pointer;
+}
+
+
+.settings-reset-button:hover {
+    background: var(--viewer-control-hover-background);
+    color: var(--viewer-control-hover-foreground);
+}
+
+
+.settings-reset-button:active {
+    background: var(--viewer-control-pressed-background);
+    color: var(--viewer-control-pressed-foreground);
+}
+
+
+.settings-reset-button:focus {
+    border-color: var(--viewer-control-focus-border);
+    outline: none;
+}
+
+
+/* Settings range */
+
+.settings-range-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    width: 190px;
+    flex-shrink: 0;
+}
+
+
+.settings-range {
+    min-width: 0;
+    flex: 1;
+    margin: 0;
+
+    accent-color: var(--viewer-control-selected-background);
+
+    cursor: pointer;
+}
+
+
+.settings-range-value {
+    width: 34px;
+    flex-shrink: 0;
+
+    color: var(--viewer-control-muted-foreground);
+
+    font-size: 11px;
+    text-align: right;
+}

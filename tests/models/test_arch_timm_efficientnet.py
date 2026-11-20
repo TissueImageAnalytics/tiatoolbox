@@ -16,7 +16,6 @@ from tiatoolbox.models.architecture.timm_efficientnet import (
     DEFAULT_IN_CHANNELS,
     EfficientNetEncoder,
     EncoderMixin,
-    replace_strides_with_dilation,
 )
 
 
@@ -39,63 +38,6 @@ class DummyEncoder(nn.Module, EncoderMixin):
             Dictionary with keys as output stride and values as list of modules.
         """
         return {16: [self.conv], 32: [self.conv32]}
-
-
-def test_patch_first_conv() -> None:
-    """patch_first_conv should reduce or expand correctly."""
-    # create simple conv
-    model = nn.Sequential(nn.Conv2d(3, 2, kernel_size=1, bias=False))
-    conv = model[0]
-
-    # collapsing 3 channels into 1
-    effnet_mod.patch_first_conv(model, new_in_channels=1, pretrained=True)
-    assert conv.in_channels == 1
-
-    # expanding to 5 channels
-    model = nn.Sequential(nn.Conv2d(3, 2, kernel_size=1, bias=False))
-    conv = model[0]
-
-    effnet_mod.patch_first_conv(model, new_in_channels=5, pretrained=True)
-    assert conv.in_channels == 5
-
-
-def test_patch_first_conv_reset_weights_when_not_pretrained() -> None:
-    """Ensure random reinit happens when pretrained flag is False."""
-    # start from known weights
-    model = nn.Sequential(nn.Conv2d(3, 1, kernel_size=1, bias=False))
-    original = model[0].weight.clone()
-    # changing channel count without pretrained should reinit parameters
-    effnet_mod.patch_first_conv(model, new_in_channels=4, pretrained=False)
-    assert model[0].in_channels == 4
-    assert model[0].weight.shape[1] == 4
-    # Almost surely changed due to reset_parameters
-    assert not torch.equal(original, model[0].weight[:1, :3])
-
-
-def test_patch_first_conv_no_matching_layer_is_safe() -> None:
-    """The function should silently exit when no suitable conv exists."""
-    model = nn.Sequential(nn.Conv2d(5, 1, kernel_size=1))
-    original = model[0].weight.clone()
-    # no conv with default channel count, so weights stay unchanged
-    effnet_mod.patch_first_conv(model, new_in_channels=3, pretrained=True)
-    assert torch.equal(original, model[0].weight)
-
-
-def test_replace_strides_with_dilation_applies_to_nested_convs() -> None:
-    """Strides become dilation and static padding gets removed."""
-    module = nn.Sequential(
-        nn.Conv2d(1, 1, kernel_size=3, stride=2, padding=1),
-    )
-    # attach static_padding to mirror EfficientNet convs
-    module[0].static_padding = nn.Conv2d(1, 1, 1)
-
-    # applying dilation should also strip static padding
-    replace_strides_with_dilation(module, dilation_rate=3)
-    conv = module[0]
-    assert conv.stride == (1, 1)
-    assert conv.dilation == (3, 3)
-    assert conv.padding == (3, 3)
-    assert isinstance(conv.static_padding, nn.Identity)
 
 
 def test_encoder_mixin_properties_and_set_in_channels() -> None:

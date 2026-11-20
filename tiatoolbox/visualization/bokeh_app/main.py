@@ -78,6 +78,7 @@ from tiatoolbox.utils.misc import select_device
 from tiatoolbox.utils.visualization import random_colors
 from tiatoolbox.visualization.ui_utils import get_level_by_extent
 from tiatoolbox.wsicore.wsireader import WSIReader
+from tiatoolbox.wsicore.wsireader.detection import is_dicom
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Callable
@@ -937,10 +938,14 @@ def populate_slide_list(slide_folder: Path, search_txt: str | None = None) -> No
         "*.png",
         "*.tif",
         "*.qptiff",
-        "*.dcm",
     ]:
         file_list.extend(list(Path(slide_folder).glob(str(Path("*") / ext))))
         file_list.extend(list(Path(slide_folder).glob(ext)))
+    # DICOM
+    file_list.extend(
+        p for p in Path(slide_folder).iterdir() if p.is_dir() and is_dicom(p)
+    )
+
     if search_txt is None:
         file_list = [
             (str(Path(*p.parts[len_slidepath:])), str(Path(*p.parts[len_slidepath:])))

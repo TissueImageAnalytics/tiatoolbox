@@ -1,19 +1,32 @@
 {
   "dependencies": {
-    "ol": "10.10.0",
+    "ol": "10.11.0",
     "ol-ext": "4.0.38"
   },
   "description": "OpenLayers frontend for TIAToolbox.",
   "devDependencies": {
-    "vite": "8.2.1"
+    "@eslint/js": "10.0.1",
+    "@vitest/coverage-v8": "5.0.5",
+    "@vitest/eslint-plugin": "1.6.28",
+    "eslint": "10.13.0",
+    "globals": "17.13.0",
+    "jsdom": "30.1.3",
+    "vite": "8.3.5",
+    "vitest": "5.0.5"
   },
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": "^22.13.0 || >=24"
   },
   "name": "tiatoolbox-openlayers",
   "private": true,
   "scripts": {
-    "build": "vite build"
+    "build": "vite build",
+    "build:legacy": "vite build --config vite.legacy.config.js",
+    "lint": "cd ../../.. && eslint --config tiatoolbox/visualization/openlayers/eslint.config.js tiatoolbox/visualization/openlayers/src tiatoolbox/visualization/openlayers/vite.config.js tiatoolbox/visualization/openlayers/vite.legacy.config.js tiatoolbox/visualization/openlayers/vitest.config.js tiatoolbox/visualization/openlayers/eslint.config.js tests/javascript",
+    "lint:fix": "npm run lint -- --fix",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest"
   },
   "type": "module",
   "version": "0.0.0"

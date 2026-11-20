@@ -58,81 +58,8 @@ import torch
 from torch import nn
 
 from tiatoolbox.models.architecture.timm_efficientnet import EfficientNetEncoder
-from tiatoolbox.models.architecture.utils import SegmentationHead
+from tiatoolbox.models.architecture.utils import Conv2dReLU, SegmentationHead
 from tiatoolbox.models.models_abc import ModelABC
-
-
-class Conv2dReLU(nn.Sequential):
-    """Conv2d + BatchNorm + ReLU block.
-
-    This class implements a common convolutional block used in encoder-decoder
-    architectures. It consists of a 2D convolution followed by batch normalization
-    and a ReLU activation function.
-
-    Attributes:
-        conv (nn.Conv2d):
-            Convolutional layer for feature extraction.
-        norm (nn.BatchNorm2d):
-            Batch normalization layer for stabilizing training.
-        activation (nn.ReLU):
-            ReLU activation function applied after normalization.
-
-    Example:
-        >>> block = Conv2dReLU(
-        ... in_channels=32, out_channels=64, kernel_size=3, padding=1
-        ... )
-        >>> x = torch.randn(1, 32, 128, 128)
-        >>> output = block(x)
-        >>> output.shape
-        ... torch.Size([1, 64, 128, 128])
-
-    """
-
-    def __init__(
-        self: Conv2dReLU,
-        in_channels: int,
-        out_channels: int,
-        kernel_size: int,
-        padding: int = 0,
-        stride: int = 1,
-        *,
-        bias: bool = False,
-    ) -> None:
-        """Initialize Conv2dReLU block.
-
-        Creates a convolutional layer followed by batch normalization and a ReLU
-        activation function. This block is commonly used in UNet++ and similar
-        architectures for feature extraction.
-
-        Args:
-            in_channels (int):
-                Number of input channels.
-            out_channels (int):
-                Number of output channels.
-            kernel_size (int):
-                Size of the convolution kernel.
-            padding (int):
-                Padding applied to the input. Defaults to 0.
-            stride (int):
-                Stride of the convolution. Defaults to 1.
-            bias (bool):
-                If `True`, adds a learnable bias to the output. Default: `False`
-
-        """
-        norm = nn.BatchNorm2d(out_channels)
-
-        conv = nn.Conv2d(
-            in_channels,
-            out_channels,
-            kernel_size,
-            stride=stride,
-            padding=padding,
-            bias=bias,
-        )
-
-        activation = nn.ReLU(inplace=True)
-
-        super().__init__(conv, norm, activation)
 
 
 class DecoderBlock(nn.Module):

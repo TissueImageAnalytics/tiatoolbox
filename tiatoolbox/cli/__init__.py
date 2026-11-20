@@ -21,6 +21,7 @@ from tiatoolbox.cli.slide_thumbnail import slide_thumbnail
 from tiatoolbox.cli.stain_norm import stain_norm
 from tiatoolbox.cli.tissue_mask import tissue_mask
 from tiatoolbox.cli.visualize import visualize
+from tiatoolbox.cli.visualize_beta import visualize_beta
 
 
 def version_msg() -> str:
@@ -55,6 +56,7 @@ main.add_command(slide_thumbnail)
 main.add_command(stain_norm)
 main.add_command(tissue_mask)
 main.add_command(visualize)
+main.add_command(visualize_beta)
 
 
 if __name__ == "__main__":

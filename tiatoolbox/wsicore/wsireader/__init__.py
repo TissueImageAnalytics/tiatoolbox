@@ -4,24 +4,27 @@ from __future__ import annotations
 
 from tiatoolbox.wsicore.wsimeta import WSIMeta
 
+from .annotation_store import AnnotationStoreReader
+
 # Import base classes and utility functions
 from .base import (
-    AnnotationStoreReader,
     ArrayView,
-    DICOMWSIReader,
     FsspecJsonWSIReader,
-    JP2WSIReader,
-    NGFFWSIReader,
-    OpenSlideWSIReader,
     TIFFWSIReader,
     TIFFWSIReaderDelegate,
-    TransformedWSIReader,
     VirtualWSIReader,
     WSIReader,
     _handle_tiff_wsi,
     _handle_virtual_wsi,
 )
 from .detection import is_dicom, is_ngff, is_tiled_tiff, is_url, is_zarr
+
+# Import reader classes
+from .dicom import DICOMWSIReader
+from .jp2 import JP2WSIReader
+from .ngff import NGFFWSIReader
+from .openslide import OpenSlideWSIReader
+from .transformed import TransformedWSIReader
 
 __all__ = [
     "AnnotationStoreReader",
