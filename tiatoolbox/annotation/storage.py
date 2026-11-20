@@ -2682,6 +2682,8 @@ class SQLiteStore(AnnotationStore):
 
     def close(self: SQLiteStore) -> None:
         """Closes :class:`SQLiteStore` from file pointer or path."""
+        if not getattr(self, "cons", None):
+            return
         if self.auto_commit:
             self.con.commit()
         self.optimize(vacuum=False, limit=1000)

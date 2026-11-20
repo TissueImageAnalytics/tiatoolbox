@@ -7,3 +7,4 @@ Pipelines
 
     _notebooks/jnb/inference-pipelines/*
     _notebooks/jnb/full-pipelines/*
+    _notebooks/jnb/training-pipelines/*
