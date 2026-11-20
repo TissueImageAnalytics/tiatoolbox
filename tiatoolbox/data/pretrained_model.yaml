@@ -7,6 +7,7 @@
     # catalog: Information about the model and its intended use.
         # description: Task that the model performs. [e.g. Detect and classify nuclei in colon histology images.]
         # tissue_type: List of tissue types that the model supports. Use "agnostic" for models that support different tissue types. [e.g. colon, breast, agnostic]
+        # engine: Processing engine used to run the model. [e.g. patch_predictor]
     # architecture: Model architecture and its parameters.
         # class: Python class used to create the model. [e.g. hovernet.HoVerNet]
         # kwargs: Parameters passed to the model class. The required parameters depend on the model class.
@@ -68,13 +69,14 @@ alexnet-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: alexnet
             num_classes: 9
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -88,6 +90,7 @@ resnet18-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -105,7 +108,7 @@ resnet18-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -119,6 +122,7 @@ resnet34-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -136,7 +140,7 @@ resnet34-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -150,6 +154,7 @@ resnet50-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -167,7 +172,7 @@ resnet50-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -181,6 +186,7 @@ resnet101-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -198,7 +204,7 @@ resnet101-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -212,6 +218,7 @@ resnext50_32x4d-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -229,7 +236,7 @@ resnext50_32x4d-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -243,6 +250,7 @@ resnext101_32x8d-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -260,7 +268,7 @@ resnext101_32x8d-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -274,6 +282,7 @@ wide_resnet50_2-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -291,7 +300,7 @@ wide_resnet50_2-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -305,6 +314,7 @@ wide_resnet101_2-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -322,7 +332,7 @@ wide_resnet101_2-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -336,6 +346,7 @@ densenet121-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -353,7 +364,7 @@ densenet121-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -367,6 +378,7 @@ densenet161-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -384,7 +396,7 @@ densenet161-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -398,6 +410,7 @@ densenet169-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -415,7 +428,7 @@ densenet169-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -429,6 +442,7 @@ densenet201-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -446,7 +460,7 @@ densenet201-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -460,6 +474,7 @@ mobilenet_v2-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -477,7 +492,7 @@ mobilenet_v2-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -491,6 +506,7 @@ mobilenet_v3_large-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -508,7 +524,7 @@ mobilenet_v3_large-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -522,6 +538,7 @@ mobilenet_v3_small-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -539,7 +556,7 @@ mobilenet_v3_small-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -553,6 +570,7 @@ googlenet-kather100k:
             Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -570,7 +588,7 @@ googlenet-kather100k:
                 8: "lymphocytes"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -589,6 +607,7 @@ alexnet-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -599,7 +618,7 @@ alexnet-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -613,6 +632,7 @@ resnet18-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -623,7 +643,7 @@ resnet18-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -637,6 +657,7 @@ resnet34-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -647,7 +668,7 @@ resnet34-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -661,6 +682,7 @@ resnet50-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -671,7 +693,7 @@ resnet50-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -685,6 +707,7 @@ resnet101-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -695,7 +718,7 @@ resnet101-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -709,6 +732,7 @@ resnext50_32x4d-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -719,7 +743,7 @@ resnext50_32x4d-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -733,6 +757,7 @@ resnext101_32x8d-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -743,7 +768,7 @@ resnext101_32x8d-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -757,6 +782,7 @@ wide_resnet50_2-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -767,7 +793,7 @@ wide_resnet50_2-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -781,6 +807,7 @@ wide_resnet101_2-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -791,7 +818,7 @@ wide_resnet101_2-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -805,6 +832,7 @@ densenet121-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -815,7 +843,7 @@ densenet121-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -829,6 +857,7 @@ densenet161-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -839,7 +868,7 @@ densenet161-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -853,6 +882,7 @@ densenet169-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -863,7 +893,7 @@ densenet169-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -877,6 +907,7 @@ densenet201-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -887,7 +918,7 @@ densenet201-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -901,6 +932,7 @@ mobilenet_v2-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -911,7 +943,7 @@ mobilenet_v2-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -925,6 +957,7 @@ mobilenet_v3_large-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -935,7 +968,7 @@ mobilenet_v3_large-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -949,6 +982,7 @@ mobilenet_v3_small-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -959,7 +993,7 @@ mobilenet_v3_small-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -973,6 +1007,7 @@ googlenet-pcam:
             Predict breast cancer metastases in lymph node tissue images at a patch level.
         tissue_type:
             - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -983,7 +1018,7 @@ googlenet-pcam:
                 1: "metastatic tissue"
             }
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [96, 96]
             stride_shape: [96, 96]
@@ -1002,13 +1037,14 @@ resnet18-idars-tumour:
             Patch level prediction of tumor versus non-tumor/viable epithelium status in colon histology.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: idars.IDaRS
         kwargs:
             backbone: resnet18
             num_classes: 2
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [512, 512]
             stride_shape: [512, 512]
@@ -1021,13 +1057,14 @@ resnet34-idars-msi:
             Patch level prediction of Microsatellite Instability (MSI) status in colon histology.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -1040,13 +1077,14 @@ resnet34-idars-braf:
             Patch level prediction of BRAF gene mutation Status in colon histology.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -1059,13 +1097,14 @@ resnet34-idars-cimp:
             Patch level prediction of CpG island methylator phenotype in colon histology.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -1078,13 +1117,14 @@ resnet34-idars-cin:
             Patch level prediction of chromosomal instability in colon histology.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -1097,13 +1137,14 @@ resnet34-idars-tp53:
             Patch level prediction of TP53 tumor suppressor gene mutation status in colon histology.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -1116,13 +1157,14 @@ resnet34-idars-hm:
              Patch level prediction of Hypermutated status in colon histology.
         tissue_type:
             - colon
+        engine: patch_predictor
     architecture:
         class: idars.IDaRS
         kwargs:
             backbone: resnet34
             num_classes: 2
     ioconfig:
-        class: io_config.IOPatchPredictorConfig
+        class: io_config.IOpatch_predictorConfig
         kwargs:
             patch_input_shape: [224, 224]
             stride_shape: [224, 224]
@@ -1140,6 +1182,7 @@ fcn-tissue_mask:
             Segmentation of tissue regions across different cancer types
         tissue_type:
             - agnostic
+        engine: semantic_segmentor
     architecture:
         class: unet.UNetModel
         kwargs:
@@ -1167,6 +1210,7 @@ fcn_resnet50_unet-bcss:
             Segments tumor, stroma, necrosi, and inflamatory regions in breast cancer images
         tissue_type:
             - breast
+        engine: semantic_segmentor
     architecture:
         class: unet.UNetModel
         kwargs:
@@ -1202,6 +1246,7 @@ unet_tissue_mask_tsef:
             segmentation excluding fat.
         tissue_type:
             - agnostic
+        engine: semantic_segmentor
     architecture:
         class: unet.UNetModel
         kwargs:
@@ -1229,6 +1274,7 @@ grandqc_tissue_detection:
             Segmentation model for masking background from tissue regions
         tissue_type:
             - agnostic
+        engine: semantic_segmentor
     architecture:
         class: grandqc.GrandQCModel
         kwargs:
@@ -1257,6 +1303,7 @@ efficientunet-tissue_mask:
             Segmentation model for tissue regions in images across cancer types.
         tissue_type:
             - agnostic
+        engine: semantic_segmentor
     architecture:
         class: efficientunet_tissue_mask_model.EfficientUNetTissueMaskModel
         kwargs:
@@ -1291,6 +1338,7 @@ hovernet_fast-pannuke:
             Instance Segmentation and detection of Neoplastic, Inflammatory, Connective, Dead, and Non-Neoplastic Epithelial nuclei across different cancer types.
         tissue_type:
             - agnostic
+        engine: multi_task_segmentor
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -1328,6 +1376,7 @@ hovernet_fast-monusac:
             Instance Segmentation and detection of Epithelial, Lymphocyte, Macrophage, and Neutrophil nuclei across different cancer types.
         tissue_type:
             - agnostic
+        engine: multi_task_segmentor
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -1364,6 +1413,7 @@ hovernet_original-consep:
             Instance Segmentation and detection of Epithelial, Inflammatory, and Spindle-Shaped nuclei in colon images.
         tissue_type:
             - colon
+        engine: multi_task_segmentor
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -1399,6 +1449,7 @@ hovernet_original-kumar:
             Instance Segmentation and detection of Epithelial, Inflammatory, and Spindle-Shaped nuclei across different cancer types.
         tissue_type:
             - agnostic
+        engine: multi_task_segmentor
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -1422,6 +1473,13 @@ hovernet_original-kumar:
 
 hovernetplus-oed:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Instance segmentation and classification of epithelial nuclei,
+            and segmentation of epithelial tissue layers in oral histology images.
+        tissue_type:
+            - oral cavity
+        engine: multi_task_segmentor
     architecture:
         class: hovernetplus.HoVerNetPlus
         kwargs:
@@ -1487,9 +1545,10 @@ mapde-crchisto:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
     catalog:
         description: >
-            Nucleus detection model for colon histology.
+            Nucleus instance segmentation model for colon histology.
         tissue_type:
             - colon
+        engine: nucleus_detector
     architecture:
         class: mapde.MapDe
         kwargs:
@@ -1521,6 +1580,7 @@ mapde-conic:
             Nucleus detection model for Epithelial, Lymphocyte, Plasma, Eosinophil, Neutrophil, and Connective tissue nuclei in colon histology.
         tissue_type:
             - colon
+        engine: nucleus_detector
     architecture:
         class: mapde.MapDe
         kwargs:
@@ -1663,6 +1723,7 @@ KongNet_CoNIC_1:
             Nuclei detection model for neutrophils, epithelial, lymphocytes, plasma, eosinophil, and connective nuclei in colon histology.
         tissue_type:
             - colon
+        engine: nucleus_detector
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1700,6 +1761,7 @@ KongNet_PanNuke_1:
             Nucleus detection model for connective, neoplastic, epithelial, dead, and inflamatory nuclei across multiple cancers.
         tissue_type:
             - agnostic
+        engine: nucleus_detector
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1736,6 +1798,7 @@ KongNet_MONKEY_1:
             Model for detecting lymphocytes, monocytes, and inflamatory nuclei in Kidney Biopsy images.
         tissue_type:
             - kidney
+        engine: nucleus_detector
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1777,6 +1840,7 @@ KongNet_PUMA_T1_3:
             - gastrointestinal tract
             - soft tissue
             - lymph node
+        engine: nucleus_detector
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1818,6 +1882,7 @@ KongNet_PUMA_T2_3:
             - gastrointestinal tract
             - soft tissue
             - lymph node
+        engine: nucleus_detector
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1859,6 +1924,7 @@ KongNet_Det_MIDOG_1:
             Nuclei detection model for mitotic figure detection across different cancer types.
         tissue_type:
             - agnostic
+        engine: nucleus_detector
     architecture:
         class: kongnet.KongNet
         kwargs:
