@@ -2075,11 +2075,28 @@ def test_populate_slide_list_dicom_container(
     assert ("case1/000002.dcm", "case1/000002.dcm") not in mock_select.options
 
 
+@pytest.fixture
+def preserve_bokeh_state() -> Generator[None, None, None]:
+    """Restore global Bokeh app state after each test."""
+    original_ui = main.UI
+    original_win_dicts = list(main.win_dicts)
+
+    try:
+        yield
+    finally:
+        main.UI = original_ui
+
+        main.win_dicts.clear()
+        main.win_dicts.extend(original_win_dicts)
+
+
 def test_segment_on_box(
+    preserve_bokeh_state: None,
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
 ) -> None:
     """Test segment_on_box callback."""
+    _ = preserve_bokeh_state
     slide_path = track_tmp_path / "slide.svs"
     slide_path.touch()
 
@@ -2248,10 +2265,12 @@ def test_segment_on_box(
 
 
 def test_sam_segment_with_point_prompt(
+    preserve_bokeh_state: None,
     monkeypatch: pytest.MonkeyPatch,
     track_tmp_path: Path,
 ) -> None:
     """Test SAM segmentation callback using point prompts."""
+    _ = preserve_bokeh_state
     annotation_calls: list[list[str]] = []
 
     roi = np.zeros(
@@ -2417,9 +2436,11 @@ def test_sam_segment_with_point_prompt(
 
 
 def test_initialise_overlay_removes_stale_widgets(
+    preserve_bokeh_state: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test stale type and color widgets are removed."""
+    _ = preserve_bokeh_state
     type_keep = Toggle(label="Tumour", active=True)
     type_remove = Toggle(label="OldType", active=True)
 
@@ -2477,8 +2498,11 @@ def test_initialise_overlay_removes_stale_widgets(
     assert colour_remove not in main.UI["color_column"].children
 
 
-def test_update_ui_on_new_annotations_resets_cprop() -> None:
+def test_update_ui_on_new_annotations_resets_cprop(
+    preserve_bokeh_state: None,
+) -> None:
     """Test cprop is reset to 'type' when no valid property is selected."""
+    _ = preserve_bokeh_state
     main.win_dicts.clear()
 
     class FakeResponse:
@@ -2568,8 +2592,11 @@ def test_update_ui_on_new_annotations_resets_cprop() -> None:
     assert called["renderer_type"] == "mapper"
 
 
-def test_model_drop_cb() -> None:
+def test_model_drop_cb(
+    preserve_bokeh_state: None,
+) -> None:
     """Test model selection callback."""
+    _ = preserve_bokeh_state
     main.win_dicts.clear()
 
     vstate = SimpleNamespace(
@@ -2594,9 +2621,11 @@ def test_model_drop_cb() -> None:
 
 
 def test_to_model_cb_hovernet(
+    preserve_bokeh_state: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test HoverNet callback dispatch."""
+    _ = preserve_bokeh_state
     called = False
 
     def _fake_segment_on_box() -> None:
@@ -2628,9 +2657,11 @@ def test_to_model_cb_hovernet(
 
 
 def test_to_model_cb_sam(
+    preserve_bokeh_state: None,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test SAM callback dispatch."""
+    _ = preserve_bokeh_state
     called = False
 
     def _fake_sam_segment() -> None:
@@ -2662,9 +2693,11 @@ def test_to_model_cb_sam(
 
 
 def test_to_model_cb_unknown_model(
+    preserve_bokeh_state: None,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Test unknown model warning."""
+    _ = preserve_bokeh_state
     main.win_dicts.clear()
 
     main.win_dicts.append(
