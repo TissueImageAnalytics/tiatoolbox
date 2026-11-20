@@ -158,6 +158,11 @@ function createSettingsPanelController({
             );
 
         viewerApp.style.setProperty(
+            "--viewer-control-opacity",
+            opacity.toString(),
+        );
+
+        viewerApp.style.setProperty(
             "--viewer-control-background",
             toRgba(colour, opacity),
         );

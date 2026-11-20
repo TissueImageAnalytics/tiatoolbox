@@ -149,6 +149,11 @@ const snapshotFileInput =
         "settings-snapshot-file",
     );
 
+const snapshotLoadStatus =
+    document.getElementById(
+        "settings-snapshot-load-status",
+    );
+
 const viewerPanel = document.getElementById("viewer-panel");
 const viewerPanelToggle = document.getElementById(
     "viewer-panel-toggle",
@@ -438,6 +443,7 @@ if (
     snapshotMetadataInput === null ||
     snapshotLoadButton === null ||
     snapshotFileInput === null ||
+    snapshotLoadStatus === null ||
     viewerPanel === null ||
     viewerPanelToggle === null ||
     layerEditor === null ||
@@ -3432,6 +3438,8 @@ const snapshotController =
         },
     });
 
+let snapshotLoadStatusTimeout = null;
+
 snapshotLoadButton.addEventListener(
     "click",
     () => {
@@ -3465,8 +3473,39 @@ snapshotFileInput.addEventListener(
                 "Failed to load snapshot metadata.",
                 error,
             );
+
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : "Unknown error.";
+
+            if (snapshotLoadStatusTimeout !== null) {
+                clearTimeout(
+                    snapshotLoadStatusTimeout,
+                );
+            }
+
+            snapshotLoadStatus.textContent =
+                `Failed to load snapshot metadata: ${message}`;
+
+            snapshotLoadStatus.classList.add(
+                "visible",
+            );
+
+            snapshotLoadStatusTimeout = setTimeout(
+                () => {
+                    snapshotLoadStatus.classList.remove(
+                        "visible",
+                    );
+
+                    snapshotLoadStatus.textContent = "";
+                    snapshotLoadStatusTimeout = null;
+                },
+                4000,
+            );
         } finally {
             snapshotFileInput.value = "";
+            snapshotLoadButton.disabled = false;
         }
     },
 );
