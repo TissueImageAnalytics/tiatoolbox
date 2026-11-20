@@ -268,7 +268,7 @@ max-complexity = 14
 "pre-commit/*" = ["T201", "INP001"]
 "tiatoolbox/cli/*" = ["PLR0913"]
 # Training tutorials intentionally print results; their CLI scripts are not packages.
-"examples/1[345]-training-*.ipynb" = ["T201"]
+"examples/training-pipelines/*.ipynb" = ["T201"]
 
 # need to enable for docstrings check.
 [tool.ruff.lint.pydocstyle]

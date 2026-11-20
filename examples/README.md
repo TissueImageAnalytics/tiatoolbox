@@ -20,7 +20,7 @@ Processes in the notebooks can be accelerated by using a GPU. Whether you are ru
 
 The examples directory includes general notebooks explaining different functionalities/modules incorporated in TIAToolbox. Most of these notebooks are written with less advanced users in mind—some familiarity with Python is assumed—but the capabilities they demonstrate are also useful to more advanced users.
 
-The examples directory contains two subdirectories: `full-pipelines` and `inference-pipelines`, which include examples of using TIAToolbox for training neural networks or inference of WSIs for high-level computational pathology applications, such as patient survival prediction and MSI status prediction from H&E whole slide images.
+The examples directory contains three subdirectories. `full-pipelines` and `inference-pipelines` include examples of using TIAToolbox for training neural networks or inference of WSIs for high-level computational pathology applications, such as patient survival prediction and MSI status prediction from H&E whole slide images. `training-pipelines` includes examples of training models with the `tiatoolbox.models.training` package.
 
 ## A) Examples of TIAToolbox Functionalities
 
@@ -107,18 +107,6 @@ Demonstrates the use of the TIAToolbox implementation of the [KongNet model](htt
 
 [![image](../docs/images/nucleus_detection_classification.png)](./12-nucleus-detection.ipynb)
 
-### 13. Training Patch Classifiers from Per-Class Patch Folders ([13-training-patch-folder-classification](./13-training-patch-folder-classification.ipynb))
-
-Shows how to train a patch classifier using the new training package in `tiatoolbox.models.training` for the folder-based classification setup, where each class corresponds to a subfolder of patches. The notebook covers dataset construction with the model's preprocessing, index-based splits with `split_indices`, explicit optimizer/scheduler setup, trainer configuration, checkpointing, resuming training from `last.ckpt`, and whole-slide inference with the model rebuilt by `load_trained_model`.
-
-### 14. Training Tissue Segmentation from Slide + Annotation Store Pairs ([14-training-slide-annotation-segmentation](./14-training-slide-annotation-segmentation.ipynb))
-
-Shows how to train a semantic segmentation model directly from whole-slide images and paired TIAToolbox annotation stores using `SlideAnnotationPatchDataset`. The notebook demonstrates building baseline-coordinate tissue annotations from `WSIReader.tissue_mask()`, labelling and balancing patches from those annotations, training at 2 mpp, running WSI inference with `SemanticSegmentor`, and comparing predicted vs. reference tissue masks side-by-side.
-
-### 15. Training KongNet on CoNIC ([15-training-kongnet-conic](./15-training-kongnet-conic.ipynb))
-
-Shows how to train a KongNet model, with its encoder initialised from ImageNet weights, on a downloadable 2,001-patch sample of the CoNIC dataset using the new structured dense training path in `tiatoolbox.models.training`. The notebook pairs PNG patches with TIAToolbox annotation stores, builds mask, boundary and centroid targets for each CoNIC cell class, derives a `StructuredDenseTask` from KongNet's output specification with `StructuredDenseTask.from_output_spec()`, trains for a short demo run, inspects patch-level predictions and instance post-processing, and segments nuclei in a whole-slide image with the model rebuilt by `load_trained_model`.
-
 ## B) Examples of High-Level Analysis (Pipelines) Using TIAToolbox
 
 List of Jupyter notebooks demonstrating how to use TIAToolbox for high-level analysis in computational pathology.
@@ -150,3 +138,19 @@ Demonstrates how to use TIAToolbox to reproduce the ["SlideGraph+ method" ("Slid
 Demonstrates how to use [DeepSpot-M](https://huggingface.co/ratschlab/DeepSpotM) (["A multimodal foundation model for transcriptome-wide virtual spatial transcriptomics from histology" by Nonchev et al. (2026)](https://www.medrxiv.org/content/10.64898/2026.06.19.26356060v1)) to predict spatial gene expression across a whole slide image. DeepSpot-M maps each 224x224 H&E tile to transcriptome-wide expression with a LoRA-adapted Midnight backbone and a cross-attention gene decoder. Genes are represented as queryable embeddings rather than fixed output units, so one model covers a panel of about 19,000 genes and can be asked for genes it did not see during training. The notebook runs the model through the `DeepFeatureExtractor` engine, which writes an `(n_tiles, n_genes)` expression matrix together with the matching tile coordinates, and overlays the predicted expression of three marker genes back onto the slide. The weights are gated and released for non-commercial research use.
 
 [![image](../docs/images/deepspotm.png)](./inference-pipelines/deepspotm.ipynb)
+
+## C) Examples of Training Models Using TIAToolbox
+
+List of Jupyter notebooks demonstrating how to train models with the training package in `tiatoolbox.models.training` and use them with TIAToolbox's inference engines.
+
+### 1. Training Patch Classifiers from Per-Class Patch Folders ([13-training-patch-folder-classification](./training-pipelines/13-training-patch-folder-classification.ipynb))
+
+Shows how to train a patch classifier using the new training package in `tiatoolbox.models.training` for the folder-based classification setup, where each class corresponds to a subfolder of patches. The notebook covers dataset construction with the model's preprocessing, index-based splits with `split_indices`, explicit optimizer/scheduler setup, trainer configuration, checkpointing, resuming training from `last.ckpt`, and whole-slide inference with the model rebuilt by `load_trained_model`.
+
+### 2. Training Tissue Segmentation from Slide + Annotation Store Pairs ([14-training-slide-annotation-segmentation](./training-pipelines/14-training-slide-annotation-segmentation.ipynb))
+
+Shows how to train a semantic segmentation model directly from whole-slide images and paired TIAToolbox annotation stores using `SlideAnnotationPatchDataset`. The notebook demonstrates building baseline-coordinate tissue annotations from `WSIReader.tissue_mask()`, labelling and balancing patches from those annotations, training at 2 mpp, running WSI inference with `SemanticSegmentor`, and comparing predicted vs. reference tissue masks side-by-side.
+
+### 3. Training KongNet on CoNIC ([15-training-kongnet-conic](./training-pipelines/15-training-kongnet-conic.ipynb))
+
+Shows how to train a KongNet model, with its encoder initialised from ImageNet weights, on a downloadable 2,001-patch sample of the CoNIC dataset using the new structured dense training path in `tiatoolbox.models.training`. The notebook pairs PNG patches with TIAToolbox annotation stores, builds mask, boundary and centroid targets for each CoNIC cell class, derives a `StructuredDenseTask` from KongNet's output specification with `StructuredDenseTask.from_output_spec()`, trains for a short demo run, inspects patch-level predictions and instance post-processing, and segments nuclei in a whole-slide image with the model rebuilt by `load_trained_model`.

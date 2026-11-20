@@ -21,12 +21,12 @@ optimizer and PyTorch ``DataLoader`` objects. The package provides:
 
 Three example notebooks walk through complete runs:
 
-- :doc:`_notebooks/jnb/13-training-patch-folder-classification`: a patch
+- :doc:`_notebooks/jnb/training-pipelines/13-training-patch-folder-classification`: a patch
   classifier trained from per-class folders, with checkpointing, resuming and
   whole-slide inference.
-- :doc:`_notebooks/jnb/14-training-slide-annotation-segmentation`: tissue
+- :doc:`_notebooks/jnb/training-pipelines/14-training-slide-annotation-segmentation`: tissue
   segmentation trained directly from whole-slide images and annotation stores.
-- :doc:`_notebooks/jnb/15-training-kongnet-conic`: a multi-head KongNet nucleus
+- :doc:`_notebooks/jnb/training-pipelines/15-training-kongnet-conic`: a multi-head KongNet nucleus
   model trained on CoNIC patches with ``StructuredDenseTask``.
 
 Quick start
