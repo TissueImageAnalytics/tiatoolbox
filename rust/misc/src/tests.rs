@@ -51,3 +51,15 @@ fn contrast_enhancer_constant_image_unchanged() {
     let input = Array3::from_elem((4, 4, 3), 77u8);
     assert_eq!(rust_contrast_enhancer(input.clone(), 2, 98), input);
 }
+
+#[test]
+fn percentile_interpolates_and_stays_in_bounds() {
+    assert_eq!(percentile(&[0, 10, 20, 30, 40], 0), 0.0);
+    assert_eq!(percentile(&[0, 10, 20, 30, 40], 50), 20.0);
+    assert_eq!(percentile(&[0, 10, 20, 30, 40], 60), 24.0);
+    assert_eq!(percentile(&[0, 10, 20, 30, 40], 100), 40.0);
+    // With f32 maths the 100th-percentile index for this length rounded past the end.
+    let mut sorted = vec![0u8; 512 * 512 * 3];
+    *sorted.last_mut().unwrap() = 255;
+    assert_eq!(percentile(&sorted, 100), 255.0);
+}
