@@ -82,6 +82,22 @@ Ready to contribute? Here's how to set up ``tiatoolbox`` for local development.
    Some models depend on optional packages that are not installed by default
    and so are imported lazily.
 
+   Some utilities have faster Rust implementations in ``rust/``. To build them,
+   install a `Rust compiler <https://rust-lang.org/tools/install/>`_ **before**
+   installing TIAToolbox. Without a Rust toolchain, the install will still succeed
+   but the Rust implementation will be skipped and NumPy fallback will be used instead.
+   To check if the Rust implementation works, run::
+
+    $ python -c "import tiatoolbox.rust.utils.misc"
+
+   After editing Rust code in ``rust/``, you have to rebuild the extension.
+   ``uv sync`` does this automatically; or with ``pip``/``conda`` run::
+
+    $ python setup.py build_rust --inplace --release
+
+   Each Python environment has its own build, so rebuild in every environment
+   you use.
+
 4. Create a branch for local development::
 
     $ git checkout -b name-of-your-bugfix-or-feature
@@ -92,6 +108,12 @@ Ready to contribute? Here's how to set up ``tiatoolbox`` for local development.
 
     $ pre-commit run --all-files
     $ python setup.py test or pytest
+
+   If you changed Rust code, also run::
+
+    $ cargo fmt --all -- --check
+    $ cargo clippy --all-targets --all-features -- -D warnings
+    $ cargo test
 
    To get `pre-commit <https://pre-commit.com/#install>`_, just pip install it into your virtual environment using::
 
