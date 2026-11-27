@@ -31,10 +31,19 @@ from skimage import exposure
 from tqdm.auto import tqdm, trange
 from tqdm.dask import TqdmCallback
 
-import tiatoolbox.rust.utils.misc as rmisc
 from tiatoolbox import logger
 from tiatoolbox.annotation.storage import Annotation, AnnotationStore, SQLiteStore
 from tiatoolbox.utils.exceptions import FileNotSupportedError
+
+try:
+    import tiatoolbox.rust.utils.misc as rmisc
+except ImportError:  # pragma: no cover
+    # Rust extension not built: fall back to the NumPy implementations.
+    rmisc = None  # type: ignore[assignment]
+    logger.warning(
+        "Rust extension not available; using slower NumPy implementations. "
+        "Install a Rust toolchain and build the Rust extension.",
+    )
 
 if TYPE_CHECKING:  # pragma: no cover
     from collections.abc import Iterable, Iterator
@@ -432,7 +441,7 @@ def contrast_enhancer(img: np.ndarray, low_p: int = 2, high_p: int = 98) -> np.n
         msg = "Image should be uint8."
         raise AssertionError(msg)
     dimension_for_rust = 3
-    if img.ndim == dimension_for_rust:
+    if rmisc is not None and img.ndim == dimension_for_rust:
         return rmisc.contrast_enhancer(img, low_p, high_p)
     img_out = img.copy()
     percentiles = np.array(np.percentile(img_out, (low_p, high_p)))
