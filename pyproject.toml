@@ -317,5 +317,5 @@ path = "rust/misc/Cargo.toml"
 binding = "PyO3"
 # Skip the extension if no Rust compiler is found; NumPy fallbacks are used instead.
 optional = true
-#Uncomment below for release
-#debug = false
+# Always build optimised, including editable installs (which default to debug).
+debug = false
