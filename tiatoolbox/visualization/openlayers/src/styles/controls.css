@@ -381,8 +381,28 @@
     z-index: 1000;
     display: flex;
     align-items: center;
-    gap: 8px;
     transform: translateX(-50%);
+}
+
+
+.bottom-controls-left,
+.bottom-controls-right {
+    position: absolute;
+    top: 50%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transform: translateY(-50%);
+}
+
+
+.bottom-controls-left {
+    right: calc(100% + 8px);
+}
+
+
+.bottom-controls-right {
+    left: calc(100% + 8px);
 }
 
 
@@ -466,4 +486,16 @@
     left: auto;
     z-index: 1000;
     background: transparent;
+}
+
+
+.bottom-controls-group .snapshot-control,
+.bottom-controls-group .snapshot-control:hover {
+    position: static;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    margin: 0;
+    transform: none;
 }

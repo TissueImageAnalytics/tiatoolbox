@@ -6,7 +6,6 @@
     left: 48px;
     z-index: 1000;
     width: 240px;
-    max-height: 170px;
     box-sizing: border-box;
     overflow: visible;
 
@@ -289,4 +288,24 @@
 .viewer-file-actions button:disabled {
     opacity: 0.4;
     cursor: default;
+}
+
+
+/* Snapshot metadata loading */
+
+.viewer-file-snapshot-section {
+    margin-top: 9px;
+    padding-top: 9px;
+    border-top: 1px solid var(--viewer-control-border);
+}
+
+
+.viewer-file-snapshot-actions {
+    display: flex;
+    justify-content: center;
+}
+
+
+.viewer-file-snapshot-actions button {
+    width: calc((100% - 6px) / 2);
 }

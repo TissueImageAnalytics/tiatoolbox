@@ -240,6 +240,42 @@ afterEach(() => {
 });
 
 describe("initialisation", () => {
+    it("moves the Load JSON button into the Files panel", () => {
+        // Move the existing Load JSON button without recreating it.
+        const snapshotContainer =
+            document.createElement("div");
+        snapshotContainer.hidden = true;
+
+        const snapshotLoadButton =
+            document.createElement("button");
+        snapshotLoadButton.id =
+            "settings-snapshot-load";
+        snapshotLoadButton.textContent =
+            "Load JSON";
+
+        snapshotContainer.append(snapshotLoadButton);
+        document.body.append(snapshotContainer);
+
+        createHarness();
+
+        const snapshotSection =
+            document.querySelector(
+                ".viewer-file-snapshot-section",
+            );
+
+        expect(snapshotSection).not.toBeNull();
+
+        expect(
+            snapshotSection.querySelector(
+                ".viewer-file-snapshot-actions button",
+            ),
+        ).toBe(snapshotLoadButton);
+
+        expect(
+            snapshotContainer.contains(snapshotLoadButton),
+        ).toBe(false);
+    });
+
     it("creates the file selectors and action buttons", () => {
         // Test creating the slide and overlay selectors and their action buttons.
         const {

@@ -40,6 +40,22 @@
             aria-live="assertive"
         ></div>
 
+        <div hidden>
+            <button
+                id="settings-snapshot-load"
+                type="button"
+            >
+                Load JSON
+            </button>
+
+            <input
+                id="settings-snapshot-file"
+                type="file"
+                accept="application/json,.json"
+                hidden
+            >
+        </div>
+
         <div class="reset-view-control ol-unselectable ol-control">
             <button
                 id="reset-view-button"
@@ -1002,32 +1018,6 @@
                             >
                             <span class="settings-switch-slider"></span>
                         </label>
-                    </div>
-
-                    <div class="settings-option">
-                        <div class="settings-option-text">
-                            <div class="settings-option-label">
-                                Load snapshot metadata
-                            </div>
-                            <div class="settings-option-description">
-                                Restore a viewer state from snapshot metadata JSON.
-                            </div>
-                        </div>
-
-                        <button
-                            id="settings-snapshot-load"
-                            class="settings-action-button"
-                            type="button"
-                        >
-                            Load JSON
-                        </button>
-
-                        <input
-                            id="settings-snapshot-file"
-                            type="file"
-                            accept="application/json,.json"
-                            hidden
-                        >
                     </div>
                 </section>
 

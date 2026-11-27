@@ -16528,10 +16528,16 @@ function Dg({ map: e, viewerApp: t, getSlideSource: n, zoomVisibleInput: r, zoom
 	let E = new vg({ source: t });
 	e.addControl(E);
 	let D = document.createElement("div");
-	D.className = "bottom-controls-group ol-unselectable", t.append(D), D.append(s, v, E.element);
-	let O = n() !== null;
-	function k(e) {
-		O = e;
+	D.className = "bottom-controls-group ol-unselectable", t.append(D);
+	let O = document.createElement("div");
+	O.className = "bottom-controls-left", O.append(s);
+	let k = t.querySelector(".snapshot-control");
+	k !== null && O.append(k);
+	let A = document.createElement("div");
+	A.className = "bottom-controls-right", A.append(E.element), D.append(O, v, A);
+	let j = n() !== null;
+	function M(e) {
+		j = e;
 		let t = v.querySelector(".ol-zoom-in"), n = v.querySelector(".ol-zoom-out"), r = T.element.querySelector("button");
 		for (let i of [
 			t,
@@ -16541,30 +16547,30 @@ function Dg({ map: e, viewerApp: t, getSlideSource: n, zoomVisibleInput: r, zoom
 		]) i !== null && (i.disabled = !e);
 		b.disabled = !e, v.classList.toggle("viewer-control-disabled", !e), h.setActive(e), w.element.classList.toggle("viewer-control-hidden", !e || !u.checked);
 	}
-	function A() {
+	function N() {
 		let e = n() !== null;
 		v.classList.toggle("viewer-control-hidden", !r.checked), b.classList.toggle("viewer-control-hidden", !i.checked), T.element.classList.toggle("viewer-control-hidden", !a.checked), s.classList.toggle("viewer-control-hidden", !c.checked), E.element.classList.toggle("viewer-control-hidden", !l.checked), w.element.classList.toggle("viewer-control-hidden", !e || !u.checked);
 	}
-	function j() {
-		e.removeInteraction(h), h = m(), h.setActive(O), e.addInteraction(h);
+	function P() {
+		e.removeInteraction(h), h = m(), h.setActive(j), e.addInteraction(h);
 	}
-	function M() {
+	function F() {
 		/* v8 ignore if */
 		if (e.removeControl(_), _ = g(), e.addControl(_), v = _.element, y = v.querySelector(".ol-zoom-out"), y === null) throw Error("The OpenLayers zoom control could not be found.");
-		v.insertBefore(b, y), D.insertBefore(v, E.element), k(O), A();
+		v.insertBefore(b, y), D.insertBefore(v, A), M(j), N();
 	}
 	return d.addEventListener("change", () => {
-		j();
+		P();
 	}), f.addEventListener("change", () => {
-		M();
+		F();
 	}), {
 		fullscreen: E,
 		mousePositionControl: w,
 		rotate: T,
-		setViewerEnabled: k,
-		updateMouseWheelZoomSensitivity: j,
-		updateVisibility: A,
-		updateZoomButtonStep: M,
+		setViewerEnabled: M,
+		updateMouseWheelZoomSensitivity: P,
+		updateVisibility: N,
+		updateZoomButtonStep: F,
 		updateZoomLevel: x
 	};
 }
@@ -17841,88 +17847,95 @@ function v_({ panel: e, toggle: t, container: n, configuredSlides: r, configured
 	}
 	let v = _("Clear Slide"), y = _("Clear Overlays");
 	v.disabled = !0, y.disabled = !0, g.append(v, y), n.append(p, g);
-	function b(n) {
+	let b = document.getElementById("settings-snapshot-load");
+	if (b !== null) {
+		let e = document.createElement("div");
+		e.className = "viewer-file-snapshot-section";
+		let t = document.createElement("div");
+		t.className = "viewer-file-actions viewer-file-snapshot-actions", t.append(b), e.append(t), n.append(e);
+	}
+	function x(n) {
 		if (n && f(), e.classList.toggle("hidden", !n), t.classList.toggle("active", n), t.innerHTML = n ? "<i class=\"fas fa-folder-open\"></i>" : "<i class=\"fas fa-folder\"></i>", !n) for (let t of e.querySelectorAll(".viewer-file-select.open")) t.close?.();
 	}
-	function x(e, t, n) {
+	function S(e, t, n) {
 		e.setFiles(t, n);
 	}
-	function S(e) {
+	function C(e) {
 		let t = __(e);
 		return i.files.filter((e) => (e.name.split(/[\\/]/).pop() ?? e.name).includes(t));
 	}
-	function C() {
+	function w() {
 		if (i.directory === null) {
-			x(h, [], "No overlay directory configured");
+			S(h, [], "No overlay directory configured");
 			return;
 		}
 		let e = a();
 		if (e === null) {
-			x(h, [], "Select slide first");
+			S(h, [], "Select slide first");
 			return;
 		}
-		let t = S(e);
-		x(h, t, t.length === 0 ? "No matching overlays" : "Load overlay");
+		let t = C(e);
+		S(h, t, t.length === 0 ? "No matching overlays" : "Load overlay");
 	}
-	function w(e) {
+	function T(e) {
 		m.value = e;
 	}
-	function T() {
-		let e = o(), t = s(), n = a(), i = n !== null && S(n).length > 0;
+	function E() {
+		let e = o(), t = s(), n = a(), i = n !== null && C(n).length > 0;
 		v.disabled = !e, y.disabled = !e || !t, m.disabled = r.files.length === 0, h.disabled = !e || !i;
 	}
-	function E(e) {
-		e ? (m.disabled = !0, h.disabled = !0, v.disabled = !0, y.disabled = !0) : T();
+	function D(e) {
+		e ? (m.disabled = !0, h.disabled = !0, v.disabled = !0, y.disabled = !0) : E();
 	}
 	return m.addEventListener("change", async (e) => {
 		let t = e.detail ?? m.value;
 		if (t !== "") {
-			E(!0);
+			D(!0);
 			try {
 				await c(t), h.value = "";
 			} catch (e) {
 				console.error(e);
 			} finally {
-				E(!1);
+				D(!1);
 			}
 		}
 	}), h.addEventListener("change", async (e) => {
 		let t = e.detail ?? h.value;
 		if (t !== "") {
-			E(!0);
+			D(!0);
 			try {
 				await l(t), h.value = "";
 			} catch (e) {
 				console.error(e);
 			} finally {
-				E(!1);
+				D(!1);
 			}
 		}
 	}), v.addEventListener("click", async () => {
-		E(!0);
+		D(!0);
 		try {
-			await u(), m.value = "", h.value = "", C();
+			await u(), m.value = "", h.value = "", w();
 		} catch (e) {
 			console.error(e);
 		} finally {
-			E(!1);
+			D(!1);
 		}
 	}), y.addEventListener("click", async () => {
-		E(!0);
+		D(!0);
 		try {
 			await d(), h.value = "";
 		} catch (e) {
 			console.error(e);
 		} finally {
-			E(!1);
+			D(!1);
 		}
 	}), t.addEventListener("click", () => {
-		b(e.classList.contains("hidden"));
-	}), x(m, r.files, r.directory === null ? "No slide directory configured" : "Select slide"), C(), T(), {
-		setOpen: b,
-		setSlide: w,
-		updateActionState: T,
-		updateOverlaySelect: C
+		x(e.classList.contains("hidden"));
+	}), S(m, r.files, r.directory === null ? "No slide directory configured" : "Select slide"), w(), E(), {
+		setOpen: x,
+		setSlide: T,
+		updateActionState: E,
+		updateOverlaySelect: w
 	};
 }
 // src/panels/layers.js

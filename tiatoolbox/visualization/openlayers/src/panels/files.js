@@ -70,6 +70,29 @@ function createFilesPanelController({
         fileActions,
     );
 
+    const snapshotLoadButton =
+        document.getElementById(
+            "settings-snapshot-load",
+        );
+
+    if (snapshotLoadButton !== null) {
+        const snapshotSection =
+            document.createElement("div");
+
+        snapshotSection.className =
+            "viewer-file-snapshot-section";
+
+        const snapshotActions =
+            document.createElement("div");
+
+        snapshotActions.className =
+            "viewer-file-actions viewer-file-snapshot-actions";
+
+        snapshotActions.append(snapshotLoadButton);
+        snapshotSection.append(snapshotActions);
+        container.append(snapshotSection);
+    }
+
     function setOpen(open) {
         if (open) {
             onOpen();
