@@ -87,3 +87,6 @@ fn misc(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(contrast_enhancer, m)?)?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;
