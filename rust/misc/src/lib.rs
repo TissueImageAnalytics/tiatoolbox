@@ -1,4 +1,4 @@
-use ndarray::{Array1, Array3};
+use ndarray::Array3;
 use numpy::{IntoPyArray, PyArray3, PyReadonlyArray3};
 use pyo3::prelude::*;
 
@@ -35,13 +35,9 @@ fn rust_contrast_enhancer(img: Array3<u8>, low_p: u8, high_p: u8) -> Array3<u8> 
             Image with contrast enhanced.
 
     */
-    let img_out = img.to_owned();
     let len = img.len();
-    let mut flat_img_out: Array1<u8> = img_out.into_shape_with_order(len).unwrap();
-
-    if let Some(slice) = flat_img_out.as_slice_mut() {
-        slice.sort_unstable();
-    }
+    let mut flat_img_out: Vec<u8> = img.iter().copied().collect();
+    flat_img_out.sort_unstable();
 
     let lenf32: f32 = len as f32;
 
