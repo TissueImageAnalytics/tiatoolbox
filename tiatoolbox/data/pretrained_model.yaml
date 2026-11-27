@@ -99,7 +99,7 @@ resnet18-kather100k:
             class_dict: {
                 0: "background",
                 1: "normal",
-                2: "debri",
+                2: "debris",
                 3: "tumor",
                 4: "adipose",
                 5: "mucus",
@@ -131,7 +131,7 @@ resnet34-kather100k:
             class_dict: {
                 0: "background",
                 1: "normal",
-                2: "debri",
+                2: "debris",
                 3: "tumor",
                 4: "adipose",
                 5: "mucus",
@@ -163,7 +163,7 @@ resnet50-kather100k:
             class_dict: {
                 0: "background",
                 1: "normal",
-                2: "debri",
+                2: "debris",
                 3: "tumor",
                 4: "adipose",
                 5: "mucus",
@@ -195,7 +195,7 @@ resnet101-kather100k:
             class_dict: {
                 0: "background",
                 1: "normal",
-                2: "debri",
+                2: "debris",
                 3: "tumor",
                 4: "adipose",
                 5: "mucus",
@@ -227,7 +227,7 @@ resnext50_32x4d-kather100k:
             class_dict: {
                 0: "background",
                 1: "normal",
-                2: "debri",
+                2: "debris",
                 3: "tumor",
                 4: "adipose",
                 5: "mucus",
@@ -259,7 +259,7 @@ resnext101_32x8d-kather100k:
             class_dict: {
                 0: "background",
                 1: "normal",
-                2: "debri",
+                2: "debris",
                 3: "tumor",
                 4: "adipose",
                 5: "mucus",
@@ -291,7 +291,7 @@ wide_resnet50_2-kather100k:
             class_dict: {
                 0: "background",
                 1: "normal",
-                2: "debri",
+                2: "debris",
                 3: "tumor",
                 4: "adipose",
                 5: "mucus",
@@ -323,7 +323,7 @@ wide_resnet101_2-kather100k:
             class_dict: {
                 0: "background",
                 1: "normal",
-                2: "debri",
+                2: "debris",
                 3: "tumor",
                 4: "adipose",
                 5: "mucus",
@@ -355,7 +355,7 @@ densenet121-kather100k:
             class_dict: {
                 0: "background",
                 1: "normal",
-                2: "debri",
+                2: "debris",
                 3: "tumor",
                 4: "adipose",
                 5: "mucus",
@@ -387,7 +387,7 @@ densenet161-kather100k:
             class_dict: {
                 0: "background",
                 1: "normal",
-                2: "debri",
+                2: "debris",
                 3: "tumor",
                 4: "adipose",
                 5: "mucus",
@@ -419,7 +419,7 @@ densenet169-kather100k:
             class_dict: {
                 0: "background",
                 1: "normal",
-                2: "debri",
+                2: "debris",
                 3: "tumor",
                 4: "adipose",
                 5: "mucus",
@@ -451,7 +451,7 @@ densenet201-kather100k:
             class_dict: {
                 0: "background",
                 1: "normal",
-                2: "debri",
+                2: "debris",
                 3: "tumor",
                 4: "adipose",
                 5: "mucus",
@@ -483,7 +483,7 @@ mobilenet_v2-kather100k:
             class_dict: {
                 0: "background",
                 1: "normal",
-                2: "debri",
+                2: "debris",
                 3: "tumor",
                 4: "adipose",
                 5: "mucus",
@@ -515,7 +515,7 @@ mobilenet_v3_large-kather100k:
             class_dict: {
                 0: "background",
                 1: "normal",
-                2: "debri",
+                2: "debris",
                 3: "tumor",
                 4: "adipose",
                 5: "mucus",
@@ -547,7 +547,7 @@ mobilenet_v3_small-kather100k:
             class_dict: {
                 0: "background",
                 1: "normal",
-                2: "debri",
+                2: "debris",
                 3: "tumor",
                 4: "adipose",
                 5: "mucus",
@@ -579,7 +579,7 @@ googlenet-kather100k:
             class_dict: {
                 0: "background",
                 1: "normal",
-                2: "debri",
+                2: "debris",
                 3: "tumor",
                 4: "adipose",
                 5: "mucus",
