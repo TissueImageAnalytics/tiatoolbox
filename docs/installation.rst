@@ -212,7 +212,9 @@ Once you have a copy of the source, you can install it with:
 
 .. code-block:: console
 
-    $ python setup.py install
+    $ pip install .
+
+To build the faster Rust implementations, install the Rust compiler (see Prerequisites) first.
 
 .. _GitHub repo: https://github.com/TissueImageAnalytics/tiatoolbox.git
 .. _tarball: https://github.com/TissueImageAnalytics/tiatoolbox/tarball/master
