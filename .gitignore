@@ -74,6 +74,7 @@ docs/tiatoolbox.*.rst
 
 # PyBuilder
 target/
+Cargo.lock
 
 # Jupyter Notebook
 .ipynb_checkpoints
