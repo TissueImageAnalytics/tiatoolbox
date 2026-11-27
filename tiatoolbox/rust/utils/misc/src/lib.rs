@@ -14,17 +14,25 @@ fn rescale_intensity(x: f32, in_range_low: f32, in_range_high: f32, range: f32) 
 }
 
 fn rust_contrast_enhancer(img: Array3<u8>, low_p: u8, high_p: u8) -> Array3<u8> {
-    /*Get tissue mask based on the luminosity of the input image.
+    /*Enhance contrast of the input image using intensity adjustment.
+
+    Values at or below the low percentile are saturated to 0, values at or
+    above the high percentile are saturated to 255, and values in between are
+    linearly rescaled. If the percentiles coincide, the image min and max are
+    used instead.
 
     Args:
-        img: Array
-            Input image used to obtain tissue mask.
-        threshold (float):
-            Luminosity threshold used to determine tissue area.
+        img: Array3<u8>
+            Input image (uint8).
+        low_p (u8):
+            Low percentile of image values to be saturated to 0.
+        high_p (u8):
+            High percentile of image values to be saturated to 255.
+            Should be greater than low_p and at most 100.
 
     Returns:
-        tissue_mask
-            Binary tissue mask.
+        Array3<u8>
+            Image with contrast enhanced.
 
     */
     let img_out = img.to_owned();
