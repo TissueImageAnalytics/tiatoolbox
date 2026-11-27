@@ -13,6 +13,15 @@ fn rescale_intensity(x: f32, in_range_low: f32, in_range_high: f32, range: f32) 
     }
 }
 
+fn percentile(sorted: &[u8], p: u8) -> f32 {
+    // Linear interpolation between closest ranks
+    let index = (sorted.len() - 1) as f64 * f64::from(p) / 100.0;
+    let lower = index.floor() as usize;
+    let upper = (index.ceil() as usize).min(sorted.len() - 1);
+    let fraction = index - index.floor();
+    ((1.0 - fraction) * f64::from(sorted[lower]) + fraction * f64::from(sorted[upper])) as f32
+}
+
 fn rust_contrast_enhancer(img: Array3<u8>, low_p: u8, high_p: u8) -> Array3<u8> {
     /*Enhance contrast of the input image using intensity adjustment.
 
@@ -39,19 +48,8 @@ fn rust_contrast_enhancer(img: Array3<u8>, low_p: u8, high_p: u8) -> Array3<u8> 
     let mut flat_img_out: Vec<u8> = img.iter().copied().collect();
     flat_img_out.sort_unstable();
 
-    let lenf32: f32 = len as f32;
-
-    let p_low_index: f32 = (lenf32 - 1.0) * low_p as f32 / 100.0;
-    let p_low_index_difference = p_low_index - p_low_index.floor();
-    let mut p_low = (1.0 - p_low_index_difference)
-        * flat_img_out[p_low_index.floor() as usize] as f32
-        + p_low_index_difference * flat_img_out[p_low_index.ceil() as usize] as f32;
-
-    let p_high_index: f32 = (lenf32 - 1.0) * high_p as f32 / 100.0;
-    let p_high_index_difference = p_high_index - p_high_index.floor();
-    let mut p_high = (1.0 - p_high_index_difference)
-        * flat_img_out[p_high_index.floor() as usize] as f32
-        + p_high_index_difference * flat_img_out[p_high_index.ceil() as usize] as f32;
+    let mut p_low = percentile(&flat_img_out, low_p);
+    let mut p_high = percentile(&flat_img_out, high_p);
 
     if p_low >= p_high {
         p_low = flat_img_out[0].into();
