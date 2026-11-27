@@ -99,7 +99,6 @@ cache-keys = [
   { file = "pyproject.toml" },
   { file = "setup.py" },
   { file = "Cargo.toml" },
-  { file = "Cargo.lock" },
   { file = "rust/**/Cargo.toml" },
   { file = "rust/**/*.rs" },
 ]
