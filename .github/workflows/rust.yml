@@ -38,7 +38,8 @@ jobs:
         run: |
           source <(cargo llvm-cov show-env --sh)
           cargo llvm-cov clean --workspace
-          python -m pip install --force-reinstall --no-deps -e .
+          python -m pip install setuptools-rust
+          python setup.py build_rust --inplace --debug
           python -m pytest tests/rust -v
           cargo test --all-features
           cargo llvm-cov report --lcov --output-path lcov.info
