@@ -304,7 +304,7 @@ python_version = "3.12"
 
 [[tool.setuptools-rust.ext-modules]]
 target = "tiatoolbox.rust.utils.misc"
-path = "tiatoolbox/rust/utils/misc/Cargo.toml"
+path = "rust/misc/Cargo.toml"
 binding = "PyO3"
 #Uncomment below for release
 #debug = false

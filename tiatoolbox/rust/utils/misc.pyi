@@ -1,4 +1,4 @@
-# tiatoolbox/rust/utils/misc.pyi
+# Type stubs for the Rust extension built from rust/misc.
 
 import numpy as np
 from numpy.typing import NDArray
