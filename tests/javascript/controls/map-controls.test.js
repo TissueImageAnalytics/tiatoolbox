@@ -129,6 +129,7 @@ function createHarness({
     mousePositionVisible = true,
     mouseWheelSensitivity = "default",
     zoomButtonStep = "1",
+    withSnapshot = false,
 } = {}) {
     const state = {
         source:
@@ -277,6 +278,23 @@ function createHarness({
         zoomButtonStepSelect,
     );
 
+    if (withSnapshot) {
+        const snapshotControl =
+            document.createElement("div");
+
+        snapshotControl.className =
+            "snapshot-control";
+
+        const snapshotButton =
+            document.createElement("button");
+
+        snapshotButton.id =
+            "snapshot-button";
+
+        snapshotControl.append(snapshotButton);
+        viewerApp.append(snapshotControl);
+    }
+
     const controller =
         createMapControlsController({
             map,
@@ -349,6 +367,54 @@ beforeEach(() => {
 });
 
 describe("initialisation", () => {
+    it("places Snapshot beside Home in the bottom controls", () => {
+        // Check Snapshot is moved into the left control group.
+        const {
+            bottomControlsGroup,
+            resetViewControl,
+            zoomControl,
+            controller,
+        } = createHarness({
+            withSnapshot: true,
+        });
+
+        const leftControlsGroup =
+            bottomControlsGroup.querySelector(
+                ".bottom-controls-left",
+            );
+
+        const snapshotControl =
+            leftControlsGroup.querySelector(
+                ".snapshot-control",
+            );
+
+        expect(snapshotControl).not.toBeNull();
+
+        expect([
+            ...leftControlsGroup.children,
+        ]).toEqual([
+            resetViewControl,
+            snapshotControl,
+        ]);
+
+        expect(
+            snapshotControl.querySelector(
+                "#snapshot-button",
+            ),
+        ).not.toBeNull();
+
+        expect(
+            bottomControlsGroup.children[1],
+        ).toBe(zoomControl);
+
+        expect(
+            bottomControlsGroup.children[2]
+                .contains(
+                    controller.fullscreen.element,
+                ),
+        ).toBe(true);
+    });
+
     it("creates the map controls and mouse wheel interaction", () => {
         // Test creating the map controls and mouse wheel zoom interaction.
         const {
@@ -399,8 +465,9 @@ describe("initialisation", () => {
         );
     });
 
+
     it("builds the bottom controls group in the expected order", () => {
-        // Test the bottom controls are placed in the expected order.
+        // Check the left, centre and right control groups.
         const {
             bottomControlsGroup,
             resetViewControl,
@@ -408,20 +475,37 @@ describe("initialisation", () => {
             controller,
         } = createHarness();
 
-        expect(
-            bottomControlsGroup,
-        ).not.toBeNull();
+        const leftControlsGroup =
+            bottomControlsGroup.querySelector(
+                ".bottom-controls-left",
+            );
+
+        const rightControlsGroup =
+            bottomControlsGroup.querySelector(
+                ".bottom-controls-right",
+            );
 
         expect([
-            ...bottomControlsGroup
-                .children,
+            ...bottomControlsGroup.children,
+        ]).toEqual([
+            leftControlsGroup,
+            zoomControl,
+            rightControlsGroup,
+        ]);
+
+        expect([
+            ...leftControlsGroup.children,
         ]).toEqual([
             resetViewControl,
-            zoomControl,
-            controller.fullscreen
-                .element,
+        ]);
+
+        expect([
+            ...rightControlsGroup.children,
+        ]).toEqual([
+            controller.fullscreen.element,
         ]);
     });
+
 
     it("inserts the zoom level input before the zoom-out button", () => {
         // Test the editable zoom field is created in the correct position.
@@ -1324,9 +1408,18 @@ describe("zoom button step", () => {
             replacementElement
                 .nextElementSibling,
         ).toBe(
-            controller.fullscreen
-                .element,
+            viewerApp.querySelector(
+                ".bottom-controls-right",
+            ),
         );
+
+        expect(
+            replacementElement
+                .nextElementSibling
+                .contains(
+                    controller.fullscreen.element,
+                ),
+        ).toBe(true);
     });
 
     it("preserves viewer state and visibility when the zoom control is recreated", () => {

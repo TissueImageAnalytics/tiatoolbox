@@ -49,6 +49,9 @@ function createSettingsPanelController({
     scaleBarOpacityInput,
     scaleBarSizeSelect,
     scaleBarUnitsSelect,
+    snapshotVisibleInput,
+    snapshotScaleBarInput,
+    snapshotMetadataInput,
     onAnnotationInspectionChange,
     onMultipleAnnotationSelectionChange,
     onThemeChange,
@@ -153,6 +156,11 @@ function createSettingsPanelController({
                 interactionTarget,
                 0.58,
             );
+
+        viewerApp.style.setProperty(
+            "--viewer-control-opacity",
+            opacity.toString(),
+        );
 
         viewerApp.style.setProperty(
             "--viewer-control-background",
@@ -311,6 +319,14 @@ function createSettingsPanelController({
                 size: scaleBarSizeSelect.value,
                 units:
                     scaleBarUnitsSelect.value,
+            },
+            snapshot: {
+                visible:
+                    snapshotVisibleInput.checked,
+                scaleBar:
+                    snapshotScaleBarInput.checked,
+                metadata:
+                    snapshotMetadataInput.checked,
             },
         };
 
@@ -647,6 +663,38 @@ function createSettingsPanelController({
                     scaleBar.units;
             }
         }
+
+        const snapshot =
+            savedSettings.snapshot;
+
+        if (
+            snapshot !== null &&
+            typeof snapshot === "object"
+        ) {
+            if (
+                typeof snapshot.visible ===
+                "boolean"
+            ) {
+                snapshotVisibleInput.checked =
+                    snapshot.visible;
+            }
+
+            if (
+                typeof snapshot.scaleBar ===
+                "boolean"
+            ) {
+                snapshotScaleBarInput.checked =
+                    snapshot.scaleBar;
+            }
+
+            if (
+                typeof snapshot.metadata ===
+                "boolean"
+            ) {
+                snapshotMetadataInput.checked =
+                    snapshot.metadata;
+            }
+        }
     }
 
     function resetValues() {
@@ -698,6 +746,10 @@ function createSettingsPanelController({
 
         scaleBarUnitsSelect.value =
             "metric";
+
+        snapshotVisibleInput.checked = true;
+        snapshotScaleBarInput.checked = true;
+        snapshotMetadataInput.checked = true;
     }
 
     function clearSavedSettings() {
@@ -807,6 +859,7 @@ function createSettingsPanelController({
             fullscreenVisibleInput,
             mousePositionVisibleInput,
             overviewMapVisibleInput,
+            snapshotVisibleInput,
         ]) {
             input.addEventListener(
                 "change",
@@ -827,6 +880,9 @@ function createSettingsPanelController({
             scaleBarEnabledInput,
             scaleBarSizeSelect,
             scaleBarUnitsSelect,
+            snapshotVisibleInput,
+            snapshotScaleBarInput,
+            snapshotMetadataInput,
         ]) {
             input.addEventListener(
                 "change",

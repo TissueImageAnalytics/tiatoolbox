@@ -239,10 +239,31 @@ function createMapControlsController({
 
     viewerApp.append(bottomControlsGroup);
 
+    const leftControlsGroup =
+        document.createElement("div");
+    leftControlsGroup.className =
+        "bottom-controls-left";
+
+    leftControlsGroup.append(resetViewControl);
+
+    const snapshotControl =
+        viewerApp.querySelector(".snapshot-control");
+
+    if (snapshotControl !== null) {
+        leftControlsGroup.append(snapshotControl);
+    }
+
+    const rightControlsGroup =
+        document.createElement("div");
+    rightControlsGroup.className =
+        "bottom-controls-right";
+
+    rightControlsGroup.append(fullscreen.element);
+
     bottomControlsGroup.append(
-        resetViewControl,
+        leftControlsGroup,
         zoomControl,
-        fullscreen.element,
+        rightControlsGroup,
     );
 
     let viewerEnabled =
@@ -367,7 +388,7 @@ function createMapControlsController({
 
         bottomControlsGroup.insertBefore(
             zoomControl,
-            fullscreen.element,
+            rightControlsGroup,
         );
 
         setViewerEnabled(viewerEnabled);

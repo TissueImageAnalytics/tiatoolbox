@@ -8,6 +8,7 @@
 .reset-view-control,
 .viewer-panel-control,
 .layer-editor-control,
+.snapshot-control,
 .annotation-control,
 .settings-control {
     padding: 0;
@@ -28,6 +29,7 @@
 .reset-view-control:hover,
 .viewer-panel-control:hover,
 .layer-editor-control:hover,
+.snapshot-control:hover,
 .annotation-control:hover,
 .settings-control:hover {
     background: var(--viewer-control-background);
@@ -44,6 +46,7 @@
 .reset-view-control button,
 .viewer-panel-control button,
 .layer-editor-control button,
+.snapshot-control button,
 .annotation-control button,
 .settings-control button {
     width: 32px;
@@ -64,6 +67,7 @@
 .reset-view-control button:hover:not(:disabled),
 .viewer-panel-control button:hover:not(:disabled),
 .layer-editor-control button:hover:not(:disabled),
+.snapshot-control button:hover:not(:disabled),
 .annotation-control button:hover:not(:disabled),
 .settings-control button:hover:not(:disabled) {
     background: var(--viewer-control-hover-background);
@@ -81,6 +85,7 @@
 .reset-view-control button:active:not(:disabled),
 .viewer-panel-control button:active:not(:disabled),
 .layer-editor-control button:active:not(:disabled),
+.snapshot-control button:active:not(:disabled),
 .annotation-control button:active:not(:disabled),
 .settings-control button:active:not(:disabled) {
     background: var(--viewer-control-pressed-background);
@@ -232,6 +237,52 @@
 }
 
 
+/* Loading indicator */
+
+.viewer-loading-indicator {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    z-index: 1001;
+
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    padding: 6px 10px;
+
+    background: var(--viewer-control-background);
+    color: var(--viewer-control-foreground);
+
+    border-radius: 4px;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.3);
+
+    font-size: 12px;
+    white-space: nowrap;
+
+    pointer-events: none;
+    transform: translateX(-50%);
+}
+
+
+.viewer-loading-indicator[hidden] {
+    display: none;
+}
+
+
+.snapshot-load-status {
+    background: rgba(180, 35, 35, var(--viewer-control-opacity));
+    color: #ffffff;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+
+.snapshot-load-status.visible {
+    opacity: 1;
+}
+
+
 /* Viewer tools */
 
 .viewer-tools-group {
@@ -330,8 +381,28 @@
     z-index: 1000;
     display: flex;
     align-items: center;
-    gap: 8px;
     transform: translateX(-50%);
+}
+
+
+.bottom-controls-left,
+.bottom-controls-right {
+    position: absolute;
+    top: 50%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transform: translateY(-50%);
+}
+
+
+.bottom-controls-left {
+    right: calc(100% + 8px);
+}
+
+
+.bottom-controls-right {
+    left: calc(100% + 8px);
 }
 
 
@@ -401,4 +472,30 @@
 .ol-layerswitcher,
 .ol-control.ol-layerswitcher {
     display: none;
+}
+
+
+/* Snapshot button */
+
+.snapshot-control,
+.snapshot-control:hover {
+    position: absolute;
+    top: 8px;
+    right: 88px;
+    bottom: auto;
+    left: auto;
+    z-index: 1000;
+    background: transparent;
+}
+
+
+.bottom-controls-group .snapshot-control,
+.bottom-controls-group .snapshot-control:hover {
+    position: static;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    margin: 0;
+    transform: none;
 }
