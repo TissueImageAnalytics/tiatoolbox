@@ -16,7 +16,7 @@ if TYPE_CHECKING:  # pragma: no cover
     from numbers import Number
     from pathlib import Path
 
-    from tiatoolbox.type_hints import IntPair, Resolution, Units
+    from tiatoolbox.type_hints import IntBounds, IntPair, Resolution, Units, WSIPostProc
 
 
 class OpenSlideWSIReader(WSIReader):
@@ -45,7 +45,7 @@ class OpenSlideWSIReader(WSIReader):
         input_img: str | Path | np.ndarray,
         mpp: tuple[Number, Number] | None = None,
         power: Number | None = None,
-        post_proc: str | callable | None = "auto",
+        post_proc: WSIPostProc = "auto",
     ) -> None:
         """Initialize :class:`OpenSlideWSIReader`."""
         super().__init__(input_img=input_img, mpp=mpp, power=power, post_proc=post_proc)
@@ -297,7 +297,7 @@ class OpenSlideWSIReader(WSIReader):
 
     def read_bounds(
         self: OpenSlideWSIReader,
-        bounds: IntPair,
+        bounds: IntBounds,
         resolution: Resolution = 0,
         units: Units = "level",
         interpolation: str = "optimize",
@@ -483,7 +483,7 @@ class OpenSlideWSIReader(WSIReader):
         return utils.transforms.background_composite(image=im_region, alpha=False)
 
     @staticmethod
-    def _estimate_mpp(props: openslide.OpenSlide.properties) -> tuple:
+    def _estimate_mpp(props: openslide._PropertyMap) -> tuple[float, float] | None:
         """Find microns per pixel (mpp).
 
         Args:

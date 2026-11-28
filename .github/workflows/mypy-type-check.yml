@@ -74,5 +74,6 @@ jobs:
           tiatoolbox/wsicore/wsireader/jp2.py \
           tiatoolbox/wsicore/wsireader/dicom.py \
           tiatoolbox/wsicore/wsireader/ngff.py \
+          tiatoolbox/wsicore/wsireader/openslide.py \
           tiatoolbox/wsicore/wsireader/annotation_store.py \
           tiatoolbox/wsicore/wsireader/transformed.py
