@@ -1,5 +1,75 @@
+# ------------------------------------------------------------------------------------
+# GUIDE FOR NEW YAML ENTRIES
+# ------------------------------------------------------------------------------------
+
+# model-name: Unique name of the pretrained model. [e.g. resnet18-kather100k]
+    # hf_repo_id: Hugging Face repository that stores the model weights. [e.g. TIACentre/TIAToolbox_pretrained_weights]
+    # catalog: Information about the model and its intended use.
+        # description: Task that the model performs. [e.g. Detect and classify nuclei in colon histology images.]
+        # tissue_type: List of tissue types that the model supports. Use "agnostic" for models that support different tissue types. [e.g. colon, breast, agnostic]
+        # engine: Processing engine used to run the model. [e.g. patch_predictor]
+    # architecture: Model architecture and its parameters.
+        # class: Python class used to create the model. [e.g. hovernet.HoVerNet]
+        # kwargs: Parameters passed to the model class. The required parameters depend on the model class.
+            # backbone: Name of the neural network backbone. [e.g. resnet50]
+            # encoder: Name of the encoder network. [e.g. resnet50]
+            # num_input_channels: Number of input channels. [e.g. 3]
+            # num_output_channels: Number of output channels. [e.g. 2]
+            # num_classes: Number of classes that the model predicts. [e.g. 9]
+            # num_types: Number of nucleus types that the model predicts. Use null if the model does not classify nucleus types. [e.g. 6]
+            # num_layers: Number of tissue layers that the model predicts. [e.g. 5]
+            # class_dict: Map each class index to its class name. [e.g. {0: "Background", 1: "Tissue"}]
+            # nuc_type_dict: Map each nucleus type index to its name. [e.g. {0: "Background", 1: "Neoplastic"}]
+            # layer_type_dict: Map each tissue layer index to its name. [e.g. {0: "Background", 1: "Basal Epithelium"}]
+            # mode: Select the model operating mode. [e.g. fast, original]
+            # decoder_block: Number of layers in each decoder block. [e.g. [3, 3]]
+            # encoder_levels: Number of channels at each encoder level. [e.g. [32, 64, 128, 256]]
+            # skip_type: Method used to combine skip connections. [e.g. add]
+            # num_heads: Number of prediction heads in the model. [e.g. 6]
+            # num_channels_per_head: Number of channels assigned to each prediction head. [e.g. [3, 3, 3, 3, 3, 3]]
+            # target_channels: Indices of the output channels used for predictions. [e.g. [2, 5, 8, 11, 14, 17]]
+            # wide_decoder: Enable or disable the wide decoder. [e.g. false]
+            # min_distance: Minimum distance between detected points, in pixels. [e.g. 5]
+            # threshold_abs: Minimum absolute value used to select detections. [e.g. 0.5]
+            # threshold: Threshold used to select model predictions. [e.g. 0.95]
+            # radius: Radius used by the detection model. [e.g. 12]
+            # patch_output_shape: Output patch size in pixels, as [height, width]. [e.g. [13, 13]]
+            # tile_shape: Tile size in pixels, as [height, width]. [e.g. [2048, 2048]]
+    # ioconfig: Configuration for image input, output, and processing.
+        # class: Python class used to configure image input and output. [e.g. io_config.IOSegmentorConfig]
+        # kwargs: Parameters passed to the input/output configuration class.
+            # input_resolutions: List of resolutions at which the model reads images.
+                # resolution: Numerical value of the input image resolution. [e.g. 0.25]
+                # units: Unit used to specify the resolution. "mpp" means micrometres per pixel. "baseline" refers to the baseline image level. [e.g. mpp]
+            # output_resolutions: List of resolutions at which the model produces output.
+                # resolution: Numerical value of the output image resolution. [e.g. 0.25]
+                # units: Unit used to specify the output resolution. [e.g. mpp]
+            # patch_input_shape: Input patch size in pixels, as [height, width]. [e.g. [256, 256]]
+            # patch_output_shape: Output patch size in pixels, as [height, width]. [e.g. [164, 164]]
+            # stride_shape: Distance between the start positions of adjacent patches, in pixels, as [vertical, horizontal]. [e.g. [164, 164]]
+            # tile_shape: Tile size in pixels, as [height, width]. [e.g. [1024, 1024]]
+            # margin: Number of extra pixels around the tile boundary. [e.g. 128]
+            # save_resolution: Resolution used to save the model output.
+                # resolution: Numerical value of the saved output resolution. [e.g. 0.25]
+                # units: Unit used for the saved output resolution. [e.g. mpp]
+            # ignore_index: Class index that the model excludes from selected calculations. [e.g. 0]
+    # dataset: Name of the dataset used to train the model. [e.g. kather100k]
+
+# ------------------------------------------------------------------------------------
+
+
+# ------------------------------------------------------------------------------------
+# KATHER100K PATCH CLASSIFICATION MODELS
+# ------------------------------------------------------------------------------------
+
 alexnet-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
@@ -12,13 +82,31 @@ alexnet-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 resnet18-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnet18
             num_classes: 9
+            class_dict: {
+                0: "background",
+                1: "normal",
+                2: "debris",
+                3: "tumor",
+                4: "adipose",
+                5: "mucus",
+                6: "smooth muscle",
+                7: "stroma",
+                8: "lymphocytes"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -26,13 +114,31 @@ resnet18-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 resnet34-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnet34
             num_classes: 9
+            class_dict: {
+                0: "background",
+                1: "normal",
+                2: "debris",
+                3: "tumor",
+                4: "adipose",
+                5: "mucus",
+                6: "smooth muscle",
+                7: "stroma",
+                8: "lymphocytes"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -40,13 +146,31 @@ resnet34-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 resnet50-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnet50
             num_classes: 9
+            class_dict: {
+                0: "background",
+                1: "normal",
+                2: "debris",
+                3: "tumor",
+                4: "adipose",
+                5: "mucus",
+                6: "smooth muscle",
+                7: "stroma",
+                8: "lymphocytes"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -54,13 +178,31 @@ resnet50-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 resnet101-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnet101
             num_classes: 9
+            class_dict: {
+                0: "background",
+                1: "normal",
+                2: "debris",
+                3: "tumor",
+                4: "adipose",
+                5: "mucus",
+                6: "smooth muscle",
+                7: "stroma",
+                8: "lymphocytes"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -68,13 +210,31 @@ resnet101-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 resnext50_32x4d-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnext50_32x4d
             num_classes: 9
+            class_dict: {
+                0: "background",
+                1: "normal",
+                2: "debris",
+                3: "tumor",
+                4: "adipose",
+                5: "mucus",
+                6: "smooth muscle",
+                7: "stroma",
+                8: "lymphocytes"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -82,13 +242,31 @@ resnext50_32x4d-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 resnext101_32x8d-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: resnext101_32x8d
             num_classes: 9
+            class_dict: {
+                0: "background",
+                1: "normal",
+                2: "debris",
+                3: "tumor",
+                4: "adipose",
+                5: "mucus",
+                6: "smooth muscle",
+                7: "stroma",
+                8: "lymphocytes"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -96,13 +274,31 @@ resnext101_32x8d-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 wide_resnet50_2-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: wide_resnet50_2
             num_classes: 9
+            class_dict: {
+                0: "background",
+                1: "normal",
+                2: "debris",
+                3: "tumor",
+                4: "adipose",
+                5: "mucus",
+                6: "smooth muscle",
+                7: "stroma",
+                8: "lymphocytes"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -110,13 +306,31 @@ wide_resnet50_2-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 wide_resnet101_2-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: wide_resnet101_2
             num_classes: 9
+            class_dict: {
+                0: "background",
+                1: "normal",
+                2: "debris",
+                3: "tumor",
+                4: "adipose",
+                5: "mucus",
+                6: "smooth muscle",
+                7: "stroma",
+                8: "lymphocytes"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -124,13 +338,31 @@ wide_resnet101_2-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 densenet121-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: densenet121
             num_classes: 9
+            class_dict: {
+                0: "background",
+                1: "normal",
+                2: "debris",
+                3: "tumor",
+                4: "adipose",
+                5: "mucus",
+                6: "smooth muscle",
+                7: "stroma",
+                8: "lymphocytes"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -138,13 +370,31 @@ densenet121-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 densenet161-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: densenet161
             num_classes: 9
+            class_dict: {
+                0: "background",
+                1: "normal",
+                2: "debris",
+                3: "tumor",
+                4: "adipose",
+                5: "mucus",
+                6: "smooth muscle",
+                7: "stroma",
+                8: "lymphocytes"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -152,13 +402,31 @@ densenet161-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 densenet169-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: densenet169
             num_classes: 9
+            class_dict: {
+                0: "background",
+                1: "normal",
+                2: "debris",
+                3: "tumor",
+                4: "adipose",
+                5: "mucus",
+                6: "smooth muscle",
+                7: "stroma",
+                8: "lymphocytes"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -166,13 +434,31 @@ densenet169-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 densenet201-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: densenet201
             num_classes: 9
+            class_dict: {
+                0: "background",
+                1: "normal",
+                2: "debris",
+                3: "tumor",
+                4: "adipose",
+                5: "mucus",
+                6: "smooth muscle",
+                7: "stroma",
+                8: "lymphocytes"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -180,13 +466,31 @@ densenet201-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 mobilenet_v2-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: mobilenet_v2
             num_classes: 9
+            class_dict: {
+                0: "background",
+                1: "normal",
+                2: "debris",
+                3: "tumor",
+                4: "adipose",
+                5: "mucus",
+                6: "smooth muscle",
+                7: "stroma",
+                8: "lymphocytes"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -194,13 +498,31 @@ mobilenet_v2-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 mobilenet_v3_large-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: mobilenet_v3_large
             num_classes: 9
+            class_dict: {
+                0: "background",
+                1: "normal",
+                2: "debris",
+                3: "tumor",
+                4: "adipose",
+                5: "mucus",
+                6: "smooth muscle",
+                7: "stroma",
+                8: "lymphocytes"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -208,13 +530,31 @@ mobilenet_v3_large-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 mobilenet_v3_small-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: mobilenet_v3_small
             num_classes: 9
+            class_dict: {
+                0: "background",
+                1: "normal",
+                2: "debris",
+                3: "tumor",
+                4: "adipose",
+                5: "mucus",
+                6: "smooth muscle",
+                7: "stroma",
+                8: "lymphocytes"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -222,13 +562,31 @@ mobilenet_v3_small-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
 googlenet-kather100k:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict Normal, Debris, Tumor, Adipose, Mucus, Smooth, Stroma, Lymphocytes regions at a patch level in colon images.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: googlenet
             num_classes: 9
+            class_dict: {
+                0: "background",
+                1: "normal",
+                2: "debris",
+                3: "tumor",
+                4: "adipose",
+                5: "mucus",
+                6: "smooth muscle",
+                7: "stroma",
+                8: "lymphocytes"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -236,238 +594,29 @@ googlenet-kather100k:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
     dataset: kather100k
+
+
+# ------------------------------------------------------------------------------------
+# PCAM PATCH CLASSIFICATION MODELS
+# ------------------------------------------------------------------------------------
 
 alexnet-pcam:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
     architecture:
         class: vanilla.CNNModel
         kwargs:
             backbone: alexnet
             num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [96, 96]
-            stride_shape: [96, 96]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
-    dataset: pcam
-resnet18-pcam:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: vanilla.CNNModel
-        kwargs:
-            backbone: resnet18
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [96, 96]
-            stride_shape: [96, 96]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
-    dataset: pcam
-resnet34-pcam:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: vanilla.CNNModel
-        kwargs:
-            backbone: resnet34
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [96, 96]
-            stride_shape: [96, 96]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
-    dataset: pcam
-resnet50-pcam:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: vanilla.CNNModel
-        kwargs:
-            backbone: resnet50
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [96, 96]
-            stride_shape: [96, 96]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
-    dataset: pcam
-resnet101-pcam:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: vanilla.CNNModel
-        kwargs:
-            backbone: resnet101
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [96, 96]
-            stride_shape: [96, 96]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
-    dataset: pcam
-resnext50_32x4d-pcam:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: vanilla.CNNModel
-        kwargs:
-            backbone: resnext50_32x4d
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [96, 96]
-            stride_shape: [96, 96]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
-    dataset: pcam
-resnext101_32x8d-pcam:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: vanilla.CNNModel
-        kwargs:
-            backbone: resnext101_32x8d
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [96, 96]
-            stride_shape: [96, 96]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
-    dataset: pcam
-wide_resnet50_2-pcam:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: vanilla.CNNModel
-        kwargs:
-            backbone: wide_resnet50_2
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [96, 96]
-            stride_shape: [96, 96]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
-    dataset: pcam
-wide_resnet101_2-pcam:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: vanilla.CNNModel
-        kwargs:
-            backbone: wide_resnet101_2
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [96, 96]
-            stride_shape: [96, 96]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
-    dataset: pcam
-densenet121-pcam:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: vanilla.CNNModel
-        kwargs:
-            backbone: densenet121
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [96, 96]
-            stride_shape: [96, 96]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
-    dataset: pcam
-densenet161-pcam:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: vanilla.CNNModel
-        kwargs:
-            backbone: densenet161
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [96, 96]
-            stride_shape: [96, 96]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
-    dataset: pcam
-densenet169-pcam:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: vanilla.CNNModel
-        kwargs:
-            backbone: densenet169
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [96, 96]
-            stride_shape: [96, 96]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
-    dataset: pcam
-densenet201-pcam:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: vanilla.CNNModel
-        kwargs:
-            backbone: densenet201
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [96, 96]
-            stride_shape: [96, 96]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
-    dataset: pcam
-mobilenet_v2-pcam:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: vanilla.CNNModel
-        kwargs:
-            backbone: mobilenet_v2
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [96, 96]
-            stride_shape: [96, 96]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
-    dataset: pcam
-mobilenet_v3_large-pcam:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: vanilla.CNNModel
-        kwargs:
-            backbone: mobilenet_v3_large
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [96, 96]
-            stride_shape: [96, 96]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
-    dataset: pcam
-mobilenet_v3_small-pcam:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: vanilla.CNNModel
-        kwargs:
-            backbone: mobilenet_v3_small
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [96, 96]
-            stride_shape: [96, 96]
-            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
-    dataset: pcam
-googlenet-pcam:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: vanilla.CNNModel
-        kwargs:
-            backbone: googlenet
-            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
     ioconfig:
         class: io_config.IOPatchPredictorConfig
         kwargs:
@@ -476,8 +625,419 @@ googlenet-pcam:
             input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
     dataset: pcam
 
+resnet18-pcam:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnet18
+            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+resnet34-pcam:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+resnet50-pcam:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnet50
+            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+resnet101-pcam:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnet101
+            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+resnext50_32x4d-pcam:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnext50_32x4d
+            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+resnext101_32x8d-pcam:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: resnext101_32x8d
+            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+wide_resnet50_2-pcam:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: wide_resnet50_2
+            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+wide_resnet101_2-pcam:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: wide_resnet101_2
+            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+densenet121-pcam:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: densenet121
+            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+densenet161-pcam:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: densenet161
+            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+densenet169-pcam:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: densenet169
+            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+densenet201-pcam:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: densenet201
+            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+mobilenet_v2-pcam:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: mobilenet_v2
+            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+mobilenet_v3_large-pcam:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: mobilenet_v3_large
+            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+mobilenet_v3_small-pcam:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: mobilenet_v3_small
+            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+googlenet-pcam:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Predict breast cancer metastases in lymph node tissue images at a patch level.
+        tissue_type:
+            - breast
+        engine: patch_predictor
+    architecture:
+        class: vanilla.CNNModel
+        kwargs:
+            backbone: googlenet
+            num_classes: 2
+            class_dict: {
+                0: "non-metastatic tissue",
+                1: "metastatic tissue"
+            }
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [96, 96]
+            stride_shape: [96, 96]
+            input_resolutions: [{"resolution": 1.0, "units": "mpp"}]
+    dataset: pcam
+
+
+# ------------------------------------------------------------------------------------
+# IDARS PATCH CLASSIFICATION MODELS
+# ------------------------------------------------------------------------------------
+
 resnet18-idars-tumour:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Patch level prediction of tumor versus non-tumor/viable epithelium status in colon histology.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -489,73 +1049,15 @@ resnet18-idars-tumour:
             patch_input_shape: [512, 512]
             stride_shape: [512, 512]
             input_resolutions: [{"resolution": 0.5, "units": "mpp"}]
+
 resnet34-idars-msi:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: idars.IDaRS
-        kwargs:
-            backbone: resnet34
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [224, 224]
-            stride_shape: [224, 224]
-            input_resolutions: [{"resolution": 1, "units": "mpp"}]
-resnet34-idars-braf:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: idars.IDaRS
-        kwargs:
-            backbone: resnet34
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [224, 224]
-            stride_shape: [224, 224]
-            input_resolutions: [{"resolution": 1, "units": "mpp"}]
-resnet34-idars-cimp:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: idars.IDaRS
-        kwargs:
-            backbone: resnet34
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [224, 224]
-            stride_shape: [224, 224]
-            input_resolutions: [{"resolution": 1, "units": "mpp"}]
-resnet34-idars-cin:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: idars.IDaRS
-        kwargs:
-            backbone: resnet34
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [224, 224]
-            stride_shape: [224, 224]
-            input_resolutions: [{"resolution": 1, "units": "mpp"}]
-resnet34-idars-tp53:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: idars.IDaRS
-        kwargs:
-            backbone: resnet34
-            num_classes: 2
-    ioconfig:
-        class: io_config.IOPatchPredictorConfig
-        kwargs:
-            patch_input_shape: [224, 224]
-            stride_shape: [224, 224]
-            input_resolutions: [{"resolution": 1, "units": "mpp"}]
-resnet34-idars-hm:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Patch level prediction of Microsatellite Instability (MSI) status in colon histology.
+        tissue_type:
+            - colon
+        engine: patch_predictor
     architecture:
         class: idars.IDaRS
         kwargs:
@@ -568,9 +1070,119 @@ resnet34-idars-hm:
             stride_shape: [224, 224]
             input_resolutions: [{"resolution": 1, "units": "mpp"}]
 
+resnet34-idars-braf:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Patch level prediction of BRAF gene mutation Status in colon histology.
+        tissue_type:
+            - colon
+        engine: patch_predictor
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+
+resnet34-idars-cimp:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Patch level prediction of CpG island methylator phenotype in colon histology.
+        tissue_type:
+            - colon
+        engine: patch_predictor
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+
+resnet34-idars-cin:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Patch level prediction of chromosomal instability in colon histology.
+        tissue_type:
+            - colon
+        engine: patch_predictor
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+
+resnet34-idars-tp53:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Patch level prediction of TP53 tumor suppressor gene mutation status in colon histology.
+        tissue_type:
+            - colon
+        engine: patch_predictor
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+
+resnet34-idars-hm:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+             Patch level prediction of Hypermutated status in colon histology.
+        tissue_type:
+            - colon
+        engine: patch_predictor
+    architecture:
+        class: idars.IDaRS
+        kwargs:
+            backbone: resnet34
+            num_classes: 2
+    ioconfig:
+        class: io_config.IOPatchPredictorConfig
+        kwargs:
+            patch_input_shape: [224, 224]
+            stride_shape: [224, 224]
+            input_resolutions: [{"resolution": 1, "units": "mpp"}]
+
+
+# ------------------------------------------------------------------------------------
+# TISSUE SEGMENTATION MODELS
+# ------------------------------------------------------------------------------------
 
 fcn-tissue_mask:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Segmentation of tissue regions across different cancer types
+        tissue_type:
+            - agnostic
+        engine: semantic_segmentor
     architecture:
         class: unet.UNetModel
         kwargs:
@@ -578,7 +1190,6 @@ fcn-tissue_mask:
             num_output_channels: 2
             encoder: "resnet50"
             decoder_block: [3]
-            class_dict: {1: "Tissue"}
     ioconfig:
         class: io_config.IOSegmentorConfig
         kwargs:
@@ -594,6 +1205,12 @@ fcn-tissue_mask:
 
 fcn_resnet50_unet-bcss:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Segments tumor, stroma, necrosi, and inflamatory regions in breast cancer images
+        tissue_type:
+            - breast
+        engine: semantic_segmentor
     architecture:
         class: unet.UNetModel
         kwargs:
@@ -601,7 +1218,13 @@ fcn_resnet50_unet-bcss:
             num_output_channels: 5
             encoder: "resnet50"
             decoder_block: [3, 3]
-            class_dict: {0: "Tumour", 1: "Stroma", 2: "Inflamatory", 3: "Necrosis", 4: "Others"}
+            class_dict: {
+                0: "Tumour",
+                1: "Stroma",
+                2: "Inflamatory",
+                3: "Necrosis",
+                4: "Others"
+            }
     ioconfig:
         class: io_config.IOSegmentorConfig
         kwargs:
@@ -616,10 +1239,14 @@ fcn_resnet50_unet-bcss:
 
 unet_tissue_mask_tsef:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    description: >
-      These weights can be used to segment a grayscale image to
-      create a tissue mask excluding the fatty region. TSEF stands for tissue
-      segmentation excluding fat.
+    catalog:
+        description: >
+            These weights can be used to segment a grayscale image to
+            create a tissue mask excluding the fatty region. TSEF stands for tissue
+            segmentation excluding fat.
+        tissue_type:
+            - agnostic
+        engine: semantic_segmentor
     architecture:
         class: unet.UNetModel
         kwargs:
@@ -640,8 +1267,78 @@ unet_tissue_mask_tsef:
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
             ignore_index: 0
 
+grandqc_tissue_detection:
+    hf_repo_id: TIACentre/GrandQC_Tissue_Detection
+    catalog:
+        description: >
+            Segmentation model for masking background from tissue regions
+        tissue_type:
+            - agnostic
+        engine: semantic_segmentor
+    architecture:
+        class: grandqc.GrandQCModel
+        kwargs:
+            num_output_channels: 2
+            class_dict: {
+                0: "Background",
+                1: "Tissue",
+            }
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 10.0}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 10.0}
+            patch_input_shape: [512, 512]
+            patch_output_shape: [512, 512]
+            stride_shape: [256, 256]
+            save_resolution: {'units': 'mpp', 'resolution': 10.0}
+            ignore_index: 0
+
+efficientunet-tissue_mask:
+    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Segmentation model for tissue regions in images across cancer types.
+        tissue_type:
+            - agnostic
+        engine: semantic_segmentor
+    architecture:
+        class: efficientunet_tissue_mask_model.EfficientUNetTissueMaskModel
+        kwargs:
+            num_classes: 1
+            threshold: 0.95
+            class_dict: {
+                0: "Background",
+                1: "Tissue",
+            }
+    ioconfig:
+        class: io_config.IOSegmentorConfig
+        kwargs:
+            input_resolutions:
+                - {'units': 'mpp', 'resolution': 8.0}
+            output_resolutions:
+                - {'units': 'mpp', 'resolution': 8.0}
+            patch_input_shape: [512, 512]
+            patch_output_shape: [512, 512]
+            stride_shape: [480, 480]
+            save_resolution: {'units': 'mpp', 'resolution': 8.0}
+            ignore_index: 0
+
+
+# ------------------------------------------------------------------------------------
+# NUCLEUS SEGMENTATION/CLASSIFICATION MODELS
+# ------------------------------------------------------------------------------------
+
 hovernet_fast-pannuke:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Instance Segmentation and detection of Neoplastic, Inflammatory, Connective, Dead, and Non-Neoplastic Epithelial nuclei across different cancer types.
+        tissue_type:
+            - agnostic
+        engine: multi_task_segmentor
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -674,6 +1371,12 @@ hovernet_fast-pannuke:
 
 hovernet_fast-monusac:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Instance Segmentation and detection of Epithelial, Lymphocyte, Macrophage, and Neutrophil nuclei across different cancer types.
+        tissue_type:
+            - agnostic
+        engine: multi_task_segmentor
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -705,6 +1408,12 @@ hovernet_fast-monusac:
 
 hovernet_original-consep:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Instance Segmentation and detection of Epithelial, Inflammatory, and Spindle-Shaped nuclei in colon images.
+        tissue_type:
+            - colon
+        engine: multi_task_segmentor
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -735,6 +1444,12 @@ hovernet_original-consep:
 
 hovernet_original-kumar:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Instance Segmentation and detection of Epithelial, Inflammatory, and Spindle-Shaped nuclei across different cancer types.
+        tissue_type:
+            - agnostic
+        engine: multi_task_segmentor
     architecture:
         class: hovernet.HoVerNet
         kwargs:
@@ -758,6 +1473,13 @@ hovernet_original-kumar:
 
 hovernetplus-oed:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Instance segmentation and classification of epithelial nuclei,
+            and segmentation of epithelial tissue layers in oral histology images.
+        tissue_type:
+            - oral cavity
+        engine: multi_task_segmentor
     architecture:
         class: hovernetplus.HoVerNetPlus
         kwargs:
@@ -795,6 +1517,11 @@ hovernetplus-oed:
 
 micronet-consep:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Multi-resolution instance segmentation and phenotype classification of Epithelial, Inflammatory, Spindle-Shaped, and Miscellaneous nuclei in colon histology.
+        tissue_type:
+            - colon
     architecture:
         class: micronet.MicroNet
         kwargs:
@@ -816,6 +1543,12 @@ micronet-consep:
 
 mapde-crchisto:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Nucleus instance segmentation model for colon histology.
+        tissue_type:
+            - colon
+        engine: nucleus_detector
     architecture:
         class: mapde.MapDe
         kwargs:
@@ -842,6 +1575,12 @@ mapde-crchisto:
 
 mapde-conic:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Nucleus detection model for Epithelial, Lymphocyte, Plasma, Eosinophil, Neutrophil, and Connective tissue nuclei in colon histology.
+        tissue_type:
+            - colon
+        engine: nucleus_detector
     architecture:
         class: mapde.MapDe
         kwargs:
@@ -867,6 +1606,11 @@ mapde-conic:
 
 sccnn-crchisto:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Nucleus detection model for colon histology.
+        tissue_type:
+            - colon
     architecture:
         class: sccnn.SCCNN
         kwargs:
@@ -893,6 +1637,11 @@ sccnn-crchisto:
 
 sccnn-conic:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description: >
+            Nucleus detection model for colon histology.
+        tissue_type:
+            - colon
     architecture:
         class: sccnn.SCCNN
         kwargs:
@@ -919,6 +1668,10 @@ sccnn-conic:
 
 nuclick_original-pannuke:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description:
+        tissue_type:
+            - agnostic
     architecture:
         class: nuclick.NuClick
         kwargs:
@@ -938,6 +1691,10 @@ nuclick_original-pannuke:
 
 nuclick_light-pannuke:
     hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
+    catalog:
+        description:
+        tissue_type:
+            - agnostic
     architecture:
         class: unet.UNetModel
         kwargs:
@@ -959,31 +1716,14 @@ nuclick_light-pannuke:
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
             ignore_index: 0
 
-grandqc_tissue_detection:
-    hf_repo_id: TIACentre/GrandQC_Tissue_Detection
-    architecture:
-        class: grandqc.GrandQCModel
-        kwargs:
-            num_output_channels: 2
-            class_dict: {
-                0: "Background",
-                1: "Tissue",
-            }
-    ioconfig:
-        class: io_config.IOSegmentorConfig
-        kwargs:
-            input_resolutions:
-                - {'units': 'mpp', 'resolution': 10.0}
-            output_resolutions:
-                - {'units': 'mpp', 'resolution': 10.0}
-            patch_input_shape: [512, 512]
-            patch_output_shape: [512, 512]
-            stride_shape: [256, 256]
-            save_resolution: {'units': 'mpp', 'resolution': 10.0}
-            ignore_index: 0
-
 KongNet_CoNIC_1:
     hf_repo_id: TIACentre/KongNet_pretrained_weights
+    catalog:
+        description: >
+            Nuclei detection model for neutrophils, epithelial, lymphocytes, plasma, eosinophil, and connective nuclei in colon histology.
+        tissue_type:
+            - colon
+        engine: nucleus_detector
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1016,6 +1756,12 @@ KongNet_CoNIC_1:
 
 KongNet_PanNuke_1:
     hf_repo_id: TIACentre/KongNet_pretrained_weights
+    catalog:
+        description: >
+            Nucleus detection model for connective, neoplastic, epithelial, dead, and inflamatory nuclei across multiple cancers.
+        tissue_type:
+            - agnostic
+        engine: nucleus_detector
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1047,6 +1793,12 @@ KongNet_PanNuke_1:
 
 KongNet_MONKEY_1:
     hf_repo_id: TIACentre/KongNet_pretrained_weights
+    catalog:
+        description: >
+            Model for detecting lymphocytes, monocytes, and inflamatory nuclei in Kidney Biopsy images.
+        tissue_type:
+            - kidney
+        engine: nucleus_detector
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1076,6 +1828,19 @@ KongNet_MONKEY_1:
 
 KongNet_PUMA_T1_3:
     hf_repo_id: TIACentre/KongNet_pretrained_weights
+    catalog:
+        description:  >
+            Nuclei detection model for detecting Tumor and Lymphocyte nuclei in melanoma and metastatic melanoma.
+        tissue_type:
+            - skin
+            - bone
+            - lung
+            - liver
+            - brain
+            - gastrointestinal tract
+            - soft tissue
+            - lymph node
+        engine: nucleus_detector
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1105,6 +1870,19 @@ KongNet_PUMA_T1_3:
 
 KongNet_PUMA_T2_3:
     hf_repo_id: TIACentre/KongNet_pretrained_weights
+    catalog:
+        description: >
+             Nuclei Detection model for detecting tumor, lymphocytes, plasma, histiocyte, melanophage, neutrophil, stroma, epithelium, endothelium, and apoptotic nuclei in melanoma and metastatic melanoma
+        tissue_type:
+            - skin
+            - bone
+            - lung
+            - liver
+            - brain
+            - gastrointestinal tract
+            - soft tissue
+            - lymph node
+        engine: nucleus_detector
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1141,6 +1919,12 @@ KongNet_PUMA_T2_3:
 
 KongNet_Det_MIDOG_1:
     hf_repo_id: TIACentre/KongNet_pretrained_weights
+    catalog:
+        description: >
+            Nuclei detection model for mitotic figure detection across different cancer types.
+        tissue_type:
+            - agnostic
+        engine: nucleus_detector
     architecture:
         class: kongnet.KongNet
         kwargs:
@@ -1165,27 +1949,3 @@ KongNet_Det_MIDOG_1:
             patch_output_shape: [512, 512]
             stride_shape: [492, 492]
             save_resolution: {'units': 'baseline', 'resolution': 1.0}
-
-efficientunet-tissue_mask:
-    hf_repo_id: TIACentre/TIAToolbox_pretrained_weights
-    architecture:
-        class: efficientunet_tissue_mask_model.EfficientUNetTissueMaskModel
-        kwargs:
-            num_classes: 1
-            threshold: 0.95
-            class_dict: {
-                0: "Background",
-                1: "Tissue",
-            }
-    ioconfig:
-        class: io_config.IOSegmentorConfig
-        kwargs:
-            input_resolutions:
-                - {'units': 'mpp', 'resolution': 8.0}
-            output_resolutions:
-                - {'units': 'mpp', 'resolution': 8.0}
-            patch_input_shape: [512, 512]
-            patch_output_shape: [512, 512]
-            stride_shape: [480, 480]
-            save_resolution: {'units': 'mpp', 'resolution': 8.0}
-            ignore_index: 0
