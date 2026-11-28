@@ -795,7 +795,7 @@ class PointsPatchExtractor(PatchExtractor):
             msg += "Supported types: np.ndarray, DataFrame, str, Path."
             raise TypeError(msg) from exc
         self.locations_df["x"] = self.locations_df["x"] - int(
-            (self.patch_size[1] - 1) / 2,
+            (self.patch_size[0] - 1) / 2,
         )
         self.locations_df["y"] = self.locations_df["y"] - int(
             (self.patch_size[1] - 1) / 2,
