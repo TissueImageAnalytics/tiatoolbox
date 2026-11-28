@@ -88,7 +88,7 @@ def verify_supported_wsi(input_path: Path, **kwargs: Unpack[WSIReaderParams]) ->
     ):
         return
 
-    _, _, suffixes = utils.misc.split_path_name_ext(input_path)
+    suffixes = input_path.suffixes
 
     if suffixes and suffixes[-1] not in [
         ".svs",

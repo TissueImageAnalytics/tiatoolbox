@@ -51,6 +51,10 @@ class OpenSlideWSIReader(WSIReader):
         super().__init__(input_img=input_img, mpp=mpp, power=power, post_proc=post_proc)
         self.openslide_wsi = openslide.OpenSlide(filename=str(self.input_path))
 
+    def close(self: OpenSlideWSIReader) -> None:
+        """Close the OpenSlide handle."""
+        self.openslide_wsi.close()
+
     def read_rect(
         self: OpenSlideWSIReader,
         location: IntPair,

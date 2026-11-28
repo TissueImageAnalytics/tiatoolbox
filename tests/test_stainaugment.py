@@ -92,3 +92,26 @@ def test_call_returns_original_image_when_probability_check_fails(
 
     assert fit_called
     assert result is img
+
+
+def test_stain_parameters_use_the_instance_rng() -> None:
+    """Both standalone and training callers can seed all parameter draws."""
+    augmentor = StainAugmentor()
+    augmentor.rng = np.random.default_rng(123)
+    augmentor._sample_params()
+    expected = (augmentor.alpha, augmentor.beta)
+    augmentor.rng = np.random.default_rng(123)
+    augmentor._sample_params()
+    assert (augmentor.alpha, augmentor.beta) == expected
+
+
+def test_stain_fit_accepts_background_only_patches() -> None:
+    """Blank patches retain the training branch's empty tissue-mask behavior."""
+    augmentor = StainAugmentor(
+        stain_matrix=np.array([[0.65, 0.70, 0.29], [0.07, 0.99, 0.11]])
+    )
+    image = np.full((8, 8, 3), 255, dtype=np.uint8)
+    augmentor.fit(image)
+    assert not augmentor.tissue_mask.any()
+    # Reconstructing RGB from optical density can round down by one intensity unit.
+    np.testing.assert_allclose(augmentor.augment(), image, atol=1, rtol=0)
