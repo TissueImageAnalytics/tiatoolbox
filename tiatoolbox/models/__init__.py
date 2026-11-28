@@ -10,6 +10,7 @@ from .architecture.idars import IDaRS
 from .architecture.mapde import MapDe
 from .architecture.micronet import MicroNet
 from .architecture.nuclick import NuClick
+from .architecture.onnx_model import ONNXModel
 from .architecture.sam import SAM
 from .architecture.sccnn import SCCNN
 from .dataset import PatchDataset, WSIPatchDataset
@@ -45,6 +46,7 @@ __all__ = [
     "NuClick",
     "NucleusDetector",
     "NucleusInstanceSegmentor",
+    "ONNXModel",
     "PatchDataset",
     "PatchPredictor",
     "PromptSegmentor",
